@@ -20,7 +20,10 @@ const routes = [
   '/zh/contact/thanks',
   '/zh/solutions',
   '/zh/activity',
-  '/zh/news'
+  '/zh/news',
+  '/zh/legal/risk-disclosure',
+  '/zh/legal/privacy',
+  '/zh/legal/disclaimer'
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

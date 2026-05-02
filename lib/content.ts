@@ -764,6 +764,14 @@ export const footerContent = {
         { label: '项目与案例', href: '/zh/projects/' },
         { label: '联系 SAREC', href: '/zh/contact/' }
       ]
+    },
+    {
+      title: '法律与合规',
+      links: [
+        { label: '风险披露', href: '/zh/legal/risk-disclosure/' },
+        { label: '隐私政策', href: '/zh/legal/privacy/' },
+        { label: '免责声明', href: '/zh/legal/disclaimer/' }
+      ]
     }
   ],
   disclaimer: '页面内容仅作信息说明、案例展示与研究参考，不构成公开募资、收益承诺或投资建议。'
