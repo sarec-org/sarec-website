@@ -764,6 +764,7 @@ export const footerContent = {
         { label: '会员服务', href: '/zh/membership/' },
         { label: '活动与考察', href: '/zh/events/' },
         { label: '项目与案例', href: '/zh/projects/' },
+        { label: '案例研究', href: '/zh/case-studies/' },
         { label: '联系 SAREC', href: '/zh/contact/' }
       ]
     },
@@ -776,7 +777,7 @@ export const footerContent = {
       ]
     }
   ],
-  disclaimer: '页面内容仅作信息说明、案例展示与研究参考，不构成公开募资、收益承诺或投资建议。'
+  disclaimer: '页面内容仅作信息说明、案例展示与研究参考，不构成证券发行、收益承诺或投资建议。'
 };
 
 export const servicesOverviewPage = {
@@ -823,7 +824,7 @@ export const projectsPage = {
   subtitle: '不是广告，是真实记录。以下是SAREC参与协调的部分项目，展示我们如何在实际工作中帮助客户',
   active: {
     title: '在建/活跃项目',
-    note: '页面展示仅作项目案例说明，不构成公开募资、收益承诺或投资建议。具体合作方式、资料披露范围与商业条款，以后续正式文件为准。',
+    note: '页面展示仅作项目案例说明，不构成证券发行、收益承诺或投资建议。具体合作方式、资料披露范围与商业条款，以后续正式文件为准。',
     items: [
       {
         name: '4136 Rosewood｜洛杉矶精品公寓开发项目',
@@ -837,7 +838,7 @@ export const projectsPage = {
         description:
           '4136 Rosewood 是 Terra Capital 当前重点推进的洛杉矶住宅开发项目之一。项目不属于概念性展示，而是已经进入实际审批与推进流程的真实开发案例。该项目可作为 SAREC / Terra Capital 在洛杉矶住宅开发方向上的代表性案例，用于展示项目判断、审批推进、产品定位和开发管理能力。',
         boundary:
-          '页面展示仅作项目案例说明，不构成公开募资、收益承诺或投资建议。具体合作方式、资料披露范围与商业条款，以后续正式文件为准。'
+          '页面展示仅作项目案例说明，不构成证券发行、收益承诺或投资建议。具体合作方式、资料披露范围与商业条款，以后续正式文件为准。'
       }
     ]
   },
@@ -1028,7 +1029,7 @@ export const researchPages: Record<string, ResearchArticleContent> = {
           {
             title: '维度2：土地与许可状态',
             question: '要查的问题：土地是否已经完成产权清晰的收购？开发许可（Entitlement）处于哪个阶段？分区是否支持目标开发类型？',
-            redFlag: '红旗信号：土地仍在谈判中，或开发许可尚未启动，但项目已在募资。'
+            redFlag: '红旗信号：土地仍在谈判中，或开发许可尚未启动，但项目已在推进资金安排。'
           },
           {
             title: '维度3：财务结构合理性',
@@ -1165,7 +1166,7 @@ export const solutionsPage = {
   notice: {
     title: '重要说明',
     body: [
-      '本页面内容仅用于说明 SAREC 可提供的合作方向，不构成公开募资、收益承诺、证券发行、法律、税务或投资建议。',
+      '本页面内容仅用于说明 SAREC 可提供的合作方向，不构成证券发行、收益承诺、法律、税务或投资建议。',
       '具体合作方式、收费结构、资料披露范围与商业条款，均需根据具体项目、客户情况和正式文件另行确认。'
     ]
   },

@@ -81,6 +81,10 @@ const frameworkItems = [
 
 const relatedEntries = [
   {
+    title: '案例研究',
+    href: '/zh/case-studies'
+  },
+  {
     title: '服务产品矩阵',
     href: '/zh/services'
   },
@@ -124,6 +128,9 @@ export default function ProjectsPage() {
             </a>
             <a className={secondaryButtonClass} href="/zh/solutions">
               查看合作方案
+            </a>
+            <a className={secondaryButtonClass} href="/zh/case-studies">
+              案例研究
             </a>
           </div>
         </div>
@@ -219,7 +226,10 @@ export default function ProjectsPage() {
                 <Card className="bg-zinc-50 md:p-7">
                   <h4 className="font-sans text-lg font-semibold text-ink">这个项目适合说明什么</h4>
                   <p className="mt-4 text-sm leading-7 text-muted md:text-base">{rosewoodUseCase}</p>
-                  <div className="mt-8">
+                  <div className="mt-8 flex flex-col gap-3">
+                    <a className={outlineButtonClass} href="/zh/case-studies/4136-rosewood">
+                      查看完整案例研究
+                    </a>
                     <a className={outlineButtonClass} href="/zh/solutions">
                       了解合作方式
                     </a>
@@ -237,7 +247,7 @@ export default function ProjectsPage() {
                 <section className="border-t border-line pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
                   <h4 className="font-sans text-lg font-semibold text-ink">展示边界说明</h4>
                   <p className="mt-3 text-sm leading-7 text-muted">
-                    页面展示仅作项目案例说明，不构成公开募资、收益承诺或投资建议。具体合作方式、资料披露范围与商业条款，以后续正式文件为准。
+                    页面展示仅作项目案例说明，不构成证券发行、收益承诺或投资建议。具体合作方式、资料披露范围与商业条款，以后续正式文件为准。
                   </p>
                 </section>
               </div>

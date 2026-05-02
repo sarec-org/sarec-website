@@ -11,6 +11,8 @@ const routes = [
   '/zh/services/due-diligence',
   '/zh/services/capital',
   '/zh/projects',
+  '/zh/case-studies',
+  '/zh/case-studies/4136-rosewood',
   '/zh/research',
   '/zh/research/eb5',
   '/zh/research/investment-pitfalls',
