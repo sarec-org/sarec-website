@@ -761,6 +761,7 @@ export const footerContent = {
       title: '机构信息',
       links: [
         { label: '关于 SAREC', href: '/zh/about/' },
+        { label: '会员服务', href: '/zh/membership/' },
         { label: '项目与案例', href: '/zh/projects/' },
         { label: '联系 SAREC', href: '/zh/contact/' }
       ]

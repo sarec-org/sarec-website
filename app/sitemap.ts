@@ -18,6 +18,7 @@ const routes = [
   '/zh/research/risk-checklist',
   '/zh/contact',
   '/zh/contact/thanks',
+  '/zh/membership',
   '/zh/solutions',
   '/zh/activity',
   '/zh/news',
