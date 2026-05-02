@@ -21,6 +21,7 @@ const routes = [
   '/zh/membership',
   '/zh/solutions',
   '/zh/activity',
+  '/zh/events',
   '/zh/news',
   '/zh/legal/risk-disclosure',
   '/zh/legal/privacy',
