@@ -14,6 +14,7 @@ const routes = [
   '/zh/case-studies',
   '/zh/case-studies/4136-rosewood',
   '/zh/research',
+  '/zh/research/chinese-investors-us-real-estate-risks',
   '/zh/research/eb5',
   '/zh/research/investment-pitfalls',
   '/zh/research/framework',

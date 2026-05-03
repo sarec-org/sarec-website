@@ -46,6 +46,11 @@ const columns = [
 
 const featuredInsights = [
   {
+    title: '中国投资人美国房地产常见风险',
+    body: '从信息不对称、审批周期、融资可行性、租金假设、合作结构和退出路径等角度，建立跨境投资风险判断框架。',
+    href: '/zh/research/chinese-investors-us-real-estate-risks/'
+  },
+  {
     title: '美国房地产项目判断框架',
     body: '建立从市场、土地、审批、融资、建设、租赁到退出的系统判断方法。',
     href: '/zh/research/framework/'
@@ -69,10 +74,6 @@ const featuredInsights = [
 
 const upcomingTopics = [
   {
-    title: '中国投资人美国房地产常见风险',
-    body: '梳理跨境客户在项目材料、审批路径、融资结构和退出假设中最容易忽略的问题。'
-  },
-  {
     title: 'LP / GP 合作结构详解',
     body: '解释管理权、信息披露、重大事项决策、费用安排和退出机制如何影响合作质量。'
   },
@@ -81,7 +82,7 @@ const upcomingTopics = [
     body: '从土地获取、设计、审批、融资、施工到出租或出售，拆解开发项目的关键节点。'
   },
   {
-    title: 'Cap Rate / IRR / ROE 如何理解',
+    title: '项目指标与估值假设如何理解',
     body: '帮助读者理解常见项目指标背后的假设边界，以及为什么数字必须回到真实项目逻辑中验证。'
   },
   {
