@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { SectionCTA } from '@/components/sections/SectionCTA';
 import { aboutPage } from '@/lib/content';
 import { createPageMetadata } from '@/lib/seo';
@@ -19,6 +20,21 @@ export default function AboutPage() {
           <p className="font-sans text-sm font-semibold text-gold">About SAREC</p>
           <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">{aboutPage.title}</h1>
           <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">{aboutPage.subtitle}</p>
+        </div>
+      </section>
+
+      <section className="border-b border-line bg-zinc-50 py-10 md:py-12">
+        <div className="container-shell grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="max-w-3xl">
+            <p className="font-sans text-sm font-semibold text-gold">Founder / Trust</p>
+            <h2 className="mt-2 font-sans text-2xl font-bold leading-tight">了解主理人 Andy Wang</h2>
+            <p className="mt-3 text-sm leading-7 text-muted md:text-base">
+              从房地产全链条经验、职业投资视角和跨境资源整合能力，理解 SAREC 的成立逻辑和项目判断方法。
+            </p>
+          </div>
+          <Button href="/zh/about/founder/" variant="secondary">
+            查看主理人介绍
+          </Button>
         </div>
       </section>
 
