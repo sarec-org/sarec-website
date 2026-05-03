@@ -46,6 +46,11 @@ const columns = [
 
 const featuredInsights = [
   {
+    title: 'LP / GP 合作结构详解',
+    body: '从角色分工、资金路径、管理权、信息披露、费用机制、利润分配和退出安排等角度，理解美国房地产项目合作结构。',
+    href: '/zh/research/lp-gp-structure/'
+  },
+  {
     title: '中国投资人美国房地产常见风险',
     body: '从信息不对称、审批周期、融资可行性、租金假设、合作结构和退出路径等角度，建立跨境投资风险判断框架。',
     href: '/zh/research/chinese-investors-us-real-estate-risks/'
@@ -73,10 +78,6 @@ const featuredInsights = [
 ];
 
 const upcomingTopics = [
-  {
-    title: 'LP / GP 合作结构详解',
-    body: '解释管理权、信息披露、重大事项决策、费用安排和退出机制如何影响合作质量。'
-  },
   {
     title: '美国房地产开发完整流程',
     body: '从土地获取、设计、审批、融资、施工到出租或出售，拆解开发项目的关键节点。'
