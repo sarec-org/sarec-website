@@ -46,6 +46,11 @@ const columns = [
 
 const featuredInsights = [
   {
+    title: '美国房地产开发完整流程',
+    body: '从土地筛选、可行性分析、审批、许可、融资、施工、运营到退出，理解开发项目背后的关键环节与风险。',
+    href: '/zh/research/us-real-estate-development-process/'
+  },
+  {
     title: 'LP / GP 合作结构详解',
     body: '从角色分工、资金路径、管理权、信息披露、费用机制、利润分配和退出安排等角度，理解美国房地产项目合作结构。',
     href: '/zh/research/lp-gp-structure/'
@@ -78,10 +83,6 @@ const featuredInsights = [
 ];
 
 const upcomingTopics = [
-  {
-    title: '美国房地产开发完整流程',
-    body: '从土地获取、设计、审批、融资、施工到出租或出售，拆解开发项目的关键节点。'
-  },
   {
     title: '项目指标与估值假设如何理解',
     body: '帮助读者理解常见项目指标背后的假设边界，以及为什么数字必须回到真实项目逻辑中验证。'

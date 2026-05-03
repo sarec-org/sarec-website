@@ -16,6 +16,7 @@ const routes = [
   '/zh/research',
   '/zh/research/chinese-investors-us-real-estate-risks',
   '/zh/research/lp-gp-structure',
+  '/zh/research/us-real-estate-development-process',
   '/zh/research/eb5',
   '/zh/research/investment-pitfalls',
   '/zh/research/framework',
