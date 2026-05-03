@@ -46,6 +46,11 @@ const columns = [
 
 const featuredInsights = [
   {
+    title: 'Cap Rate / IRR / ROE 如何理解',
+    body: '解释美国房地产投资中常见指标背后的收入、成本、融资、时间、退出和风险假设。',
+    href: '/zh/research/cap-rate-irr-roe/'
+  },
+  {
     title: '美国房地产开发完整流程',
     body: '从土地筛选、可行性分析、审批、许可、融资、施工、运营到退出，理解开发项目背后的关键环节与风险。',
     href: '/zh/research/us-real-estate-development-process/'
@@ -83,10 +88,6 @@ const featuredInsights = [
 ];
 
 const upcomingTopics = [
-  {
-    title: '项目指标与估值假设如何理解',
-    body: '帮助读者理解常见项目指标背后的假设边界，以及为什么数字必须回到真实项目逻辑中验证。'
-  },
   {
     title: '洛杉矶 ED1 与经济适用房开发观察',
     body: '关注洛杉矶政策环境、审批效率、产品结构和经济适用房开发中的执行风险。'
