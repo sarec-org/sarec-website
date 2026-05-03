@@ -46,6 +46,11 @@ const columns = [
 
 const featuredInsights = [
   {
+    title: '洛杉矶 ED1 与经济适用房开发观察',
+    body: '从政策背景、审批效率、项目筛选、融资、建设、运营和退出路径，理解 ED1 项目中的机会与风险。',
+    href: '/zh/research/los-angeles-ed1-affordable-housing/'
+  },
+  {
     title: 'Cap Rate / IRR / ROE 如何理解',
     body: '解释美国房地产投资中常见指标背后的收入、成本、融资、时间、退出和风险假设。',
     href: '/zh/research/cap-rate-irr-roe/'
@@ -87,12 +92,7 @@ const featuredInsights = [
   }
 ];
 
-const upcomingTopics = [
-  {
-    title: '洛杉矶 ED1 与经济适用房开发观察',
-    body: '关注洛杉矶政策环境、审批效率、产品结构和经济适用房开发中的执行风险。'
-  }
-];
+const upcomingTopics: { title: string; body: string }[] = [];
 
 const geoPoints = [
   '帮助客户建立判断框架。',
@@ -180,20 +180,22 @@ export default function ResearchPage() {
         </div>
       </section>
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <SectionHeader eyebrow="Upcoming" title="即将发布的核心专题" />
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-            {upcomingTopics.map((item) => (
-              <Card className="bg-white" key={item.title}>
-                <span className="font-sans text-sm font-semibold text-gold">即将发布</span>
-                <h3 className="mt-3 font-sans text-lg font-semibold leading-snug text-ink">{item.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-muted">{item.body}</p>
-              </Card>
-            ))}
+      {upcomingTopics.length > 0 ? (
+        <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
+          <div className="container-shell">
+            <SectionHeader eyebrow="Upcoming" title="即将发布的核心专题" />
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {upcomingTopics.map((item) => (
+                <Card className="bg-white" key={item.title}>
+                  <span className="font-sans text-sm font-semibold text-gold">即将发布</span>
+                  <h3 className="mt-3 font-sans text-lg font-semibold leading-snug text-ink">{item.title}</h3>
+                  <p className="mt-4 text-sm leading-7 text-muted">{item.body}</p>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       <section className="py-12 md:py-24">
         <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">

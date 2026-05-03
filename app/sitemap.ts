@@ -17,6 +17,7 @@ const routes = [
   '/zh/research/cap-rate-irr-roe',
   '/zh/research/chinese-investors-us-real-estate-risks',
   '/zh/research/lp-gp-structure',
+  '/zh/research/los-angeles-ed1-affordable-housing',
   '/zh/research/us-real-estate-development-process',
   '/zh/research/eb5',
   '/zh/research/investment-pitfalls',
