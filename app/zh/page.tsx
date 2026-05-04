@@ -92,24 +92,43 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="border-b border-line bg-zinc-50 py-10 md:py-14">
+        <div className="container-shell grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="max-w-3xl">
+            <p className="font-sans text-sm font-semibold text-gold">Membership</p>
+            <h2 className="mt-2 font-sans text-2xl font-bold leading-tight">会员服务</h2>
+            <p className="mt-3 text-sm leading-7 text-muted md:text-base">
+              面向美国华人投资人、中国企业家、房地产项目方和跨境资源伙伴，SAREC 通过会员服务提供研究内容、项目沟通、活动考察和资源协同入口。
+            </p>
+          </div>
+          <Button href="/zh/membership/" variant="secondary">
+            了解会员服务
+          </Button>
+        </div>
+      </section>
+
       <section className="py-12 md:py-24">
         <div className="container-shell grid gap-8 md:grid-cols-[1fr_1.2fr] md:items-start">
           <div>
             <h2 className="font-sans text-2xl font-bold leading-tight md:text-4xl">{homePage.news.title}</h2>
             <p className="mt-4 text-sm leading-7 text-muted md:text-base">{homePage.news.subtitle}</p>
-            <div className="mt-8">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button href={homePage.news.cta.href} variant="secondary">
                 {homePage.news.cta.text}
+              </Button>
+              <Button href="/zh/research/" variant="primary">
+                查看全部研究内容
               </Button>
             </div>
           </div>
           <div className="grid gap-4">
-            {homePage.news.placeholders.map((item) => (
-              <Card className="bg-zinc-50" key={item}>
-                <p className="inline-flex rounded-[2px] border border-line bg-white px-2.5 py-1 font-sans text-xs font-semibold text-muted">
-                  Phase 2 placeholder
-                </p>
-                <h3 className="mt-3 font-sans text-lg font-semibold">{item}</h3>
+            {homePage.news.items.map((item) => (
+              <Card className="bg-zinc-50" key={item.href}>
+                <h3 className="font-sans text-lg font-semibold leading-snug">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-muted">{item.description}</p>
+                <Link className="mt-5 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink hover:text-gold" href={item.href}>
+                  阅读内容
+                </Link>
               </Card>
             ))}
           </div>

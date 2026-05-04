@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ContactForm } from '@/components/sections/ContactForm';
+import { ContactInquiryForm } from './contact-inquiry-form';
 import { Card } from '@/components/ui/Card';
 import { createPageMetadata } from '@/lib/seo';
 
@@ -112,7 +112,7 @@ export default function ContactPage() {
             如果你正在判断一个美国房地产项目、寻找项目合作、配置美国资产，或希望了解 SAREC 的服务产品，可以先提交基本信息。我们会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。
           </p>
           <div className="mt-10">
-            <a className={primaryButtonClass} href="#contact-form">
+            <a className={primaryButtonClass} href="#inquiry-form">
               开始提交需求
             </a>
           </div>
@@ -168,11 +168,15 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24" id="contact-form">
+      <section className="border-y border-line bg-zinc-50 py-12 md:py-24" id="inquiry-form">
         <div className="container-shell">
-          <SectionHeader eyebrow="Form" title="提交你的需求" />
+          <SectionHeader
+            eyebrow="Form"
+            title="提交项目或合作需求"
+            subtitle="你可以简单说明你的身份、项目阶段、合作需求或希望咨询的问题。SAREC 会根据资料完整度、项目阶段和合作可能性，判断下一步是否适合继续沟通。"
+          />
           <div className="mt-10">
-            <ContactForm />
+            <ContactInquiryForm />
           </div>
         </div>
       </section>

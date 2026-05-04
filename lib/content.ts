@@ -10,11 +10,15 @@ export const site = {
 };
 
 export const navItems = [
-  { label: '核心服务', href: '/zh/services/' },
-  { label: '项目与案例', href: '/zh/projects/' },
-  { label: '研究与观点', href: '/zh/research/' },
+  { label: '首页', href: '/zh/' },
   { label: '关于商会', href: '/zh/about/' },
-  { label: '联系我们', href: '/zh/contact/' }
+  { label: '服务产品', href: '/zh/services/' },
+  { label: '项目案例', href: '/zh/case-studies/' },
+  { label: '研究中心', href: '/zh/research/' },
+  { label: '新闻动态', href: '/zh/news/' },
+  { label: '会员服务', href: '/zh/membership/' },
+  { label: '活动与考察', href: '/zh/events/' },
+  { label: '联系我们', href: '/zh/contact#inquiry-form' }
 ];
 
 export const serviceItems = [
@@ -58,7 +62,7 @@ export const researchItems = [
   },
   {
     title: 'SAREC投资风险清单',
-    description: '第一阶段占位内容页，PDF 下载按钮待甲方提供文件后启用',
+    description: '从土地、审批、融资、建设、合作结构和退出路径识别项目关键风险',
     href: '/zh/research/risk-checklist/'
   }
 ];
@@ -164,13 +168,35 @@ export const homePage = {
     secondaryCTA: { text: '查看项目与案例', href: '/zh/projects/' }
   },
   news: {
-    title: 'SAREC每日市场简报',
-    subtitle: '围绕中美地产、开发、资本与政策变化，持续输出更接近实务判断的市场观察。',
-    cta: { text: '查看全部简报', href: '/zh/news/' },
-    placeholders: [
-      '这个模块的意义，不是追热点，而是帮助客户形成持续、稳健、可落地的判断框架。',
-      '围绕开发节奏、资本结构与政策变化，提供更接近执行面的观察。',
-      '作为下一阶段内容模块，这里将持续承接简报与阶段性判断更新。'
+    title: '新闻与研究动态',
+    subtitle: '查看 SAREC 最新研究内容、项目观察、活动更新和机构动态。',
+    cta: { text: '查看新闻与研究动态', href: '/zh/news/' },
+    items: [
+      {
+        title: '中国投资人美国房地产常见风险',
+        description: '从信息不对称、审批周期、融资可行性、租金假设、合作结构和退出路径等角度，建立跨境投资风险判断框架。',
+        href: '/zh/research/chinese-investors-us-real-estate-risks/'
+      },
+      {
+        title: 'LP / GP 合作结构详解',
+        description: '理解角色分工、资金路径、信息披露、费用机制、利润分配和退出安排等关键结构问题。',
+        href: '/zh/research/lp-gp-structure/'
+      },
+      {
+        title: '美国房地产开发完整流程',
+        description: '从土地筛选、审批、许可、融资、施工、运营到退出，理解开发项目背后的关键环节与风险。',
+        href: '/zh/research/us-real-estate-development-process/'
+      },
+      {
+        title: 'Cap Rate / IRR / ROE 如何理解',
+        description: '看懂房地产投资指标背后的收入、成本、融资、时间、退出和风险假设。',
+        href: '/zh/research/cap-rate-irr-roe/'
+      },
+      {
+        title: '洛杉矶 ED1 与经济适用房开发观察',
+        description: '从政策背景、审批效率、项目筛选、融资、建设、运营和退出路径，理解 ED1 项目中的机会与风险。',
+        href: '/zh/research/los-angeles-ed1-affordable-housing/'
+      }
     ]
   },
   trustTitle: '我们更看重长期可验证的合作能力，而不是短期话术。',

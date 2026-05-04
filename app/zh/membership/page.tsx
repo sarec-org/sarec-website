@@ -174,7 +174,7 @@ export default function MembershipPage() {
             会员服务面向中美房地产投资人、项目方、房地产从业者、新移民家庭和跨境企业主。我们希望通过专业内容、项目交流、资源协同、考察培训和长期关系沉淀，帮助会员更清楚地理解美国房地产机会、风险和合作路径。
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/contact/" variant="gold">
+            <Button href="/zh/contact#inquiry-form" variant="gold">
               申请成为会员
             </Button>
             <Button href="/zh/solutions/" variant="light">
@@ -311,7 +311,7 @@ export default function MembershipPage() {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/contact/" variant="light">
+            <Button href="/zh/contact#inquiry-form" variant="light">
               申请成为会员
             </Button>
             <Button href="/zh/solutions/" variant="gold">

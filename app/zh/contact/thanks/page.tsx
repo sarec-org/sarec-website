@@ -6,8 +6,8 @@ import { createPageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = {
   ...createPageMetadata({
-    title: '提交成功｜SAREC 中美房地产商会',
-    description: 'SAREC 已收到您的联系信息。',
+    title: '联系 SAREC｜中美房地产商会',
+    description: '通过邮箱、电话或网站表单联系 SAREC，提交项目或合作需求。',
     path: '/zh/contact/thanks'
   }),
   robots: { index: false, follow: false }
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 const links = [
   ['阅读：华人投资美国房产常见风险', '/zh/research/investment-pitfalls/'],
   ['了解：EB-5最新政策与SAREC判断', '/zh/research/eb5/'],
-  ['下载：SAREC投资风险清单', '/zh/research/risk-checklist/'],
+  ['查看：SAREC 投资风险清单', '/zh/research/risk-checklist/'],
   ['查看：近期合作项目案例', '/zh/projects/'],
   ['返回首页', '/zh/']
 ];
@@ -25,11 +25,13 @@ export default function ThanksPage() {
   return (
     <div className="py-16 md:py-24">
       <div className="container-shell max-w-4xl">
-        <h1 className="font-sans text-4xl font-bold md:text-5xl">感谢您的联系 ✓</h1>
+        <h1 className="font-sans text-4xl font-bold md:text-5xl">感谢你联系 SAREC</h1>
 
         <Card className="mt-10">
-          <h2 className="font-sans text-2xl font-semibold">我们已收到您的信息</h2>
-          <p className="mt-4 text-muted">您的联系信息已成功提交。SAREC团队将在 1个工作日内 与您取得联系。</p>
+          <h2 className="font-sans text-2xl font-semibold">请确认邮件是否已经发送</h2>
+          <p className="mt-4 text-muted">
+            当前网站采用本机邮箱发送需求信息。如果你的邮箱客户端没有自动打开或邮件没有发送成功，请返回联系页复制表单内容，并手动发送至 {site.email}。
+          </p>
         </Card>
 
         <Card className="mt-6">

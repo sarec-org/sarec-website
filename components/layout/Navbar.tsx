@@ -14,9 +14,11 @@ export function Navbar() {
           <span className="ml-2 hidden text-xs font-medium text-muted sm:inline">中美房地产商会</span>
         </a>
 
-        <nav className="hidden items-center gap-7 font-sans text-sm text-ink lg:flex">
+        <nav className="hidden items-center gap-4 font-sans text-[13px] text-ink xl:gap-5 xl:text-sm lg:flex">
+          <a href="/zh/">首页</a>
+          <a href="/zh/about/">关于商会</a>
           <div className="group relative py-7">
-            <a href="/zh/services/">核心服务</a>
+            <a href="/zh/services/">服务产品</a>
             <div className="invisible absolute left-0 top-full w-64 translate-y-2 border border-line bg-white p-3 opacity-0 shadow-soft transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
               {serviceItems.map((item) => (
                 <a className="block px-3 py-2 text-sm hover:bg-zinc-50" href={item.href} key={item.href}>
@@ -25,9 +27,9 @@ export function Navbar() {
               ))}
             </div>
           </div>
-          <a href="/zh/projects/">项目与案例</a>
+          <a href="/zh/case-studies/">项目案例</a>
           <div className="group relative py-7">
-            <a href="/zh/research/">研究与观点</a>
+            <a href="/zh/research/">研究中心</a>
             <div className="invisible absolute left-0 top-full w-72 translate-y-2 border border-line bg-white p-3 opacity-0 shadow-soft transition group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
               <a className="block px-3 py-2 text-sm hover:bg-zinc-50" href="/zh/research/">
                 研究总览
@@ -39,16 +41,17 @@ export function Navbar() {
               ))}
             </div>
           </div>
-          <a href="/zh/about/">关于商会</a>
-          <a href="/zh/contact/">联系我们</a>
+          <a href="/zh/news/">新闻动态</a>
+          <a href="/zh/membership/">会员服务</a>
+          <a href="/zh/events/">活动与考察</a>
         </nav>
 
         <div className="hidden lg:block">
           <a
             className="inline-flex min-h-12 w-full items-center justify-center rounded-[2px] border border-ink bg-ink px-5 py-3 text-center font-sans text-sm font-semibold leading-none text-white transition-colors duration-150 hover:bg-black sm:w-auto"
-            href="/zh/contact/"
+            href="/zh/contact#inquiry-form"
           >
-            预约咨询
+            联系我们
           </a>
         </div>
 
@@ -78,10 +81,10 @@ export function Navbar() {
             ))}
             <a
               className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-[2px] border border-ink bg-ink px-5 py-3 text-center font-sans text-sm font-semibold leading-none text-white transition-colors duration-150 hover:bg-black sm:w-auto"
-              href="/zh/contact/"
+              href="/zh/contact#inquiry-form"
               onClick={() => setOpen(false)}
             >
-              预约咨询
+              联系我们
             </a>
           </nav>
         </div>

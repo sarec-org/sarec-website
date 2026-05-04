@@ -76,7 +76,7 @@ const featuredInsights = [
     href: '/zh/research/framework/'
   },
   {
-    title: '美国房地产风险清单',
+    title: '美国房地产项目投资风险清单',
     body: '帮助投资人和项目方识别项目开发、合作结构、市场和融资中的关键风险。',
     href: '/zh/research/risk-checklist/'
   },
