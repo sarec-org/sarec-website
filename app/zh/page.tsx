@@ -8,6 +8,7 @@ import { H06ProjectsFeatured } from '@/components/sections/H06ProjectsFeatured';
 import { H07FounderIntro } from '@/components/sections/H07FounderIntro';
 import { H08ResearchPreview } from '@/components/sections/H08ResearchPreview';
 import { H09FAQ } from '@/components/sections/H09FAQ';
+import { H10CTABanner } from '@/components/sections/H10CTABanner';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 
 export const metadata: Metadata = {
@@ -44,20 +45,7 @@ export default function HomePage() {
 
       <H09FAQ />
 
-      <section
-        id="h10-cta-banner"
-        className="min-h-screen bg-[var(--ink-deepest)] flex items-center justify-center border-t border-[var(--line)]"
-      >
-        <div className="text-center">
-          <p
-            className="text-xs uppercase tracking-[0.22em] text-[var(--gold-dim)]"
-            style={{ fontFamily: 'var(--mono)' }}
-          >
-            H10 / CTA Banner
-          </p>
-          <p className="mt-4 text-[var(--ivory-mute)]">placeholder</p>
-        </div>
-      </section>
+      <H10CTABanner />
 
       <SiteFooter />
     </main>
