@@ -6,6 +6,7 @@ import { H04ThreeLayers } from '@/components/sections/H04ThreeLayers';
 import { H05TrustAnchors } from '@/components/sections/H05TrustAnchors';
 import { H06ProjectsFeatured } from '@/components/sections/H06ProjectsFeatured';
 import { H07FounderIntro } from '@/components/sections/H07FounderIntro';
+import { H08ResearchPreview } from '@/components/sections/H08ResearchPreview';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 
 export const metadata: Metadata = {
@@ -38,20 +39,7 @@ export default function HomePage() {
 
       <H07FounderIntro />
 
-      <section
-        id="h08-research"
-        className="min-h-screen bg-[var(--ink-deepest)] flex items-center justify-center border-t border-[var(--line)]"
-      >
-        <div className="text-center">
-          <p
-            className="text-xs uppercase tracking-[0.22em] text-[var(--gold-dim)]"
-            style={{ fontFamily: 'var(--mono)' }}
-          >
-            H08 / Research Preview
-          </p>
-          <p className="mt-4 text-[var(--ivory-mute)]">placeholder</p>
-        </div>
-      </section>
+      <H08ResearchPreview />
 
       <section
         id="h09-faq"
