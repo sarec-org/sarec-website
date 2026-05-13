@@ -5,22 +5,48 @@
   align-items: center;
   justify-content: center;
   padding: 120px 6vw;
-  background: var(--ink-deepest);
+  background:
+    radial-gradient(
+      ellipse 60% 40% at 50% 50%,
+      rgba(201, 165, 103, 0.08) 0%,
+      transparent 70%
+    ),
+    var(--ink-deepest);
   overflow: hidden;
   isolation: isolate;
 }
 
+/* Scroll cue — small 1px gold vertical line + SCROLL label near the
+   bottom. The line goes on ::before, the label on ::after. Both sit
+   above the grain/quoteMark layers via z-index. */
 .section::before {
   content: '';
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  bottom: calc(clamp(48px, 8vh, 80px) + 28px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  height: 32px;
+  background: var(--gold-dim);
+  opacity: 0.6;
+  z-index: 2;
   pointer-events: none;
-  background: radial-gradient(
-    ellipse 60% 40% at 50% 50%,
-    rgba(201, 165, 103, 0.08) 0%,
-    transparent 70%
-  );
+}
+
+.section::after {
+  content: 'SCROLL';
+  position: absolute;
+  bottom: clamp(48px, 8vh, 80px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: var(--text-label);
+  letter-spacing: 0.32em;
+  color: var(--ivory-mute);
+  text-transform: uppercase;
+  opacity: 0.6;
+  z-index: 2;
+  pointer-events: none;
 }
 
 .grain {
@@ -37,7 +63,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -65%);
+  transform: translate(-50%, -68%);
   z-index: 0;
   pointer-events: none;
   user-select: none;
@@ -66,7 +92,7 @@
 
 .line {
   font-family: var(--serif-zh);
-  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+  font-size: clamp(2rem, 3.6vw, 3.1rem);
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: -0.01em;
@@ -109,7 +135,7 @@
 .attribution {
   margin-top: 64px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--text-label);
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--ivory-mute);

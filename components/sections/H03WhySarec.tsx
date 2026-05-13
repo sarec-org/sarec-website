@@ -73,7 +73,10 @@ export function H03WhySarec() {
           viewport={{ once: true, amount: 0.25 }}
         >
           <span className={styles.eyebrow}>WHY SAREC · 为什么需要 SAREC</span>
-          <h2 className={styles.h2}>中美房地产合作的真正门槛</h2>
+          <h2 className={styles.h2}>
+            <span className={styles.h2Line}>中美房地产合作</span>
+            <span className={styles.h2Line}>真正的门槛</span>
+          </h2>
           <p className={styles.lead}>
             不是机会的缺乏，
             <br />

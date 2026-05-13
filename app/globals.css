@@ -33,8 +33,8 @@
   /* Ivory */
   --ivory:       #F2EAD6;
   --ivory-warm:  #EFE5CD;
-  --ivory-dim:   rgba(242, 234, 214, 0.88);
-  --ivory-mute:  rgba(242, 234, 214, 0.62);
+  --ivory-dim:   rgba(242, 234, 214, 0.95);
+  --ivory-mute:  rgba(242, 234, 214, 0.74);
   --ivory-faint: rgba(242, 234, 214, 0.36);
 
   /* Signal */
@@ -45,6 +45,38 @@
   --serif-en: var(--font-cormorant), 'Cormorant Garamond', 'Garamond', serif;
   --sans:     var(--font-inter-tight), 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
   --mono:     var(--font-jetbrains-mono), 'JetBrains Mono', 'SF Mono', monospace;
+
+  /* ============================================================
+     Semantic Typography Tokens — readability calibrated
+     ============================================================
+     Min size targets 13" laptop @ 1280px logical width.
+     Max size targets 1920px+ displays.
+     Use clamp(min, vw-based middle, max) for fluid scaling.
+     ============================================================ */
+
+  /* Display: hero H1, layer card H2 (商会 / 共投 / etc) — already large, keep */
+  --text-display: clamp(3.5rem, 6vw, 6.5rem);
+
+  /* Headline: section H2 (中美房地产合作的真正门槛 etc) */
+  --text-headline: clamp(2rem, 3vw, 2.8rem);
+
+  /* Sub-headline: smaller H3 / card title */
+  --text-subhead: clamp(1.3rem, 1.8vw, 1.6rem);
+
+  /* Tagline: Cormorant italic accents (副标题) */
+  --text-tagline: clamp(1.4rem, 1.9vw, 1.85rem);
+
+  /* Body lead: lead paragraph, emphasized body */
+  --text-body-lg: clamp(1rem, 1.15vw, 1.15rem);  /* ~16-18px */
+
+  /* Body: standard reading text, card descriptions */
+  --text-body: clamp(0.95rem, 1vw, 1.05rem);  /* ~15-17px */
+
+  /* Label: mono caps eyebrow, meta labels */
+  --text-label: clamp(0.75rem, 0.85vw, 0.825rem);  /* ~12-13px */
+
+  /* Link: inline / arrow links */
+  --text-link: clamp(0.9rem, 1vw, 1rem);  /* ~14-16px */
 }
 
 * { box-sizing: border-box; }

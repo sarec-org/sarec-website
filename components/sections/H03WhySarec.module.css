@@ -21,6 +21,7 @@
   top: 25vh;
   align-self: start;
   height: max-content;
+  padding-right: clamp(0px, 3vw, 80px);
 }
 
 .eyebrow {
@@ -28,7 +29,7 @@
   position: relative;
   padding-top: 28px;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--text-label);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--gold);
@@ -47,18 +48,22 @@
 
 .h2 {
   font-family: var(--serif-zh);
-  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-size: var(--text-headline);
   font-weight: 500;
-  line-height: 1.2;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   color: var(--ivory-warm);
   margin: 0 0 32px 0;
 }
 
+.h2Line {
+  display: block;
+}
+
 .lead {
   font-family: var(--serif-en);
   font-style: italic;
-  font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+  font-size: var(--text-tagline);
   font-weight: 400;
   line-height: 1.6;
   color: var(--ivory-dim);
@@ -68,6 +73,7 @@
 /* ===== Right column ===== */
 .right {
   grid-column: 6 / span 7;
+  padding-left: clamp(0px, 3vw, 80px);
 }
 
 .card {
@@ -91,7 +97,7 @@
   z-index: 0;
   font-family: var(--serif-en);
   font-style: italic;
-  font-size: 160px;
+  font-size: clamp(7rem, 11vw, 12rem);
   font-weight: 400;
   line-height: 1;
   color: var(--gold-faint);
@@ -103,7 +109,7 @@
   position: relative;
   z-index: 1;
   font-family: var(--serif-zh);
-  font-size: 1.4rem;
+  font-size: var(--text-subhead);
   font-weight: 500;
   line-height: 1.35;
   color: var(--ivory-warm);
@@ -114,7 +120,7 @@
   position: relative;
   z-index: 1;
   font-family: var(--sans);
-  font-size: 15px;
+  font-size: var(--text-body);
   line-height: 1.85;
   color: var(--ivory-dim);
   margin: 0;
@@ -131,9 +137,11 @@
     grid-column: 1 / -1;
     position: static;
     top: auto;
+    padding-right: 0;
   }
   .right {
     grid-column: 1 / -1;
+    padding-left: 0;
   }
 }
 
@@ -149,12 +157,10 @@
     padding: 32px 0 40px 0;
   }
   .cardNumber {
-    font-size: 96px;
     top: 4px;
     opacity: 0.85;
   }
   .cardTitle {
-    font-size: 1.2rem;
     padding-right: 64px;
   }
 }
