@@ -1,6 +1,4 @@
 import { site } from '@/lib/content';
-import { Footer } from '@/components/layout/Footer';
-import { Navbar } from '@/components/layout/Navbar';
 
 export default function ZhLayout({ children }: { children: React.ReactNode }) {
   const jsonLd = {
@@ -44,9 +42,7 @@ export default function ZhLayout({ children }: { children: React.ReactNode }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         type="application/ld+json"
       />
-      <Navbar />
-      <main>{children}</main>
-      <Footer />
+      {children}
     </>
   );
 }

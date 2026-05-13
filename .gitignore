@@ -9,3 +9,10 @@ dist/
 .DS_Store
 .vercel/
 *.tsbuildinfo
+sarec-website.zip
+.next/
+node_modules/
+*.log
+
+# Backup files
+*.backup-*

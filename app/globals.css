@@ -2,28 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   SAREC Design Tokens
+   Extracted from _handoff_to_claude/hero_v3b_final.html
+   DO NOT MODIFY VALUES
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
+  /* Ink / Deep Navy */
+  --ink-deepest: #020610;
+  --ink-deep:    #040B16;
+  --ink:         #06111E;
+  --ink-2:       #0B1A28;
+  --navy-deep:   #0A1730;
+
+  /* Lines */
+  --line:        rgba(232, 220, 196, 0.05);
+  --line-2:      rgba(232, 220, 196, 0.10);
+  --line-3:      rgba(232, 220, 196, 0.20);
+
+  /* Gold */
+  --gold:        #C9A567;
+  --gold-warm:   #DBBA7C;
+  --gold-bright: #ECD292;
+  --gold-blaze:  #F5DCA0;
+  --gold-muted:  #B89656;
+  --gold-dim:    rgba(201, 165, 103, 0.45);
+  --gold-faint:  rgba(201, 165, 103, 0.16);
+
+  /* Ivory */
+  --ivory:       #F2EAD6;
+  --ivory-warm:  #EFE5CD;
+  --ivory-dim:   rgba(242, 234, 214, 0.88);
+  --ivory-mute:  rgba(242, 234, 214, 0.62);
+  --ivory-faint: rgba(242, 234, 214, 0.36);
+
+  /* Signal */
+  --signal-green: #6FC18C;
+
+  /* Typography — bound to Next.js font variables from app/layout.tsx */
+  --serif-zh: var(--font-noto-serif-sc), 'Noto Serif SC', 'Songti SC', serif;
+  --serif-en: var(--font-cormorant), 'Cormorant Garamond', 'Garamond', serif;
+  --sans:     var(--font-inter-tight), 'Inter Tight', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono:     var(--font-jetbrains-mono), 'JetBrains Mono', 'SF Mono', monospace;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html {
-  scroll-behavior: auto;
-}
-
-body {
+html, body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: "Source Han Serif SC", "Songti SC", Georgia, serif;
-  font-size: 16px;
-  line-height: 1.75;
+  padding: 0;
+  background: var(--ink-deepest);
+  color: var(--ivory);
+  font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 a {
@@ -39,17 +73,84 @@ textarea {
 }
 
 ::selection {
-  background: #c8a96e;
-  color: #0a0a0a;
+  background: var(--gold);
+  color: var(--ink-deepest);
 }
 
-.container-shell {
-  width: min(100% - 32px, 1200px);
-  margin-inline: auto;
+/* ============================================================
+   Hero v3-B Final — keyframes (preserved verbatim from source)
+   ============================================================ */
+
+@keyframes videoFadeIn  { to { opacity: 1; } }
+
+@keyframes mapEnter {
+  from { opacity: 0; transform: rotateX(20deg) scale(1.15); }
+  to   { opacity: 0.55; transform: rotateX(8deg) scale(1.05); }
 }
 
-@media (min-width: 768px) {
-  .container-shell {
-    width: min(100% - 96px, 1200px);
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.85; }
+}
+
+@keyframes ringPulse {
+  0%   { r: 6;  opacity: 0.55; }
+  100% { r: 32; opacity: 0; }
+}
+
+@keyframes flowDash { to { stroke-dashoffset: -250; } }
+
+@keyframes radarSweep {
+  0%   { transform: skewX(-12deg) translateX(-100%); }
+  100% { transform: skewX(-12deg) translateX(450%); }
+}
+
+@keyframes floatUp {
+  0%   { transform: translateY(105vh) translateX(0); opacity: 0; }
+  8%   { opacity: 0.7; }
+  50%  { transform: translateY(50vh) translateX(35px); opacity: 0.6; }
+  92%  { opacity: 0.6; }
+  100% { transform: translateY(-10vh) translateX(-25px); opacity: 0; }
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes revealText {
+  from { transform: translateY(105%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes drawLine { to { transform: scaleX(1); } }
+
+@keyframes drawUnderline { to { transform: scaleX(1); } }
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+@keyframes scrollLine {
+  0%, 100% { transform: scaleY(1);   opacity: 0.5; }
+  50%      { transform: scaleY(1.4); opacity: 1; }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
