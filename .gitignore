@@ -1,18 +1,39 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Build output
 .next/
 out/
 dist/
+*.tsbuildinfo
+
+# Environment
 .env
 .env.local
 .env.production
 .env*.local
+
+# Mac
 .DS_Store
+
+# Vercel
 .vercel/
-*.tsbuildinfo
-sarec-website.zip
-.next/
-node_modules/
+
+# Logs
 *.log
 
 # Backup files
 *.backup-*
+*.bak
+
+# Earlier session backup zip
+sarec-website.zip
+
+# LARGE MEDIA — DO NOT commit (use Vercel Blob or CDN)
+/public/videos/
+/public/downloads/
+
+# IDE
+.vscode/
+.idea/
