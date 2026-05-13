@@ -1,12 +1,12 @@
-import { Footer } from '@/components/layout/Footer';
-import { Navbar } from '@/components/layout/Navbar';
+import { InternalNav } from '@/components/layout/InternalNav';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 
 export default function ZhInternalLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <Navbar />
+      <InternalNav />
       <main>{children}</main>
-      <Footer />
+      <SiteFooter />
     </>
   );
 }

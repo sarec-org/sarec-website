@@ -1,0 +1,373 @@
+/* ============================================================
+   InternalNav — shared chrome for non-home pages
+   Ported 1:1 from HeroV3B's embedded nav visual language,
+   adapted to render on solid background (no Hero behind it).
+   ============================================================ */
+
+.header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(2, 6, 16, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line-2);
+}
+
+/* ===== Util bar (top tier) ===== */
+.utilBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 64px 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  color: var(--ivory-faint);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+.utilBarLeft {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.utilBarRight {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.liveDot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal-green);
+  margin-right: 10px;
+  vertical-align: middle;
+  box-shadow: 0 0 8px rgba(111, 193, 140, 0.6);
+  animation: navLivePulse 2.4s infinite;
+}
+
+.lang {
+  color: var(--ivory-mute);
+  cursor: pointer;
+  transition: color 0.25s;
+}
+
+.lang:hover,
+.langActive {
+  color: var(--ivory);
+}
+
+/* ===== Main nav (lower tier) ===== */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 64px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  text-decoration: none;
+}
+
+.brandMark {
+  font-family: var(--serif-en);
+  font-size: 30px;
+  letter-spacing: 0.22em;
+  font-weight: 500;
+  color: var(--ivory);
+}
+
+.brandSub {
+  font-family: var(--serif-zh);
+  font-size: 12px;
+  letter-spacing: 0.34em;
+  color: var(--ivory-mute);
+}
+
+/* Menu */
+.navMenu {
+  display: flex;
+  gap: 44px;
+  list-style: none;
+  font-family: var(--serif-zh);
+  font-size: 14px;
+  color: var(--ivory-dim);
+  margin: 0;
+  padding: 0;
+}
+
+.navMenu a {
+  color: inherit;
+  text-decoration: none;
+  position: relative;
+  padding: 6px 0;
+  transition: color 0.3s;
+}
+
+.navMenu a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+
+.navMenu a:hover {
+  color: var(--gold-warm);
+}
+
+.navMenu a:hover::after {
+  transform: scaleX(1);
+}
+
+/* Active route */
+.navMenu a.navItemActive {
+  color: var(--gold-warm);
+}
+
+.navMenu a.navItemActive::after {
+  transform: scaleX(1);
+  background: var(--gold-dim);
+}
+
+/* Right cluster (hamburger + CTA) */
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* CTA */
+.cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--ivory-faint);
+  padding: 12px 22px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  background: rgba(4, 11, 22, 0.3);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--ivory);
+  cursor: pointer;
+  font-family: var(--serif-zh);
+  transition: all 0.3s;
+  overflow: hidden;
+  text-decoration: none;
+  z-index: 0;
+}
+
+.cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--ivory);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.4s ease;
+  z-index: -1;
+}
+
+.cta:hover {
+  color: var(--ink);
+  border-color: var(--ivory);
+}
+
+.cta:hover::before {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ===== Hamburger (mobile only) ===== */
+.hamburger {
+  display: none;
+  position: relative;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--ivory-faint);
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.hamburger:hover {
+  border-color: var(--ivory);
+}
+
+.hamburger span {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  height: 1px;
+  background: var(--ivory);
+  transition: transform 0.3s ease, opacity 0.3s ease, top 0.3s ease;
+}
+
+.hamburger span:nth-child(1) {
+  top: 12px;
+}
+.hamburger span:nth-child(2) {
+  top: 18px;
+}
+.hamburger span:nth-child(3) {
+  top: 24px;
+}
+
+.hamburgerOpen span:nth-child(1) {
+  top: 18px;
+  transform: rotate(45deg);
+}
+.hamburgerOpen span:nth-child(2) {
+  opacity: 0;
+}
+.hamburgerOpen span:nth-child(3) {
+  top: 18px;
+  transform: rotate(-45deg);
+}
+
+/* ===== Mobile slide-in panel ===== */
+.mobilePanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 80vw;
+  max-width: 360px;
+  height: 100vh;
+  background: var(--ink-deepest);
+  border-left: 1px solid var(--line-2);
+  z-index: 110;
+  padding: 96px 32px 32px;
+  transform: translateX(100%);
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  display: none;
+}
+
+.mobilePanelOpen {
+  transform: translateX(0);
+}
+
+.mobileMenu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobileMenu li {
+  border-bottom: 1px solid var(--line-2);
+}
+
+.mobileMenu li:first-child {
+  border-top: 1px solid var(--line-2);
+}
+
+.mobileMenu a {
+  display: block;
+  padding: 20px 0;
+  font-family: var(--serif-zh);
+  font-size: 18px;
+  letter-spacing: -0.01em;
+  color: var(--ivory-dim);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.mobileMenu a:hover,
+.mobileMenu a.navItemActive {
+  color: var(--gold-warm);
+}
+
+/* Mobile overlay backdrop */
+.mobileOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 16, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 105;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  display: none;
+}
+
+.mobileOverlayOpen {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ===== Mobile breakpoint ===== */
+@media (max-width: 768px) {
+  .utilBar {
+    padding: 12px 20px 10px;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+  }
+  .utilBarLeft {
+    gap: 14px;
+  }
+  .utilBarLeft span:nth-child(2) {
+    display: none;
+  }
+  .utilBarRight {
+    display: none;
+  }
+  .nav {
+    padding: 14px 20px;
+  }
+  .brandMark {
+    font-size: 22px;
+    letter-spacing: 0.18em;
+  }
+  .brandSub {
+    font-size: 10px;
+    letter-spacing: 0.26em;
+  }
+  .navMenu {
+    display: none;
+  }
+  .cta {
+    padding: 9px 16px;
+    font-size: 12px;
+  }
+  .hamburger {
+    display: block;
+  }
+  .mobilePanel {
+    display: block;
+  }
+  .mobileOverlay {
+    display: block;
+  }
+}
+
+/* ===== Keyframe (duplicated locally so CSS Modules scoping resolves) ===== */
+@keyframes navLivePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
