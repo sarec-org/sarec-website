@@ -5,6 +5,7 @@ import { H03WhySarec } from '@/components/sections/H03WhySarec';
 import { H04ThreeLayers } from '@/components/sections/H04ThreeLayers';
 import { H05TrustAnchors } from '@/components/sections/H05TrustAnchors';
 import { H06ProjectsFeatured } from '@/components/sections/H06ProjectsFeatured';
+import { H07FounderIntro } from '@/components/sections/H07FounderIntro';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 
 export const metadata: Metadata = {
@@ -35,20 +36,7 @@ export default function HomePage() {
 
       <H06ProjectsFeatured />
 
-      <section
-        id="h07-founder"
-        className="min-h-screen bg-[var(--ink-deep)] flex items-center justify-center border-t border-[var(--line)]"
-      >
-        <div className="text-center">
-          <p
-            className="text-xs uppercase tracking-[0.22em] text-[var(--gold-dim)]"
-            style={{ fontFamily: 'var(--mono)' }}
-          >
-            H07 / Founder Introduction
-          </p>
-          <p className="mt-4 text-[var(--ivory-mute)]">placeholder</p>
-        </div>
-      </section>
+      <H07FounderIntro />
 
       <section
         id="h08-research"
