@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { HeroV3B } from '@/components/hero/HeroV3B';
+import { H02CinematicQuote } from '@/components/sections/H02CinematicQuote';
+import { H03WhySarec } from '@/components/sections/H03WhySarec';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 
 export const metadata: Metadata = {
@@ -21,35 +23,8 @@ export default function HomePage() {
           Each is a 100vh dark section with a section ID and copy stub.
           Will be replaced by full implementations in subsequent prompts. */}
 
-      <section
-        id="h02-cinematic-quote"
-        className="min-h-screen bg-[var(--ink-deepest)] flex items-center justify-center border-t border-[var(--line)]"
-      >
-        <div className="text-center">
-          <p
-            className="text-xs uppercase tracking-[0.22em] text-[var(--gold-dim)]"
-            style={{ fontFamily: 'var(--mono)' }}
-          >
-            H02 / Cinematic Quote
-          </p>
-          <p className="mt-4 text-[var(--ivory-mute)]">placeholder — implementation in next prompt</p>
-        </div>
-      </section>
-
-      <section
-        id="h03-why-sarec"
-        className="min-h-screen bg-[var(--ink-deep)] flex items-center justify-center border-t border-[var(--line)]"
-      >
-        <div className="text-center">
-          <p
-            className="text-xs uppercase tracking-[0.22em] text-[var(--gold-dim)]"
-            style={{ fontFamily: 'var(--mono)' }}
-          >
-            H03 / Why SAREC
-          </p>
-          <p className="mt-4 text-[var(--ivory-mute)]">placeholder</p>
-        </div>
-      </section>
+      <H02CinematicQuote />
+      <H03WhySarec />
 
       <section
         id="h04-three-layers"

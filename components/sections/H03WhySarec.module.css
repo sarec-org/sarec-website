@@ -1,0 +1,160 @@
+.section {
+  position: relative;
+  background: var(--ink-deep);
+  padding: 160px 6vw;
+  overflow: hidden;
+}
+
+.container {
+  position: relative;
+  max-width: 1440px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 64px;
+}
+
+/* ===== Left column ===== */
+.left {
+  grid-column: 1 / span 5;
+  position: sticky;
+  top: 25vh;
+  align-self: start;
+  height: max-content;
+}
+
+.eyebrow {
+  display: block;
+  position: relative;
+  padding-top: 28px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 24px;
+}
+
+.eyebrow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 1px;
+  background: var(--gold-dim);
+}
+
+.h2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 3vw, 2.8rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--ivory-warm);
+  margin: 0 0 32px 0;
+}
+
+.lead {
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--ivory-dim);
+  margin: 0;
+}
+
+/* ===== Right column ===== */
+.right {
+  grid-column: 6 / span 7;
+}
+
+.card {
+  position: relative;
+  padding: 48px 0 56px 0;
+  isolation: isolate;
+}
+
+.card + .card {
+  border-top: 1px solid var(--line-3);
+}
+
+.card:first-child {
+  border-top: 1px solid var(--gold-dim);
+}
+
+.cardNumber {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  z-index: 0;
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-size: 160px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--gold-faint);
+  pointer-events: none;
+  user-select: none;
+}
+
+.cardTitle {
+  position: relative;
+  z-index: 1;
+  font-family: var(--serif-zh);
+  font-size: 1.4rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ivory-warm);
+  margin: 0 0 16px 0;
+}
+
+.cardBody {
+  position: relative;
+  z-index: 1;
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--ivory-dim);
+  margin: 0;
+  max-width: 540px;
+}
+
+/* ===== Tablet ===== */
+@media (max-width: 1023px) {
+  .container {
+    grid-template-columns: 1fr;
+    gap: 56px;
+  }
+  .left {
+    grid-column: 1 / -1;
+    position: static;
+    top: auto;
+  }
+  .right {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+  .section {
+    padding: 96px 24px;
+  }
+  .container {
+    gap: 40px;
+  }
+  .card {
+    padding: 32px 0 40px 0;
+  }
+  .cardNumber {
+    font-size: 96px;
+    top: 4px;
+    opacity: 0.85;
+  }
+  .cardTitle {
+    font-size: 1.2rem;
+    padding-right: 64px;
+  }
+}

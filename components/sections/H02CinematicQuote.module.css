@@ -1,0 +1,141 @@
+.section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 6vw;
+  background: var(--ink-deepest);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 60% 40% at 50% 50%,
+    rgba(201, 165, 103, 0.08) 0%,
+    transparent 70%
+  );
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0.95 0 0 0 0 0.9 0 0 0 0 0.84 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.quoteMarkWrap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -65%);
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+  line-height: 0.8;
+}
+
+.quoteMark {
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(20rem, 28vw, 32rem);
+  color: var(--gold-faint);
+  line-height: 0.8;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.line {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.6rem, 3.2vw, 2.6rem);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+  text-shadow: 0 2px 18px rgba(4, 11, 22, 0.55);
+}
+
+.accent {
+  position: relative;
+  display: inline-block;
+  padding: 0 0.05em;
+  font-family: var(--serif-en);
+  font-style: italic;
+  color: var(--gold-warm);
+}
+
+.accent::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.08em;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--gold) 15%,
+    var(--gold) 85%,
+    transparent 100%
+  );
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.underlineActive::after {
+  transform: scaleX(1);
+}
+
+.attribution {
+  margin-top: 64px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--ivory-mute);
+}
+
+@media (max-width: 1279px) {
+  .quoteMark {
+    font-size: clamp(14rem, 22vw, 20rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .quoteMark {
+    font-size: clamp(8rem, 24vw, 12rem);
+  }
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 96px 24px;
+  }
+  .line {
+    font-size: 1.6rem;
+  }
+  .attribution {
+    margin-top: 48px;
+    letter-spacing: 0.22em;
+  }
+}
