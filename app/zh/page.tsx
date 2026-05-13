@@ -3,6 +3,7 @@ import { HeroV3B } from '@/components/hero/HeroV3B';
 import { H02CinematicQuote } from '@/components/sections/H02CinematicQuote';
 import { H03WhySarec } from '@/components/sections/H03WhySarec';
 import { H04ThreeLayers } from '@/components/sections/H04ThreeLayers';
+import { H05TrustAnchors } from '@/components/sections/H05TrustAnchors';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 
 export const metadata: Metadata = {
@@ -29,20 +30,7 @@ export default function HomePage() {
 
       <H04ThreeLayers />
 
-      <section
-        id="h05-trust-anchors"
-        className="min-h-screen bg-[var(--ink-deep)] flex items-center justify-center border-t border-[var(--line)]"
-      >
-        <div className="text-center">
-          <p
-            className="text-xs uppercase tracking-[0.22em] text-[var(--gold-dim)]"
-            style={{ fontFamily: 'var(--mono)' }}
-          >
-            H05 / Trust Anchors
-          </p>
-          <p className="mt-4 text-[var(--ivory-mute)]">placeholder</p>
-        </div>
-      </section>
+      <H05TrustAnchors />
 
       <section
         id="h06-projects"

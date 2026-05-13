@@ -1,6 +1,6 @@
 /* ============================================================
    H04 Three Layers — Vertical Sticky Stacked Cards
-   3 cards each position:sticky;top:0;height:100vh inside a 320vh
+   3 cards each position:sticky;top:0;height:100vh inside a 310vh
    outer. Z-index 1/2/3 makes later cards paint over earlier ones
    as they reach their sticky boundary. Pure CSS stack; framer-motion
    only powers per-card content reveal and the progress indicator.
@@ -8,7 +8,7 @@
 
 .outer {
   position: relative;
-  height: 320vh;
+  height: 310vh;
   background: var(--ink-deepest);
 }
 
