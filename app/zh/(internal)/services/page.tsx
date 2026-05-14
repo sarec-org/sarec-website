@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 import { InternalHero } from '@/components/sections/InternalHero';
 import { InternalCTABanner } from '@/components/sections/InternalCTABanner';
+import { S02ThreeLayersOverview } from '@/components/sections/services/S02ThreeLayersOverview';
+import { S03Chamber } from '@/components/sections/services/S03Chamber';
+import { S04Advisory } from '@/components/sections/services/S04Advisory';
+import { S05CoInvest } from '@/components/sections/services/S05CoInvest';
+import { S06PartnerNetwork } from '@/components/sections/services/S06PartnerNetwork';
 import { createPageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = createPageMetadata({
@@ -36,23 +41,11 @@ export default function ServicesPage() {
         background="standard"
       />
 
-      {/* TODO Phase 4 Step 4b: S02 三层架构总览, S03 Layer 1 Chamber 详细,
-          S04 Layer 2 Advisory 详细, S05 Layer 3 Co-Invest 详细,
-          S06 专业服务伙伴网络 */}
-      <section
-        style={{
-          background: 'var(--ink-deep)',
-          padding: 'clamp(80px, 12vh, 140px) clamp(24px, 5vw, 80px)',
-          textAlign: 'center',
-          color: 'var(--ivory-mute)',
-          fontFamily: 'var(--mono)',
-          fontSize: '13px',
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase'
-        }}
-      >
-        S02 — S06 · COMING IN STEP 4B
-      </section>
+      <S02ThreeLayersOverview />
+      <S03Chamber />
+      <S04Advisory />
+      <S05CoInvest />
+      <S06PartnerNetwork />
 
       <InternalCTABanner
         eyebrow="BEGIN · 开始合作"

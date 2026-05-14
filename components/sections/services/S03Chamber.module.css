@@ -1,0 +1,290 @@
+/* ============================================================
+   S03 / Layer 1 商会 (id="chamber")
+   5 services editorial list + 3 membership tiers + [note] +
+   inline CTA. Background: var(--ink-deepest).
+   ============================================================ */
+
+.section {
+  position: relative;
+  background: var(--ink-deepest);
+  padding: clamp(80px, 12vh, 140px) clamp(24px, 5vw, 80px);
+  overflow: hidden;
+  scroll-margin-top: 120px;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* ===== Header ===== */
+.header {
+  max-width: 760px;
+  margin-bottom: clamp(56px, 8vh, 96px);
+}
+
+.eyebrow {
+  display: block;
+  position: relative;
+  padding-top: 28px;
+  margin-bottom: 22px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.eyebrow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 1px;
+  background: var(--gold-dim);
+}
+
+.h2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 18px 0;
+}
+
+.tagline {
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-size: var(--text-tagline);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--gold-warm);
+  margin: 0;
+}
+
+/* ===== Section sub-eyebrow (for membership block heading) ===== */
+.subEyebrow {
+  display: block;
+  position: relative;
+  padding-top: 22px;
+  margin-bottom: 18px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.subEyebrow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 1px;
+  background: var(--gold-dim);
+}
+
+.subH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+  margin: 0 0 36px 0;
+}
+
+/* ===== Services list ===== */
+.servicesList {
+  list-style: none;
+  margin: 0 0 clamp(72px, 10vh, 120px) 0;
+  padding: 0;
+}
+
+.serviceItem {
+  position: relative;
+  padding: clamp(24px, 3vh, 36px) 0;
+  border-top: 1px solid var(--line-2);
+}
+
+.serviceItem:last-child {
+  border-bottom: 1px solid var(--line-2);
+}
+
+.serviceHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0 0 14px 0;
+}
+
+.serviceNumber {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.serviceTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+  margin: 0;
+}
+
+.serviceBody {
+  font-family: var(--sans);
+  font-size: var(--text-body);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  margin: 0;
+  max-width: 880px;
+}
+
+.serviceBody p {
+  margin: 0;
+}
+.serviceBody p + p {
+  margin-top: 4px;
+}
+
+/* ===== Membership tiers ===== */
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(20px, 2.5vw, 40px);
+  margin: 0 0 clamp(32px, 4vh, 56px) 0;
+}
+
+.tier {
+  position: relative;
+  padding: clamp(28px, 3vw, 36px);
+  background: rgba(2, 6, 16, 0.35);
+  border: 1px solid var(--line-3);
+  transition: border-color 0.4s ease;
+}
+
+.tier:hover {
+  border-color: var(--gold-dim);
+}
+
+.tierTitleRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line-2);
+}
+
+.tierTitleZh {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.8vw, 1.45rem);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ivory);
+}
+
+.tierTitleEn {
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--gold-warm);
+}
+
+.tierFitLabel {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--gold-dim);
+  margin-right: 8px;
+}
+
+.tierFit {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+/* ===== Note ===== */
+.note {
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ivory-mute);
+  margin: 0 0 clamp(40px, 5vh, 64px) 0;
+  max-width: 880px;
+}
+
+.noteLabel {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin-right: 8px;
+}
+
+/* ===== Inline CTA ===== */
+.ctaWrap {
+  display: flex;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 26px;
+  border: 1px solid var(--gold-dim);
+  font-family: var(--sans);
+  font-size: var(--text-link);
+  letter-spacing: 0.05em;
+  color: var(--gold-warm);
+  text-decoration: none;
+  transition: all 0.4s ease;
+}
+
+.ctaArrow {
+  display: inline-block;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cta:hover {
+  border-color: var(--gold);
+  background: rgba(201, 165, 103, 0.08);
+  color: var(--gold);
+}
+
+.cta:hover .ctaArrow {
+  transform: translateX(4px);
+}
+
+/* ===== Tablet / mobile ===== */
+@media (max-width: 1023px) {
+  .tiers {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .h2 {
+    font-size: clamp(1.7rem, 6vw, 2.2rem);
+  }
+  .serviceItem {
+    padding: 24px 0;
+  }
+}
