@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
+import { ChamberIcon, AdvisoryIcon, CoInvestIcon } from './icons';
 import styles from './S02ThreeLayersOverview.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+type IconComponent = (props: { className?: string; size?: number }) => JSX.Element;
 
 type Layer = {
   layerLabel: string;
@@ -15,6 +18,7 @@ type Layer = {
   partnership: string;
   linkLabel: string;
   linkHref: string;
+  Icon: IconComponent;
 };
 
 const LAYERS: Layer[] = [
@@ -26,7 +30,8 @@ const LAYERS: Layer[] = [
     entry: '会员服务',
     partnership: '年度会员费',
     linkLabel: '查看商会详细',
-    linkHref: '#chamber'
+    linkHref: '#chamber',
+    Icon: ChamberIcon
   },
   {
     layerLabel: 'LAYER 02',
@@ -36,7 +41,8 @@ const LAYERS: Layer[] = [
     entry: '咨询服务',
     partnership: '按项目阶段约定',
     linkLabel: '查看咨询撮合详细',
-    linkHref: '#advisory'
+    linkHref: '#advisory',
+    Icon: AdvisoryIcon
   },
   {
     layerLabel: 'LAYER 03',
@@ -46,7 +52,8 @@ const LAYERS: Layer[] = [
     entry: '项目合作',
     partnership: '以项目协议为准',
     linkLabel: '查看共投详细',
-    linkHref: '#co-invest'
+    linkHref: '#co-invest',
+    Icon: CoInvestIcon
   }
 ];
 
@@ -113,6 +120,7 @@ export function S02ThreeLayersOverview() {
               className={styles.card}
               variants={cardVariants}
             >
+              <layer.Icon className={styles.cardIcon} />
               <span className={styles.cardLayerLabel}>{layer.layerLabel}</span>
               <div className={styles.cardTitleRow}>
                 <h3 className={styles.cardTitleZh}>{layer.titleZh}</h3>

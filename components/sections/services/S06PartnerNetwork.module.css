@@ -85,6 +85,20 @@
   background: rgba(2, 6, 16, 0.55);
 }
 
+/* SVG icon at the very top of each card. Parent-hover triggers
+   opacity change (not icon-self-hover). */
+.cardIcon {
+  display: block;
+  color: var(--gold);
+  opacity: 0.4;
+  margin-bottom: 24px;
+  transition: opacity 300ms ease-out;
+}
+
+.partnerCard:hover .cardIcon {
+  opacity: 1;
+}
+
 .partnerCode {
   display: block;
   font-family: var(--mono);

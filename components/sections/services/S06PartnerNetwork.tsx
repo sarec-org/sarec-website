@@ -1,41 +1,56 @@
 'use client';
 
 import { motion, type Variants } from 'framer-motion';
+import {
+  ImmigrationIcon,
+  LegalIcon,
+  WealthIcon,
+  TaxIcon,
+  InsuranceIcon
+} from './icons';
 import styles from './S06PartnerNetwork.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+type IconComponent = (props: { className?: string; size?: number }) => JSX.Element;
 
 type Partner = {
   code: string;
   title: string;
   body: string;
+  Icon: IconComponent;
 };
 
 const PARTNERS: Partner[] = [
   {
     code: '01',
     title: '移民服务',
-    body: 'EB-5 / L1 / E2 / 投资移民相关法律服务'
+    body: 'EB-5 / L1 / E2 / 投资移民相关法律服务',
+    Icon: ImmigrationIcon
   },
   {
     code: '02',
     title: '法律服务',
-    body: '公司法 / 合同法 / 跨境合规 / 税务结构'
+    body: '公司法 / 合同法 / 跨境合规 / 税务结构',
+    Icon: LegalIcon
   },
   {
     code: '03',
     title: '财富管理',
-    body: '家族办公室 / 信托 / 资产配置'
+    body: '家族办公室 / 信托 / 资产配置',
+    Icon: WealthIcon
   },
   {
     code: '04',
     title: '税务服务',
-    body: '跨境税务 / 公司税 / 个人税'
+    body: '跨境税务 / 公司税 / 个人税',
+    Icon: TaxIcon
   },
   {
     code: '05',
     title: '保险服务',
-    body: '人寿 / 商业保险 / 跨境保险'
+    body: '人寿 / 商业保险 / 跨境保险',
+    Icon: InsuranceIcon
   }
 ];
 
@@ -104,6 +119,7 @@ export function S06PartnerNetwork() {
               className={styles.partnerCard}
               variants={cardVariants}
             >
+              <partner.Icon className={styles.cardIcon} />
               <span className={styles.partnerCode}>{partner.code} /</span>
               <h3 className={styles.partnerTitle}>{partner.title}</h3>
               <p className={styles.partnerBody}>{partner.body}</p>
