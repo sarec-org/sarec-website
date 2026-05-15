@@ -1,0 +1,9 @@
+/* Editorial filter applied via class so parent hover can swap it.
+   Inline-style filter would block the hover override (specificity). */
+.hoverEnabled {
+  filter: var(--filter-editorial);
+}
+
+*:hover > .hoverEnabled {
+  filter: var(--filter-editorial-hover);
+}

@@ -1,0 +1,44 @@
+.chapterMark {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.number {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--gold);
+  letter-spacing: 0.15em;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.line {
+  width: 30px;
+  height: 0.5px;
+  background-color: var(--gold);
+  opacity: 0.5;
+}
+
+@media (max-width: 1023px) {
+  .number {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 767px) {
+  .number {
+    font-size: 12px;
+  }
+
+  .line {
+    width: 24px;
+  }
+
+  .chapterMark {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+}

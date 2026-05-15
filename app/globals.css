@@ -40,6 +40,19 @@
   /* Signal */
   --signal-green: #6FC18C;
 
+  /* Editorial filter for general imagery */
+  --filter-editorial: brightness(0.85) contrast(1.15)
+                      saturate(0.7) sepia(0.12);
+
+  /* Hover state for editorial imagery */
+  --filter-editorial-hover: brightness(0.95) contrast(1.2)
+                            saturate(0.85) sepia(0.08);
+
+  /* Light filter for project renderings (less aggressive,
+     preserve modern architecture detail) */
+  --filter-editorial-light: brightness(0.92) contrast(1.08)
+                            saturate(0.85) sepia(0.06);
+
   /* Typography — bound to Next.js font variables from app/layout.tsx */
   --serif-zh: var(--font-noto-serif-sc), 'Noto Serif SC', 'Songti SC', serif;
   --serif-en: var(--font-cormorant), 'Cormorant Garamond', 'Garamond', serif;

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { InternalHero } from '@/components/sections/InternalHero';
 import { InternalCTABanner } from '@/components/sections/InternalCTABanner';
+import { S01HeroSpread } from '@/components/sections/services/S01HeroSpread';
 import { S02ThreeLayersOverview } from '@/components/sections/services/S02ThreeLayersOverview';
 import { S03Chamber } from '@/components/sections/services/S03Chamber';
 import { S04Advisory } from '@/components/sections/services/S04Advisory';
@@ -18,28 +18,7 @@ export const metadata: Metadata = createPageMetadata({
 export default function ServicesPage() {
   return (
     <>
-      <InternalHero
-        eyebrow="SERVICES · 服务架构"
-        h1="三层服务架构"
-        sub={
-          <>
-            SAREC 围绕项目判断、结构设计、风险控制与资源协同，
-            <br />
-            按客户参与深度分为三层：
-            <br />
-            商会 · 咨询撮合 · 共投。
-          </>
-        }
-        primaryCTA={{
-          label: '预约 30 分钟沟通',
-          href: '/zh/contact'
-        }}
-        secondaryCTA={{
-          label: '查看会员服务',
-          href: '/zh/membership'
-        }}
-        background="standard"
-      />
+      <S01HeroSpread />
 
       <S02ThreeLayersOverview />
       <S03Chamber />
