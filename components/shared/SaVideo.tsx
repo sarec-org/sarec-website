@@ -19,6 +19,16 @@ const INLINE_FILTER: Record<string, string | undefined> = {
   none: undefined,
 };
 
+const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE ?? '';
+
+function resolveMediaUrl(path: string): string {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!MEDIA_BASE) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${MEDIA_BASE}${normalizedPath}`;
+}
+
 export function SaVideo({
   src,
   poster,
@@ -29,6 +39,8 @@ export function SaVideo({
   filterIntensity = 'editorial',
 }: SaVideoProps) {
   const inlineFilter = INLINE_FILTER[filterIntensity];
+  const resolvedSrc = resolveMediaUrl(src);
+  const resolvedPoster = resolveMediaUrl(poster);
 
   const style: CSSProperties = {
     transition: 'filter 400ms ease-out',
@@ -47,8 +59,8 @@ export function SaVideo({
     <>
       <video
         className={`${videoStyles.desktopOnly} ${className ?? ''}`.trim()}
-        src={src}
-        poster={poster}
+        src={resolvedSrc}
+        poster={resolvedPoster}
         autoPlay
         muted
         loop
@@ -60,7 +72,7 @@ export function SaVideo({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         className={`${videoStyles.mobileOnly} ${className ?? ''}`.trim()}
-        src={poster}
+        src={resolvedPoster}
         alt={alt}
         style={style}
         loading="lazy"

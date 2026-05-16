@@ -29,13 +29,23 @@ const cx = (...keys: Array<string | false | null | undefined>) =>
     .filter(Boolean)
     .join(' ');
 
+const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE ?? '';
+
+function resolveMediaUrl(path: string): string {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!MEDIA_BASE) return path;
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${MEDIA_BASE}${normalizedPath}`;
+}
+
 export function HeroV3B() {
   return (
     <section className={styles.hero}>
       {/* Layer 0: VIDEO */}
       <div className={styles['video-bg']}>
         <video autoPlay muted loop playsInline preload="auto">
-          <source src="/videos/la-hero-main.mp4" type="video/mp4" />
+          <source src={resolveMediaUrl('/videos/la-hero-main.mp4')} type="video/mp4" />
           Your browser does not support video.
         </video>
       </div>
