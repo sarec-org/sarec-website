@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
+import { SaVideo } from '@/components/shared/SaVideo';
 import styles from './S03Chamber.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -114,6 +115,28 @@ export function S03Chamber() {
   return (
     <section id="chamber" className={styles.section}>
       <div className={styles.container}>
+        <div className={styles.stickyBlock}>
+          <div className={styles.videoCol}>
+            <div className={styles.videoSticky}>
+              <div className={styles.videoFrame}>
+                <SaVideo
+                  src="/videos/chamber-boardroom-discussion.mp4"
+                  poster="/videos/chamber-boardroom-discussion-poster.jpg"
+                  alt="商会会议室研讨"
+                  fill
+                  filterIntensity="editorial"
+                />
+              </div>
+              <div className={styles.videoCaption}>
+                <span className={styles.videoCaptionBracket}>[</span>
+                <span className={styles.videoCaptionLabel}>BOARDROOM</span>
+                <span className={styles.videoCaptionDivider}>·</span>
+                <span className={styles.videoCaptionZh}>商会研讨</span>
+                <span className={styles.videoCaptionBracket}>]</span>
+              </div>
+            </div>
+          </div>
+          <div className={styles.contentCol}>
         {/* Header */}
         <motion.div
           className={styles.header}
@@ -159,6 +182,8 @@ export function S03Chamber() {
             </motion.li>
           ))}
         </motion.ul>
+          </div>
+        </div>
 
         {/* Membership tiers heading */}
         <motion.div
