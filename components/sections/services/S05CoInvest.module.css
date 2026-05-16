@@ -71,12 +71,26 @@
   list-style: none;
   margin: 0 0 clamp(72px, 10vh, 120px) 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(40px, 5vw, 72px);
 }
 
 .mechanismItem {
   position: relative;
   padding: clamp(28px, 4vh, 44px) 0;
+  padding-left: clamp(20px, 2vw, 32px);
   border-top: 1px solid var(--line-2);
+}
+
+.mechanismItem::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--gold-dim);
 }
 
 .mechanismItem:last-child {
@@ -151,6 +165,9 @@
 /* ===== Project types subsection ===== */
 .typesBlock {
   margin-bottom: clamp(40px, 5vh, 64px);
+  margin-left: auto;
+  max-width: 540px;
+  margin-top: clamp(80px, 10vh, 120px);
 }
 
 .subEyebrow {
@@ -259,12 +276,24 @@
   transform: translateX(4px);
 }
 
-/* ===== Mobile ===== */
+/* ===== Tablet / mobile ===== */
+@media (max-width: 1023px) {
+  .mechanisms {
+    grid-template-columns: 1fr;
+    gap: clamp(40px, 6vh, 56px);
+  }
+  .typesBlock {
+    margin-left: 0;
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .h2 {
     font-size: clamp(1.7rem, 6vw, 2.2rem);
   }
   .mechanismItem {
     padding: 24px 0;
+    padding-left: clamp(20px, 2vw, 32px);
   }
 }
