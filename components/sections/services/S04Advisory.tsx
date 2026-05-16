@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
+import { SaVideo } from '@/components/shared/SaVideo';
 import styles from './S04Advisory.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -87,23 +88,37 @@ export function S04Advisory() {
     <section id="advisory" className={styles.section}>
       <div className={styles.container}>
         {/* Header */}
-        <motion.div
-          className={styles.header}
-          variants={headerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-        >
-          <motion.span className={styles.eyebrow} variants={headerItem}>
-            LAYER 02 · ADVISORY &amp; DEAL COORDINATION
-          </motion.span>
-          <motion.h2 className={styles.h2} variants={headerItem}>
-            咨询撮合
-          </motion.h2>
-          <motion.p className={styles.tagline} variants={headerItem}>
-            撮合只是入口，把控才是核心。
-          </motion.p>
-        </motion.div>
+        <div className={styles.topBlock}>
+          <div className={styles.videoCol}>
+            <div className={styles.videoFrame}>
+              <SaVideo
+                src="/videos/advisory-presentation.mp4"
+                poster="/videos/advisory-presentation-poster.jpg"
+                alt="顾问咨询场景"
+                fill
+                filterIntensity="editorial"
+              />
+            </div>
+            <span className={styles.videoCaption}>[ ADVISORY · 咨询研讨 ]</span>
+          </div>
+          <motion.div
+            className={styles.headerCol}
+            variants={headerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <motion.span className={styles.eyebrow} variants={headerItem}>
+              LAYER 02 · ADVISORY &amp; DEAL COORDINATION
+            </motion.span>
+            <motion.h2 className={styles.h2} variants={headerItem}>
+              咨询撮合
+            </motion.h2>
+            <motion.p className={styles.tagline} variants={headerItem}>
+              撮合只是入口，把控才是核心。
+            </motion.p>
+          </motion.div>
+        </div>
 
         {/* 4 services 2x2 */}
         <motion.div

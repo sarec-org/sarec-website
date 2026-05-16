@@ -254,3 +254,67 @@
     font-size: clamp(1.7rem, 6vw, 2.2rem);
   }
 }
+
+/* ============================================================
+   Step 4c-5 V2 — Top dual-column block (video + header)
+   Mirrors S03Chamber.stickyBlock X2 bleed pattern (no sticky).
+   Original .header rule retained above but no longer used.
+   ============================================================ */
+
+.topBlock {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: clamp(80px, 10vw, 160px);
+  align-items: start;
+  margin-bottom: clamp(72px, 10vh, 120px);
+  /* Symmetric bleed: break past .section padding on both sides */
+  margin-left: 0;
+  margin-right: calc(-1 * clamp(24px, 5vw, 80px));
+  width: calc(100% + clamp(24px, 5vw, 80px));
+}
+
+.videoCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* NO position: sticky (S03 sticky lesson) */
+}
+
+.videoFrame {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink-deep);
+  border: 1px solid var(--line-3);
+}
+
+.videoCaption {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--gold-dim);
+  text-transform: uppercase;
+  padding-left: 2px;
+}
+
+.headerCol {
+  /* Block layout — preserves the eyebrow/h2/tagline margin rhythm
+     identical to the original .header (no flex, no gap). No max-width
+     so the right column fills the 7fr grid track and aligns with the
+     bleed edge. */
+}
+
+@media (max-width: 1023px) {
+  .topBlock {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    margin-bottom: clamp(48px, 8vh, 80px);
+  }
+  .videoFrame {
+    aspect-ratio: 16 / 9;
+  }
+}
