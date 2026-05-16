@@ -162,12 +162,57 @@
   margin-right: 8px;
 }
 
+/* ===== Project types row (left: typesBlock text, right: ED1 image) ===== */
+.typesRow {
+  display: grid;
+  grid-template-columns: 540px 540px;
+  gap: clamp(40px, 5vw, 80px);
+  align-items: start;
+  justify-content: space-between;
+  max-width: 1180px;
+  margin-top: clamp(80px, 10vh, 120px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.typesPrefix {
+  max-width: 540px;
+  padding: 0;
+}
+
+.typesPrefixLabel {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  margin: 0 0 12px 0;
+  line-height: 1;
+}
+
+.typesPrefixFrame {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink-deep);
+}
+
+.typesPrefixCaption {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+  line-height: 1.5;
+  margin: 12px 0 0 0;
+}
+
 /* ===== Project types subsection ===== */
 .typesBlock {
   margin-bottom: clamp(40px, 5vh, 64px);
-  margin-left: auto;
+  margin-left: 0;
   max-width: 540px;
-  margin-top: clamp(80px, 10vh, 120px);
 }
 
 .subEyebrow {
@@ -282,8 +327,17 @@
     grid-template-columns: 1fr;
     gap: clamp(40px, 6vh, 56px);
   }
-  .typesBlock {
+  .typesRow {
+    grid-template-columns: 1fr;
+    gap: clamp(40px, 6vh, 56px);
+    max-width: 100%;
+  }
+  .typesPrefix {
+    max-width: 100%;
     margin-left: 0;
+    margin-right: 0;
+  }
+  .typesBlock {
     max-width: 100%;
   }
 }

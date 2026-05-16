@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
+import { SaImage } from '@/components/shared/SaImage';
 import { SaVideo } from '@/components/shared/SaVideo';
 import styles from './S03Chamber.module.css';
 
@@ -134,6 +135,22 @@ export function S03Chamber() {
                 <span className={styles.videoCaptionZh}>商会研讨</span>
                 <span className={styles.videoCaptionBracket}>]</span>
               </div>
+
+              <figure className={styles.proofBlock}>
+                <p className={styles.proofLabel}>项目落地 · 商会服务案例</p>
+                <div className={styles.proofFrame}>
+                  <SaImage
+                    src="/images/projects/4155-wilshire-bronson.webp"
+                    alt="4155 Wilshire 商业综合体外观渲染"
+                    fill
+                    sizes="(max-width: 1023px) 100vw, 500px"
+                    filterIntensity="none"
+                  />
+                </div>
+                <figcaption className={styles.proofCaption}>
+                  4155 Wilshire Blvd · 9 层综合体
+                </figcaption>
+              </figure>
             </div>
           </div>
           <div className={styles.contentCol}>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
+import { SaImage } from '@/components/shared/SaImage';
 import styles from './S05CoInvest.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -143,44 +144,62 @@ export function S05CoInvest() {
           ))}
         </motion.ul>
 
-        {/* Project types subsection */}
-        <motion.div
-          className={styles.typesBlock}
-          variants={headerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-        >
-          <motion.span className={styles.subEyebrow} variants={headerItem}>
-            PROJECT EXPERIENCE · 项目类型经验
-          </motion.span>
-          <motion.h3 className={styles.subH3} variants={headerItem}>
-            3 类项目经验
-          </motion.h3>
-
-          <motion.ul className={styles.typesList} variants={listContainer}>
-            {PROJECT_TYPES.map((type) => (
-              <motion.li
-                key={type}
-                className={styles.typeItem}
-                variants={itemVariants}
-              >
-                <span className={styles.typeBullet} aria-hidden="true">
-                  ·
-                </span>
-                <span>{type}</span>
-              </motion.li>
-            ))}
-          </motion.ul>
-
+        {/* Project types row — left: existing typesBlock (text), right: ED1 image */}
+        <div className={styles.typesRow}>
           <motion.div
-            className={styles.typesClosing}
-            variants={itemVariants}
+            className={styles.typesBlock}
+            variants={headerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
           >
-            <p>具体项目名称、地址、规模与投资材料 ——</p>
-            <p>仅在合格沟通后提供。</p>
+            <motion.span className={styles.subEyebrow} variants={headerItem}>
+              PROJECT EXPERIENCE · 项目类型经验
+            </motion.span>
+            <motion.h3 className={styles.subH3} variants={headerItem}>
+              3 类项目经验
+            </motion.h3>
+
+            <motion.ul className={styles.typesList} variants={listContainer}>
+              {PROJECT_TYPES.map((type) => (
+                <motion.li
+                  key={type}
+                  className={styles.typeItem}
+                  variants={itemVariants}
+                >
+                  <span className={styles.typeBullet} aria-hidden="true">
+                    ·
+                  </span>
+                  <span>{type}</span>
+                </motion.li>
+              ))}
+            </motion.ul>
+
+            <motion.div
+              className={styles.typesClosing}
+              variants={itemVariants}
+            >
+              <p>具体项目名称、地址、规模与投资材料 ——</p>
+              <p>仅在合格沟通后提供。</p>
+            </motion.div>
           </motion.div>
-        </motion.div>
+
+          <figure className={styles.typesPrefix}>
+            <p className={styles.typesPrefixLabel}>项目类型 · ED1 案例</p>
+            <div className={styles.typesPrefixFrame}>
+              <SaImage
+                src="/images/projects/2215-wellesley-ed1.webp"
+                alt="2215 Wellesley ED1 项目外观渲染"
+                fill
+                sizes="(max-width: 1023px) 100vw, 540px"
+                filterIntensity="none"
+              />
+            </div>
+            <figcaption className={styles.typesPrefixCaption}>
+              2215 Wellesley · ED1 单体住宅
+            </figcaption>
+          </figure>
+        </div>
 
         {/* Inline CTA */}
         <motion.div
