@@ -25,8 +25,11 @@ function resolveMediaUrl(path: string): string {
   if (!path) return path;
   if (/^https?:\/\//i.test(path)) return path;
   if (!MEDIA_BASE) return path;
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${MEDIA_BASE}${normalizedPath}`;
+  // R2 bucket is flat at root — strip /videos/ prefix when present
+  const stripped = path.startsWith('/videos/')
+    ? path.replace(/^\/videos\//, '/')
+    : (path.startsWith('/') ? path : `/${path}`);
+  return `${MEDIA_BASE}${stripped}`;
 }
 
 export function SaVideo({
