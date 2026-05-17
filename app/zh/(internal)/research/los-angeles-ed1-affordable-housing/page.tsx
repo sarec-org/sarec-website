@@ -213,7 +213,7 @@ export default function LosAngelesEd1AffordableHousingPage() {
             <p className="font-sans text-sm font-semibold text-gold">Case Lens</p>
             <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">从案例看 ED1：政策机会要落到真实项目推进能力</h2>
             <div className="mt-6 grid gap-4 text-sm leading-7 text-muted md:text-base">
-              <p>4136 Rosewood 用于说明精品公寓开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。</p>
+              <p>4136 Rosewood 用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。</p>
               <p>3434 Chesapeake 适合说明 ED1 政策下的 RTI Ready、审批效率、土地利用提升和项目推进能力。</p>
               <p>2215 Wellesley 适合说明复杂规划区、Plan Check、公用事业协调、LADWP / LAFD 技术问题和跨部门推进能力。</p>
             </div>

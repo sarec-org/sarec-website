@@ -3,12 +3,15 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { createPageMetadata } from '@/lib/seo';
 
-export const metadata: Metadata = createPageMetadata({
-  title: '新闻与研究动态｜SAREC 中美房地产商会',
-  description:
-    '查看 SAREC 中美房地产商会的研究内容、项目观察、活动更新和美国房地产市场观点，涵盖跨境投资风险、LP/GP 合作结构、开发流程、ED1 政策和项目案例研究。',
-  path: '/zh/news'
-});
+export const metadata: Metadata = {
+  ...createPageMetadata({
+    title: '新闻与研究动态｜SAREC 中美房地产商会',
+    description:
+      '查看 SAREC 中美房地产商会的研究内容、项目观察、活动更新和美国房地产市场观点，涵盖跨境投资风险、LP/GP 合作结构、开发流程、ED1 政策和项目案例研究。',
+    path: '/zh/news'
+  }),
+  robots: { index: false, follow: false }
+};
 
 const latestResearch = [
   {
@@ -47,7 +50,7 @@ const caseUpdates = [
   {
     title: '4136 Rosewood 深度案例',
     href: '/zh/case-studies/4136-rosewood/',
-    description: '通过洛杉矶精品公寓开发项目，理解土地、审批、成本、融资、租赁、退出和合作结构判断。'
+    description: '通过洛杉矶 East Hollywood 的 ED1 经济适用房开发项目，理解土地、审批、成本、融资、租赁、退出和合作结构判断。'
   }
 ];
 

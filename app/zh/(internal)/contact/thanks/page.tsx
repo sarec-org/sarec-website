@@ -14,8 +14,6 @@ export const metadata: Metadata = {
 };
 
 const links = [
-  ['阅读：华人投资美国房产常见风险', '/zh/research/investment-pitfalls/'],
-  ['了解：EB-5最新政策与SAREC判断', '/zh/research/eb5/'],
   ['查看：SAREC 投资风险清单', '/zh/research/risk-checklist/'],
   ['查看：近期合作项目案例', '/zh/projects/'],
   ['返回首页', '/zh/']

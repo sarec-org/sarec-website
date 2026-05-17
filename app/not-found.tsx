@@ -14,8 +14,8 @@ export default function NotFound() {
           <a className="rounded-[2px] border border-line bg-white px-4 py-3 font-sans font-semibold text-ink transition hover:border-zinc-400" href="/zh/services">
             查看服务
           </a>
-          <a className="rounded-[2px] border border-line bg-white px-4 py-3 font-sans font-semibold text-ink transition hover:border-zinc-400" href="/zh/solutions">
-            查看合作方案
+          <a className="rounded-[2px] border border-line bg-white px-4 py-3 font-sans font-semibold text-ink transition hover:border-zinc-400" href="/zh/case-studies">
+            查看项目案例
           </a>
           <a className="rounded-[2px] border border-line bg-white px-4 py-3 font-sans font-semibold text-ink transition hover:border-zinc-400" href="/zh/contact">
             联系 SAREC

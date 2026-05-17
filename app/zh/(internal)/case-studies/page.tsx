@@ -29,7 +29,7 @@ const categories = [
   }
 ];
 
-const featuredTags = ['真实项目案例', '精品公寓开发', '洛杉矶成熟社区', '项目判断案例'];
+const featuredTags = ['真实项目案例', 'ED1 经济适用房开发', '洛杉矶 East Hollywood', '项目判断案例'];
 
 const projectCases = [
   {
@@ -158,10 +158,10 @@ export default function CaseStudiesPage() {
                   </span>
                 ))}
               </div>
-              <h3 className="mt-6 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">4136 Rosewood｜洛杉矶精品公寓开发项目</h3>
+              <h3 className="mt-6 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">4136 Rosewood｜洛杉矶 East Hollywood · ED1 经济适用房开发</h3>
               <p className="mt-5 max-w-4xl text-base leading-8 text-muted md:text-lg md:leading-9">
-                4136 Rosewood 是一个位于洛杉矶成熟社区的精品公寓开发项目，规划约 69
-                个公寓单元、6 层建筑，适合用于说明美国城市公寓开发项目从土地、审批、成本、融资、租赁到退出的系统判断逻辑。
+                4136 Rosewood 是一个位于洛杉矶 East Hollywood 的 ED1 经济适用房开发项目，规划约 69
+                个公寓单元、6 层建筑，适合用于说明美国城市住宅开发项目从土地、审批、成本、融资、租赁到退出的系统判断逻辑。
               </p>
               <div className="mt-8">
                 <Button href="/zh/case-studies/4136-rosewood/">查看案例</Button>

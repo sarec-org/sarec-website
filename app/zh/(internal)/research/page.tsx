@@ -13,29 +13,14 @@ export const metadata: Metadata = createPageMetadata({
 
 const columns = [
   {
-    title: '美国房地产项目判断框架',
-    body: '如何判断一个美国房地产项目是否值得继续看？从土地、审批、市场、融资、建设、租赁、退出到合作结构，建立完整判断框架。',
-    href: '/zh/research/framework/'
-  },
-  {
-    title: '跨境投资风险观察',
-    body: '关注中国投资人参与美国房地产项目时常见的信息不对称、审批误判、融资压力、市场假设和合作结构风险。',
-    href: '/zh/research/investment-pitfalls/'
-  },
-  {
     title: '洛杉矶地产开发观察',
     body: '聚焦洛杉矶公寓开发、ED1、经济适用房、城市更新、租赁需求和项目审批趋势。',
     href: '/zh/case-studies/'
   },
   {
-    title: 'EB-5 与新移民资产配置',
-    body: '关注 EB-5 项目风险、新移民家庭资产配置、房地产、保险、现金流和长期保障之间的协同关系。',
-    href: '/zh/research/eb5/'
-  },
-  {
     title: '项目合作与资本结构',
     body: '解释 LP / GP、管理费、顾问费、佣金、分成、信息披露、重大事项决策和退出机制等合作结构问题。',
-    href: '/zh/solutions/'
+    href: '/zh/services/'
   },
   {
     title: 'AI + 房地产趋势',
@@ -71,24 +56,9 @@ const featuredInsights = [
     href: '/zh/research/chinese-investors-us-real-estate-risks/'
   },
   {
-    title: '美国房地产项目判断框架',
-    body: '建立从市场、土地、审批、融资、建设、租赁到退出的系统判断方法。',
-    href: '/zh/research/framework/'
-  },
-  {
     title: '美国房地产项目投资风险清单',
     body: '帮助投资人和项目方识别项目开发、合作结构、市场和融资中的关键风险。',
     href: '/zh/research/risk-checklist/'
-  },
-  {
-    title: 'EB-5 项目观察',
-    body: '从风险识别和资金结构角度理解 EB-5 与房地产项目之间的关系。',
-    href: '/zh/research/eb5/'
-  },
-  {
-    title: '投资常见误区',
-    body: '总结跨境投资人参与美国地产项目时容易忽视的关键问题。',
-    href: '/zh/research/investment-pitfalls/'
   }
 ];
 
@@ -123,10 +93,7 @@ export default function ResearchPage() {
             美国房地产项目判断与跨境投资研究。我们关注的不只是市场机会，更关注项目背后的土地、审批、融资、建设、租赁、退出、合作结构和风险控制。
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/research/framework/" variant="gold">
-              查看项目判断框架
-            </Button>
-            <Button href="/zh/contact/" variant="light">
+            <Button href="/zh/contact/" variant="gold">
               提交项目或合作需求
             </Button>
           </div>
@@ -228,9 +195,6 @@ export default function ResearchPage() {
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/research/framework/" variant="light">
-              查看项目判断框架
-            </Button>
             <Button href="/zh/contact/" variant="gold">
               提交项目或合作需求
             </Button>

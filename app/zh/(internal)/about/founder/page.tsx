@@ -296,7 +296,7 @@ export default function FounderPage() {
 
       <SectionCTA
         primaryCTA={{ text: '提交项目或合作需求', href: '/zh/contact/' }}
-        secondaryCTA={{ text: '查看合作方案', href: '/zh/solutions/' }}
+        secondaryCTA={{ text: '查看服务架构', href: '/zh/services/' }}
         subtitle="无论你是投资人、项目方、房地产同行，还是正在配置美国资产的新移民家庭，都可以提交你的需求。SAREC 会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。"
         title="如果你正在判断一个美国房地产项目，可以先从一次清晰沟通开始。"
       />

@@ -85,16 +85,8 @@ const relatedEntries = [
     href: '/zh/case-studies'
   },
   {
-    title: '服务产品矩阵',
+    title: '服务架构',
     href: '/zh/services'
-  },
-  {
-    title: '合作方案',
-    href: '/zh/solutions'
-  },
-  {
-    title: '项目判断框架',
-    href: '/zh/research/framework/'
   },
   {
     title: '风险清单',
@@ -126,8 +118,8 @@ export default function ProjectsPage() {
             <a className={primaryButtonClass} href="/zh/contact/">
               提交项目或合作需求
             </a>
-            <a className={secondaryButtonClass} href="/zh/solutions">
-              查看合作方案
+            <a className={secondaryButtonClass} href="/zh/services">
+              查看服务架构
             </a>
             <a className={secondaryButtonClass} href="/zh/case-studies">
               案例研究
@@ -163,7 +155,7 @@ export default function ProjectsPage() {
                 <span className="inline-flex w-fit rounded-[2px] border border-line bg-zinc-50 px-3 py-1.5 font-sans text-xs font-semibold text-muted">
                   已进入实质推进阶段
                 </span>
-                <h3 className="mt-5 font-sans text-2xl font-bold leading-tight md:text-4xl">4136 Rosewood｜洛杉矶精品公寓开发项目</h3>
+                <h3 className="mt-5 font-sans text-2xl font-bold leading-tight md:text-4xl">4136 Rosewood｜洛杉矶 East Hollywood · ED1 经济适用房开发</h3>
               </div>
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -180,7 +172,7 @@ export default function ProjectsPage() {
               <dl className="mt-8 grid gap-4 border-y border-line py-8 md:grid-cols-2">
                 <div className="rounded-[2px] bg-zinc-50 p-4">
                   <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目类型</dt>
-                  <dd className="mt-2 text-sm leading-7 text-muted">精品公寓开发</dd>
+                  <dd className="mt-2 text-sm leading-7 text-muted">ED1 经济适用房开发</dd>
                 </div>
                 <div className="rounded-[2px] bg-zinc-50 p-4">
                   <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目位置</dt>
@@ -198,7 +190,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="rounded-[2px] bg-zinc-50 p-4">
                   <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目定位</dt>
-                  <dd className="mt-2 text-sm leading-7 text-muted">面向中高收入家庭及专业人士的中高端公寓产品</dd>
+                  <dd className="mt-2 text-sm leading-7 text-muted">符合 ED1 政策的洛杉矶城市住宅开发产品，单元面向 LA 区域工薪与中等收入家庭。</dd>
                 </div>
               </dl>
 
@@ -230,8 +222,8 @@ export default function ProjectsPage() {
                     <a className={outlineButtonClass} href="/zh/case-studies/4136-rosewood">
                       查看完整案例研究
                     </a>
-                    <a className={outlineButtonClass} href="/zh/solutions">
-                      了解合作方式
+                    <a className={outlineButtonClass} href="/zh/services">
+                      了解服务架构
                     </a>
                   </div>
                 </Card>

@@ -8,18 +8,18 @@ import { createPageMetadata } from '@/lib/seo';
 export const metadata: Metadata = createPageMetadata({
   title: '4136 Rosewood 案例研究｜SAREC 中美房地产商会',
   description:
-    '4136 Rosewood 是洛杉矶精品公寓开发项目案例，用于说明美国城市公寓开发项目的土地、审批、成本、融资、租赁、退出和合作结构判断逻辑。',
+    '4136 Rosewood 是洛杉矶 East Hollywood 的 ED1 经济适用房开发项目案例，用于说明美国城市住宅开发项目的土地、审批、成本、融资、租赁、退出和合作结构判断逻辑。',
   path: '/zh/case-studies/4136-rosewood'
 });
 
-const tags = ['真实项目案例', '洛杉矶精品公寓', '项目判断', '风险识别'];
+const tags = ['真实项目案例', 'ED1 经济适用房', '项目判断', '风险识别'];
 
 const overview = [
-  ['项目类型', '精品公寓开发'],
+  ['项目类型', 'ED1 经济适用房开发'],
   ['项目位置', '洛杉矶成熟社区'],
   ['项目规模', '约 69 个公寓单元，6 层建筑'],
   ['建筑规模', '约 34,500 平方英尺'],
-  ['项目定位', '面向中高收入家庭及专业人士的中高端公寓产品'],
+  ['项目定位', '符合 ED1 政策的洛杉矶城市住宅开发产品，单元面向 LA 区域工薪与中等收入家庭。'],
   ['项目阶段', '项目已完成关键审批节点，进入实质推进阶段。具体开工安排、融资条件和项目进展，应以项目最新资料为准。']
 ];
 
@@ -107,8 +107,8 @@ const relatedLinks = [
     href: '/zh/services/strategy/'
   },
   {
-    title: '合作方案与服务产品',
-    href: '/zh/solutions/'
+    title: '服务架构',
+    href: '/zh/services/'
   },
   {
     title: '风险披露',
@@ -148,7 +148,7 @@ export default function RosewoodCaseStudyPage() {
       <section className="bg-deep py-16 text-white md:py-24">
         <div className="container-shell max-w-5xl">
           <p className="font-sans text-sm font-semibold text-gold">Case Study</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">4136 Rosewood｜洛杉矶精品公寓开发项目</h1>
+          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">4136 Rosewood｜洛杉矶 East Hollywood · ED1 经济适用房开发</h1>
           <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
             一个美国城市公寓开发项目，真正值得研究的不只是项目规模和收益测算，而是土地、审批、建设、融资、租赁、退出和合作结构背后的系统判断。
           </p>
@@ -163,8 +163,8 @@ export default function RosewoodCaseStudyPage() {
             <Button href="/zh/contact/" variant="gold">
               提交项目或合作需求
             </Button>
-            <Button href="/zh/solutions/" variant="light">
-              查看合作方案
+            <Button href="/zh/services/" variant="light">
+              查看服务架构
             </Button>
           </div>
         </div>

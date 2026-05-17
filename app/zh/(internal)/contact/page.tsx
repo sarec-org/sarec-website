@@ -82,10 +82,9 @@ const processSteps = [
 ];
 
 const relatedEntries = [
-  { title: '服务产品矩阵', href: '/zh/services' },
-  { title: '合作方案', href: '/zh/solutions' },
+  { title: '服务架构', href: '/zh/services' },
   { title: '项目与案例', href: '/zh/projects/' },
-  { title: '项目判断服务', href: '/zh/services/strategy' }
+  { title: '案例研究', href: '/zh/case-studies' }
 ];
 
 const primaryButtonClass =
@@ -232,8 +231,8 @@ export default function ContactPage() {
             </p>
           </div>
           <div className="md:justify-self-end">
-            <a className={primaryButtonClass} href="/zh/solutions">
-              查看合作方案
+            <a className={primaryButtonClass} href="/zh/services">
+              查看服务架构
             </a>
           </div>
         </div>

@@ -119,13 +119,8 @@ const applicationSteps = [
 
 const relatedLinks = [
   {
-    title: '合作方案与服务产品',
-    body: '了解 SAREC 如何与投资人、项目方和高净值家庭合作。',
-    href: '/zh/solutions/'
-  },
-  {
-    title: '服务产品矩阵',
-    body: '查看项目初筛、深度尽调、结构设计、项目合作和资产配置服务。',
+    title: '服务架构',
+    body: '查看 SAREC 三层服务架构:商会、咨询撮合、项目共投。',
     href: '/zh/services/'
   },
   {
@@ -177,8 +172,8 @@ export default function MembershipPage() {
             <Button href="/zh/contact#inquiry-form" variant="gold">
               申请成为会员
             </Button>
-            <Button href="/zh/solutions/" variant="light">
-              查看合作方案
+            <Button href="/zh/services/" variant="light">
+              查看服务架构
             </Button>
           </div>
         </div>
@@ -314,8 +309,8 @@ export default function MembershipPage() {
             <Button href="/zh/contact#inquiry-form" variant="light">
               申请成为会员
             </Button>
-            <Button href="/zh/solutions/" variant="gold">
-              查看合作方案
+            <Button href="/zh/services/" variant="gold">
+              查看服务架构
             </Button>
           </div>
         </div>

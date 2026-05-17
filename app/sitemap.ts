@@ -20,17 +20,12 @@ const routes = [
   '/zh/research/lp-gp-structure',
   '/zh/research/los-angeles-ed1-affordable-housing',
   '/zh/research/us-real-estate-development-process',
-  '/zh/research/eb5',
-  '/zh/research/investment-pitfalls',
-  '/zh/research/framework',
   '/zh/research/risk-checklist',
   '/zh/contact',
   '/zh/contact/thanks',
   '/zh/membership',
-  '/zh/solutions',
-  '/zh/activity',
   '/zh/events',
-  '/zh/news',
+  '/zh/legal',
   '/zh/legal/risk-disclosure',
   '/zh/legal/privacy',
   '/zh/legal/disclaimer'
@@ -46,7 +41,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority:
       route === '/' || route === '/zh'
         ? 1
-        : route === '/zh/services' || route === '/zh/solutions' || route === '/zh/projects' || route === '/zh/contact'
+        : route === '/zh/services' || route === '/zh/projects' || route === '/zh/contact'
           ? 0.9
           : 0.7
   }));

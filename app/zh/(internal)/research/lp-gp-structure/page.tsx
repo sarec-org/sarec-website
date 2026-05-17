@@ -126,7 +126,7 @@ const relatedLinks = [
   { title: '中国投资人美国房地产常见风险', href: '/zh/research/chinese-investors-us-real-estate-risks/' },
   { title: '风险披露', href: '/zh/legal/risk-disclosure/' },
   { title: '项目初筛服务', href: '/zh/services/strategy/' },
-  { title: '合作方案与服务产品', href: '/zh/solutions/' }
+  { title: '服务架构', href: '/zh/services/' }
 ];
 
 export default function LpGpStructurePage() {
@@ -227,8 +227,8 @@ export default function LpGpStructurePage() {
                 案例研究
               </Link>
               与
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/solutions/">
-                合作方案
+              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/services/">
+                服务架构
               </Link>
               进一步讨论。
             </p>
