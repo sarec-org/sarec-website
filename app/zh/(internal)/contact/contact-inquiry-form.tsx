@@ -1,67 +1,102 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import styles from './contact.module.css';
 
 const identityOptions = [
-  '中国企业家 / 投资人',
-  '美国华人投资人',
-  '房地产开发商 / 项目方',
-  '房地产经纪 / 从业者',
-  '新移民家庭 / 高净值客户',
-  '专业服务机构',
+  '在美华人投资人',
+  '出海企业家',
+  '中国地产同行',
+  '美国项目方',
+  '其他(请简要说明)'
+];
+
+const requestOptions = [
+  '预约 30 分钟沟通',
+  '项目评估',
+  '申请加入会员',
+  '报名活动 / 考察团',
   '其他'
 ];
 
-const requestOptions = ['项目初筛', '深度尽调', '合作结构咨询', '会员服务', '活动与考察', '项目方寻求资源协同', '其他'];
+const locationOptions = [
+  '美国洛杉矶及周边',
+  '美国其他地区',
+  '中国大陆',
+  '海外(其他)'
+];
 
-const stageOptions = ['还在了解阶段', '已有项目资料', '已有土地或项目', '项目在审批中', '项目准备融资', '项目已进入施工或运营', '不确定'];
+const sourceOptions = [
+  '朋友推荐',
+  '微信公众号',
+  '行业活动',
+  '搜索引擎',
+  'AI 推荐(ChatGPT / Claude 等)',
+  '其他'
+];
 
 type InquiryFormState = {
   name: string;
   identity: string;
-  contact: string;
-  email: string;
   requestType: string;
-  projectStage: string;
+  location: string;
+  email: string;
+  contact: string;
   message: string;
+  source: string;
   compliance: boolean;
 };
 
 const initialState: InquiryFormState = {
   name: '',
   identity: '',
-  contact: '',
-  email: '',
   requestType: '',
-  projectStage: '',
+  location: '',
+  email: '',
+  contact: '',
   message: '',
+  source: '',
   compliance: false
 };
 
-const fieldClass =
-  'w-full border-0 border-b border-line bg-transparent px-0 py-3.5 text-base text-ink outline-none transition placeholder:text-zinc-400 focus:border-ink';
+const INTENT_MAP: Record<string, string> = {
+  consult: '预约 30 分钟沟通',
+  evaluate: '项目评估',
+  membership: '申请加入会员',
+  events: '报名活动 / 考察团'
+};
 
 export function ContactInquiryForm() {
   const [form, setForm] = useState<InquiryFormState>(initialState);
   const [generatedBody, setGeneratedBody] = useState('');
+
+  // Prefill 需求类型 from URL ?intent= query (set by CT02 intent cards)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const intent = params.get('intent');
+    if (intent && INTENT_MAP[intent]) {
+      setForm((curr) => ({ ...curr, requestType: INTENT_MAP[intent] }));
+    }
+  }, []);
 
   const emailBody = useMemo(
     () =>
       [
         'SAREC 项目或合作需求',
         '',
-        `姓名：${form.name}`,
-        `身份类型：${form.identity}`,
-        `联系方式：${form.contact}`,
-        `邮箱：${form.email}`,
-        `需求类型：${form.requestType}`,
-        `项目阶段：${form.projectStage}`,
+        `姓名:${form.name}`,
+        `身份:${form.identity}`,
+        `需求类型:${form.requestType}`,
+        `所在地:${form.location}`,
+        `邮箱:${form.email}`,
+        `微信 / WhatsApp / 电话:${form.contact}`,
+        `如何找到 SAREC:${form.source || '(未填写)'}`,
         '',
-        '需求说明：',
-        form.message,
+        '你想聊什么:',
+        form.message || '(未填写)',
         '',
-        '合规确认：我理解本表单仅用于初步沟通，不构成投资建议、法律意见、税务意见、移民建议或任何收益承诺。'
+        '合规确认:我理解本表单仅用于初步沟通,不构成投资建议、法律意见、税务意见、移民建议或任何收益承诺。'
       ].join('\n'),
     [form]
   );
@@ -80,163 +115,176 @@ export function ContactInquiryForm() {
   }
 
   return (
-    <div className="rounded-md border border-line bg-white p-5 shadow-soft md:p-8">
-      <form className="grid gap-6" onSubmit={handleSubmit}>
-        <div className="grid gap-6 md:grid-cols-2">
-          <TextInput
-            label="姓名"
-            name="name"
-            onChange={(value) => updateField('name', value)}
-            placeholder="请输入您的姓名"
-            required
-            value={form.name}
-          />
-          <SelectInput
-            label="身份类型"
-            name="identity"
-            onChange={(value) => updateField('identity', value)}
-            options={identityOptions}
-            required
-            value={form.identity}
-          />
-          <TextInput
-            label="联系方式"
-            name="contact"
-            onChange={(value) => updateField('contact', value)}
-            placeholder="手机号 / 微信 / WhatsApp / 邮箱均可"
-            required
-            value={form.contact}
-          />
-          <TextInput
-            label="邮箱"
-            name="email"
-            onChange={(value) => updateField('email', value)}
-            placeholder="请输入邮箱，便于发送资料"
-            required
-            type="email"
-            value={form.email}
-          />
-          <SelectInput
-            label="需求类型"
-            name="requestType"
-            onChange={(value) => updateField('requestType', value)}
-            options={requestOptions}
-            required
-            value={form.requestType}
-          />
-          <SelectInput
-            label="项目阶段"
-            name="projectStage"
-            onChange={(value) => updateField('projectStage', value)}
-            options={stageOptions}
-            required
-            value={form.projectStage}
-          />
+    <div className={styles.formWrap}>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.formGrid2}>
+          <Field label="你的姓名" required>
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="请输入您的姓名"
+              required
+              value={form.name}
+              onChange={(e) => updateField('name', e.target.value)}
+            />
+          </Field>
+
+          <Field label="你的身份" required>
+            <select
+              className={styles.select}
+              required
+              value={form.identity}
+              onChange={(e) => updateField('identity', e.target.value)}
+            >
+              <option value="" disabled>
+                请选择
+              </option>
+              {identityOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="你的需求类型" required>
+            <select
+              className={styles.select}
+              required
+              value={form.requestType}
+              onChange={(e) => updateField('requestType', e.target.value)}
+            >
+              <option value="" disabled>
+                请选择
+              </option>
+              {requestOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="你的所在地" required>
+            <select
+              className={styles.select}
+              required
+              value={form.location}
+              onChange={(e) => updateField('location', e.target.value)}
+            >
+              <option value="" disabled>
+                请选择
+              </option>
+              {locationOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="邮箱" required>
+            <input
+              className={styles.input}
+              type="email"
+              placeholder="便于发送资料"
+              required
+              value={form.email}
+              onChange={(e) => updateField('email', e.target.value)}
+            />
+          </Field>
+
+          <Field label="微信 / WhatsApp / 电话" required>
+            <input
+              className={styles.input}
+              type="text"
+              placeholder="任选其一即可"
+              required
+              value={form.contact}
+              onChange={(e) => updateField('contact', e.target.value)}
+            />
+          </Field>
         </div>
 
-        <label className="block font-sans text-sm font-medium text-muted" htmlFor="field-message">
-          <span className="block">需求说明 *</span>
+        <Field label="你想聊什么">
           <textarea
-            className={`${fieldClass} min-h-32 resize-y`}
-            id="field-message"
-            name="message"
-            onChange={(event) => updateField('message', event.target.value)}
-            placeholder="请简单说明你的项目、需求或希望 SAREC 协助判断的问题。"
-            required
+            className={styles.textarea}
+            maxLength={500}
+            placeholder="可简要描述你的项目、背景或具体问题。便于我们准备更针对性的沟通。"
             value={form.message}
+            onChange={(e) => updateField('message', e.target.value)}
           />
-        </label>
+        </Field>
 
-        <label className="flex gap-3 rounded-[2px] border border-line bg-zinc-50 p-4 text-sm leading-7 text-muted">
+        <Field label="你是怎么找到 SAREC 的">
+          <select
+            className={styles.select}
+            value={form.source}
+            onChange={(e) => updateField('source', e.target.value)}
+          >
+            <option value="">请选择(选填)</option>
+            {sourceOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <label className={styles.compliance}>
           <input
-            checked={form.compliance}
-            className="mt-1 h-4 w-4 accent-ink"
-            name="compliance"
-            onChange={(event) => updateField('compliance', event.target.checked)}
-            required
             type="checkbox"
+            className={styles.complianceCheckbox}
+            required
+            checked={form.compliance}
+            onChange={(e) => updateField('compliance', e.target.checked)}
           />
-          <span>我理解本表单仅用于初步沟通，不构成投资建议、法律意见、税务意见、移民建议或任何收益承诺。</span>
+          <span>
+            我理解本表单仅用于初步沟通,不构成投资建议、法律意见、税务意见、移民建议或任何收益承诺。
+          </span>
         </label>
 
         <div>
-          <Button type="submit">生成邮件并发送需求</Button>
-          <p className="mt-4 text-sm leading-7 text-muted">
-            当前表单将通过你的本机邮箱发送给 SAREC。如邮箱客户端未自动打开，请复制表单内容发送至 info@sinoamericanrec.org。
+          <button type="submit" className={styles.submit}>
+            <span>提交并发送邮件</span>
+            <span className={styles.submitArrow} aria-hidden="true">
+              →
+            </span>
+          </button>
+          <p className={styles.formNote}>
+            提交后将通过本机邮箱发送给 SAREC。如邮箱客户端未自动打开,请复制下方生成的邮件内容,
+            手动发送至 <strong>info@sinoamericanrec.org</strong>。我们 1 个工作日内回复。
           </p>
         </div>
       </form>
 
       {generatedBody ? (
-        <div className="mt-8 rounded-[2px] border border-line bg-zinc-50 p-5">
-          <h3 className="font-sans text-lg font-semibold text-ink">已生成邮件内容</h3>
-          <p className="mt-2 text-sm leading-7 text-muted">如果邮箱客户端没有自动打开，可以复制以下内容后手动发送。</p>
-          <textarea className="mt-4 min-h-64 w-full resize-y border border-line bg-white p-4 text-sm leading-7 text-ink outline-none" readOnly value={generatedBody} />
+        <div className={styles.formResult}>
+          <h3>已生成邮件内容</h3>
+          <p>如果邮箱客户端没有自动打开,可以复制以下内容后手动发送。</p>
+          <textarea readOnly value={generatedBody} />
         </div>
       ) : null}
     </div>
   );
 }
 
-function TextInput({
+function Field({
   label,
-  name,
-  onChange,
-  placeholder,
   required,
-  type = 'text',
-  value
+  children
 }: {
   label: string;
-  name: string;
-  onChange: (value: string) => void;
-  placeholder: string;
   required?: boolean;
-  type?: 'text' | 'email';
-  value: string;
+  children: React.ReactNode;
 }) {
   return (
-    <label className="block font-sans text-sm font-medium text-muted" htmlFor={`field-${name}`}>
-      <span className="block">
+    <label className={styles.field}>
+      <span className={styles.fieldLabel}>
         {label}
-        {required ? ' *' : ''}
+        {required ? <span className={styles.fieldRequired}>*</span> : null}
       </span>
-      <input className={fieldClass} id={`field-${name}`} name={name} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} required={required} type={type} value={value} />
-    </label>
-  );
-}
-
-function SelectInput({
-  label,
-  name,
-  onChange,
-  options,
-  required,
-  value
-}: {
-  label: string;
-  name: string;
-  onChange: (value: string) => void;
-  options: string[];
-  required?: boolean;
-  value: string;
-}) {
-  return (
-    <label className="block font-sans text-sm font-medium text-muted" htmlFor={`field-${name}`}>
-      <span className="block">
-        {label}
-        {required ? ' *' : ''}
-      </span>
-      <select className={fieldClass} id={`field-${name}`} name={name} onChange={(event) => onChange(event.target.value)} required={required} value={value}>
-        <option disabled value="">
-          请选择
-        </option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      {children}
     </label>
   );
 }

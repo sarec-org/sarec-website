@@ -1,59 +1,104 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Card } from '@/components/ui/Card';
-import { site } from '@/lib/content';
 import { createPageMetadata } from '@/lib/seo';
+import styles from '../contact.module.css';
 
 export const metadata: Metadata = {
   ...createPageMetadata({
-    title: '联系 SAREC｜中美房地产商会',
-    description: '通过邮箱、电话或网站表单联系 SAREC，提交项目或合作需求。',
+    title: '已收到你的提交｜SAREC 中美房地产商会',
+    description:
+      'SAREC 团队会在 1 个工作日内回复（美国西部时间）。回复将通过你提交的邮箱发送，或通过你提供的微信 / WhatsApp 联系。',
     path: '/zh/contact/thanks'
   }),
   robots: { index: false, follow: false }
 };
 
-const links = [
-  ['查看：SAREC 投资风险清单', '/zh/research/risk-checklist/'],
-  ['查看：近期合作项目案例', '/zh/projects/'],
-  ['返回首页', '/zh/']
+const timeline = [
+  '01  SAREC 团队在 1 个工作日内回复',
+  '02  根据你的需求安排 30 分钟沟通',
+  '03  30 分钟通话 —— 双向判断',
+  '04  匹配则深入合作，不匹配也告诉你'
+];
+
+const exploreLinks = [
+  {
+    code: '01',
+    title: '阅读 SAREC 研究中心',
+    body: '了解 SAREC 对美国房地产市场的深度判断。',
+    href: '/zh/research'
+  },
+  {
+    code: '02',
+    title: '了解 SAREC 完整服务架构',
+    body: '理解 SAREC 三层服务架构 —— 商会、咨询撮合、项目共投。',
+    href: '/zh/services'
+  },
+  {
+    code: '03',
+    title: '了解创始人 Andy Wang',
+    body: '了解 SAREC 创始人 Andy Wang 的背景、判断方法论和长期主义。',
+    href: '/zh/about/founder'
+  }
 ];
 
 export default function ThanksPage() {
   return (
-    <div className="py-16 md:py-24">
-      <div className="container-shell max-w-4xl">
-        <h1 className="font-sans text-4xl font-bold md:text-5xl">感谢你联系 SAREC</h1>
-
-        <Card className="mt-10">
-          <h2 className="font-sans text-2xl font-semibold">请确认邮件是否已经发送</h2>
-          <p className="mt-4 text-muted">
-            当前网站采用本机邮箱发送需求信息。如果你的邮箱客户端没有自动打开或邮件没有发送成功，请返回联系页复制表单内容，并手动发送至 {site.email}。
+    <main className={styles.page}>
+      {/* TK01 / 确认提交 */}
+      <section className={styles.thanksHero}>
+        <div className={styles.thanksHeroInner}>
+          <span className={styles.eyebrow}>SUBMITTED · 已收到</span>
+          <h1 className={styles.h1}>谢谢，已收到你的提交</h1>
+          <p className={styles.lead}>
+            SAREC 团队会在 1 个工作日内回复（美国西部时间）。
           </p>
-        </Card>
+          <p className={styles.lead}>
+            回复将通过你提交的邮箱发送，或通过你提供的微信 / WhatsApp 联系。
+          </p>
+        </div>
+      </section>
 
-        <Card className="mt-6">
-          <h2 className="font-sans text-2xl font-semibold">联系时间说明</h2>
-          <div className="mt-4 grid gap-2 text-muted">
-            <p>SAREC工作时间（洛杉矶时间）：</p>
-            <p>周一至周五 09:00 – 18:00 PT</p>
-            <p>周六 10:00 – 14:00 PT（仅紧急事务）</p>
-            <p>周日 休息</p>
-            <p>如需紧急咨询，请直接致电：{site.phone}</p>
-          </div>
-        </Card>
+      {/* TK02 / 接下来会发生什么 */}
+      <section className={`${styles.section} ${styles.sectionDeep}`}>
+        <div className={styles.containerNarrow}>
+          <span className={styles.eyebrow}>WHAT'S NEXT · 接下来会发生什么</span>
+          <h2 className={styles.h2}>接下来会发生什么</h2>
+          <ul className={styles.thanksTimeline}>
+            {timeline.map((line) => {
+              const [num, ...rest] = line.split(/\s{2,}/);
+              return (
+                <li key={line} className={styles.thanksTimelineItem}>
+                  <span className={styles.thanksTimelineNumber}>{num}</span>
+                  <p className={styles.thanksTimelineText}>{rest.join(' ')}</p>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
 
-        <section className="mt-10">
-          <h2 className="font-sans text-2xl font-semibold">在等待回复期间，您可以</h2>
-          <div className="mt-5 grid gap-3">
-            {links.map(([label, href]) => (
-              <Link className="border-b border-line py-3 font-sans hover:text-gold" href={href} key={href}>
-                {label}
+      {/* TK03 / 在等待回复期间 */}
+      <section className={styles.section}>
+        <div className={styles.containerNarrow}>
+          <span className={styles.eyebrow}>WHILE YOU WAIT · 在等待回复期间</span>
+          <h2 className={styles.h2}>在等待回复期间</h2>
+          <div className={styles.thanksLinks}>
+            {exploreLinks.map((it) => (
+              <Link key={it.code} href={it.href} className={styles.thanksLink}>
+                <span className={styles.thanksLinkCode}>{it.code} /</span>
+                <span className={styles.thanksLinkTitle}>{it.title}</span>
+                <span className={styles.thanksLinkBody}>{it.body}</span>
               </Link>
             ))}
           </div>
-        </section>
-      </div>
-    </div>
+
+          {/* TK04 / Footer 链接(由 SiteFooter 全局接管,本处加一行邮箱提示) */}
+          <p className={styles.thanksFooterNote}>
+            如有疑问，可联系{' '}
+            <a href="mailto:info@sinoamericanrec.org">info@sinoamericanrec.org</a>
+          </p>
+        </div>
+      </section>
+    </main>
   );
 }
