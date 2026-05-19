@@ -306,8 +306,8 @@
 /* A04 项目图 — 三层结构(diffImageBox 裁切 + diffImageMotion 动效层 + diffImage 命中 img)*/
 .diffImageMotion {
   position: absolute;
-  inset: -3%;
-  animation: assetImageDrift 24s ease-in-out infinite alternate;
+  inset: -4%;
+  animation: assetImageDrift 14s ease-in-out infinite alternate;
   will-change: transform;
   transform-origin: center center;
 }
@@ -321,10 +321,13 @@
 
 @keyframes assetImageDrift {
   0% {
-    transform: scale(1.03) translate3d(-1.5%, 0, 0);
+    transform: scale(1.02) translate3d(-2.8%, 0, 0);
+  }
+  50% {
+    transform: scale(1.07) translate3d(0, -0.6%, 0);
   }
   100% {
-    transform: scale(1.09) translate3d(1.5%, -0.8%, 0);
+    transform: scale(1.12) translate3d(2.8%, -1.2%, 0);
   }
 }
 
@@ -602,6 +605,7 @@
 .manifestoSection {
   min-height: 90vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background: var(--ink-deepest);
@@ -670,13 +674,6 @@
   }
 }
 
-.manifestoBy {
-  font-family: var(--sans);
-  font-size: 14px;
-  letter-spacing: 0.05em;
-  color: var(--gold-dim);
-  margin: 0;
-}
 
 /* ============================================================
    A06 Founder bar(轻量文字入口,无照片 — v1.2 §11.5 失败 4)
@@ -700,12 +697,31 @@
   max-width: 720px;
 }
 
-.founderTitle {
+/* A06 创始人卡片承接 A05 manifesto 署名:Andy Wang 名 + 角色子标 + 正文 */
+.founderName {
   font-family: var(--serif-zh);
-  font-size: clamp(1.25rem, 1.8vw, 1.625rem);
-  font-weight: 500;
-  line-height: 1.35;
+  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  font-weight: 600;
+  line-height: 1.2;
   color: var(--ivory);
+  margin: 12px 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.founderRole {
+  font-family: var(--sans);
+  font-size: clamp(0.9rem, 1.05vw, 1rem);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--gold-warm);
+  margin: 0 0 16px 0;
+}
+
+.founderBody {
+  font-family: var(--sans);
+  font-size: clamp(1rem, 1.1vw, 1.0625rem);
+  line-height: 1.65;
+  color: var(--ivory-mute);
   margin: 0;
 }
 

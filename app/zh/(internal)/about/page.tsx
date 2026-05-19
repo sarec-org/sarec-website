@@ -223,9 +223,11 @@ export default function AboutPage() {
           <div className={styles.founderBar}>
             <div className={styles.founderText}>
               <span className={styles.eyebrow}>FOUNDER · 创始人</span>
-              <h3 className={styles.founderTitle}>
-                SAREC 由长期房地产投资、项目操盘与跨境合作实践者推动
-              </h3>
+              <h3 className={styles.founderName}>Andy Wang</h3>
+              <p className={styles.founderRole}>SAREC 创始人 · 跨境地产投资人</p>
+              <p className={styles.founderBody}>
+                SAREC 由长期房地产投资、项目操盘与跨境合作实践者推动。
+              </p>
             </div>
             <Link href="/zh/about/founder" className={styles.ctaSecondary}>
               <span>阅读完整创始人背景</span>

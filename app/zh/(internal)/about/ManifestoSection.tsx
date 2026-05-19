@@ -22,17 +22,13 @@ export function ManifestoSection() {
       <div
         className={styles.manifestoMarquee}
         role="figure"
-        aria-label={`${MANIFESTO_TEXT} — Andy Wang,SAREC 创始人`}
+        aria-label={`${MANIFESTO_TEXT} — Andy Wang,SAREC 创始人(详见下方 Founder 段落)`}
       >
         <div className={styles.manifestoMarqueeTrack} aria-hidden="true">
           <span>{MANIFESTO_TEXT}</span>
           <span>{MANIFESTO_TEXT}</span>
           <span>{MANIFESTO_TEXT}</span>
         </div>
-      </div>
-
-      <div className={styles.manifestoInner}>
-        <p className={styles.manifestoBy}>— Andy Wang,SAREC 创始人</p>
       </div>
     </section>
   );
