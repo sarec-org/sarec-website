@@ -1,0 +1,224 @@
+/* ============================================================
+   Membership page — Phase 4c-8 批次 1(M01 + M07 + placeholder)
+   基于 SAREC_VISUAL_SPEC.md v1.2.1 六模板:
+     M01 Editorial Split 文字版变体(§5.2)— 无图无视频,SVG 印章 + 巨型 Serif H1 clip-path reveal
+     M02-M06 placeholder — 批次 2/3 填充
+     M07 Conversion Panel(§5.6)— 3 CTA
+   ============================================================ */
+
+/* ============================================================
+   M01 Hero — Editorial Split 文字版变体
+   ============================================================ */
+.heroSection {
+  position: relative;
+  background: var(--ink-deepest);
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  padding: clamp(120px, 16vw, 200px) clamp(24px, 6vw, 96px);
+  overflow: hidden;
+}
+
+.heroInner {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  z-index: 1;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: clamp(24px, 4vh, 48px);
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(4rem, 9vw, 9rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 clamp(32px, 5vh, 56px) 0;
+  overflow: hidden;
+}
+
+/* About A01 同款 clip-path reveal — 默认可见(opacity 1 + clip-path 0),动画失败兜底 */
+.heroRevealLine {
+  display: block;
+  opacity: 1;
+  clip-path: inset(0 0 0 0);
+  animation: heroLineReveal 1.8s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes heroLineReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.heroLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.6vw, 1.5rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  max-width: 800px;
+  margin: 0 0 clamp(40px, 6vh, 72px) 0;
+}
+
+.ctaGroup {
+  display: flex;
+  gap: clamp(16px, 2vw, 32px);
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  padding: 18px 36px;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+.ctaPrimary:hover {
+  background: var(--ivory);
+  transform: translateY(-1px);
+}
+
+.ctaSecondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 18px 36px;
+  background: transparent;
+  color: var(--ivory);
+  border: 1px solid var(--gold-dim);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: border-color 0.3s ease, color 0.3s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* M01 商会 seal — V1 SVG 双圆嵌套印章 wrapper(SVG 直接用 var(--gold) 渲染,不依赖 filter)*/
+.heroSealWrap {
+  position: absolute;
+  right: clamp(40px, 6vw, 120px);
+  top: 50%;
+  transform: translateY(-50%);
+  width: clamp(280px, 28vw, 480px);
+  height: clamp(280px, 28vw, 480px);
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (max-width: 1024px) {
+  .heroSealWrap {
+    display: none;
+  }
+}
+
+/* ============================================================
+   M02 - M06 临时 placeholder(批次 2 / 3 替换)
+   ============================================================ */
+.placeholderSection {
+  background: var(--ink-deep);
+  padding: clamp(80px, 10vw, 160px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.placeholderInner {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.placeholderText {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--ivory-mute);
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   M07 Conversion Panel(3 CTA:1 主 + 2 副在下方一行)
+   ============================================================ */
+.ctaBannerSection {
+  background: var(--ink-deepest);
+  padding: clamp(80px, 12vw, 160px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--gold-dim);
+}
+
+.ctaBannerInner {
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.ctaBannerH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ivory);
+  margin: 0 0 clamp(20px, 3vh, 32px) 0;
+}
+
+.ctaBannerLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  max-width: 700px;
+  margin: 0 auto clamp(40px, 6vh, 64px) auto;
+}
+
+.ctaBannerGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(20px, 3vh, 32px);
+}
+
+.ctaBannerSecondaryRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ============================================================
+   prefers-reduced-motion 兜底
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+
+  .ctaPrimary:hover {
+    transform: none !important;
+  }
+}
