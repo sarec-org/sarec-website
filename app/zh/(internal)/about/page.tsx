@@ -1,133 +1,266 @@
 import type { Metadata } from 'next';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { SectionCTA } from '@/components/sections/SectionCTA';
-import { aboutPage } from '@/lib/content';
+import Link from 'next/link';
+import { SaImage } from '@/components/shared/SaImage';
 import { createPageMetadata } from '@/lib/seo';
+import styles from './about.module.css';
+import { ManifestoSection } from './ManifestoSection';
 
 export const metadata: Metadata = createPageMetadata({
   title: '关于 SAREC｜中美房地产商会',
   description:
-    'SAREC 是跨境地产项目协作与资源整合平台，连接中国资本、美国资本与美国项目方，推动项目判断、结构设计、风险控制与落地协同。',
+    'SAREC 是跨境地产平台,围绕真实项目、长期合作和投资人视角,连接中美房地产资本与项目资源。',
   path: '/zh/about'
 });
 
+const whoLayers = [
+  {
+    code: '01',
+    title: '商会层',
+    body: '通过会员服务建立长期连接中美房地产相关客户的网络。'
+  },
+  {
+    code: '02',
+    title: '咨询撮合层',
+    body: '提供项目尽调、财务建模、结构设计、风险评估,用投资人视角帮助客户判断项目。'
+  },
+  {
+    code: '03',
+    title: '项目共投层',
+    body: '在符合 SAREC 参与标准的项目共投场景下,团队与客户共同出资,利益一致、风险共担。'
+  }
+];
+
+const proofPoints = [
+  {
+    code: '01',
+    title: (
+      <>
+        信息多但<span className={styles.proofAccent}>判断</span>少
+      </>
+    ),
+    body: '培训供给充足,但具体项目的判断、风险识别、结构评估稀缺。'
+  },
+  {
+    code: '02',
+    title: (
+      <>
+        中介多但<span className={styles.proofAccent}>结构把控</span>少
+      </>
+    ),
+    body: '撮合服务多,但持续的尽调、风控、合作落地很少。'
+  },
+  {
+    code: '03',
+    title: (
+      <>
+        项目多但<span className={styles.proofAccent}>风险识别</span>少
+      </>
+    ),
+    body: '大量项目方等钱,但能从投资人视角识别真伪、风险的人少。'
+  },
+  {
+    code: '04',
+    title: (
+      <>
+        专业服务多但<span className={styles.proofAccent}>整合</span>缺失
+      </>
+    ),
+    body: '法律 / 税务 / 移民 / 保险各自为战,缺少地产为核心的整合协调。'
+  }
+];
+
+const differentiators = [
+  {
+    code: '01',
+    title: '先判断项目,再谈合作',
+    body: '培训和展会都围绕真实项目,不做基础卖课。'
+  },
+  {
+    code: '02',
+    title: '撮合只是入口',
+    body: '真正的价值在于尽调、结构设计、风险评估、过程监督。'
+  },
+  {
+    code: '03',
+    title: '项目共投,但不做施工开发',
+    body: 'SAREC 不作为施工主体,不设资金池,只设计法律结构和对齐投资人利益。'
+  },
+  {
+    code: '04',
+    title: '只服务能承担风险的客户',
+    body: 'SAREC 不服务"想短期套利"的客户,寻找能看懂项目、能承担风险、想长期合作的投资人。'
+  }
+];
+
 export default function AboutPage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">About SAREC</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">{aboutPage.title}</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">{aboutPage.subtitle}</p>
+    <main className={styles.page}>
+      {/* A01 Hero — Cinematic Hero(全屏大图 + 横向漂移大字,VISUAL_SPEC v1.2 §5.1 + v1.2.1 §6 巨型 Serif 白名单)*/}
+      <section className={styles.heroSection}>
+        <div className={styles.heroImageFrame}>
+          <div className={styles.heroImageMotion}>
+            <SaImage
+              src="/images/home/los-angeles-hero.jpg"
+              alt="Los Angeles skyline — SAREC 关于页"
+              fill
+              priority
+              sizes="100vw"
+              filterIntensity="none"
+            />
+          </div>
+        </div>
+        <div className={styles.heroBottomGradient} aria-hidden="true" />
+        <div className={styles.heroContent}>
+          <span className={`${styles.eyebrow} ${styles.heroEyebrow}`}>ABOUT · 关于</span>
+          <h1
+            className={styles.heroH1}
+            aria-label="一个跨境地产平台,不是一个地产中介。"
+          >
+            <span className={styles.heroRevealLine}>一个跨境地产平台,</span>
+            <span className={styles.heroRevealLine}>不是一个地产中介。</span>
+          </h1>
+          <p className={styles.heroLead}>
+            SAREC 由实操背景出身的跨境地产团队推动,围绕真实项目、长期合作和投资人视角,连接中美房地产资本与项目资源。
+          </p>
+          <div className={styles.ctaGroup}>
+            <Link href="/zh/contact" className={styles.ctaPrimary}>
+              <span>预约 30 分钟沟通</span>
+              <span className={styles.ctaArrow} aria-hidden="true">
+                →
+              </span>
+            </Link>
+            <Link href="/zh/services" className={styles.ctaSecondary}>
+              <span>查看服务架构</span>
+              <span className={styles.ctaArrow} aria-hidden="true">
+                →
+              </span>
+            </Link>
+          </div>
         </div>
       </section>
 
-      <section className="border-b border-line bg-zinc-50 py-10 md:py-12">
-        <div className="container-shell grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
-          <div className="max-w-3xl">
-            <p className="font-sans text-sm font-semibold text-gold">Founder / Trust</p>
-            <h2 className="mt-2 font-sans text-2xl font-bold leading-tight">了解主理人 Andy Wang</h2>
-            <p className="mt-3 text-sm leading-7 text-muted md:text-base">
-              从房地产全链条经验、职业投资视角和跨境资源整合能力，理解 SAREC 的成立逻辑和项目判断方法。
-            </p>
-          </div>
-          <Button href="/zh/about/founder/" variant="secondary">
-            查看主理人介绍
-          </Button>
-        </div>
-      </section>
-
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Identity</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight md:text-4xl">{aboutPage.who.title}</h2>
-          </div>
-          <Card>
-            <div className="grid gap-4 text-muted">
-              {aboutPage.who.body.map((item) => (
-                <p key={item}>{item}</p>
-              ))}
+      {/* A02 我们是谁 — Editorial Split(无图变体,40/60)*/}
+      <section className={`${styles.section} ${styles.sectionDeep}`}>
+        <div className={styles.container}>
+          <div className={`${styles.splitGrid} ${styles.whoGrid}`}>
+            <div className={styles.whoTextCol}>
+              <span className={styles.eyebrow}>WHO WE ARE · 我们是谁</span>
+              <h2 className={styles.h2}>SAREC 是三层平台</h2>
             </div>
-            {aboutPage.who.bullets.length ? (
-              <ul className="mt-6 grid gap-3">
-                {aboutPage.who.bullets.map((item) => (
-                  <li className="border-l-2 border-gold pl-4 text-muted" key={item}>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </Card>
+            <ol className={styles.whoList}>
+              {whoLayers.map((layer) => (
+                <li key={layer.code} className={styles.whoItem}>
+                  <p className={styles.whoItemCode}>{layer.code} /</p>
+                  <h3 className={styles.whoItemTitle}>{layer.title}</h3>
+                  <p className={styles.whoItemBody}>{layer.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </section>
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[1fr_1fr]">
-          <Card>
-            <p className="font-sans text-sm font-semibold text-gold">Positioning</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight">{aboutPage.positioning.title}</h2>
-            <p className="mt-5 font-sans text-xl font-semibold">{aboutPage.positioning.intro}</p>
-            <p className="mt-6 text-muted">{aboutPage.positioning.body}</p>
-          </Card>
-
-          <div className="grid gap-4">
-            {aboutPage.functions.map((item, index) => (
-              <Card key={item.title}>
-                <p className="font-sans text-sm font-semibold text-gold">0{index + 1}</p>
-                <h3 className="mt-3 font-sans text-xl font-semibold">{item.title}</h3>
-                <div className="mt-4 grid gap-2 text-muted">
-                  {item.lines.map((line) => (
-                    <p key={line}>{line}</p>
-                  ))}
-                </div>
-              </Card>
+      {/* A03 为什么需要 SAREC — Proof Grid 2x2(无图)*/}
+      <section className={styles.section}>
+        <div className={styles.container}>
+          <div className={styles.proofHead}>
+            <span className={styles.eyebrow}>WHY SAREC · 为什么需要 SAREC</span>
+            <h2 className={styles.h2}>客户为什么需要我们</h2>
+          </div>
+          <div className={styles.proofGrid}>
+            {proofPoints.map((p) => (
+              <article key={p.code} className={styles.proofCard}>
+                <p className={styles.proofCode}>{p.code}</p>
+                <h3 className={styles.proofTitle}>{p.title}</h3>
+                <p className={styles.proofBody}>{p.body}</p>
+              </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Proof</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight md:text-4xl">核心数字</h2>
-            <p className="mt-4 max-w-4xl text-sm leading-7 text-muted md:text-base">{aboutPage.statsIntro}</p>
+      {/* A04 SAREC 的差异化 — Editorial Split(图字反向,55/45,左图右字)*/}
+      <section className={`${styles.section} ${styles.sectionFull} ${styles.sectionDeep}`}>
+        <div className={styles.diffGrid}>
+          <div className={styles.diffImageBox}>
+            <div className={styles.diffImageMotion}>
+              <SaImage
+                src="/images/projects/4155-wilshire-bronson.webp"
+                alt="4155 Wilshire 项目实物 — SAREC 差异化"
+                fill
+                sizes="(max-width: 768px) 100vw, 55vw"
+                filterIntensity="none"
+                className={styles.diffImage}
+              />
+            </div>
           </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {aboutPage.stats.map((stat) => (
-              <Card key={stat.label}>
-                <div className="font-sans text-3xl font-bold text-gold">{stat.value}</div>
-                <p className="mt-2 text-sm text-muted">{stat.label}</p>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-8 grid gap-4 lg:grid-cols-2">
-            <Card>
-              <h2 className="font-sans text-2xl font-semibold">合作伙伴</h2>
-              <p className="mt-4 text-muted">{aboutPage.partners}</p>
-            </Card>
-            <Card>
-              <h2 className="font-sans text-2xl font-semibold">联系我们</h2>
-              <p className="mt-4 text-muted">{aboutPage.contact.body}</p>
-              <div className="mt-4 grid gap-2 text-muted">
-                <p>总部地址：{aboutPage.contact.address}</p>
-                <p>电话：{aboutPage.contact.phone}</p>
-                <p>邮箱：{aboutPage.contact.email}</p>
-              </div>
-            </Card>
+          <div className={styles.diffTextBox}>
+            <span className={styles.eyebrow}>
+              WHAT MAKES SAREC DIFFERENT · 我们的不同
+            </span>
+            <h2 className={styles.h2}>4 件让 SAREC 不一样的事</h2>
+            <ol className={styles.diffList}>
+              {differentiators.map((d) => (
+                <li key={d.code} className={styles.diffItem}>
+                  <p className={styles.diffItemCode}>{d.code} /</p>
+                  <div>
+                    <h3 className={styles.diffItemTitle}>{d.title}</h3>
+                    <p className={styles.diffItemBody}>{d.body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
         </div>
       </section>
 
-      <SectionCTA
-        primaryCTA={aboutPage.ctas[0]}
-        secondaryCTA={aboutPage.ctas[1]}
-        subtitle="如果您愿意，我们可以从一次项目交流开始。先讨论判断框架、合作边界与现实路径，再决定下一步是否值得推进。"
-        title="与其更快进入，不如先把关键问题看清。"
-      />
-    </article>
+      {/* A05 方法论金句屏 — Manifesto Screen(client component:IntersectionObserver 触发 Blackstone reveal)*/}
+      <ManifestoSection />
+
+      {/* A06 创始人入口 — 文字 CTA Bar(无照片)*/}
+      <section className={`${styles.section} ${styles.sectionDeep} ${styles.founderSection}`}>
+        <div className={styles.container}>
+          <div className={styles.founderBar}>
+            <div className={styles.founderText}>
+              <span className={styles.eyebrow}>FOUNDER · 创始人</span>
+              <h3 className={styles.founderTitle}>
+                SAREC 由长期房地产投资、项目操盘与跨境合作实践者推动
+              </h3>
+            </div>
+            <Link href="/zh/about/founder" className={styles.ctaSecondary}>
+              <span>阅读完整创始人背景</span>
+              <span className={styles.ctaArrow} aria-hidden="true">
+                →
+              </span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* A07 CTA Banner — Conversion Panel(0 图)*/}
+      <section className={`${styles.section} ${styles.ctaBannerSection}`}>
+        <div className={styles.containerNarrow}>
+          <span className={styles.eyebrow}>BEGIN · 开始合作</span>
+          <h2 className={styles.h2}>想进一步了解 SAREC?</h2>
+          <p className={styles.lead}>
+            预约 30 分钟沟通,我们一起判断 SAREC 是不是合适的合作方。
+          </p>
+          <div className={styles.ctaGroup}>
+            <Link href="/zh/contact" className={styles.ctaPrimary}>
+              <span>预约 30 分钟沟通</span>
+              <span className={styles.ctaArrow} aria-hidden="true">
+                →
+              </span>
+            </Link>
+            <Link href="/zh/services" className={styles.ctaSecondary}>
+              <span>查看服务架构</span>
+              <span className={styles.ctaArrow} aria-hidden="true">
+                →
+              </span>
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

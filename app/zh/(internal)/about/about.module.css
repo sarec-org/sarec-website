@@ -1,0 +1,774 @@
+/* ============================================================
+   About page (A01-A07) — Phase 4c-8 V3
+   基于 SAREC_VISUAL_SPEC.md v1.2 六模板:
+     A01 Editorial Split    (§5.2) — 左字右图
+     A02 Editorial Split    (§5.2 无图变体) — 左 H2 右叙事
+     A03 Proof Grid 2×2     (§5.3) — 无图,金线分隔
+     A04 Editorial Split    (§5.2 反向) — 左图右字
+     A05 Manifesto Screen   (§5.5) — 巨型金句屏
+     A06 Conversion CTA bar (§5.6) — 创始人文字入口(无照片)
+     A07 Conversion Panel   (§5.6) — 双 CTA banner
+   核心原则:一屏只做一件事 / 图就是图,字就是字 / 图上无遮罩无字
+   ============================================================ */
+
+/* ===== Page wrapper ===== */
+.page {
+  background: var(--ink-deepest);
+  color: var(--ivory);
+  min-height: 100vh;
+}
+
+/* ===== Section base ===== */
+.section {
+  position: relative;
+  background: var(--ink-deepest);
+  padding: clamp(64px, 10vh, 128px) clamp(24px, 5vw, 80px);
+  overflow: hidden;
+}
+
+.sectionDeep {
+  background: var(--ink-deep);
+}
+
+/* sectionFull — Editorial Split 满宽段(Hero/A04),取消水平 padding */
+.sectionFull {
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.containerNarrow {
+  max-width: 880px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* ===== Typography ===== */
+.eyebrow {
+  display: block;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 24px 0;
+  line-height: 1;
+  position: relative;
+  padding-top: 28px;
+}
+
+.eyebrow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 1px;
+  background: var(--gold-dim);
+}
+
+.h1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 32px 0;
+}
+
+.h2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 24px 0;
+}
+
+.lead {
+  font-family: var(--sans);
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 32px 0;
+  max-width: 560px;
+}
+
+.containerNarrow .lead {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ============================================================
+   A01 Hero — Cinematic Hero(v1.2 §5.1 + v1.2.1 §6 巨型 Serif 横向漂移浮现白名单)
+   全屏大图铺满 + 底部 30% 渐变保护 + 巨型字横向漂移浮现
+   ============================================================ */
+.heroSection {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 720px;
+  overflow: hidden;
+  background: var(--ink-deepest);
+}
+
+/* A01 Hero 图片 — wrapper-based 动效(动画在 .heroImageMotion 上,不在 img 上)
+   .heroImageFrame 裁切容器,absolute 撑满 section;
+   .heroImageMotion 动效层,inset -2% 留 4% 缓冲,scale + 横移 alternate 永续呼吸;
+   img 只负责 fill cover,不写动画(避免 Next/Image inline style 冲突) */
+.heroImageFrame {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.heroImageMotion {
+  position: absolute;
+  inset: -2%;
+  animation: heroImageDrift 22s ease-in-out infinite alternate;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+.heroImageMotion img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@keyframes heroImageDrift {
+  0% {
+    transform: scale(1.04) translate3d(-1.2%, 0, 0);
+  }
+  100% {
+    transform: scale(1.08) translate3d(1.2%, -0.8%, 0);
+  }
+}
+
+.heroBottomGradient {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(2, 6, 16, 0.18) 0%,
+    rgba(2, 6, 16, 0) 38%,
+    rgba(2, 6, 16, 0.85) 100%
+  );
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  height: 100%;
+  padding: clamp(80px, 12vh, 120px) clamp(40px, 6vw, 80px);
+}
+
+.heroEyebrow {
+  color: var(--gold);
+  margin-bottom: 32px;
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(5rem, 12vw, 14rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--ivory);
+  margin: 0 0 40px 0;
+  max-width: none;
+  white-space: nowrap;
+  text-shadow: 0 2px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* A01 — 整行 Blackstone 横向入场(巨型 Serif 作为一块资产从左滑入,可超 viewport 被裁切)*/
+.heroRevealLine {
+  display: block;
+  opacity: 0;
+  transform: translateX(-12vw);
+  clip-path: inset(0 100% 0 0);
+  animation: heroLineReveal 2.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.heroRevealLine:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.heroRevealLine:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+@keyframes heroLineReveal {
+  0% {
+    opacity: 0;
+    transform: translateX(-12vw);
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.heroLead {
+  font-family: var(--sans);
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 40px 0;
+  max-width: 640px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  animation: heroLeadFade 0.8s ease-out 1.4s forwards;
+}
+
+@keyframes heroLeadFade {
+  to {
+    opacity: 1;
+  }
+}
+
+.heroSection .ctaGroup {
+  opacity: 0;
+  animation: heroLeadFade 0.8s ease-out 2s forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine,
+  .heroLead,
+  .heroSection .ctaGroup {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    animation: none !important;
+  }
+
+  .heroImageMotion,
+  .diffImageMotion {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .manifestoMarqueeTrack {
+    animation: none !important;
+    transform: translateX(0) !important;
+  }
+
+  .manifestoMarqueeTrack span:not(:first-of-type) {
+    display: none;
+  }
+}
+
+/* ============================================================
+   Editorial Split — 共享布局(v1.2 §5.2)
+   ============================================================ */
+.splitGrid {
+  display: grid;
+  align-items: stretch;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* A04 — 55/45 反向(左图右字),图盒 ↔ 文字盒 上下边缘完全对齐 */
+.diffGrid {
+  display: grid;
+  grid-template-columns: 55fr 45fr;
+  align-items: stretch;
+  width: 100%;
+}
+
+.diffImageBox {
+  position: relative;
+  min-height: 72vh;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* A04 项目图 — 三层结构(diffImageBox 裁切 + diffImageMotion 动效层 + diffImage 命中 img)*/
+.diffImageMotion {
+  position: absolute;
+  inset: -3%;
+  animation: assetImageDrift 24s ease-in-out infinite alternate;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+.diffImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@keyframes assetImageDrift {
+  0% {
+    transform: scale(1.03) translate3d(-1.5%, 0, 0);
+  }
+  100% {
+    transform: scale(1.09) translate3d(1.5%, -0.8%, 0);
+  }
+}
+
+.diffTextBox {
+  min-height: 72vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: clamp(48px, 7vw, 96px);
+  background: var(--ink-deepest);
+}
+
+/* A02 Who — 40/60 无图变体(纯文字两栏)*/
+.whoGrid {
+  grid-template-columns: 40fr 60fr;
+  gap: clamp(40px, 6vw, 96px);
+  align-items: start;
+  min-height: 0;
+}
+
+.splitTextCol {
+  background: var(--ink-deepest);
+  padding: clamp(48px, 7vw, 112px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.splitTextInner {
+  max-width: 540px;
+  width: 100%;
+}
+
+.splitImageCol {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink-deep);
+}
+
+.splitImageCol img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ============================================================
+   A01 / A07 — CTA buttons
+   ============================================================ */
+.ctaGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.containerNarrow .ctaGroup {
+  justify-content: center;
+}
+
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: var(--gold);
+  border: 1px solid var(--gold);
+  color: var(--ink-deepest);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.ctaPrimary:hover {
+  background: var(--gold-warm);
+  border-color: var(--gold-warm);
+}
+
+.ctaSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  transition: border-color 0.25s ease, color 0.25s ease, background-color 0.25s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold-warm);
+  background: rgba(199, 161, 99, 0.05);
+}
+
+.ctaArrow {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ctaPrimary:hover .ctaArrow,
+.ctaSecondary:hover .ctaArrow {
+  transform: translateX(4px);
+}
+
+/* ============================================================
+   A02 Who — 3 段叙事列表
+   ============================================================ */
+.whoTextCol {
+  /* nested under .whoGrid > 左列 */
+}
+
+.whoList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(28px, 4vh, 48px);
+}
+
+.whoItem {
+  border-top: 1px solid var(--line-3);
+  padding-top: clamp(20px, 3vh, 32px);
+}
+
+.whoItem:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.whoItemCode {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  margin: 0 0 12px 0;
+}
+
+.whoItemTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2vw, 1.875rem);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+}
+
+.whoItemBody {
+  font-family: var(--sans);
+  font-size: clamp(0.95rem, 1.15vw, 1.0625rem);
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0;
+}
+
+/* ============================================================
+   A03 Proof Grid 2×2(v1.2 §5.3 — 严谨 grid 不错落 / 金线分隔)
+   ============================================================ */
+.proofHead {
+  max-width: 720px;
+  margin: 0 0 clamp(40px, 6vh, 72px) 0;
+}
+
+.proofGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid var(--line-3);
+  border-left: 1px solid var(--line-3);
+}
+
+.proofCard {
+  border-right: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+  padding: clamp(32px, 4vw, 56px);
+  background: var(--ink-deepest);
+  display: flex;
+  flex-direction: column;
+}
+
+.proofCode {
+  font-family: var(--serif-en);
+  font-size: clamp(2.5rem, 4vw, 4rem);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--gold);
+  margin: 0 0 24px 0;
+}
+
+.proofTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ivory);
+  margin: 0 0 16px 0;
+}
+
+.proofAccent {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.proofBody {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0;
+}
+
+/* ============================================================
+   A04 差异化 — 4 条纵向列表
+   ============================================================ */
+.diffList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vh, 36px);
+}
+
+.diffItem {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 16px;
+  align-items: start;
+  border-top: 1px solid var(--line-3);
+  padding-top: clamp(20px, 2.5vh, 28px);
+}
+
+.diffItem:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.diffItemCode {
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  margin: 4px 0 0 0;
+}
+
+.diffItemTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.5vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--ivory);
+  margin: 0 0 6px 0;
+}
+
+.diffItemBody {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0;
+}
+
+/* ============================================================
+   A05 Manifesto Screen(v1.2 §5.5)
+   ============================================================ */
+.manifestoSection {
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink-deepest);
+  padding: clamp(96px, 15vh, 160px) clamp(24px, 5vw, 80px);
+}
+
+.manifestoInner {
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.manifestoInner .eyebrow {
+  margin-left: auto;
+  margin-right: auto;
+  display: inline-block;
+  padding-left: 32px;
+}
+
+.manifestoInner .eyebrow::before {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* A05 — Blackstone 巨型文字横向无限循环 marquee
+   full-bleed 100vw 黑底,巨型 Serif 单句复制 3 份,持续向左 linear infinite。
+   track 总宽 = 3 份内容 + 2 段 gap;translateX(0 → -1/3) 完成一轮无缝循环。
+   ⚠️ 与 VISUAL_SPEC v1.2.1 §6 "动效不 loop" 条款冲突,Andy 拍板用 marquee。 */
+.manifestoMarquee {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  overflow: hidden;
+  background: var(--ink-deepest);
+  padding: clamp(120px, 16vw, 220px) 0;
+}
+
+.manifestoMarqueeTrack {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  gap: clamp(80px, 8vw, 160px);
+  white-space: nowrap;
+  animation: manifestoMarquee 32s linear infinite;
+  will-change: transform;
+}
+
+.manifestoMarqueeTrack span {
+  flex: 0 0 auto;
+  font-family: var(--serif-zh);
+  font-size: clamp(7rem, 13vw, 16rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  color: var(--ivory);
+}
+
+/* N=3 复制 + calc(-100%/3) = 精确一份的位移 → 无缝循环。translate3d 启 GPU 加速更稳 */
+@keyframes manifestoMarquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-100% / 3), 0, 0);
+  }
+}
+
+.manifestoBy {
+  font-family: var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: var(--gold-dim);
+  margin: 0;
+}
+
+/* ============================================================
+   A06 Founder bar(轻量文字入口,无照片 — v1.2 §11.5 失败 4)
+   ============================================================ */
+.founderSection {
+  padding-top: clamp(48px, 7vh, 80px);
+  padding-bottom: clamp(48px, 7vh, 80px);
+}
+
+.founderBar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: clamp(24px, 4vw, 64px);
+  align-items: center;
+  padding: clamp(32px, 4vw, 56px) clamp(32px, 4vw, 64px);
+  border: 1px solid var(--line-3);
+  background: rgba(2, 6, 16, 0.4);
+}
+
+.founderText {
+  max-width: 720px;
+}
+
+.founderTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.8vw, 1.625rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ivory);
+  margin: 0;
+}
+
+/* ============================================================
+   A07 CTA Banner — Conversion Panel
+   ============================================================ */
+.ctaBannerSection {
+  padding-top: clamp(80px, 12vh, 160px);
+  padding-bottom: clamp(80px, 12vh, 160px);
+}
+
+/* ============================================================
+   Mobile responsive(<= 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  /* A01 Cinematic Hero — mobile 字号自然缩到 clamp 下限 4rem */
+  .heroSection {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .heroContent {
+    padding: clamp(80px, 14vh, 120px) clamp(24px, 5vw, 40px);
+  }
+
+  /* A02 / A04 / Editorial Split — 单列堆叠 */
+  .splitGrid,
+  .diffGrid,
+  .whoGrid {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  /* A02 (剩余的 splitGrid 用例) */
+  .splitImageCol {
+    aspect-ratio: 16 / 10;
+  }
+
+  .splitTextCol {
+    padding: clamp(40px, 7vw, 64px) clamp(24px, 5vw, 40px);
+  }
+
+  /* A04 mobile — 图盒在上、文字盒在下,各自由内容/aspect 决定高度 */
+  .diffImageBox {
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+
+  .diffTextBox {
+    min-height: 0;
+    padding: clamp(40px, 7vw, 64px) clamp(24px, 5vw, 40px);
+  }
+
+  .whoGrid {
+    gap: clamp(24px, 4vh, 40px);
+  }
+
+  .proofGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .founderBar {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+}
