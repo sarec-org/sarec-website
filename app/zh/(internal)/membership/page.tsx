@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { SaImage } from '@/components/shared/SaImage';
 import { createPageMetadata } from '@/lib/seo';
 import styles from './membership.module.css';
 
@@ -107,11 +108,267 @@ export default function MembershipPage() {
         </div>
       </section>
 
-      {/* M02 - M06 placeholder — 批次 2 / 批次 3 实施 */}
+      {/* Membership Manifesto — Masked Text Marquee(字内嵌建筑图,horizontal marquee 无限循环) */}
+      <section
+        className={styles.membershipManifestoSection}
+        aria-label="SAREC Membership · 长期入口 · 跨境资本 · 专业服务 · 美国房地产"
+      >
+        <div className={styles.maskedMarqueeViewport}>
+          <div className={styles.maskedMarqueeTrack} aria-hidden="true">
+            <span className={styles.maskedMarqueeText}>
+              SAREC MEMBERSHIP · 长期入口 · 跨境资本 · 专业服务 · 美国房地产 ·
+            </span>
+            <span className={styles.maskedMarqueeText}>
+              SAREC MEMBERSHIP · 长期入口 · 跨境资本 · 专业服务 · 美国房地产 ·
+            </span>
+            <span className={styles.maskedMarqueeText}>
+              SAREC MEMBERSHIP · 长期入口 · 跨境资本 · 专业服务 · 美国房地产 ·
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {/* M02 — Editorial Split §5.2:为什么加入 + advisory video */}
+      <section className={styles.whyJoinSection} id="benefits">
+        <div className={styles.whyJoinGrid}>
+          <div className={styles.whyJoinMedia}>
+            <video
+              src={`${process.env.NEXT_PUBLIC_MEDIA_BASE ?? ''}/videos/advisory-presentation.mp4`}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className={styles.whyJoinVideo}
+            />
+          </div>
+          <div className={styles.whyJoinText}>
+            <span className={styles.eyebrow}>WHY JOIN · 为什么加入</span>
+            <h2 className={styles.sectionH2}>为什么加入 SAREC 会员</h2>
+            <p className={styles.sectionLead}>
+              SAREC 会员不只是访问内容的权限。它是连接美国房地产投资、跨境资本合作和专业服务伙伴网络的长期入口。
+            </p>
+            <ol className={styles.whyJoinList}>
+              <li>
+                <span className={styles.whyJoinNum}>01</span>
+                <div>
+                  <h3 className={styles.whyJoinH3}>系统化研究内容</h3>
+                  <p className={styles.whyJoinBody}>
+                    定期发布美国房地产研究内容,关注政策动向、市场结构、项目机会和风险清单。
+                  </p>
+                  <ul className={styles.whyJoinSubList}>
+                    <li>研究内容优先访问</li>
+                    <li>市场观察简报</li>
+                    <li>专题报告与活动资料</li>
+                  </ul>
+                </div>
+              </li>
+              <li>
+                <span className={styles.whyJoinNum}>02</span>
+                <div>
+                  <h3 className={styles.whyJoinH3}>高含金量培训与活动</h3>
+                  <p className={styles.whyJoinBody}>
+                    不做泛泛而谈的基础培训。围绕真实项目、市场判断、风险识别和资源对接 —— 包括项目研讨、闭门分享、行业展会。
+                  </p>
+                  <p className={styles.whyJoinBody}>
+                    详见 →{' '}
+                    <Link href="/zh/events" className={styles.inlineLink}>
+                      活动与考察
+                    </Link>
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className={styles.whyJoinNum}>03</span>
+                <div>
+                  <h3 className={styles.whyJoinH3}>美国实地考察</h3>
+                  <p className={styles.whyJoinBody}>
+                    SAREC 将根据项目进度和会员需求,组织美国实地考察、项目走访和专题交流。会员可优先参加考察活动,直接接触本地华人开发商、专业服务伙伴和真实项目现场。
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className={styles.whyJoinNum}>04</span>
+                <div>
+                  <h3 className={styles.whyJoinH3}>专业服务伙伴对接</h3>
+                  <p className={styles.whyJoinBody}>
+                    SAREC 与非竞争性专业服务伙伴建立资源互荐机制。
+                  </p>
+                  <ul className={styles.whyJoinSubList}>
+                    <li>地产服务(律师、会计师、贷款经纪)</li>
+                    <li>法律 / 税务 / 移民 / 财富管理</li>
+                    <li>跨境合规 / 公司架构</li>
+                  </ul>
+                  <p className={styles.whyJoinBody}>
+                    会员可获得专业服务伙伴的优先对接。
+                  </p>
+                  <p className={styles.complianceNote}>
+                    具体合作方式以单独协议为准。
+                  </p>
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      {/* M03 — Proof Grid 3 卡 §5.3 变体:三档会员,中间金边强调 */}
+      <section className={styles.tiersSection}>
+        <div className={styles.tiersInner}>
+          <span className={styles.eyebrow}>MEMBERSHIP LEVELS · 会员级别</span>
+          <h2 className={styles.sectionH2}>三档会员</h2>
+          <p className={styles.sectionLead}>
+            SAREC 会员目前设有三个级别,对应不同的参与深度和合作意向。
+          </p>
+          <div className={styles.tiersGrid}>
+            <article className={styles.tierCard}>
+              <h3 className={styles.tierTitle}>理事会员</h3>
+              <p className={styles.tierEn}>Council Member</p>
+              <p className={styles.tierFit}>
+                适合:希望系统了解美国房地产投资和跨境合作的人
+              </p>
+              <p className={styles.tierIncludes}>权益包括:</p>
+              <ul className={styles.tierList}>
+                <li>研究内容优先访问</li>
+                <li>市场观察简报</li>
+                <li>参加公开活动与培训</li>
+                <li>美国实地考察报名资格(需符合资格审核)</li>
+              </ul>
+              <Link href="/zh/contact" className={styles.tierCta}>
+                申请理事会员 →
+              </Link>
+            </article>
+            <article className={`${styles.tierCard} ${styles.tierCardFeatured}`}>
+              <h3 className={styles.tierTitle}>常务理事</h3>
+              <p className={styles.tierEn}>Executive Council Member</p>
+              <p className={styles.tierFit}>
+                适合:已有具体项目方向或投资意向,希望深度参与的人
+              </p>
+              <p className={styles.tierIncludes}>
+                权益包括理事会员全部内容,并额外包括:
+              </p>
+              <ul className={styles.tierList}>
+                <li>专题报告与闭门分享</li>
+                <li>项目研讨与圆桌讨论</li>
+                <li>美国实地考察优先权</li>
+                <li>专业服务伙伴优先对接</li>
+                <li>与 SAREC 团队定期沟通</li>
+              </ul>
+              <Link href="/zh/contact" className={styles.tierCta}>
+                申请常务理事 →
+              </Link>
+            </article>
+            <article className={styles.tierCard}>
+              <h3 className={styles.tierTitle}>副会长单位</h3>
+              <p className={styles.tierEn}>Vice President Member</p>
+              <p className={styles.tierFit}>
+                适合:在房地产、金融、专业服务领域有长期合作意向的机构或个人
+              </p>
+              <p className={styles.tierBody}>权益按单独协议约定。</p>
+              <Link href="/zh/contact" className={styles.tierCta}>
+                申请副会长单位 →
+              </Link>
+            </article>
+          </div>
+          <p className={styles.tiersNote}>
+            具体会员费、合作方式和入会资格审核标准,在初次沟通后提供。
+          </p>
+        </div>
+      </section>
+
+      {/* M04 — Editorial Split 反向 §5.2:会员的核心价值 + 项目图 */}
+      <section className={styles.valuesSection}>
+        <div className={styles.valuesGrid}>
+          <div className={styles.valuesMedia}>
+            <div className={styles.valuesImageBox}>
+              <div className={styles.valuesImageMotion}>
+                <SaImage
+                  src="/images/projects/2215-wellesley-ed1.webp"
+                  alt="SAREC 项目实物 — 2215 Wellesley"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 55vw"
+                  filterIntensity="none"
+                  className={styles.valuesImage}
+                />
+              </div>
+            </div>
+          </div>
+          <div className={styles.valuesText}>
+            <span className={styles.eyebrow}>WHAT YOU GET · 会员权益</span>
+            <h2 className={styles.sectionH2}>会员的核心价值</h2>
+            <p className={styles.sectionLead}>
+              SAREC 会员的核心价值,在于持续接触美国房地产投资和跨境合作的真实场景。
+            </p>
+            <ol className={styles.valuesList}>
+              <li>
+                <span className={styles.valuesNum}>01</span>
+                <div>
+                  <h3 className={styles.valuesH3}>研究内容订阅</h3>
+                  <p className={styles.valuesBody}>
+                    定期发布的市场观察、政策深度、风险清单和专题研究。
+                  </p>
+                  <p className={styles.valuesBody}>会员获得优先访问。</p>
+                </div>
+              </li>
+              <li>
+                <span className={styles.valuesNum}>02</span>
+                <div>
+                  <h3 className={styles.valuesH3}>主题培训与项目研讨</h3>
+                  <p className={styles.valuesBody}>
+                    围绕真实项目和真实判断设计的培训内容。
+                  </p>
+                  <p className={styles.valuesBody}>
+                    包括项目结构、财务建模、风险识别等专题。
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className={styles.valuesNum}>03</span>
+                <div>
+                  <h3 className={styles.valuesH3}>行业展会与论坛</h3>
+                  <p className={styles.valuesBody}>跨境地产投资相关的行业活动。</p>
+                  <p className={styles.valuesBody}>
+                    会员可优先参加,部分活动需要资格审核。
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className={styles.valuesNum}>04</span>
+                <div>
+                  <h3 className={styles.valuesH3}>美国实地考察</h3>
+                  <p className={styles.valuesBody}>
+                    根据项目进度和会员需求组织。
+                  </p>
+                  <p className={styles.valuesBody}>
+                    包括项目走访、本地开发商面对面、专业服务伙伴见面等。
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span className={styles.valuesNum}>05</span>
+                <div>
+                  <h3 className={styles.valuesH3}>闭门分享</h3>
+                  <p className={styles.valuesBody}>
+                    针对常务理事和副会长单位的小范围分享。
+                  </p>
+                  <p className={styles.valuesBody}>通常涉及具体项目或敏感话题。</p>
+                </div>
+              </li>
+            </ol>
+            <p className={styles.valuesFooter}>
+              完整活动安排见 →{' '}
+              <Link href="/zh/events" className={styles.inlineLink}>
+                活动与考察
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* M05 + M06 placeholder — 批次 3 实施 */}
       <section className={styles.placeholderSection}>
         <div className={styles.placeholderInner}>
           <p className={styles.placeholderText}>
-            M02 - M06 区块将在批次 2 / 批次 3 实施。当前为临时 placeholder。
+            M05 - M06 区块将在批次 3 实施。当前为临时 placeholder。
           </p>
         </div>
       </section>

@@ -163,6 +163,529 @@
 }
 
 /* ============================================================
+   Membership Manifesto Screen — Horizontal Text Marquee
+   黑底 + ivory 实色字,horizontal marquee 无限循环
+   简化版:删除字内嵌图片,所有浏览器一致表现,无 Webkit bug 风险
+   ============================================================ */
+
+.membershipManifestoSection {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: var(--ink-deepest);
+  min-height: clamp(520px, 72vh, 820px);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.maskedMarqueeViewport {
+  width: 100%;
+  overflow: hidden;
+}
+
+.maskedMarqueeTrack {
+  display: flex;
+  width: max-content;
+  gap: clamp(80px, 8vw, 160px);
+  white-space: nowrap;
+  animation: membershipMaskedMarquee 34s linear infinite;
+  will-change: transform;
+}
+
+.maskedMarqueeText {
+  flex: 0 0 auto;
+  font-family: var(--serif-zh);
+  font-size: clamp(6rem, 12vw, 15rem);
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  white-space: nowrap;
+  color: var(--ivory);
+}
+
+/* N=3 复制 + translateX 0 → -100%/3 = 精确无缝循环 */
+@keyframes membershipMaskedMarquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-100% / 3), 0, 0);
+  }
+}
+
+/* 移动端降级:< 768px 缩小字号 */
+@media (max-width: 768px) {
+  .maskedMarqueeText {
+    font-size: clamp(3rem, 10vw, 6rem);
+  }
+}
+
+/* prefers-reduced-motion 兜底:停 marquee,字静态居中显示一份 */
+@media (prefers-reduced-motion: reduce) {
+  .maskedMarqueeTrack {
+    animation: none !important;
+    transform: translate3d(0, 0, 0) !important;
+    justify-content: center;
+  }
+
+  .maskedMarqueeTrack .maskedMarqueeText:not(:first-of-type) {
+    display: none;
+  }
+}
+
+/* ============================================================
+   M02 — Editorial Split:为什么加入 + advisory video
+   ============================================================ */
+
+.whyJoinSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) 0;
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+  scroll-margin-top: 80px;
+}
+
+.whyJoinGrid {
+  display: grid;
+  grid-template-columns: 45fr 55fr;
+  align-items: stretch;
+  gap: clamp(48px, 6vw, 96px);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 clamp(24px, 6vw, 96px);
+}
+
+@media (max-width: 1024px) {
+  .whyJoinGrid {
+    grid-template-columns: 1fr;
+    gap: clamp(32px, 5vh, 64px);
+  }
+}
+
+.whyJoinMedia {
+  position: relative;
+  min-height: 72vh;
+  overflow: hidden;
+  background: var(--ink-deepest);
+}
+
+@media (max-width: 1024px) {
+  .whyJoinMedia {
+    min-height: 50vh;
+  }
+}
+
+.whyJoinVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.whyJoinText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.sectionH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: clamp(20px, 3vh, 32px) 0 clamp(24px, 4vh, 40px) 0;
+}
+
+.sectionLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(40px, 6vh, 64px) 0;
+}
+
+.whyJoinList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: clamp(28px, 4vh, 48px);
+}
+
+.whyJoinList li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(20px, 2vw, 32px);
+  align-items: start;
+}
+
+.whyJoinNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  padding-top: 6px;
+}
+
+.whyJoinH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.375rem, 1.8vw, 1.75rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+
+.whyJoinBody {
+  font-family: var(--serif-zh);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 8px 0;
+}
+
+.whyJoinBody:last-child {
+  margin-bottom: 0;
+}
+
+.whyJoinSubList {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  display: grid;
+  gap: 6px;
+}
+
+.whyJoinSubList li {
+  display: block;
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.whyJoinSubList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+.complianceNote {
+  font-family: var(--serif-zh);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: 12px 0 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+}
+
+.inlineLink {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 1px;
+  transition: border-color 0.2s ease;
+}
+
+.inlineLink:hover {
+  border-color: var(--gold);
+}
+
+/* ============================================================
+   M03 — Proof Grid 3 卡:三档会员,中间金边强调
+   ============================================================ */
+
+.tiersSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+}
+
+.tiersInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.tiersGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(20px, 2.5vw, 40px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .tiersGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tierCard {
+  background: var(--ink-deep);
+  padding: clamp(32px, 3.5vw, 56px);
+  border: 1.5px solid var(--gold);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2vh, 20px);
+  transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tierCard:hover {
+  border-color: var(--ivory);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(197, 168, 90, 0.15);
+}
+
+.tierCardFeatured {
+  background: var(--ink-deep);
+  position: relative;
+}
+
+.tierCardFeatured:hover {
+  border-color: var(--ivory);
+}
+
+.tierTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2vw, 1.875rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.tierEn {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.tierFit {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+.tierIncludes {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  margin: 0;
+}
+
+.tierList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  flex: 1;
+}
+
+.tierList li {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  padding-left: 16px;
+  position: relative;
+}
+
+.tierList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+.tierBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+  flex: 1;
+}
+
+.tierCta {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-decoration: none;
+  padding-top: clamp(12px, 2vh, 20px);
+  border-top: 1px solid var(--line-3);
+  margin-top: auto;
+  transition: color 0.2s ease;
+}
+
+.tierCta:hover {
+  color: var(--ivory);
+}
+
+.tiersNote {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  margin: clamp(40px, 5vh, 64px) auto 0;
+  text-align: center;
+  font-style: italic;
+  max-width: 800px;
+}
+
+/* ============================================================
+   M04 — Editorial Split 反向:会员的核心价值 + 项目图
+   ============================================================ */
+
+.valuesSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) 0;
+  border-top: 1px solid var(--line-3);
+}
+
+.valuesGrid {
+  display: grid;
+  grid-template-columns: 55fr 45fr;
+  align-items: stretch;
+  gap: clamp(48px, 6vw, 96px);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 clamp(24px, 6vw, 96px);
+}
+
+@media (max-width: 1024px) {
+  .valuesGrid {
+    grid-template-columns: 1fr;
+    gap: clamp(32px, 5vh, 64px);
+  }
+}
+
+/* About A04 同款 wrapper-based motion 三层结构 — 已验证稳定 */
+.valuesMedia {
+  position: relative;
+}
+
+.valuesImageBox {
+  position: relative;
+  overflow: hidden;
+  min-height: 72vh;
+  height: 100%;
+}
+
+@media (max-width: 1024px) {
+  .valuesImageBox {
+    min-height: 50vh;
+  }
+}
+
+.valuesImageMotion {
+  position: absolute;
+  inset: -3%;
+  animation: valuesImageDrift 24s ease-in-out infinite alternate;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+.valuesImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@keyframes valuesImageDrift {
+  0% {
+    transform: scale(1.03) translate3d(-1.5%, 0, 0);
+  }
+  100% {
+    transform: scale(1.09) translate3d(1.5%, -0.8%, 0);
+  }
+}
+
+.valuesText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.valuesList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: clamp(24px, 3.5vh, 40px);
+}
+
+.valuesList li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(20px, 2vw, 32px);
+  align-items: start;
+}
+
+.valuesNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  padding-top: 4px;
+}
+
+.valuesH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 10px 0;
+  line-height: 1.3;
+}
+
+.valuesBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 6px 0;
+}
+
+.valuesBody:last-child {
+  margin-bottom: 0;
+}
+
+.valuesFooter {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  margin: clamp(40px, 5vh, 56px) 0 0 0;
+  padding-top: clamp(24px, 3vh, 32px);
+  border-top: 1px solid var(--line-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .valuesImageMotion {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* ============================================================
    M07 Conversion Panel(3 CTA:1 主 + 2 副在下方一行)
    ============================================================ */
 .ctaBannerSection {
