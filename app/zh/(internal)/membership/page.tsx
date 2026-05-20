@@ -282,8 +282,8 @@ export default function MembershipPage() {
             <div className={styles.valuesImageBox}>
               <div className={styles.valuesImageMotion}>
                 <SaImage
-                  src="/images/projects/2215-wellesley-ed1.webp"
-                  alt="SAREC 项目实物 — 2215 Wellesley"
+                  src="/images/la/la-skyline-marquee.jpg"
+                  alt="SAREC 项目场景 — Los Angeles downtown"
                   fill
                   sizes="(max-width: 768px) 100vw, 55vw"
                   filterIntensity="none"
@@ -364,12 +364,126 @@ export default function MembershipPage() {
         </div>
       </section>
 
-      {/* M05 + M06 placeholder — 批次 3 实施 */}
-      <section className={styles.placeholderSection}>
-        <div className={styles.placeholderInner}>
-          <p className={styles.placeholderText}>
-            M05 - M06 区块将在批次 3 实施。当前为临时 placeholder。
+      {/* M05 — 4 步水平时间线:申请流程(VISUAL_SPEC §5.3 横向变体) */}
+      <section className={styles.applySection}>
+        <div className={styles.applyInner}>
+          <span className={styles.eyebrow}>HOW TO APPLY · 如何申请</span>
+          <h2 className={styles.sectionH2}>4 步加入 SAREC 会员</h2>
+
+          <ol className={styles.applySteps}>
+            <li className={styles.applyStep}>
+              <span className={styles.applyNum}>01</span>
+              <h3 className={styles.applyH3}>提交申请</h3>
+              <p className={styles.applyBody}>填写"申请加入会员"表单。</p>
+              <p className={styles.applyBody}>提供你的背景、当前阶段、合作意向。</p>
+            </li>
+            <li className={styles.applyStep}>
+              <span className={styles.applyNum}>02</span>
+              <h3 className={styles.applyH3}>初步评估</h3>
+              <p className={styles.applyBody}>SAREC 团队在 1 个工作日内回复,</p>
+              <p className={styles.applyBody}>评估你的需求与 SAREC 服务的匹配度。</p>
+            </li>
+            <li className={styles.applyStep}>
+              <span className={styles.applyNum}>03</span>
+              <h3 className={styles.applyH3}>30 分钟沟通</h3>
+              <p className={styles.applyBody}>匹配的申请人将安排 30 分钟视频或电话沟通,</p>
+              <p className={styles.applyBody}>进一步了解需求,确认合作意向和会员级别。</p>
+            </li>
+            <li className={styles.applyStep}>
+              <span className={styles.applyNum}>04</span>
+              <h3 className={styles.applyH3}>正式入会</h3>
+              <p className={styles.applyBody}>确认合作意向后,提供会员费支付方式,</p>
+              <p className={styles.applyBody}>完成会员资格生效。</p>
+            </li>
+          </ol>
+
+          <p className={styles.complianceNote}>
+            整个流程通常 3-5 个工作日完成。
           </p>
+        </div>
+      </section>
+
+      {/* M06 — FAQ 4 题:<details>/<summary> 原生折叠,全部默认折叠 */}
+      <section className={styles.faqSection}>
+        <div className={styles.faqInner}>
+          <span className={styles.eyebrow}>FAQ · 常见问题</span>
+          <h2 className={styles.sectionH2}>会员常见问题</h2>
+
+          <div className={styles.faqList}>
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q1</span>
+                <span className={styles.faqQText}>会员费多少?</span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>不同会员级别会员费不同。</p>
+                <p>
+                  理事会员 / 常务理事 / 副会长单位各有不同的权益和费用结构。
+                </p>
+                <p>
+                  具体会员费、合作方式和入会资格审核标准,在初次沟通后提供。
+                </p>
+              </div>
+            </details>
+
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q2</span>
+                <span className={styles.faqQText}>
+                  不加入会员可以参加活动吗?
+                </span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>部分公开活动非会员可单次报名(需资格审核)。</p>
+                <p>
+                  但 SAREC 大部分高含金量活动 —— 包括闭门分享、实地考察、深度研讨 —— 仅向会员开放。
+                </p>
+              </div>
+            </details>
+
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q3</span>
+                <span className={styles.faqQText}>
+                  会员可以获得具体项目投资机会吗?
+                </span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>
+                  会员服务属于第一层商会层 —— 研究、培训、活动、考察、资源对接。
+                </p>
+                <p>
+                  具体项目投资属于第二层(咨询撮合)和第三层(共投)服务,需要单独评估匹配度并签署相关文件。
+                </p>
+                <p>
+                  会员是建立信任和了解 SAREC 的入口,不直接等同于项目投资资格。
+                </p>
+              </div>
+            </details>
+
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q4</span>
+                <span className={styles.faqQText}>如何取消会员?</span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>会员按年度生效,可在每年到期前选择是否续约。</p>
+                <p>如有特殊情况需提前终止,按会员协议约定处理。</p>
+              </div>
+            </details>
+          </div>
         </div>
       </section>
 

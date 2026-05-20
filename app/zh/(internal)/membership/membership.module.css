@@ -139,30 +139,6 @@
 }
 
 /* ============================================================
-   M02 - M06 临时 placeholder(批次 2 / 3 替换)
-   ============================================================ */
-.placeholderSection {
-  background: var(--ink-deep);
-  padding: clamp(80px, 10vw, 160px) clamp(24px, 6vw, 96px);
-  border-top: 1px solid var(--line-3);
-  border-bottom: 1px solid var(--line-3);
-}
-
-.placeholderInner {
-  max-width: 800px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.placeholderText {
-  font-family: var(--mono);
-  font-size: 0.875rem;
-  letter-spacing: 0.2em;
-  color: var(--ivory-mute);
-  text-transform: uppercase;
-}
-
-/* ============================================================
    Membership Manifesto Screen — Horizontal Text Marquee
    黑底 + ivory 实色字,horizontal marquee 无限循环
    简化版:删除字内嵌图片,所有浏览器一致表现,无 Webkit bug 风险
@@ -242,7 +218,7 @@
 
 .whyJoinSection {
   background: var(--ink-deep);
-  padding: clamp(96px, 14vw, 180px) 0;
+  padding: 0;
   border-top: 1px solid var(--line-3);
   border-bottom: 1px solid var(--line-3);
   scroll-margin-top: 80px;
@@ -250,24 +226,26 @@
 
 .whyJoinGrid {
   display: grid;
-  grid-template-columns: 45fr 55fr;
+  grid-template-columns: 50fr 50fr;
   align-items: stretch;
-  gap: clamp(48px, 6vw, 96px);
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 clamp(24px, 6vw, 96px);
+  gap: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: clamp(80vh, 88vh, 92vh);
 }
 
 @media (max-width: 1024px) {
   .whyJoinGrid {
     grid-template-columns: 1fr;
     gap: clamp(32px, 5vh, 64px);
+    min-height: auto;
   }
 }
 
 .whyJoinMedia {
   position: relative;
-  min-height: 72vh;
+  min-height: auto;
   overflow: hidden;
   background: var(--ink-deepest);
 }
@@ -289,6 +267,13 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 6vw, 96px);
+}
+
+@media (max-width: 1024px) {
+  .whyJoinText {
+    padding: clamp(32px, 5vh, 64px) clamp(24px, 6vw, 48px);
+  }
 }
 
 .sectionH2 {
@@ -555,24 +540,26 @@
 
 .valuesSection {
   background: var(--ink-deep);
-  padding: clamp(96px, 14vw, 180px) 0;
+  padding: 0;
   border-top: 1px solid var(--line-3);
 }
 
 .valuesGrid {
   display: grid;
-  grid-template-columns: 55fr 45fr;
+  grid-template-columns: 50fr 50fr;
   align-items: stretch;
-  gap: clamp(48px, 6vw, 96px);
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 clamp(24px, 6vw, 96px);
+  gap: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  min-height: clamp(80vh, 88vh, 92vh);
 }
 
 @media (max-width: 1024px) {
   .valuesGrid {
     grid-template-columns: 1fr;
     gap: clamp(32px, 5vh, 64px);
+    min-height: auto;
   }
 }
 
@@ -584,7 +571,7 @@
 .valuesImageBox {
   position: relative;
   overflow: hidden;
-  min-height: 72vh;
+  min-height: auto;
   height: 100%;
 }
 
@@ -611,10 +598,10 @@
 
 @keyframes valuesImageDrift {
   0% {
-    transform: scale(1.03) translate3d(-1.5%, 0, 0);
+    transform: scale(1.03);
   }
   100% {
-    transform: scale(1.09) translate3d(1.5%, -0.8%, 0);
+    transform: scale(1.09);
   }
 }
 
@@ -622,6 +609,13 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 6vw, 96px);
+}
+
+@media (max-width: 1024px) {
+  .valuesText {
+    padding: clamp(32px, 5vh, 64px) clamp(24px, 6vw, 48px);
+  }
 }
 
 .valuesList {
@@ -683,6 +677,177 @@
     animation: none !important;
     transform: none !important;
   }
+}
+
+/* ============================================================
+   M05 — 4 步申请流程时间线
+   桌面 4 步横排 + 金色细横线连接 / 移动纵排 + 左侧金色竖线
+   ============================================================ */
+
+.applySection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.applyInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.applySteps {
+  list-style: none;
+  padding: 0;
+  margin: clamp(48px, 6vh, 80px) 0 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  position: relative;
+}
+
+@media (max-width: 1024px) {
+  .applySteps {
+    grid-template-columns: 1fr;
+    gap: clamp(32px, 4vh, 48px);
+  }
+}
+
+.applyStep {
+  position: relative;
+  padding: clamp(28px, 3vh, 40px) 0 0 0;
+  border-top: 1px solid var(--gold-dim);
+}
+
+@media (max-width: 1024px) {
+  .applyStep {
+    padding: 0 0 0 clamp(28px, 4vw, 40px);
+    border-top: none;
+    border-left: 1px solid var(--gold-dim);
+  }
+}
+
+.applyNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(12px, 1.5vh, 20px);
+}
+
+.applyH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(12px, 1.5vh, 18px) 0;
+  line-height: 1.3;
+}
+
+.applyBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 8px 0;
+}
+
+.applyBody:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   M06 — FAQ 4 题,<details>/<summary> 原生折叠
+   全部默认折叠,无 JS,SSR 友好
+   ============================================================ */
+
+.faqSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.faqInner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.faqList {
+  margin-top: clamp(48px, 6vh, 72px);
+  display: grid;
+  gap: 0;
+}
+
+.faqItem {
+  border-top: 1px solid var(--line-3);
+  padding: 0;
+}
+
+.faqItem:last-child {
+  border-bottom: 1px solid var(--line-3);
+}
+
+.faqItem[open] .faqChevron {
+  transform: rotate(45deg);
+}
+
+.faqQuestion {
+  list-style: none;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: clamp(20px, 2.5vw, 32px);
+  align-items: center;
+  padding: clamp(24px, 3vh, 36px) 0;
+  cursor: pointer;
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  font-weight: 500;
+  color: var(--ivory);
+  line-height: 1.4;
+  transition: color 0.2s ease;
+}
+
+.faqQuestion:hover {
+  color: var(--gold);
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+.faqQNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+
+.faqQText {
+  flex: 1;
+}
+
+.faqChevron {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  color: var(--gold);
+  transition: transform 0.3s ease;
+  line-height: 1;
+}
+
+.faqAnswer {
+  padding: 0 0 clamp(28px, 3.5vh, 40px) 0;
+}
+
+.faqAnswer p {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--ivory-mute);
+  margin: 0 0 12px 0;
+}
+
+.faqAnswer p:last-child {
+  margin-bottom: 0;
 }
 
 /* ============================================================
