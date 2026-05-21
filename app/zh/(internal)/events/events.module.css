@@ -1,0 +1,777 @@
+/* ============================================================
+   Events page /zh/events
+   E01 Cinematic Hero / E02 Types / E03 Tours(Editorial Split)/ E04 Register / E05 FAQ / E06 CTA
+   背景节奏:E01 deepest → E02 deep → E03 deepest → E04 deep → E05 deepest → E06 deepest + 上下金线
+   设计 token 继承 founder.module.css / membership.module.css
+   ============================================================ */
+
+/* ===== 共享 token ===== */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+}
+
+.sectionH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: clamp(20px, 3vh, 32px) 0 clamp(24px, 4vh, 40px) 0;
+}
+
+.sectionLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(40px, 6vh, 64px) 0;
+  max-width: 880px;
+}
+
+.inlineLink {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 1px;
+  transition: border-color 0.2s ease;
+}
+
+.inlineLink:hover {
+  border-color: var(--gold);
+}
+
+.complianceNote {
+  font-family: var(--serif-zh);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: 12px 0 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+}
+
+/* ============================================================
+   E01 — Cinematic Hero(全屏 LA skyline + 文字 overlay)
+   ============================================================ */
+.heroSection {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: clamp(85vh, 92vh, 100vh);
+  background: var(--ink-deepest);
+  overflow: hidden;
+}
+
+.heroImageWrap {
+  position: absolute;
+  inset: 0;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  animation: heroKenBurns 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1) translate(0%, 0%);
+  }
+  100% {
+    transform: scale(1.06) translate(-1%, 1%);
+  }
+}
+
+/* 左下径向 vignette:只压暗文字所在区(25% / 80% 位置),天空 + 右侧建筑保留原色 */
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 70% at 25% 80%,
+    rgba(2, 7, 14, 0.72) 0%,
+    rgba(2, 7, 14, 0.4) 35%,
+    rgba(2, 7, 14, 0) 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.heroContent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 6vw, 96px);
+  max-width: 1280px;
+}
+
+.heroEyebrow {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: clamp(20px, 2.5vh, 32px);
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 clamp(28px, 3.5vh, 40px) 0;
+  display: block;
+}
+
+.heroRevealLine {
+  display: block;
+  padding-bottom: 0.12em;
+  will-change: clip-path;
+}
+
+.heroRevealVisible {
+  animation: eventsHeroReveal 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes eventsHeroReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroImage {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+.heroLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(16px, 2vh, 24px) 0;
+  max-width: 720px;
+}
+
+.heroLead:last-of-type {
+  margin-bottom: clamp(40px, 5vh, 56px);
+}
+
+.heroCtaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  flex-wrap: wrap;
+}
+
+.heroCtaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 16px 32px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.heroCtaPrimary:hover {
+  opacity: 0.88;
+}
+
+.heroCtaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 16px 32px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.heroCtaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ============================================================
+   E02 — 活动类型 5 类(numbered card 2x2 + 第 5 张指向 E03)
+   ============================================================ */
+.typesSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.typesInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.typesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .typesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.typeCard {
+  background: var(--ink-deepest);
+  padding: clamp(32px, 3.5vw, 56px);
+  border: 1px solid var(--line-3);
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.typeCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.typeCardLink {
+  border: 1px solid var(--gold-dim);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.typeCardLink:hover {
+  border-color: var(--gold);
+}
+
+.typeNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(16px, 2vh, 24px);
+}
+
+.typeH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.375rem, 1.8vw, 1.75rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(16px, 2vh, 20px) 0;
+  line-height: 1.3;
+}
+
+.typeBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 12px 0;
+}
+
+.typeSubLabel {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold-dim);
+  margin: 16px 0 8px 0;
+  text-transform: uppercase;
+}
+
+.typeSubList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.typeSubList li {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.typeSubList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+.typeFoot {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  margin: 16px 0 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-3);
+}
+
+/* ============================================================
+   E03 — 美国实地考察(核心区块 Editorial Split 反向)
+   左:5 卡 vertical stack / 右:LA 项目图 full-bleed
+   ============================================================ */
+.toursSection {
+  background: var(--ink-deepest);
+  border-top: 1px solid var(--line-3);
+  scroll-margin-top: 80px;
+}
+
+.toursGrid {
+  display: grid;
+  grid-template-columns: 50fr 50fr;
+  align-items: stretch;
+  gap: 0;
+  min-height: clamp(80vh, 88vh, 92vh);
+}
+
+@media (max-width: 1024px) {
+  .toursGrid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+.toursText {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: clamp(96px, 14vw, 180px) clamp(40px, 6vw, 96px);
+}
+
+@media (max-width: 1024px) {
+  .toursText {
+    padding: clamp(64px, 10vh, 120px) clamp(24px, 6vw, 48px);
+    order: 2;
+  }
+}
+
+.tourList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 clamp(48px, 6vh, 72px) 0;
+  display: grid;
+  gap: clamp(28px, 4vh, 48px);
+}
+
+.tourItem {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: clamp(20px, 2vw, 32px);
+  align-items: start;
+}
+
+.tourNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  padding-top: 6px;
+}
+
+.tourH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+
+.tourBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--ivory-mute);
+  margin: 0 0 6px 0;
+}
+
+.tourBody:last-child {
+  margin-bottom: 0;
+}
+
+.tourFrequency {
+  padding-top: clamp(28px, 4vh, 40px);
+  border-top: 1px solid var(--line-3);
+}
+
+.tourFreqBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 12px 0;
+}
+
+.toursMedia {
+  position: relative;
+}
+
+@media (max-width: 1024px) {
+  .toursMedia {
+    order: 1;
+  }
+}
+
+.toursImageBox {
+  position: relative;
+  overflow: hidden;
+  min-height: 100%;
+  background: var(--ink-deep);
+}
+
+@media (max-width: 1024px) {
+  .toursImageBox {
+    min-height: 50vh;
+  }
+}
+
+.toursImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+/* ============================================================
+   E04 — 报名机制(2 列对比)
+   ============================================================ */
+.registerSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.registerInner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.registerGrid {
+  display: grid;
+  grid-template-columns: 28fr 1px 36fr 1px 36fr;
+  gap: clamp(32px, 4vw, 64px);
+  align-items: stretch;
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+.registerImageBox {
+  position: relative;
+  min-height: 100%;
+  overflow: hidden;
+  background: var(--ink-deepest);
+}
+
+.registerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.registerDivider {
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    var(--gold-dim) 20%,
+    var(--gold-dim) 80%,
+    transparent 100%
+  );
+  min-height: 100%;
+}
+
+@media (max-width: 1024px) {
+  .registerGrid {
+    grid-template-columns: 1fr;
+    gap: clamp(48px, 6vh, 72px);
+  }
+  .registerImageBox {
+    min-height: 50vh;
+    order: 1;
+  }
+  .registerDivider {
+    display: none;
+  }
+}
+
+.registerCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.registerH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2vw, 1.875rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(20px, 2.5vh, 32px) 0;
+  line-height: 1.3;
+}
+
+.registerBody {
+  font-family: var(--serif-zh);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  margin: 0 0 16px 0;
+}
+
+.registerList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  display: grid;
+  gap: 6px;
+}
+
+.registerList li {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.registerList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+.registerLabel {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold-dim);
+  margin: 16px 0 12px 0;
+  text-transform: uppercase;
+}
+
+.registerSteps {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+  display: grid;
+  gap: 16px;
+}
+
+.registerSteps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 16px;
+  align-items: start;
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+}
+
+.registerStepNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  padding-top: 2px;
+}
+
+/* ============================================================
+   E05 — FAQ 3 题(<details>/<summary> 与 Membership M06 同款)
+   ============================================================ */
+.faqSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.faqInner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.faqList {
+  margin-top: clamp(48px, 6vh, 72px);
+  display: grid;
+  gap: 0;
+}
+
+.faqItem {
+  border-top: 1px solid var(--line-3);
+}
+
+.faqItem:last-child {
+  border-bottom: 1px solid var(--line-3);
+}
+
+.faqItem[open] .faqChevron {
+  transform: rotate(45deg);
+}
+
+.faqQuestion {
+  list-style: none;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: clamp(20px, 2.5vw, 32px);
+  align-items: center;
+  padding: clamp(24px, 3vh, 36px) 0;
+  cursor: pointer;
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  font-weight: 500;
+  color: var(--ivory);
+  line-height: 1.4;
+  transition: color 0.2s ease;
+}
+
+.faqQuestion:hover {
+  color: var(--gold);
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+.faqQNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+
+.faqQText {
+  flex: 1;
+}
+
+.faqChevron {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  color: var(--gold);
+  transition: transform 0.3s ease;
+  line-height: 1;
+}
+
+.faqAnswer {
+  padding: 0 0 clamp(28px, 3.5vh, 40px) 0;
+}
+
+.faqAnswer p {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--ivory-mute);
+  margin: 0 0 12px 0;
+}
+
+.faqAnswer p:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   E06 — CTA Banner(上下金线 + 3 CTA,与 Founder F07 同款)
+   ============================================================ */
+.ctaSection {
+  background: var(--ink-deepest);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(120px, 18vw, 200px) clamp(24px, 6vw, 96px);
+  text-align: center;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.ctaInner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ctaH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ivory);
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+}
+
+.ctaSubtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(48px, 6vh, 72px) 0;
+}
+
+.ctaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 18px 36px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.ctaPrimary:hover {
+  opacity: 0.88;
+}
+
+.ctaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 18px 36px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}

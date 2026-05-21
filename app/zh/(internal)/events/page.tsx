@@ -1,300 +1,366 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { SaImage } from '@/components/shared/SaImage';
+import { RevealOnView } from '@/components/shared/RevealOnView';
 import { createPageMetadata } from '@/lib/seo';
+import styles from './events.module.css';
+import { EventsHero } from './EventsHero';
 
 export const metadata: Metadata = createPageMetadata({
-  title: '活动与考察培训｜SAREC 中美房地产商会',
+  title: 'SAREC 活动与考察｜中美房地产商会',
   description:
-    'SAREC 活动与考察培训面向中美房地产投资人、项目方、房地产从业者、新移民家庭和跨境企业主，提供美国房地产项目考察、主题培训、闭门交流和资源协同机会。',
+    'SAREC 围绕真实项目、市场判断、风险识别和资源对接,组织培训、研讨、闭门分享、行业展会和美国实地考察。活动不只是内容传播 —— 是会员深度参与跨境地产合作的关键场景。',
   path: '/zh/events'
 });
 
-const audiences = [
+const eventTypes = [
   {
-    title: '中国企业家与投资人',
-    body: '希望系统了解美国房地产市场、项目开发逻辑、投资风险和跨境合作路径。'
-  },
-  {
-    title: '美国华人投资人',
-    body: '希望参与美国房地产项目，但需要更清楚地理解项目判断、风险识别和合作结构。'
-  },
-  {
-    title: '新移民家庭与高净值客户',
-    body: '希望围绕美国房地产、保险、现金流和长期保障，建立更稳健的家庭资产配置框架。'
-  },
-  {
-    title: '房地产开发商与项目方',
-    body: '希望接触跨境资本、优化项目表达，并与潜在投资人和资源方建立沟通。'
-  },
-  {
-    title: '房地产相关行业人士',
-    body: '包括经纪人、建材商、贷款、保险、设计、施工、物业管理等相关从业者，希望建立长期合作网络。'
-  },
-  {
-    title: '专业服务机构',
-    body: '包括律师、会计师、贷款机构、保险顾问、税务顾问、移民服务等，希望服务中美跨境地产客户。'
-  }
-];
-
-const eventFormats = [
-  {
-    title: '美国房地产项目考察',
-    body: '围绕洛杉矶、尔湾及其他重点城市的住宅、公寓、商业地产、开发项目和社区环境，组织项目参访与现场讲解。'
-  },
-  {
+    code: '01',
     title: '主题培训',
-    body: '围绕美国房地产开发流程、项目尽调、LP/GP结构、融资与退出、EB-5风险、新移民资产配置等主题，进行系统讲解。'
+    body: '围绕真实项目和真实判断设计的培训。',
+    listLabel: '主题包括:',
+    list: [
+      '美国房地产投资判断框架',
+      '项目结构与法律边界',
+      '财务建模与 IRR 测算实操',
+      '跨境投资风险识别清单',
+      '美国地产政策与机会(ED1 / EB-5 等)'
+    ],
+    foot: '适合:希望系统提升美国房地产投资判断能力的人。'
   },
   {
-    title: '企业家闭门交流',
-    body: '面向投资人、项目方、企业主和专业服务资源，组织小范围深度交流，讨论项目机会、风险控制和合作路径。'
+    code: '02',
+    title: '项目研讨',
+    body: '围绕具体项目或具体行业话题的深度研讨。',
+    listLabel: '通常采用:',
+    list: ['圆桌讨论', '项目案例分析', '多方互动'],
+    foot: '适合:已有具体项目方向或投资需求的人。'
   },
   {
-    title: '项目路演与案例讨论',
-    body: '通过真实项目或脱敏案例，帮助参与者理解项目表达、投资人沟通、风险披露和合作结构设计。'
+    code: '03',
+    title: '闭门分享',
+    body: '小范围、高密度、敏感话题的深度分享。',
+    listLabel: '涉及:',
+    list: ['具体项目操盘经验', '跨境合规与结构设计', '行业内部观察'],
+    foot: '仅向常务理事和副会长单位开放。'
   },
   {
-    title: '会员专属活动',
-    body: '为 SAREC 会员提供优先活动通知、专题分享、项目讨论和资源协同机会。'
+    code: '04',
+    title: '行业展会与论坛',
+    body: '跨境地产投资相关的行业活动。',
+    listLabel: '包括:',
+    list: [
+      'SAREC 主办或联办的展会',
+      '与其他机构合作的论坛',
+      '跨境行业交流活动'
+    ],
+    foot: '会员可优先参加。'
   }
 ];
 
-const inspectionFocus = [
-  '城市与区域逻辑',
-  '社区环境与租赁需求',
-  '土地和审批状态',
-  '建设成本与开发周期',
-  '融资结构与资金压力',
-  '租金、出租速度和退出假设',
-  '项目方执行能力',
-  '投资人应重点关注的风险',
-  '美国法律、合同和专业服务边界',
-  '项目是否适合进一步沟通或合作'
-];
-
-const themes = [
-  '美国房地产开发完整流程',
-  '中国投资人美国地产常见风险',
-  '如何判断一个美国地产项目是否值得继续看',
-  'LP / GP 合作结构与投资人保护',
-  'EB-5 投资与房地产项目风险',
-  '新移民家庭的美国资产配置框架',
-  '洛杉矶公寓开发机会与挑战',
-  'AI、GEO 与房地产获客新趋势'
-];
-
-const collaborationPath = [
-  '参加活动或考察',
-  '初步理解美国房地产市场和项目逻辑',
-  '与 SAREC 沟通自身需求',
-  '进入会员服务或项目初筛',
-  '根据情况进入深度尽调、结构设计或项目合作'
-];
-
-const relatedLinks = [
+const tourCards = [
   {
-    title: '会员服务',
-    body: '了解如何加入 SAREC 会员网络，获取长期内容、活动和资源协同机会。',
-    href: '/zh/membership/'
+    code: '01',
+    title: '项目实地走访',
+    body: [
+      '参观正在进行的真实项目:',
+      '经济适用房(ED1)、精品公寓、跨境股权合作项目等。',
+      '现场了解项目背景、进度、合作结构。'
+    ]
   },
   {
-    title: '服务产品矩阵',
-    body: '查看项目初筛、深度尽调、结构设计、项目合作和资产配置服务。',
-    href: '/zh/services/'
+    code: '02',
+    title: '本地华人开发商面对面',
+    body: [
+      '与有 15 年美国本地经验的合作开发商直接对话。',
+      '了解美国地产开发的真实流程、监管环境和合作方式。'
+    ]
   },
   {
-    title: '项目与案例',
-    body: '了解 SAREC 如何展示项目判断、风险识别和合作逻辑。',
-    href: '/zh/projects/'
+    code: '03',
+    title: '专业服务伙伴见面',
+    body: [
+      '接触 SAREC 合作的律师、会计师、贷款经纪、Escrow 公司、Title 公司等专业服务伙伴。'
+    ]
   },
   {
-    title: '风险披露',
-    body: '参与项目前，先了解美国房地产投资与跨境合作中的主要风险。',
-    href: '/zh/legal/risk-disclosure/'
+    code: '04',
+    title: '真实项目盘点与问答',
+    body: [
+      '针对会员关心的项目类型 / 市场区域 / 投资结构,进行深度盘点和问答。'
+    ]
+  },
+  {
+    code: '05',
+    title: '跨境合作机制讨论',
+    body: [
+      '了解 SAREC 三层服务架构在实际项目中的落地方式:',
+      'LLC 项目公司、Escrow 托管、后端激励等。'
+    ]
   }
 ];
-
-function SectionShell({ eyebrow, title, children, muted = false }: { eyebrow?: string; title: string; children: ReactNode; muted?: boolean }) {
-  return (
-    <section className={muted ? 'border-y border-line bg-zinc-50 py-12 md:py-24' : 'py-12 md:py-24'}>
-      <div className="container-shell">
-        <div className="max-w-3xl">
-          {eyebrow ? <p className="font-sans text-sm font-semibold text-gold">{eyebrow}</p> : null}
-          <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">{title}</h2>
-        </div>
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function NumberBadge({ value }: { value: number }) {
-  return (
-    <span className="flex h-9 w-9 items-center justify-center rounded-[2px] bg-deep font-sans text-sm font-semibold text-gold">
-      {value}
-    </span>
-  );
-}
 
 export default function EventsPage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">SAREC Events</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">用实地考察和深度交流，看懂美国房地产机会</h1>
-          <p className="mt-6 max-w-3xl text-base leading-8 text-zinc-300 md:text-xl">
-            SAREC
-            活动与考察培训面向中美房地产投资人、项目方、房地产从业者、新移民家庭和跨境企业主。我们通过美国房地产项目考察、主题培训、闭门交流和专业资源连接，帮助客户更清楚地理解美国房地产市场、项目风险、合作结构和长期资产配置路径。
+    <main>
+      {/* E01 — Cinematic Hero(LA skyline 全屏 + 文字 overlay)*/}
+      <EventsHero />
+
+      {/* E02 — 活动类型 5 类(numbered card 2x2 + 第 5 张指向 E03) */}
+      <section className={styles.typesSection}>
+        <div className={styles.typesInner}>
+          <span className={styles.eyebrow}>EVENT TYPES · 活动类型</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            5 类活动
+          </RevealOnView>
+          <p className={styles.sectionLead}>
+            SAREC 活动分为五种类型,对应不同深度的参与和合作。
           </p>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/contact/" variant="gold">
-              咨询下一期活动
-            </Button>
-            <Button href="/zh/membership/" variant="light">
-              申请成为会员
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Why In Person</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">很多问题，只有走进项目现场才看得清</h2>
-          </div>
-          <Card className="md:p-10">
-            <p className="text-base leading-8 text-muted md:text-lg md:leading-9">
-              美国房地产项目不能只看材料、PPT 或收益测算。真正影响项目结果的，往往是城市位置、社区环境、土地状态、审批流程、建设成本、融资结构、租赁需求、退出路径和合作方执行能力。SAREC
-              希望通过线下考察和专业交流，让投资人和项目方不只是“听别人介绍机会”，而是逐步建立自己的判断框架。
-            </p>
-          </Card>
-        </div>
-      </section>
-
-      <SectionShell eyebrow="Audience" title="谁适合参加 SAREC 活动与考察？" muted>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {audiences.map((item) => (
-            <Card className="bg-white" key={item.title}>
-              <h3 className="font-sans text-xl font-semibold leading-snug text-ink">{item.title}</h3>
-              <p className="mt-4 text-sm leading-7 text-muted md:text-base">{item.body}</p>
-            </Card>
-          ))}
-        </div>
-      </SectionShell>
-
-      <SectionShell eyebrow="Formats" title="SAREC 活动形式">
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {eventFormats.map((item, index) => (
-            <Card key={item.title}>
-              <NumberBadge value={index + 1} />
-              <h3 className="mt-5 font-sans text-xl font-semibold leading-snug text-ink">{item.title}</h3>
-              <p className="mt-4 text-sm leading-7 text-muted md:text-base">{item.body}</p>
-            </Card>
-          ))}
-        </div>
-      </SectionShell>
-
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Inspection Logic</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">我们不把考察做成走马观花</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              SAREC
-              更重视考察背后的判断价值。一次专业的美国房地产考察，不只是看几个项目，而是帮助参与者理解项目背后的城市、政策、资本、建设、运营和退出逻辑。
-            </p>
-          </div>
-          <ol className="grid gap-4">
-            {inspectionFocus.map((item, index) => (
-              <li className="grid gap-3 rounded-md border border-line bg-white p-4 md:grid-cols-[2.5rem_1fr] md:p-5" key={item}>
-                <NumberBadge value={index + 1} />
-                <p className="text-sm leading-7 text-muted md:text-base">{item}</p>
-              </li>
+          <div className={styles.typesGrid}>
+            {eventTypes.map((ev) => (
+              <article key={ev.code} className={styles.typeCard}>
+                <span className={styles.typeNum}>{ev.code}</span>
+                <h3 className={styles.typeH3}>{ev.title}</h3>
+                <p className={styles.typeBody}>{ev.body}</p>
+                <p className={styles.typeSubLabel}>{ev.listLabel}</p>
+                <ul className={styles.typeSubList}>
+                  {ev.list.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+                <p className={styles.typeFoot}>{ev.foot}</p>
+              </article>
             ))}
-          </ol>
-        </div>
-      </section>
-
-      <SectionShell eyebrow="Topics" title="典型主题方向">
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {themes.map((theme, index) => (
-            <Card key={theme}>
-              <NumberBadge value={index + 1} />
-              <h3 className="mt-5 font-sans text-lg font-semibold leading-snug text-ink">{theme}</h3>
-            </Card>
-          ))}
-        </div>
-      </SectionShell>
-
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Long-Term Path</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">活动不是终点，而是建立信任的开始</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              SAREC
-              的活动与考察，不是单次旅游式安排，而是长期合作网络的一部分。参与者可以通过活动先理解市场、认识资源、提出问题、建立信任，再根据自身需求进入会员服务、项目初筛、深度尽调、结构设计、项目合作或家庭资产配置咨询。
-            </p>
+            <article className={`${styles.typeCard} ${styles.typeCardLink}`}>
+              <span className={styles.typeNum}>05</span>
+              <h3 className={styles.typeH3}>美国实地考察</h3>
+              <p className={styles.typeBody}>
+                <Link href="#us-project-tours" className={styles.inlineLink}>
+                  详见下一区块 →
+                </Link>
+              </p>
+            </article>
           </div>
-          <ol className="grid gap-4">
-            {collaborationPath.map((item, index) => (
-              <li className="grid gap-3 rounded-md border border-line bg-white p-4 md:grid-cols-[2.5rem_1fr] md:p-5" key={item}>
-                <NumberBadge value={index + 1} />
-                <p className="text-sm leading-7 text-muted md:text-base">{item}</p>
-              </li>
-            ))}
-          </ol>
         </div>
       </section>
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell">
-          <Card className="border-gold/40 md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">重要说明</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">活动服务边界</h2>
-            <p className="mt-6 text-base leading-8 text-muted md:text-lg md:leading-9">
-              SAREC
-              活动、考察和培训内容主要用于市场理解、项目判断、风险识别、资源交流和专业教育，不构成投资建议、证券发行、法律意见、税务意见、移民建议或收益承诺。参与任何具体项目、投资、融资、保险、移民或税务安排前，应结合相关持牌或专业人士意见审慎决策。
+      {/* E03 — 美国实地考察(核心区块:左 5 卡 + 右 LA 项目图 full-bleed) */}
+      <section
+        className={styles.toursSection}
+        id="us-project-tours"
+      >
+        <div className={styles.toursGrid}>
+          <div className={styles.toursText}>
+            <span className={styles.eyebrow}>
+              US PROJECT TOURS · 美国实地考察
+            </span>
+            <RevealOnView as="h2" className={styles.sectionH2}>
+              美国实地考察
+            </RevealOnView>
+            <p className={styles.sectionLead}>
+              美国实地考察是 SAREC 会员服务的核心环节之一。不是观光,不是商务旅游 —— 是直接接触本地华人开发商、专业服务伙伴和真实项目现场的深度行程。
             </p>
-          </Card>
+            <ol className={styles.tourList}>
+              {tourCards.map((t) => (
+                <li key={t.code} className={styles.tourItem}>
+                  <span className={styles.tourNum}>{t.code}</span>
+                  <div>
+                    <h3 className={styles.tourH3}>{t.title}</h3>
+                    {t.body.map((line, i) => (
+                      <p key={i} className={styles.tourBody}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <div className={styles.tourFrequency}>
+              <p className={styles.tourFreqBody}>
+                SAREC 将根据项目进度和会员需求,组织美国实地考察、项目走访和专题交流。
+              </p>
+              <p className={styles.tourFreqBody}>
+                考察是会员服务的一部分,非会员可单次报名(需符合资格审核)。
+              </p>
+              <p className={styles.complianceNote}>
+                具体考察时间、内容和费用,在报名沟通后提供。
+              </p>
+            </div>
+          </div>
+          <div className={styles.toursMedia}>
+            <div className={styles.toursImageBox}>
+              <SaImage
+                src="/images/projects/1340-glendale-triangle.webp"
+                alt="SAREC 项目实地考察 — 1340 Glendale Triangle"
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                filterIntensity="none"
+                className={styles.toursImage}
+              />
+            </div>
+          </div>
         </div>
       </section>
 
-      <SectionShell eyebrow="Related" title="你也可以先了解这些内容" muted>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {relatedLinks.map((item) => (
-            <Link className="group block rounded-md border border-line bg-white p-5 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:border-zinc-400 md:p-6" href={item.href} key={item.href}>
-              <h3 className="font-sans text-lg font-semibold leading-snug text-ink group-hover:text-gold">{item.title}</h3>
-              <p className="mt-4 text-sm leading-7 text-muted">{item.body}</p>
+      {/* E04 — 报名机制(会员 / 非会员 双列对比) */}
+      <section className={styles.registerSection}>
+        <div className={styles.registerInner}>
+          <span className={styles.eyebrow}>HOW TO REGISTER · 如何报名</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            两种参与机制
+          </RevealOnView>
+          <p className={styles.sectionLead}>
+            SAREC 活动的参与机制根据会员身份和活动类型而定。
+          </p>
+          <div className={styles.registerGrid}>
+            <div className={styles.registerImageBox}>
+              <SaImage
+                src="/images/projects/316-street.webp"
+                alt="SAREC 项目实景 — 316 Street"
+                fill
+                sizes="(max-width: 1024px) 100vw, 28vw"
+                filterIntensity="none"
+                className={styles.registerImage}
+              />
+            </div>
+            <div className={styles.registerDivider} aria-hidden="true" />
+            <div className={styles.registerCol}>
+              <h3 className={styles.registerH3}>会员 / Members</h3>
+              <p className={styles.registerBody}>
+                会员可参加全部活动,包括:
+              </p>
+              <ul className={styles.registerList}>
+                <li>主题培训</li>
+                <li>项目研讨</li>
+                <li>行业展会与论坛</li>
+                <li>美国实地考察(按级别)</li>
+              </ul>
+              <p className={styles.registerBody}>
+                常务理事和副会长单位可参加:
+              </p>
+              <ul className={styles.registerList}>
+                <li>闭门分享</li>
+                <li>优先实地考察名额</li>
+              </ul>
+              <p className={styles.registerBody}>
+                详见 →{' '}
+                <Link href="/zh/membership" className={styles.inlineLink}>
+                  /zh/membership
+                </Link>
+              </p>
+            </div>
+            <div className={styles.registerDivider} aria-hidden="true" />
+            <div className={styles.registerCol}>
+              <h3 className={styles.registerH3}>非会员 / Single Registration</h3>
+              <p className={styles.registerBody}>部分公开活动可单次报名。</p>
+              <p className={styles.registerLabel}>申请流程:</p>
+              <ol className={styles.registerSteps}>
+                <li>
+                  <span className={styles.registerStepNum}>01</span>
+                  <span>提交活动报名表单</span>
+                </li>
+                <li>
+                  <span className={styles.registerStepNum}>02</span>
+                  <span>SAREC 团队审核资格(1 个工作日内回复)</span>
+                </li>
+                <li>
+                  <span className={styles.registerStepNum}>03</span>
+                  <span>资格通过后,提供活动详情和参与方式</span>
+                </li>
+              </ol>
+              <p className={styles.registerBody}>
+                非会员通常无法参加闭门分享和深度考察 —— 这类活动仅向会员开放。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* E05 — FAQ 3 题(<details>/<summary> 同 Membership M06) */}
+      <section className={styles.faqSection}>
+        <div className={styles.faqInner}>
+          <span className={styles.eyebrow}>FAQ · 常见问题</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            活动常见问题
+          </RevealOnView>
+          <div className={styles.faqList}>
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q1</span>
+                <span className={styles.faqQText}>活动费用怎么收?</span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>
+                  会员可参加大部分活动,不另外付费。美国实地考察等深度活动可能涉及考察成本(差旅、住宿等),按单独协议约定。
+                </p>
+                <p>非会员单次报名活动按活动类型收费。</p>
+                <p>具体费用在报名沟通后提供。</p>
+              </div>
+            </details>
+
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q2</span>
+                <span className={styles.faqQText}>活动多久举办一次?</span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>SAREC 不设固定频次。</p>
+                <p>
+                  活动根据项目进度、会员需求、行业动态组织。会员可获得活动安排的优先通知。
+                </p>
+              </div>
+            </details>
+
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q3</span>
+                <span className={styles.faqQText}>
+                  中国大陆的客户可以报名吗?
+                </span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>可以。</p>
+                <p>
+                  SAREC 会员和活动面向全球华人房地产相关客户,包括美国本地、中国大陆、海外华人圈。
+                </p>
+                <p>
+                  中国大陆客户报名美国实地考察时,建议提前安排签证和行程。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      {/* E06 — CTA Banner(上下金线 + 3 CTA,与 Founder F07 同款) */}
+      <section className={styles.ctaSection}>
+        <div className={styles.ctaInner}>
+          <RevealOnView as="h2" className={styles.ctaH2}>
+            准备好参加 SAREC 活动了吗
+          </RevealOnView>
+          <p className={styles.ctaSubtitle}>活动不是入门,是合作的开始。</p>
+          <div className={styles.ctaRow}>
+            <Link href="/zh/contact" className={styles.ctaPrimary}>
+              报名活动 / 参加考察团
             </Link>
-          ))}
-        </div>
-      </SectionShell>
-
-      <section className="border-t border-line bg-deep py-12 text-white md:py-20">
-        <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">如果你希望通过实地考察和深度交流理解美国房地产市场，可以先提交活动咨询。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">
-              无论你是中国企业家、美国华人投资人、房地产同行、项目方，还是正在配置美国资产的新移民家庭，都可以先提交你的活动或考察需求。SAREC
-              会根据你的背景和目标，判断适合的活动形式和下一步沟通方式。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/contact/" variant="light">
-              咨询下一期活动
-            </Button>
-            <Button href="/zh/membership/" variant="gold">
-              申请成为会员
-            </Button>
+            <Link href="/zh/membership" className={styles.ctaSecondary}>
+              加入会员,参与全部活动
+            </Link>
+            <Link href="/zh/services" className={styles.ctaSecondary}>
+              查看服务架构
+            </Link>
           </div>
         </div>
       </section>
-    </article>
+    </main>
   );
 }
