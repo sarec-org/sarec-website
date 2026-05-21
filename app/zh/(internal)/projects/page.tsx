@@ -1,351 +1,340 @@
 import type { Metadata } from 'next';
-import { Card } from '@/components/ui/Card';
+import Link from 'next/link';
+import { SaImage } from '@/components/shared/SaImage';
+import { RevealOnView } from '@/components/shared/RevealOnView';
 import { createPageMetadata } from '@/lib/seo';
+import styles from './projects.module.css';
+import { ProjectsHero } from './ProjectsHero';
 
 export const metadata: Metadata = createPageMetadata({
-  title: '项目与案例｜SAREC 中美房地产商会',
+  title: 'SAREC 项目｜中美房地产商会',
   description:
-    '查看 SAREC 关注的美国房地产项目、脱敏案例、风控逻辑与项目判断框架，理解跨境地产合作如何被评估和推进。',
+    'SAREC 参与的项目覆盖经济适用房开发、精品公寓、跨境股权合作等多种类型。所有项目采用清晰的法律结构、账户结构和风险边界。',
   path: '/zh/projects'
 });
 
-const primaryButtonClass =
-  'inline-flex min-h-12 w-full items-center justify-center rounded-[2px] border border-ink bg-ink px-5 py-3 text-center font-sans text-sm font-semibold leading-none text-white transition-colors duration-150 hover:bg-black sm:w-auto';
-const secondaryButtonClass =
-  'inline-flex min-h-12 w-full items-center justify-center rounded-[2px] border border-white bg-white px-5 py-3 text-center font-sans text-sm font-semibold leading-none text-ink transition-colors duration-150 hover:bg-zinc-100 sm:w-auto';
-const outlineButtonClass =
-  'inline-flex min-h-12 w-full items-center justify-center rounded-[2px] border border-ink bg-transparent px-5 py-3 text-center font-sans text-sm font-semibold leading-none text-ink transition-colors duration-150 hover:bg-ink hover:text-white sm:w-auto';
-
-const rosewoodSummaries = ['69 单元', '6 层', '洛杉矶成熟社区', '关键审批已推进'];
-
-const rosewoodHighlights = ['成熟社区位置', '公寓租赁需求明确', '开发流程已进入实质推进阶段', '具备从土地、审批、建设到退出的完整分析价值'];
-
-const rosewoodJudgmentPoints = ['审批状态是否清晰', '建设贷款与资金结构是否匹配', '开发周期是否合理', '租金和退出假设是否稳健', '投资人信息披露机制是否充分'];
-
-const rosewoodUseCase =
-  '适合说明美国城市公寓开发项目的判断逻辑、审批节点、建设风险、融资安排和退出设计。';
-
-const caseCards = [
+const projectTypes = [
   {
-    title: '项目初筛案例｜一个看起来收益很高的开发项目',
-    background: '客户接触到一个美国房地产开发项目，项目材料强调高收益和快速退出，但基础资料不完整。',
-    questions: ['土地权属和审批状态是否清晰', '开发周期是否过于乐观', '建设成本是否有充分依据', '退出价格是否建立在合理市场假设上'],
-    value: '帮助客户先识别关键风险，而不是被表面收益率吸引。'
+    code: '01',
+    title: '经济适用房开发(ED1)',
+    body: '快速审批、政策窗口、可负担住房需求下的项目机会。',
+    role: 'SAREC 角色:政策结构判断 · 项目合作 · 投资人沟通',
+    fitLabel: '适合特点:',
+    fit: ['审批通道快', '政策红利明确', '市场刚需稳定', '中型规模'],
+    image: '/images/projects/3434-chesapeake-ed1.webp',
+    alt: 'SAREC ED1 项目实景 — 3434 Chesapeake'
   },
   {
-    title: '风控案例｜合作结构比项目本身更重要',
-    background: '一个项目本身具备一定吸引力，但资金方和项目方之间的权责边界不清晰。',
-    questions: ['谁负责项目管理', '资金如何进入', '信息如何披露', '重大事项谁有决策权', '出现延期或超支时如何处理'],
-    value: '帮助客户把“能不能投”进一步拆解为“如何投、谁来管、怎么退出”。'
+    code: '02',
+    title: '精品公寓项目',
+    body: '洛杉矶核心地段中型住宅开发。',
+    role: 'SAREC 角色:项目筛选 · 资本对接 · 结构设计',
+    fitLabel: '适合特点:',
+    fit: [
+      '区位价值清晰',
+      '单位经济模型可验证',
+      '长期持有 + 退出灵活',
+      '适合中等规模投资人组合'
+    ],
+    image: '/images/projects/236-berendo.webp',
+    alt: 'SAREC 精品公寓项目实景 — 236 Berendo'
   },
   {
-    title: '避坑案例｜资料不完整时，不急于推进',
-    background: '客户希望快速推进一个项目合作，但项目方无法提供完整的审批、预算、贷款和退出资料。',
-    questions: ['资料缺失是否影响判断', '收益测算是否缺少依据', '项目方是否愿意透明沟通', '是否存在过度包装风险'],
-    value: '帮助客户在正式投入资源前，先建立资料清单和判断边界。'
-  },
-  {
-    title: '资本协同案例｜好项目也需要被正确表达',
-    background: '项目方有真实项目和执行能力，但对跨境投资人的表达方式不清晰，投资人难以理解项目逻辑。',
-    questions: ['项目亮点是否表达清楚', '风险是否主动披露', '投资人最关心的问题是否被回答', '项目材料是否适合跨境沟通'],
-    value: '帮助项目方把复杂项目转化为投资人能理解、能讨论、能继续推进的合作方案。'
+    code: '03',
+    title: '跨境股权合作项目',
+    body: '中美投资人共同参与的项目股权结构。',
+    role: 'SAREC 角色:法律结构设计 · 合规咨询 · 风险评估',
+    fitLabel: '适合特点:',
+    fit: [
+      '跨境合规要求高',
+      '投资人多元(中美双向)',
+      '长期股权合作',
+      '适合复杂结构需求'
+    ],
+    image: '/images/projects/2478-purdue.webp',
+    alt: 'SAREC 跨境股权合作项目实景 — 2478 Purdue'
   }
 ];
 
-const frameworkItems = [
+const mechanisms = [
   {
-    title: '市场与位置',
-    body: '城市、区域、人口、租赁需求、周边供给。'
+    code: '01',
+    title: 'LLC 项目公司',
+    body: [
+      '每个项目设立独立的 LLC 项目公司。',
+      '资金通过 Escrow 进项目 LLC 账户,不进 SAREC 账户。'
+    ],
+    compliance:
+      '涉及具体项目合作时,账户安排、资金路径、汇报机制和法律文件以项目协议为准。'
   },
   {
-    title: '土地与审批',
-    body: '土地状态、分区、entitlement、permit、政策风险。'
+    code: '02',
+    title: '同股同权',
+    body: [
+      '在符合 SAREC 参与标准的项目共投场景下,团队可与客户共同出资。',
+      '我们优先采用利益一致、风险共担的合作结构。'
+    ],
+    compliance: '具体股权、决策权和退出安排,以项目协议为准。'
   },
   {
-    title: '开发与建设',
-    body: '成本预算、施工周期、承包商、延期风险、成本超支风险。'
+    code: '03',
+    title: '后端激励',
+    body: ['SAREC 优先采用利益一致、风险共担、后端激励的合作结构。'],
+    compliance: '具体合作条款以项目阶段和服务边界为准。'
   },
   {
-    title: '融资与资本结构',
-    body: '股权资金、建筑贷款、利率、再融资、资金缺口。'
-  },
-  {
-    title: '收入与退出',
-    body: '租金假设、出租速度、cap rate、出售或长期持有路径。'
-  },
-  {
-    title: '合作与风控',
-    body: 'LP/GP结构、信息披露、重大事项决策、退出机制、风险责任。'
+    code: '04',
+    title: '项目监督',
+    body: ['项目期间提供月度汇报、季度评估和重大事项通报。'],
+    compliance: '具体汇报频率、形式和内容,以项目协议为准。'
   }
 ];
-
-const relatedEntries = [
-  {
-    title: '案例研究',
-    href: '/zh/case-studies'
-  },
-  {
-    title: '服务架构',
-    href: '/zh/services'
-  },
-  {
-    title: '风险清单',
-    href: '/zh/research/risk-checklist/'
-  }
-];
-
-function SectionHeader({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle?: string }) {
-  return (
-    <div className="max-w-4xl">
-      <p className="font-sans text-sm font-semibold text-gold">{eyebrow}</p>
-      <h2 className="mt-3 font-sans text-2xl font-bold leading-tight md:text-4xl">{title}</h2>
-      {subtitle ? <p className="mt-4 text-sm leading-7 text-muted md:text-base">{subtitle}</p> : null}
-    </div>
-  );
-}
 
 export default function ProjectsPage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">Projects</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">项目与案例</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
-            SAREC 关注的不只是项目本身，更关注项目背后的判断逻辑、风险结构、合作机制和落地能力。我们通过真实项目、脱敏案例和风控框架，帮助跨境客户更清楚地理解美国房地产项目如何被筛选、评估和推进。
+    <main>
+      {/* P01 — Cinematic Hero(client component:LA 项目实景 + Ken Burns + reveal H1) */}
+      <ProjectsHero />
+
+      {/* P02 — 项目类型 3 类(图 + 编号 + 标题 + body + 角色 + 适合特点) */}
+      <section className={styles.typesSection}>
+        <div className={styles.typesInner}>
+          <span className={styles.eyebrow}>PROJECT TYPES · 项目类型</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            SAREC 参与的项目类型
+          </RevealOnView>
+          <p className={styles.sectionLead}>
+            SAREC 不限定单一项目类型。我们关注符合"项目判断、结构设计、风险控制"原则的多种类型。
           </p>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <a className={primaryButtonClass} href="/zh/contact/">
-              提交项目或合作需求
-            </a>
-            <a className={secondaryButtonClass} href="/zh/services">
-              查看服务架构
-            </a>
-            <a className={secondaryButtonClass} href="/zh/case-studies">
-              案例研究
-            </a>
+          <div className={styles.typesGrid}>
+            {projectTypes.map((p) => (
+              <article key={p.code} className={styles.typeCard}>
+                <div className={styles.typeImageBox}>
+                  <SaImage
+                    src={p.image}
+                    alt={p.alt}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 33vw"
+                    filterIntensity="none"
+                    className={styles.typeImage}
+                  />
+                </div>
+                <div className={styles.typeText}>
+                  <span className={styles.typeNum}>{p.code}</span>
+                  <h3 className={styles.typeH3}>{p.title}</h3>
+                  <p className={styles.typeBody}>{p.body}</p>
+                  <p className={styles.typeRole}>{p.role}</p>
+                  <p className={styles.typeFitLabel}>{p.fitLabel}</p>
+                  <ul className={styles.typeFitList}>
+                    {p.fit.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              </article>
+            ))}
           </div>
+          <p className={styles.complianceNote}>
+            具体项目名称、地址、规模与投资材料 —— 仅在合格沟通后提供。
+          </p>
         </div>
       </section>
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <SectionHeader eyebrow="Method" title="我们展示项目，不是为了制造机会感，而是为了说明判断方法" />
-          <Card>
-            <p className="text-muted">
-              美国房地产市场机会很多，但真正影响结果的，往往不是项目包装，而是土地、审批、融资、建设、出租、退出、合作结构和信息透明度。SAREC 在项目展示中更关注三个问题：
-            </p>
-            <ul className="mt-6 grid gap-3 text-sm leading-7 text-muted md:text-base">
-              {['这个项目为什么值得看？', '这个项目主要风险在哪里？', '如果要推进，合作结构和风控机制应该如何设计？'].map((item) => (
-                <li className="border-l-2 border-gold pl-4" key={item}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-      </section>
-
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell max-w-6xl">
-          <SectionHeader eyebrow="Featured" title="代表项目" />
-          <div className="mt-10 grid gap-6">
-            <Card className="w-full md:p-10 lg:p-12">
-              <div className="max-w-4xl">
-                <span className="inline-flex w-fit rounded-[2px] border border-line bg-zinc-50 px-3 py-1.5 font-sans text-xs font-semibold text-muted">
-                  已进入实质推进阶段
+      {/* P03 — Featured Rosewood(50/50 split:信息卡 + 渲染图) */}
+      <section className={styles.featuredSection}>
+        <div className={styles.featuredInner}>
+          <span className={styles.eyebrow}>FEATURED · 代表性项目</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            已公开的代表性项目
+          </RevealOnView>
+          <p className={styles.sectionLead}>以下是一个已公开的代表性项目。</p>
+          <div className={styles.featuredGrid}>
+            <div className={styles.featuredCard}>
+              <p className={styles.featuredAddress}>4136 Rosewood Ave</p>
+              <p className={styles.featuredLocation}>
+                洛杉矶 East Hollywood · ED1 经济适用房
+              </p>
+              <div className={styles.featuredStats}>
+                <div className={styles.featuredStat}>
+                  <span className={styles.featuredStatNum}>69</span>
+                  <span className={styles.featuredStatLabel}>单元</span>
+                </div>
+                <span className={styles.featuredStatSep} aria-hidden="true">
+                  ·
                 </span>
-                <h3 className="mt-5 font-sans text-2xl font-bold leading-tight md:text-4xl">4136 Rosewood｜洛杉矶 East Hollywood · ED1 经济适用房开发</h3>
+                <div className={styles.featuredStat}>
+                  <span className={styles.featuredStatNum}>6</span>
+                  <span className={styles.featuredStatLabel}>层</span>
+                </div>
+                <span className={styles.featuredStatSep} aria-hidden="true">
+                  ·
+                </span>
+                <div className={styles.featuredStat}>
+                  <span className={styles.featuredStatStatus}>在管</span>
+                </div>
               </div>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {rosewoodSummaries.map((summary) => (
-                  <div
-                    className="flex min-h-24 items-center rounded-[2px] border border-line bg-zinc-50 px-4 py-4 font-sans text-base font-semibold leading-snug text-ink"
-                    key={summary}
-                  >
-                    {summary}
-                  </div>
-                ))}
+              <div className={styles.featuredMeta}>
+                <p className={styles.featuredMetaRow}>
+                  <span className={styles.featuredMetaLabel}>项目类型:</span>{' '}
+                  经济适用房开发(ED1)
+                </p>
+                <p className={styles.featuredMetaRow}>
+                  <span className={styles.featuredMetaLabel}>SAREC 角色:</span>{' '}
+                  项目合作 / 投资人沟通
+                </p>
               </div>
-
-              <dl className="mt-8 grid gap-4 border-y border-line py-8 md:grid-cols-2">
-                <div className="rounded-[2px] bg-zinc-50 p-4">
-                  <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目类型</dt>
-                  <dd className="mt-2 text-sm leading-7 text-muted">ED1 经济适用房开发</dd>
-                </div>
-                <div className="rounded-[2px] bg-zinc-50 p-4">
-                  <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目位置</dt>
-                  <dd className="mt-2 text-sm leading-7 text-muted">洛杉矶成熟社区</dd>
-                </div>
-                <div className="rounded-[2px] bg-zinc-50 p-4">
-                  <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目规模</dt>
-                  <dd className="mt-2 text-sm leading-7 text-muted">69 个公寓单元，6 层建筑</dd>
-                </div>
-                <div className="rounded-[2px] bg-zinc-50 p-4 md:row-span-2">
-                  <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目阶段</dt>
-                  <dd className="mt-2 text-sm leading-7 text-muted">
-                    已完成关键土地 entitlement 审批，开工许可手续已完成，建筑贷款手续已完成，随时可以开工，属于已进入实质推进阶段的开发项目。
-                  </dd>
-                </div>
-                <div className="rounded-[2px] bg-zinc-50 p-4">
-                  <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">项目定位</dt>
-                  <dd className="mt-2 text-sm leading-7 text-muted">符合 ED1 政策的洛杉矶城市住宅开发产品，单元面向 LA 区域工薪与中等收入家庭。</dd>
-                </div>
-              </dl>
-
-              <div className="mt-8 grid gap-5 xl:grid-cols-3">
-                <Card className="bg-zinc-50 md:p-7">
-                  <h4 className="font-sans text-lg font-semibold text-ink">为什么这个项目值得关注</h4>
-                  <ul className="mt-4 grid gap-2 text-sm leading-7 text-muted md:text-base">
-                    {rosewoodHighlights.map((item) => (
-                      <li className="border-l-2 border-gold pl-4" key={item}>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-                <Card className="bg-zinc-50 md:p-7">
-                  <h4 className="font-sans text-lg font-semibold text-ink">SAREC 关注的判断点</h4>
-                  <ul className="mt-4 grid gap-2 text-sm leading-7 text-muted md:text-base">
-                    {rosewoodJudgmentPoints.map((item) => (
-                      <li className="border-l-2 border-line pl-4" key={item}>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-                <Card className="bg-zinc-50 md:p-7">
-                  <h4 className="font-sans text-lg font-semibold text-ink">这个项目适合说明什么</h4>
-                  <p className="mt-4 text-sm leading-7 text-muted md:text-base">{rosewoodUseCase}</p>
-                  <div className="mt-8 flex flex-col gap-3">
-                    <a className={outlineButtonClass} href="/zh/case-studies/4136-rosewood">
-                      查看完整案例研究
-                    </a>
-                    <a className={outlineButtonClass} href="/zh/services">
-                      了解服务架构
-                    </a>
-                  </div>
-                </Card>
-              </div>
-
-              <div className="mt-8 grid gap-7 lg:grid-cols-[1.2fr_0.8fr]">
-                <section>
-                  <h4 className="font-sans text-lg font-semibold text-ink">项目说明</h4>
-                  <p className="mt-3 text-base leading-8 text-muted">
-                    4136 Rosewood 是合作网络中的洛杉矶住宅开发项目经验之一。该项目不用于制造机会感，而是用于说明一个美国城市公寓开发项目在土地、审批、建设贷款、建设周期和退出安排上，如何被拆解、判断和讨论。
-                  </p>
-                </section>
-                <section className="border-t border-line pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
-                  <h4 className="font-sans text-lg font-semibold text-ink">展示边界说明</h4>
-                  <p className="mt-3 text-sm leading-7 text-muted">
-                    页面展示仅作项目案例说明，不构成证券发行、收益承诺或投资建议。具体合作方式、资料披露范围与商业条款，以后续正式文件为准。
-                  </p>
-                </section>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-12 md:py-24">
-        <div className="container-shell">
-          <SectionHeader eyebrow="Cases" title="不同行业客户，关注的是不同类型的判断" />
-          <div className="mt-10 grid gap-5 md:grid-cols-2">
-            {caseCards.map((item) => (
-              <Card className="md:p-9" key={item.title}>
-                <h3 className="font-sans text-xl font-semibold leading-snug">{item.title}</h3>
-                <div className="mt-6 grid gap-4 text-sm leading-7 text-muted md:text-base">
-                  <p>
-                    <span className="font-sans font-semibold text-ink">背景：</span>
-                    {item.background}
-                  </p>
-                  <div>
-                    <p className="font-sans font-semibold text-ink">SAREC 关注的问题：</p>
-                    <ul className="mt-3 grid gap-2">
-                      {item.questions.map((question) => (
-                        <li className="border-l-2 border-gold pl-4" key={question}>
-                          {question}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <p>
-                    <span className="font-sans font-semibold text-ink">价值：</span>
-                    {item.value}
-                  </p>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <SectionHeader eyebrow="Framework" title="我们如何看一个美国房地产项目" />
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {frameworkItems.map((item, index) => (
-              <Card key={item.title}>
-                <p className="font-sans text-sm font-semibold text-gold">0{index + 1}</p>
-                <h3 className="mt-3 font-sans text-xl font-semibold leading-snug">{item.title}</h3>
-                <p className="mt-4 text-sm leading-7 text-muted md:text-base">{item.body}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <SectionHeader eyebrow="Network" title="合作网络与项目经验" />
-          <Card>
-            <div className="grid gap-4 text-muted">
-              <p>
-                SAREC 的价值不只来自单一项目展示，也来自对美国本地开发商、房地产从业者、资本方、贷款、保险、法律、会计和跨境客户需求的长期理解。
-              </p>
-              <p>
-                对于涉及第三方合作方的项目经验，我们会根据授权、公开信息和合规边界进行谨慎展示。重点不是把项目包装成机会，而是把项目所涉及的判断逻辑、结构安排、风控节点和推进路径解释清楚。
-              </p>
+              <Link
+                href="/zh/case-studies/4136-rosewood"
+                className={styles.featuredCta}
+              >
+                查看项目详情 →
+              </Link>
             </div>
-          </Card>
-        </div>
-      </section>
-
-      <section className="bg-deep py-12 text-white md:py-24">
-        <div className="container-shell grid gap-8 md:grid-cols-[1.5fr_1fr] md:items-end">
-          <div>
-            <h2 className="font-sans text-2xl font-bold leading-tight md:text-4xl">如果你正在判断一个美国房地产项目，可以先让我们看一眼。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400 md:text-base">
-              无论你是投资人、项目方、房地产同行，还是正在配置美国资产的新移民家庭，都可以提交项目资料或合作需求。SAREC 会根据项目阶段、资料完整度和合作可能性，判断是否适合继续沟通。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:justify-end">
-            <a className={primaryButtonClass} href="/zh/contact/">
-              提交项目或合作需求
-            </a>
-            <a className={secondaryButtonClass} href="/zh/services/strategy">
-              查看项目判断服务
-            </a>
+            <div className={styles.featuredMedia}>
+              <div className={styles.featuredImageBox}>
+                <SaImage
+                  src="/images/projects/4136-rosewood-rendering.png"
+                  alt="4136 Rosewood Ave — ED1 经济适用房项目"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  filterIntensity="none"
+                  className={styles.featuredImage}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <SectionHeader eyebrow="Explore" title="继续了解" />
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {relatedEntries.map((item) => (
-              <Card key={item.title}>
-                <h3 className="font-sans text-xl font-semibold leading-snug">{item.title}</h3>
-                <a className="mt-6 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink hover:text-gold" href={item.href}>
-                  前往查看
-                </a>
-              </Card>
+      {/* P04 — 4 个核心机制(2x2 卡片) */}
+      <section className={styles.mechanismSection}>
+        <div className={styles.mechanismInner}>
+          <span className={styles.eyebrow}>HOW WE WORK · 项目合作机制</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            4 个核心机制
+          </RevealOnView>
+          <p className={styles.sectionLead}>
+            SAREC 项目合作的核心机制 —— 不是规模、不是回报承诺,而是法律结构、账户结构和风险边界。
+          </p>
+          <div className={styles.mechanismGrid}>
+            {mechanisms.map((m) => (
+              <article key={m.code} className={styles.mechanismCard}>
+                <span className={styles.mechanismNum}>{m.code}</span>
+                <h3 className={styles.mechanismH3}>{m.title}</h3>
+                {m.body.map((line, i) => (
+                  <p key={i} className={styles.mechanismBody}>
+                    {line}
+                  </p>
+                ))}
+                <p className={styles.complianceNote}>{m.compliance}</p>
+              </article>
             ))}
           </div>
+          <p className={styles.mechanismInlineCta}>
+            完整服务架构详见 →{' '}
+            <Link href="/zh/services" className={styles.inlineLink}>
+              /zh/services
+            </Link>
+          </p>
         </div>
       </section>
-    </article>
+
+      {/* P05 — FAQ 3 题(<details>/<summary> 同 Events E05) */}
+      <section className={styles.faqSection}>
+        <div className={styles.faqInner}>
+          <span className={styles.eyebrow}>FAQ · 常见问题</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            项目常见问题
+          </RevealOnView>
+          <div className={styles.faqList}>
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q1</span>
+                <span className={styles.faqQText}>
+                  SAREC 目前有多少在管项目?
+                </span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>
+                  SAREC 已参与多个南加州房地产项目合作,覆盖经济适用房(ED1)、精品公寓、跨境股权合作等类型。
+                </p>
+                <p className={styles.complianceNote}>
+                  具体项目数量、规模和投资材料,仅在合格沟通后提供。
+                </p>
+              </div>
+            </details>
+
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q2</span>
+                <span className={styles.faqQText}>
+                  投资 SAREC 项目的最小金额是多少?
+                </span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>
+                  不同项目类型最小投资金额不同,通常在合格投资人(Accredited Investor)标准之上。
+                </p>
+                <p className={styles.complianceNote}>
+                  具体金额、合作方式和投资材料,在合格沟通后提供。
+                </p>
+              </div>
+            </details>
+
+            <details className={styles.faqItem}>
+              <summary className={styles.faqQuestion}>
+                <span className={styles.faqQNum}>Q3</span>
+                <span className={styles.faqQText}>
+                  SAREC 自己是否参与项目投资?
+                </span>
+                <span className={styles.faqChevron} aria-hidden="true">
+                  +
+                </span>
+              </summary>
+              <div className={styles.faqAnswer}>
+                <p>
+                  在符合 SAREC 参与标准的项目共投场景下,团队可与客户共同出资。
+                </p>
+                <p>优先采用利益一致、风险共担、后端激励的合作结构。</p>
+                <p className={styles.complianceNote}>
+                  具体股权、决策权和退出安排,以项目协议为准。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      {/* P06 — CTA Banner(上下金线 + 3 CTA) */}
+      <section className={styles.ctaSection}>
+        <div className={styles.ctaInner}>
+          <RevealOnView as="h2" className={styles.ctaH2}>
+            准备好看具体项目了吗
+          </RevealOnView>
+          <p className={styles.ctaSubtitle}>
+            项目评估 · 30 分钟。
+            <br />
+            匹配则进入项目细节,不匹配也直接告诉你。
+          </p>
+          <div className={styles.ctaRow}>
+            <Link href="/zh/contact" className={styles.ctaPrimary}>
+              项目评估 · 30 分钟
+            </Link>
+            <Link href="/zh/case-studies" className={styles.ctaSecondary}>
+              查看案例研究
+            </Link>
+            <Link href="/zh/contact" className={styles.ctaSecondary}>
+              预约 30 分钟沟通
+            </Link>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

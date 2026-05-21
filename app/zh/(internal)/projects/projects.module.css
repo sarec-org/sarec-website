@@ -1,0 +1,762 @@
+/* ============================================================
+   Projects page /zh/projects
+   P01 Cinematic Hero / P02 Types 3 / P03 Featured Rosewood / P04 Mechanism 2x2 / P05 FAQ / P06 CTA
+   背景节奏:P01 deepest → P02 deep → P03 deepest → P04 deep → P05 deepest → P06 deepest + 上下金线
+   设计 token 继承 events.module.css / founder.module.css
+   ============================================================ */
+
+/* ===== 共享 token ===== */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+}
+
+.sectionH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: clamp(20px, 3vh, 32px) 0 clamp(24px, 4vh, 40px) 0;
+}
+
+.sectionLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(40px, 6vh, 64px) 0;
+  max-width: 880px;
+}
+
+.inlineLink {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 1px;
+  transition: border-color 0.2s ease;
+}
+
+.inlineLink:hover {
+  border-color: var(--gold);
+}
+
+.complianceNote {
+  font-family: var(--serif-zh);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: 12px 0 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+}
+
+/* ============================================================
+   P01 — Cinematic Hero(全屏 2219 Wellesley + Ken Burns + radial vignette)
+   ============================================================ */
+.heroSection {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: clamp(85vh, 92vh, 100vh);
+  background: var(--ink-deepest);
+  overflow: hidden;
+}
+
+.heroImageWrap {
+  position: absolute;
+  inset: 0;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  animation: heroKenBurns 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1) translate(0%, 0%);
+  }
+  100% {
+    transform: scale(1.06) translate(-1%, 1%);
+  }
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 70% at 25% 80%,
+    rgba(2, 7, 14, 0.72) 0%,
+    rgba(2, 7, 14, 0.4) 35%,
+    rgba(2, 7, 14, 0) 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.heroContent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 6vw, 96px);
+  max-width: 1280px;
+}
+
+.heroEyebrow {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: clamp(20px, 2.5vh, 32px);
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 clamp(28px, 3.5vh, 40px) 0;
+  display: block;
+}
+
+.heroRevealLine {
+  display: block;
+  padding-bottom: 0.12em;
+  will-change: clip-path;
+}
+
+.heroRevealVisible {
+  animation: projectsHeroReveal 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes projectsHeroReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroImage {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+.heroLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(16px, 2vh, 24px) 0;
+  max-width: 720px;
+}
+
+.heroNote {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: clamp(8px, 1.5vh, 16px) 0 clamp(40px, 5vh, 56px) 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+  max-width: 720px;
+}
+
+.heroCtaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  flex-wrap: wrap;
+}
+
+.heroCtaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 16px 32px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.heroCtaPrimary:hover {
+  opacity: 0.88;
+}
+
+.heroCtaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 16px 32px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.heroCtaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ============================================================
+   P02 — 项目类型 3 类(图 + 编号 + 标题 + 角色 + 适合特点)
+   ============================================================ */
+.typesSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.typesInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.typesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 3vw, 40px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .typesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.typeCard {
+  background: var(--ink-deepest);
+  border: 1px solid var(--line-3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.typeCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.typeImageBox {
+  position: relative;
+  aspect-ratio: 9 / 10;
+  overflow: hidden;
+  background: var(--ink-deep);
+}
+
+.typeImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.typeText {
+  padding: clamp(28px, 3vw, 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.typeNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(12px, 1.5vh, 20px);
+}
+
+.typeH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(12px, 1.5vh, 18px) 0;
+  line-height: 1.3;
+}
+
+.typeBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 16px 0;
+}
+
+.typeRole {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  margin: 0 0 16px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-3);
+}
+
+.typeFitLabel {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold-dim);
+  margin: 8px 0;
+  text-transform: uppercase;
+}
+
+.typeFitList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.typeFitList li {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.typeFitList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+/* ============================================================
+   P03 — Featured Rosewood(50/50 split:信息卡 + 渲染图)
+   ============================================================ */
+.featuredSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.featuredInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  margin-top: clamp(48px, 6vh, 72px);
+  border: 1px solid var(--line-3);
+}
+
+@media (max-width: 1024px) {
+  .featuredGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featuredCard {
+  padding: clamp(40px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--ink-deep);
+}
+
+.featuredAddress {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+}
+
+.featuredLocation {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  text-transform: uppercase;
+}
+
+.featuredStats {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(16px, 2vw, 28px);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  padding: clamp(20px, 2.5vh, 28px) 0;
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+  flex-wrap: wrap;
+}
+
+.featuredStat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.featuredStatNum {
+  font-family: var(--serif-en);
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.featuredStatLabel {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  color: var(--ivory-warm);
+}
+
+.featuredStatStatus {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 6px 14px;
+  text-transform: uppercase;
+}
+
+.featuredStatSep {
+  color: var(--gold-dim);
+  font-size: 1.5rem;
+}
+
+.featuredMeta {
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  display: grid;
+  gap: 12px;
+}
+
+.featuredMetaRow {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+.featuredMetaLabel {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.featuredCta {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-decoration: none;
+  align-self: flex-start;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.featuredCta:hover {
+  color: var(--ivory);
+  border-color: var(--ivory);
+}
+
+.featuredMedia {
+  position: relative;
+  min-height: 480px;
+  background: var(--ink-deepest);
+}
+
+@media (max-width: 1024px) {
+  .featuredMedia {
+    min-height: 50vh;
+    order: -1;
+  }
+}
+
+.featuredImageBox {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.featuredImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+/* ============================================================
+   P04 — 4 个核心机制(2x2 卡片)
+   ============================================================ */
+.mechanismSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.mechanismInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.mechanismGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .mechanismGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mechanismCard {
+  background: var(--ink-deepest);
+  border: 1px solid var(--line-3);
+  padding: clamp(32px, 3.5vw, 56px);
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.mechanismCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.mechanismNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(16px, 2vh, 24px);
+}
+
+.mechanismH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.375rem, 1.8vw, 1.75rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(16px, 2vh, 20px) 0;
+  line-height: 1.3;
+}
+
+.mechanismBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--ivory-mute);
+  margin: 0 0 12px 0;
+}
+
+.mechanismInlineCta {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  margin: clamp(40px, 5vh, 56px) 0 0 0;
+  text-align: right;
+}
+
+/* ============================================================
+   P05 — FAQ 3 题(<details>/<summary> 同 Events E05)
+   ============================================================ */
+.faqSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.faqInner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.faqList {
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+.faqItem {
+  border-top: 1px solid var(--line-3);
+}
+
+.faqItem:last-child {
+  border-bottom: 1px solid var(--line-3);
+}
+
+.faqItem[open] .faqChevron {
+  transform: rotate(45deg);
+}
+
+.faqQuestion {
+  list-style: none;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: clamp(20px, 2.5vw, 32px);
+  align-items: center;
+  padding: clamp(24px, 3vh, 36px) 0;
+  cursor: pointer;
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  font-weight: 500;
+  color: var(--ivory);
+  line-height: 1.4;
+  transition: color 0.2s ease;
+}
+
+.faqQuestion:hover {
+  color: var(--gold);
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+.faqQNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+
+.faqQText {
+  flex: 1;
+}
+
+.faqChevron {
+  font-family: var(--mono);
+  font-size: 1.5rem;
+  color: var(--gold);
+  transition: transform 0.3s ease;
+  line-height: 1;
+}
+
+.faqAnswer {
+  padding: 0 0 clamp(28px, 3.5vh, 40px) 0;
+}
+
+.faqAnswer p {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--ivory-mute);
+  margin: 0 0 12px 0;
+}
+
+.faqAnswer p:last-child {
+  margin-bottom: 0;
+}
+
+/* ============================================================
+   P06 — CTA Banner(上下金线 + 3 CTA)
+   ============================================================ */
+.ctaSection {
+  background: var(--ink-deepest);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(120px, 18vw, 200px) clamp(24px, 6vw, 96px);
+  text-align: center;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.ctaInner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ctaH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ivory);
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+}
+
+.ctaSubtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(48px, 6vh, 72px) 0;
+}
+
+.ctaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 18px 36px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.ctaPrimary:hover {
+  opacity: 0.88;
+}
+
+.ctaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 18px 36px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
