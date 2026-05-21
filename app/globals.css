@@ -199,3 +199,28 @@ textarea {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================================
+   RevealOnView — IO-gated clip-path reveal,共享自 Founder F01 hero
+   用法:<RevealOnView as="h2" className={styles.sectionH2}>...</RevealOnView>
+   ============================================================ */
+.reveal-line {
+  display: inline-block;
+  padding-bottom: 0.12em;
+  will-change: clip-path;
+  /* fail-safe:默认无 clip-path,字完全可见 — IO 失效也不会丢内容
+     IO 触发后加 .reveal-visible → animation 从 0% 完全遮蔽 播到 100% 完全显示,视觉效果不变 */
+}
+
+.reveal-visible {
+  animation: revealLine 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes revealLine {
+  0%   { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-line { animation: none !important; }
+}

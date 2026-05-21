@@ -4,3 +4,5 @@ export { SaVideo } from './SaVideo';
 export type { SaVideoProps } from './SaVideo';
 export { SectionChapterMark } from './SectionChapterMark';
 export type { SectionChapterMarkProps } from './SectionChapterMark';
+export { RevealOnView } from './RevealOnView';
+export type { RevealOnViewProps } from './RevealOnView';
