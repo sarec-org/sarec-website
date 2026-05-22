@@ -1,0 +1,685 @@
+/* ============================================================
+   Rosewood 详情页 /zh/case-studies/4136-rosewood
+   R01 Cinematic Hero / R02 Overview / R03 ED1 Editorial / R04 Roles / R05 Learn More / R06 CTA
+   背景节奏:R01 deepest → R02 deep → R03 deepest → R04 deep → R05 deepest → R06 deepest + 上下金线
+   设计 token 继承 case-studies / projects / events
+   ============================================================ */
+
+/* ===== 共享 token ===== */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+}
+
+.sectionH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: clamp(20px, 3vh, 32px) 0 clamp(24px, 4vh, 40px) 0;
+}
+
+.sectionLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(40px, 6vh, 64px) 0;
+  max-width: 880px;
+}
+
+.complianceNote {
+  font-family: var(--serif-zh);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: 12px 0 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+}
+
+/* ============================================================
+   R01 — Cinematic Hero(4136 渲染图 + Ken Burns + radial vignette)
+   ============================================================ */
+.heroSection {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: clamp(85vh, 92vh, 100vh);
+  background: var(--ink-deepest);
+  overflow: hidden;
+}
+
+.heroImageWrap {
+  position: absolute;
+  inset: 0;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  animation: heroKenBurns 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1) translate(0%, 0%);
+  }
+  100% {
+    transform: scale(1.06) translate(-1%, 1%);
+  }
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 70% at 25% 80%,
+    rgba(2, 7, 14, 0.72) 0%,
+    rgba(2, 7, 14, 0.4) 35%,
+    rgba(2, 7, 14, 0) 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.heroContent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 6vw, 96px);
+  max-width: 1280px;
+}
+
+.heroEyebrow {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: clamp(20px, 2.5vh, 32px);
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 clamp(20px, 2.5vh, 32px) 0;
+  display: block;
+}
+
+.heroRevealLine {
+  display: block;
+  padding-bottom: 0.12em;
+  will-change: clip-path;
+}
+
+.heroRevealVisible {
+  animation: rosewoodHeroReveal 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes rosewoodHeroReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroImage {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+.heroSubline {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.5;
+  color: var(--ivory-warm);
+  margin: 0 0 8px 0;
+}
+
+.heroSubline:last-of-type {
+  margin-bottom: clamp(28px, 3vh, 36px);
+}
+
+.heroStats {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(16px, 2vw, 28px);
+  margin: 0 0 clamp(40px, 5vh, 56px) 0;
+  flex-wrap: wrap;
+}
+
+.heroStat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.heroStatNum {
+  font-family: var(--serif-en);
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.heroStatLabel {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  color: var(--ivory-warm);
+}
+
+.heroStatStatus {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 6px 14px;
+  text-transform: uppercase;
+}
+
+.heroStatSep {
+  color: var(--gold-dim);
+  font-size: 1.5rem;
+}
+
+.heroCtaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  flex-wrap: wrap;
+}
+
+.heroCtaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 16px 32px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.heroCtaPrimary:hover {
+  opacity: 0.88;
+}
+
+.heroCtaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 16px 32px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.heroCtaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ============================================================
+   R02 — 项目概览(数据表:label 左 mono / value 右 serif)
+   ============================================================ */
+.overviewSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.overviewInner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.overviewTable {
+  list-style: none;
+  margin: clamp(48px, 6vh, 72px) 0 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line-3);
+}
+
+.overviewRow {
+  display: grid;
+  grid-template-columns: clamp(140px, 22%, 220px) 1fr;
+  gap: clamp(24px, 4vw, 64px);
+  align-items: baseline;
+  padding: clamp(20px, 2.5vh, 28px) 0;
+  border-bottom: 1px solid var(--line-3);
+}
+
+@media (max-width: 768px) {
+  .overviewRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.overviewLabel {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.overviewValue {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ivory);
+  margin: 0;
+}
+
+/* R02 内的 complianceNote 居中,留更多上间距 */
+.overviewSection .complianceNote {
+  margin-top: clamp(32px, 4vh, 48px);
+}
+
+/* ============================================================
+   R03 — ED1 政策深度(Editorial 长文 4 块)
+   ============================================================ */
+.ed1Section {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.ed1Inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ed1Block {
+  margin-top: clamp(40px, 5vh, 64px);
+}
+
+.ed1Block:first-of-type {
+  margin-top: 0;
+}
+
+.ed1BlockH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(20px, 2.5vh, 32px) 0;
+  line-height: 1.3;
+}
+
+.ed1Body {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
+  line-height: 1.85;
+  color: var(--ivory-warm);
+  margin: 0 0 16px 0;
+}
+
+.ed1Body:last-child {
+  margin-bottom: 0;
+}
+
+.ed1Inline {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.ed1Sub {
+  margin-top: clamp(24px, 3vh, 36px);
+}
+
+.ed1Sub:first-of-type {
+  margin-top: clamp(16px, 2vh, 24px);
+}
+
+.ed1SubLabel {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 12px 0;
+}
+
+.insightNote {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ivory);
+  font-style: italic;
+  margin: 16px 0 0 0;
+  padding: 12px 16px;
+  background: rgba(212, 176, 104, 0.08);
+  border-left: 2px solid var(--gold);
+}
+
+.ed1Sep {
+  width: 100%;
+  height: 1px;
+  margin: clamp(48px, 6vh, 72px) 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--gold-dim) 30%,
+    var(--gold-dim) 70%,
+    transparent 100%
+  );
+}
+
+.ed1Sources {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.ed1Sources li {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.ed1Sources li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+/* ============================================================
+   R04 — SAREC 在项目中的角色(3 卡横排)
+   ============================================================ */
+.rolesSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.rolesInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.rolesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .rolesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.roleCard {
+  background: var(--ink-deepest);
+  border: 1px solid var(--line-3);
+  padding: clamp(32px, 3.5vw, 56px);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.roleCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.roleNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(16px, 2vh, 24px);
+}
+
+.roleH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.375rem, 1.8vw, 1.625rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(16px, 2vh, 20px) 0;
+  line-height: 1.3;
+}
+
+.roleBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--ivory-mute);
+  margin: 0 0 12px 0;
+}
+
+.roleBody:last-of-type {
+  margin-bottom: 0;
+}
+
+.roleBulletList {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0 0;
+  display: grid;
+  gap: 6px;
+}
+
+.roleBulletList li {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.roleBulletList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+/* ============================================================
+   R05 — 了解更多(3 入口卡 + 每卡独立 CTA)
+   ============================================================ */
+.learnMoreSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.learnMoreInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.learnMoreGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .learnMoreGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.learnMoreCard {
+  background: var(--ink-deep);
+  border: 1px solid var(--line-3);
+  padding: clamp(32px, 3.5vw, 56px);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.learnMoreCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.learnMoreNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(16px, 2vh, 24px);
+}
+
+.learnMoreH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(16px, 2vh, 20px) 0;
+  line-height: 1.3;
+}
+
+.learnMoreBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 clamp(24px, 3vh, 36px) 0;
+  flex: 1;
+}
+
+.learnMoreCta {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-decoration: none;
+  align-self: flex-start;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.learnMoreCta:hover {
+  color: var(--ivory);
+  border-color: var(--ivory);
+}
+
+/* ============================================================
+   R06 — CTA Banner(上下金线 + 3 CTA,与 Founder F07 / Events E06 同款)
+   ============================================================ */
+.ctaSection {
+  background: var(--ink-deepest);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(120px, 18vw, 200px) clamp(24px, 6vw, 96px);
+  text-align: center;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.ctaInner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ctaH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  color: var(--ivory);
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+}
+
+.ctaSubtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(48px, 6vh, 72px) 0;
+}
+
+.ctaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 18px 36px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.ctaPrimary:hover {
+  opacity: 0.88;
+}
+
+.ctaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 18px 36px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}

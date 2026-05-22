@@ -1,314 +1,298 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { RevealOnView } from '@/components/shared/RevealOnView';
 import { createPageMetadata } from '@/lib/seo';
+import styles from './rosewood.module.css';
+import { RosewoodHero } from './RosewoodHero';
 
 export const metadata: Metadata = createPageMetadata({
-  title: '4136 Rosewood 案例研究｜SAREC 中美房地产商会',
+  title: '4136 Rosewood Ave｜SAREC 项目案例',
   description:
-    '4136 Rosewood 是洛杉矶 East Hollywood 的 ED1 经济适用房开发项目案例，用于说明美国城市住宅开发项目的土地、审批、成本、融资、租赁、退出和合作结构判断逻辑。',
+    '4136 Rosewood Ave — 洛杉矶 East Hollywood ED1 经济适用房开发项目。69 单元、6 层、在管。SAREC 角色:项目合作 / 投资人沟通。',
   path: '/zh/case-studies/4136-rosewood'
 });
 
-const tags = ['真实项目案例', 'ED1 经济适用房', '项目判断', '风险识别'];
-
 const overview = [
-  ['项目类型', 'ED1 经济适用房开发'],
-  ['项目位置', '洛杉矶成熟社区'],
-  ['项目规模', '约 69 个公寓单元，6 层建筑'],
-  ['建筑规模', '约 34,500 平方英尺'],
-  ['项目定位', '符合 ED1 政策的洛杉矶城市住宅开发产品，单元面向 LA 区域工薪与中等收入家庭。'],
-  ['项目阶段', '项目已完成关键审批节点，进入实质推进阶段。具体开工安排、融资条件和项目进展，应以项目最新资料为准。']
-];
+  ['项目名称', '4136 Rosewood Ave'],
+  ['地址', '洛杉矶 East Hollywood'],
+  ['项目类型', '经济适用房开发(ED1)'],
+  ['规模', '69 单元'],
+  ['层数', '6 层'],
+  ['当前阶段', '在管']
+] as const;
 
-const studyValuePoints = [
-  '项目位于成熟城市社区，适合讨论区位和租赁需求。',
-  '项目规模适中，既具备开发复杂度，也便于进行系统分析。',
-  '项目涉及土地、审批、建设、融资、运营和退出等完整开发链条。',
-  '项目适合说明投资人如何从财务模型回到项目真实逻辑。'
-];
+type RoleCard = {
+  code: string;
+  title: string;
+  body: string[];
+  bulletList?: string[];
+  compliance: string | null;
+};
 
-const framework = [
+const roles: RoleCard[] = [
   {
-    title: '市场与位置',
-    body: '成熟社区、公寓租赁需求、目标客群收入水平、周边供给和区域长期稳定性，是判断租赁型公寓项目的基础。'
+    code: '01',
+    title: '项目合作',
+    body: [
+      '与合作开发商共同推进项目。',
+      '参与项目筛选、结构设计、风险评估。',
+      '合作开发商具备 15 年美国本地经验。'
+    ],
+    compliance: null
   },
   {
-    title: '土地与审批',
-    body: '土地状态、分区、entitlement、permit、政策环境和审批进度，直接决定项目能否从概念进入真实开发。'
+    code: '02',
+    title: '投资人沟通',
+    body: [
+      '代表投资人视角,确保项目结构对齐投资人利益。',
+      '包括:项目尽调、合同审核、风险评估、投资结构设计。'
+    ],
+    compliance: null
   },
   {
-    title: '建设与成本',
-    body: '硬成本、软成本、设计、施工周期、承包商履约、成本超支和 contingency，都会影响项目最终结果。'
-  },
-  {
-    title: '融资与资本结构',
-    body: '股权资金、建筑贷款、利率、资金到位时间、再融资可能性和资本结构安排，是项目推进的关键。'
-  },
-  {
-    title: '租赁与退出',
-    body: '租金假设、空置率、运营成本、cap rate、出售或长期持有路径，决定项目完成后的价值实现。'
-  },
-  {
-    title: '合作与风控',
-    body: '谁管理项目、谁负责信息披露、重大事项如何决策、延期和超支如何处理、投资人如何获得透明信息，决定合作是否稳健。'
+    code: '03',
+    title: '过程监督',
+    body: ['项目期间持续监督:'],
+    bulletList: [
+      '进度跟踪',
+      '财务状况',
+      '重大事项通报',
+      '投资人沟通会'
+    ],
+    compliance: '具体汇报频率、形式和内容,以项目协议为准。'
   }
 ];
 
-const modelQuestions = [
-  '租金假设是否来自真实市场比较。',
-  '建设成本是否有充分依据。',
-  '运营费用是否足够保守。',
-  '空置率和管理费是否被充分考虑。',
-  'cap rate 和退出价值是否过于乐观。',
-  '如果成本上升、租金下降或退出延后，项目是否仍然具有安全边际。'
-];
-
-const risks = [
+const learnMore = [
   {
-    title: '审批与开工节奏',
-    body: '即使项目已经完成关键审批节点，实际开工仍可能受到施工准备、资金安排和市场条件影响。'
+    code: '01',
+    title: '项目评估对话',
+    body: '如果你正在考虑此类项目投资,预约 30 分钟项目评估,讨论 Rosewood 项目和你的需求匹配度。',
+    cta: '项目评估 · 30 分钟',
+    href: '/zh/contact'
   },
   {
-    title: '建设成本控制',
-    body: '公寓开发对硬成本、软成本和时间成本敏感，成本超支会直接影响项目结果。'
+    code: '02',
+    title: '加入 SAREC 会员',
+    body: '会员可获得:类似项目的优先信息、实地考察机会、与合作开发商面对面。',
+    cta: '申请加入会员',
+    href: '/zh/contact'
   },
   {
-    title: '融资环境变化',
-    body: '利率、贷款条件、建筑贷款安排和再融资市场变化，都会影响项目资金结构。'
-  },
-  {
-    title: '租赁市场变化',
-    body: '租金假设、出租速度和空置率变化，会影响项目现金流和估值。'
-  },
-  {
-    title: '退出市场变化',
-    body: '项目完成后的出售价格、cap rate 和买家需求，可能与最初测算存在差异。'
-  },
-  {
-    title: '合作结构安排',
-    body: '投资人是否能获得及时信息、重大事项是否有清晰机制、各方权责是否明确，是项目合作的重要保障。'
+    code: '03',
+    title: '阅读 ED1 政策研究',
+    body: 'SAREC 即将发布 ED1 政策与项目机会的深度研究。',
+    cta: '查看研究中心',
+    href: '/zh/research'
   }
 ];
 
-const takeaways = [
-  '项目规模越大，越需要完整判断体系。',
-  '收益测算越吸引人，越需要回到假设和风险。',
-  '项目方执行能力和信息透明度非常重要。',
-  '跨境投资人需要用美国本地规则判断项目。',
-  'SAREC 的价值是帮助客户建立判断框架，而不是简单介绍项目。'
-];
-
-const relatedLinks = [
-  {
-    title: '项目初筛与投资判断',
-    href: '/zh/services/strategy/'
-  },
-  {
-    title: '服务架构',
-    href: '/zh/services/'
-  },
-  {
-    title: '风险披露',
-    href: '/zh/legal/risk-disclosure/'
-  },
-  {
-    title: '会员服务',
-    href: '/zh/membership/'
-  }
-];
-
-function SectionShell({ eyebrow, title, children, muted = false }: { eyebrow?: string; title: string; children: ReactNode; muted?: boolean }) {
+export default function Rosewood4136Page() {
   return (
-    <section className={muted ? 'border-y border-line bg-zinc-50 py-12 md:py-24' : 'py-12 md:py-24'}>
-      <div className="container-shell">
-        <div className="max-w-4xl">
-          {eyebrow ? <p className="font-sans text-sm font-semibold text-gold">{eyebrow}</p> : null}
-          <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">{title}</h2>
-        </div>
-        {children}
-      </div>
-    </section>
-  );
-}
+    <main>
+      {/* R01 — Cinematic Hero(client component:4136 渲染图 + Ken Burns + reveal H1)*/}
+      <RosewoodHero />
 
-function NumberBadge({ value }: { value: number }) {
-  return (
-    <span className="flex h-9 w-9 items-center justify-center rounded-[2px] bg-deep font-sans text-sm font-semibold text-gold">
-      {value}
-    </span>
-  );
-}
-
-export default function RosewoodCaseStudyPage() {
-  return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">Case Study</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">4136 Rosewood｜洛杉矶 East Hollywood · ED1 经济适用房开发</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
-            一个美国城市公寓开发项目，真正值得研究的不只是项目规模和收益测算，而是土地、审批、建设、融资、租赁、退出和合作结构背后的系统判断。
+      {/* R02 — 项目概览(6 行数据表 + [note])*/}
+      <section className={styles.overviewSection}>
+        <div className={styles.overviewInner}>
+          <span className={styles.eyebrow}>PROJECT OVERVIEW · 项目概览</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            项目基本信息
+          </RevealOnView>
+          <dl className={styles.overviewTable}>
+            {overview.map(([label, value]) => (
+              <div key={label} className={styles.overviewRow}>
+                <dt className={styles.overviewLabel}>{label}</dt>
+                <dd className={styles.overviewValue}>{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className={styles.complianceNote}>
+            具体投资材料、合作结构和财务细节 —— 仅在合格沟通后提供。
           </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span className="rounded-[2px] border border-white/15 bg-white/5 px-3 py-1.5 font-sans text-xs font-semibold text-zinc-300" key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/contact/" variant="gold">
-              提交项目或合作需求
-            </Button>
-            <Button href="/zh/services/" variant="light">
-              查看服务架构
-            </Button>
-          </div>
         </div>
       </section>
 
-      <SectionShell eyebrow="Overview" title="项目概览">
-        <dl className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {overview.map(([label, value]) => (
-            <div className="rounded-md border border-line bg-white p-5 shadow-soft md:p-6" key={label}>
-              <dt className="font-sans text-xs font-semibold uppercase tracking-[0.14em] text-gold">{label}</dt>
-              <dd className="mt-3 text-sm leading-7 text-muted md:text-base">{value}</dd>
+      {/* R03 — ED1 政策深度(Editorial 长文 4 块)*/}
+      <section className={styles.ed1Section}>
+        <div className={styles.ed1Inner}>
+          <span className={styles.eyebrow}>ABOUT ED1 · 关于 ED1 政策</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            理解 ED1 政策
+          </RevealOnView>
+          <p className={styles.sectionLead}>
+            理解 4136 Rosewood 项目,需要先理解 ED1 政策背景。
+          </p>
+
+          {/* Block 1 — ED1 定义 */}
+          <div className={styles.ed1Block}>
+            <h3 className={styles.ed1BlockH3}>ED1 = Executive Directive 1</h3>
+            <p className={styles.ed1Body}>
+              洛杉矶市长 Karen Bass 于 2022 年 12 月 16 日颁布的行政指令,旨在加快洛杉矶市内庇护所和 100% 经济适用房项目(Shelters and 100 Percent Affordable Housing Projects)的审批通道。
+            </p>
+            <p className={styles.ed1Body}>
+              ED1 已经过多次修订,最近一次为 2024 年 7 月 1 日,重点增加了对原住租户、历史建筑和环境敏感区域的保护。
+            </p>
+          </div>
+
+          <div className={styles.ed1Sep} aria-hidden="true" />
+
+          {/* Block 2 — 核心特点 3 子条 */}
+          <div className={styles.ed1Block}>
+            <h3 className={styles.ed1BlockH3}>ED1 项目的核心特点</h3>
+
+            <div className={styles.ed1Sub}>
+              <p className={styles.ed1SubLabel}>
+                01 / 部级审批程序(Ministerial Approval Process)
+              </p>
+              <p className={styles.ed1Body}>
+                合格项目走简化的部级审批通道,豁免裁量性审查(Discretionary Review),由城市规划局(City Planning)、建设安全局(LADBS)和洛杉矶住房局(LAHD)协同处理。
+              </p>
             </div>
-          ))}
-        </dl>
-      </SectionShell>
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Why It Matters</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">这个案例的价值，不只是一个项目本身</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              4136 Rosewood
-              适合用于说明美国城市公寓开发项目的完整判断逻辑。对于跨境投资人而言，真正重要的不是只看项目介绍或收益测算，而是理解项目从土地获取、审批推进、建设成本、租赁假设、退出路径到合作结构的每一个关键环节。
+            <div className={styles.ed1Sub}>
+              <p className={styles.ed1SubLabel}>02 / 审批周期</p>
+              <p className={styles.ed1Body}>
+                ED1 设定的官方目标是:60 天内完成审批 + 5 天内出具建设许可。
+              </p>
+              <p className={styles.ed1Body}>
+                实际项目周期受现场条件、申请完整度、合作方响应速度、是否涉及历史保护或租户安置等因素影响,通常需要 9 个月,部分复杂项目可能需要 1 年。
+              </p>
+              <p className={styles.ed1Body}>
+                相比传统经济适用房项目通常 18 个月以上的审批周期,ED1 项目仍显著缩短了时间表。
+              </p>
+              <p className={styles.insightNote}>
+                理解真实周期是项目财务建模的前提之一。
+              </p>
+            </div>
+
+            <div className={styles.ed1Sub}>
+              <p className={styles.ed1SubLabel}>03 / 资格定义</p>
+              <p className={styles.ed1Body}>
+                ED1 适用于 5 单元以上、100% 经济适用房项目,所有单元须在 80% 区域中位收入(AMI)或更低,或采用混合收入结构(最多 20% 单元在 120% AMI、其余在 80% AMI 以下)。
+              </p>
+              <p className={styles.ed1Body}>具体资格审核由 LAHD 负责。</p>
+            </div>
+          </div>
+
+          <div className={styles.ed1Sep} aria-hidden="true" />
+
+          {/* Block 3 — 为什么值得关注 */}
+          <div className={styles.ed1Block}>
+            <h3 className={styles.ed1BlockH3}>为什么 ED1 项目值得关注</h3>
+            <p className={styles.ed1Body}>
+              <span className={styles.ed1Inline}>审批确定性:</span>
+              相比传统审批通道,ED1 项目时间表更可预测,资金回笼周期可控。
+            </p>
+            <p className={styles.ed1Body}>
+              <span className={styles.ed1Inline}>政策窗口:</span>
+              当前在窗口期内推进的项目,享受简化审批流程;后续政策可能调整。
+            </p>
+            <p className={styles.ed1Body}>
+              <span className={styles.ed1Inline}>可负担住房需求:</span>
+              洛杉矶住房危机背景下,经济适用房有明确的市场需求和政府支持。
             </p>
           </div>
-          <ol className="grid gap-4">
-            {studyValuePoints.map((item, index) => (
-              <li className="grid gap-3 rounded-md border border-line bg-white p-4 md:grid-cols-[2.5rem_1fr] md:p-5" key={item}>
-                <NumberBadge value={index + 1} />
-                <p className="text-sm leading-7 text-muted md:text-base">{item}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </section>
 
-      <SectionShell eyebrow="Framework" title="我们如何看这个项目">
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {framework.map((item, index) => (
-            <Card key={item.title}>
-              <NumberBadge value={index + 1} />
-              <h3 className="mt-5 font-sans text-xl font-semibold leading-snug text-ink">{item.title}</h3>
-              <p className="mt-4 text-sm leading-7 text-muted md:text-base">{item.body}</p>
-            </Card>
-          ))}
-        </div>
-      </SectionShell>
+          <div className={styles.ed1Sep} aria-hidden="true" />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Financial Assumptions</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">财务模型不是答案，而是需要被验证的假设集合</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              Rosewood 项目内部模型包含成本、租金、费用、现金流、cap rate、退出价值等多个假设。对于投资人而言，关键不是记住一个收益数字，而是理解这些数字背后的假设是否合理。
-            </p>
+          {/* Block 4 — 资料来源 */}
+          <div className={styles.ed1Block}>
+            <h3 className={styles.ed1BlockH3}>资料来源</h3>
+            <ul className={styles.ed1Sources}>
+              <li>洛杉矶市城市规划局 · Executive Directive 1</li>
+              <li>洛杉矶市长办公室 · Mayor Bass 关于 ED1 的官方声明</li>
+            </ul>
           </div>
-          <ol className="grid gap-4">
-            {modelQuestions.map((item, index) => (
-              <li className="grid gap-3 rounded-md border border-line bg-white p-4 md:grid-cols-[2.5rem_1fr] md:p-5" key={item}>
-                <NumberBadge value={index + 1} />
-                <p className="text-sm leading-7 text-muted md:text-base">{item}</p>
-              </li>
-            ))}
-          </ol>
         </div>
       </section>
 
-      <SectionShell eyebrow="Risk Review" title="一个好项目，也必须先看风险">
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {risks.map((risk, index) => (
-            <Card key={risk.title}>
-              <NumberBadge value={index + 1} />
-              <h3 className="mt-5 font-sans text-xl font-semibold leading-snug text-ink">{risk.title}</h3>
-              <p className="mt-4 text-sm leading-7 text-muted md:text-base">{risk.body}</p>
-            </Card>
-          ))}
-        </div>
-      </SectionShell>
-
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Takeaways</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">Rosewood 对跨境投资人的启发</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              4136 Rosewood
-              说明，判断美国房地产项目不能只看收益表，也不能只听项目方介绍。真正专业的判断，需要把项目拆解为土地、审批、成本、融资、租赁、退出和合作结构，并在每一个环节提出正确问题。
-            </p>
+      {/* R04 — SAREC 在项目中的角色(3 卡横排)*/}
+      <section className={styles.rolesSection}>
+        <div className={styles.rolesInner}>
+          <span className={styles.eyebrow}>OUR ROLE · 我们的角色</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            SAREC 在 4136 Rosewood 项目中
+          </RevealOnView>
+          <p className={styles.sectionLead}>
+            SAREC 在 4136 Rosewood 项目中承担的具体工作。
+          </p>
+          <div className={styles.rolesGrid}>
+            {roles.map((r) => (
+              <article key={r.code} className={styles.roleCard}>
+                <span className={styles.roleNum}>{r.code}</span>
+                <h3 className={styles.roleH3}>{r.title}</h3>
+                {r.body.map((line, i) => (
+                  <p key={i} className={styles.roleBody}>
+                    {line}
+                  </p>
+                ))}
+                {r.bulletList ? (
+                  <ul className={styles.roleBulletList}>
+                    {r.bulletList.map((b) => (
+                      <li key={b}>{b}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {r.compliance ? (
+                  <p className={styles.complianceNote}>{r.compliance}</p>
+                ) : null}
+              </article>
+            ))}
           </div>
-          <ol className="grid gap-4">
-            {takeaways.map((item, index) => (
-              <li className="grid gap-3 rounded-md border border-line bg-white p-4 md:grid-cols-[2.5rem_1fr] md:p-5" key={item}>
-                <NumberBadge value={index + 1} />
-                <p className="text-sm leading-7 text-muted md:text-base">{item}</p>
-              </li>
+        </div>
+      </section>
+
+      {/* R05 — 了解更多 3 种入口(每卡含独立 CTA)*/}
+      <section className={styles.learnMoreSection}>
+        <div className={styles.learnMoreInner}>
+          <span className={styles.eyebrow}>LEARN MORE · 了解更多</span>
+          <RevealOnView as="h2" className={styles.sectionH2}>
+            更多 4136 Rosewood 项目细节
+          </RevealOnView>
+          <p className={styles.sectionLead}>
+            更多 4136 Rosewood 项目细节 —— 包括完整投资材料、财务模型、合作结构和风险清单 —— 仅向通过合格审核的潜在合作方提供。
+          </p>
+          <div className={styles.learnMoreGrid}>
+            {learnMore.map((m) => (
+              <article key={m.code} className={styles.learnMoreCard}>
+                <span className={styles.learnMoreNum}>{m.code}</span>
+                <h3 className={styles.learnMoreH3}>{m.title}</h3>
+                <p className={styles.learnMoreBody}>{m.body}</p>
+                <Link href={m.href} className={styles.learnMoreCta}>
+                  {m.cta} →
+                </Link>
+              </article>
             ))}
-          </ol>
+          </div>
         </div>
       </section>
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell">
-          <Card className="border-gold/40 md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">重要说明</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">重要说明</h2>
-            <p className="mt-6 text-base leading-8 text-muted md:text-lg md:leading-9">
-              本案例仅用于说明美国房地产项目判断、风险识别和合作结构分析方法，不构成投资建议、证券发行、收益承诺、融资承诺或项目合作邀请。项目相关数据、阶段和条件可能随时间变化，具体交易应以最新项目资料、合同文件和相关专业人士意见为准。
-            </p>
-          </Card>
-        </div>
-      </section>
-
-      <SectionShell eyebrow="Related" title="相关入口" muted>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {relatedLinks.map((item) => (
-            <Link className="group block rounded-md border border-line bg-white p-5 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:border-zinc-400 md:p-6" href={item.href} key={item.href}>
-              <h3 className="font-sans text-lg font-semibold leading-snug text-ink group-hover:text-gold">{item.title}</h3>
-              <span className="mt-6 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink group-hover:text-gold">前往查看</span>
+      {/* R06 — CTA Banner(上下金线 + 3 CTA)*/}
+      <section className={styles.ctaSection}>
+        <div className={styles.ctaInner}>
+          <RevealOnView as="h2" className={styles.ctaH2}>
+            对 4136 Rosewood 感兴趣?
+          </RevealOnView>
+          <p className={styles.ctaSubtitle}>
+            项目评估 · 30 分钟。
+            <br />
+            合格沟通后,提供完整项目资料。
+          </p>
+          <div className={styles.ctaRow}>
+            <Link href="/zh/contact" className={styles.ctaPrimary}>
+              项目评估 · 30 分钟
             </Link>
-          ))}
-        </div>
-      </SectionShell>
-
-      <section className="border-t border-line bg-deep py-12 text-white md:py-20">
-        <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">如果你正在判断一个美国房地产项目，可以先从项目初筛开始。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">
-              无论你已经看到一个项目，还是希望了解美国房地产开发的判断逻辑，都可以提交资料或需求。SAREC
-              会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/contact/" variant="light">
-              提交项目或合作需求
-            </Button>
-            <Button href="/zh/services/strategy/" variant="gold">
-              查看项目判断服务
-            </Button>
+            <Link href="/zh/membership" className={styles.ctaSecondary}>
+              加入会员
+            </Link>
+            <Link href="/zh/case-studies" className={styles.ctaSecondary}>
+              查看所有案例
+            </Link>
           </div>
         </div>
       </section>
-    </article>
+    </main>
   );
 }

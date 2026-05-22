@@ -724,6 +724,8 @@
   font-size: clamp(2.5rem, 5vw, 4.5rem);
   font-weight: 600;
   line-height: 1.1;
+  word-break: keep-all;
+  overflow-wrap: break-word;
   color: var(--ivory);
   margin: 0 0 clamp(32px, 4vh, 48px) 0;
 }
