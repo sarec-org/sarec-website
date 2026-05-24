@@ -14,11 +14,24 @@ export function OpeningJudgment({
   judgment,
   introParagraphs
 }: OpeningJudgmentProps) {
+  const judgmentLines = judgment.split('\n');
+  const hasManualBreak = judgmentLines.length > 1;
   return (
     <section className={styles.section}>
       <div className={styles.inner}>
-        <RevealOnView as="h2" className={styles.judgment}>
-          {judgment}
+        <RevealOnView
+          as="h2"
+          className={`${styles.judgment} ${hasManualBreak ? styles.hasManualBreak : ''}`}
+        >
+          {judgmentLines.map((line, index) => (
+            <span
+              key={line}
+              className={hasManualBreak ? styles.manualLine : undefined}
+            >
+              {index > 0 ? <br /> : null}
+              {line}
+            </span>
+          ))}
         </RevealOnView>
         <div className={styles.divider} aria-hidden="true" />
         {introParagraphs && introParagraphs.length > 0 ? (

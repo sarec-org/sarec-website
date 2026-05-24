@@ -86,7 +86,17 @@ export function ArticleSection({
           {indexLabel ? (
             <span className={styles.index}>{indexLabel}</span>
           ) : null}
-          <h2 className={styles.h2}>{title}</h2>
+          <h2 className={styles.h2}>
+            {title.split('\n').map((line, index, lines) => (
+              <span
+                key={line}
+                className={lines.length > 1 ? styles.manualLine : undefined}
+              >
+                {index > 0 ? <br /> : null}
+                {line}
+              </span>
+            ))}
+          </h2>
         </header>
 
         {body ? <p className={styles.body}>{body}</p> : null}

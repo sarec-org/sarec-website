@@ -11,7 +11,7 @@
   background: var(--ink-deepest);
   display: grid;
   grid-template-columns: 30fr 70fr;
-  grid-template-rows: minmax(680px, calc(100vh - 96px)) auto;
+  grid-template-rows: minmax(560px, min(72vh, 720px)) auto;
   align-items: stretch;
   position: relative;
   overflow: hidden;
@@ -259,5 +259,30 @@
 @media (max-width: 640px) {
   .title {
     font-size: clamp(2rem, 8vw, 2.75rem);
+  }
+}
+
+/* ============================================================
+   compactWide variant — 28fr / 72fr,视频更横更宽,标题区更紧凑
+   只在 ArticleHero variant="compactWide" 时生效;default 行为不变
+   ============================================================ */
+.compactWide {
+  grid-template-columns: 28fr 72fr;
+  grid-template-rows: minmax(560px, 72vh) auto;
+}
+
+.compactWide .titleSide {
+  padding-top: clamp(3.5rem, 6vh, 5rem);
+  padding-bottom: clamp(3.5rem, 6vh, 5rem);
+}
+
+.compactWide .mediaSide {
+  min-height: 560px;
+}
+
+@media (max-width: 1023px) {
+  .compactWide {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
   }
 }

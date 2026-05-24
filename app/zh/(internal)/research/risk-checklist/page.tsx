@@ -1,7 +1,13 @@
 import type { Metadata } from 'next';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { createPageMetadata } from '@/lib/seo';
+import { ArticleHero } from '@/components/sections/research/ArticleHero';
+import { ArticleSection } from '@/components/sections/research/ArticleSection';
+import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
+import { OpeningJudgment } from '@/components/sections/research/OpeningJudgment';
+import { ResearchMap } from '@/components/sections/research/ResearchMap';
+import { RiskLedger } from '@/components/sections/research/RiskLedger';
+import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import { ConversionBlock } from '@/components/sections/research/ConversionBlock';
 
 export const metadata: Metadata = createPageMetadata({
   title: '美国房地产项目投资风险清单｜SAREC Insights',
@@ -120,151 +126,130 @@ const relatedEntries = [
   { title: '案例研究', href: '/zh/case-studies/' }
 ];
 
-function SectionHeader({ eyebrow, title, subtitle }: { eyebrow: string; title: string; subtitle?: string }) {
-  return (
-    <div className="max-w-4xl">
-      <p className="font-sans text-sm font-semibold text-gold">{eyebrow}</p>
-      <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">{title}</h2>
-      {subtitle ? <p className="mt-4 text-sm leading-7 text-muted md:text-base">{subtitle}</p> : null}
-    </div>
-  );
-}
+const introParagraphs = [
+  '很多项目在介绍材料里看起来很完整，但真正进入尽调时，问题往往出现在细节里。风险清单的意义，不是为了否定项目，而是帮助投资人和项目方在早期阶段把关键问题问清楚，避免在审批、融资、建设或退出阶段才发现重大不确定性。'
+];
+
+const principleBody =
+  '一个项目如果经不起这些基础问题的询问，说明它还不适合进入深度合作。一个项目如果能够逐项回答这些问题，才更值得进入下一步尽调、结构设计和资源协同。';
+
+const sarecScreeningBody =
+  'SAREC 会根据客户提供的项目资料，围绕土地、审批、融资、建设、租赁、退出和合作结构进行初步梳理。项目初筛不等于最终投资判断，而是帮助客户判断资料是否完整、风险是否清楚、下一步是否值得继续推进。';
+
+const noticeBody =
+  '本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。房地产投资、项目开发、融资、税务、保险、法律和跨境交易均涉及复杂风险。具体事项应结合项目资料、合同文件和相关持牌或专业人士意见审慎判断。';
+
+const researchMapKeywords = [
+  { keyword: '土地与权属', anchor: 'module-01' },
+  { keyword: 'Zoning 与审批', anchor: 'module-02' },
+  { keyword: '市场与租金', anchor: 'module-03' },
+  { keyword: '建设成本与工期', anchor: 'module-04' },
+  { keyword: '融资与资金路径', anchor: 'module-05' },
+  { keyword: 'LP / GP 结构', anchor: 'module-06' },
+  { keyword: '信息披露', anchor: 'module-07' },
+  { keyword: '退出风险', anchor: 'module-08' }
+];
+
+const researchMapItems = researchMapKeywords.map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: riskModules[i].title
+}));
+
+const heroAnchors = researchMapKeywords.slice(0, 3).map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: riskModules[i].title
+}));
+
+const conversionIntents = [
+  { label: '你有具体项目', ctaText: '提交项目初筛', href: '/zh/services/strategy/' },
+  { label: '你想继续研究', ctaText: '返回研究中心', href: '/zh/research' },
+  { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact#inquiry-form' }
+];
 
 export default function RiskChecklistPage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">SAREC Insights</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">美国房地产项目投资风险清单</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
-            美国房地产项目不是只看位置、租金和收益测算。真正的项目初筛，需要从土地、审批、融资、建设、运营、退出和合作结构等多个维度逐项验证。
-          </p>
-          <div className="mt-8 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span className="rounded-full border border-white/20 px-3 py-1 font-sans text-xs font-semibold text-zinc-200" key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/services/strategy/" variant="gold">
-              提交项目初筛
-            </Button>
-            <Button href="/zh/legal/risk-disclosure/" variant="light">
-              查看风险披露
-            </Button>
-          </div>
-        </div>
-      </section>
+    <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
+      <ArticleHero
+        eyebrow="SAREC INSIGHTS · 项目初筛清单"
+        title="美国房地产项目投资风险清单"
+        summary="美国房地产项目不是只看位置、租金和收益测算。真正的项目初筛，需要从土地、审批、融资、建设、运营、退出和合作结构等多个维度逐项验证。"
+        tags={tags}
+        heroVideo={{
+          src: '/videos/research/risk-checklist-hero.mp4',
+          poster: '/images/research/risk-checklist-poster.jpg'
+        }}
+        primaryCta={{ label: '提交项目初筛', href: '/zh/services/strategy/' }}
+        secondaryCta={{ label: '查看风险披露', href: '/zh/legal/risk-disclosure/' }}
+        anchors={heroAnchors}
+        mediaCaption="DUE DILIGENCE / PROJECT REVIEW / RISK CHECKLIST"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell max-w-5xl">
-          <SectionHeader eyebrow="Introduction" title="风险清单的意义，是把关键问题提前问清楚" />
-          <p className="mt-6 text-sm leading-7 text-muted md:text-base">
-            很多项目在介绍材料里看起来很完整，但真正进入尽调时，问题往往出现在细节里。风险清单的意义，不是为了否定项目，而是帮助投资人和项目方在早期阶段把关键问题问清楚，避免在审批、融资、建设或退出阶段才发现重大不确定性。
-          </p>
-        </div>
-      </section>
+      <OpeningJudgment
+        judgment={"风险清单的意义，\n是把关键问题提前问清楚"}
+        introParagraphs={introParagraphs}
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <SectionHeader eyebrow="Checklist" title="风险清单主体" />
-          <div className="mt-10 grid gap-5 lg:grid-cols-2">
-            {riskModules.map((module, index) => (
-              <Card className="md:p-8" key={module.title}>
-                <p className="font-sans text-sm font-semibold text-gold">Module {index + 1}</p>
-                <h3 className="mt-3 font-sans text-xl font-semibold leading-snug text-ink">{module.title}</h3>
-                <ul className="mt-6 grid gap-3 text-sm leading-7 text-muted md:text-base">
-                  {module.checks.map((check) => (
-                    <li className="border-l-2 border-gold pl-4" key={check}>
-                      {check}
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ResearchMap
+        eyebrow="CHECKLIST MAP · 风险清单导读"
+        title="八个维度,逐项验证"
+        items={researchMapItems}
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <SectionHeader eyebrow="Principle" title="风险清单不是为了拖慢项目，而是为了提高判断质量" />
-          <Card>
-            <p className="text-sm leading-7 text-muted md:text-base">
-              一个项目如果经不起这些基础问题的询问，说明它还不适合进入深度合作。一个项目如果能够逐项回答这些问题，才更值得进入下一步尽调、结构设计和资源协同。
-            </p>
-          </Card>
-        </div>
-      </section>
+      <ArticleSection id="module-01" index={1} title={riskModules[0].title} checks={riskModules[0].checks} width="default" />
+      <ArticleSection id="module-02" index={2} title={riskModules[1].title} checks={riskModules[1].checks} width="default" />
+      <ArticleSection id="module-03" index={3} title={riskModules[2].title} checks={riskModules[2].checks} width="default" />
+      <ArticleSection id="module-04" index={4} title={riskModules[3].title} checks={riskModules[3].checks} width="default" />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <SectionHeader eyebrow="SAREC Framework" title="SAREC 如何帮助客户做项目初筛？" />
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              SAREC 会根据客户提供的项目资料，围绕土地、审批、融资、建设、租赁、退出和合作结构进行初步梳理。项目初筛不等于最终投资判断，而是帮助客户判断资料是否完整、风险是否清楚、下一步是否值得继续推进。
-            </p>
-          </div>
-          <Card>
-            <p className="font-sans text-sm font-semibold text-gold">初筛关注</p>
-            <ul className="mt-5 grid gap-3 text-sm leading-7 text-muted md:text-base">
-              {screeningFocus.map((item) => (
-                <li className="border-l-2 border-gold pl-4" key={item}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-      </section>
+      <MidArticleCTA
+        body="如果你正在判断一个美国房地产项目，可以先做一次项目初筛。"
+        ctaLabel="提交项目初筛"
+        ctaHref="/zh/services/strategy/"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <SectionHeader eyebrow="Notice" title="重要说明" />
-          <Card>
-            <p className="text-sm leading-7 text-muted md:text-base">
-              本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。房地产投资、项目开发、融资、税务、保险、法律和跨境交易均涉及复杂风险。具体事项应结合项目资料、合同文件和相关持牌或专业人士意见审慎判断。
-            </p>
-          </Card>
-        </div>
-      </section>
+      <ArticleSection id="module-05" index={5} title={riskModules[4].title} checks={riskModules[4].checks} width="default" />
+      <ArticleSection id="module-06" index={6} title={riskModules[5].title} checks={riskModules[5].checks} width="default" />
+      <ArticleSection id="module-07" index={7} title={riskModules[6].title} checks={riskModules[6].checks} width="default" />
+      <ArticleSection id="module-08" index={8} title={riskModules[7].title} checks={riskModules[7].checks} width="default" />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <SectionHeader eyebrow="Related" title="相关入口" />
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {relatedEntries.map((item) => (
-              <Card key={item.href}>
-                <h3 className="font-sans text-xl font-semibold leading-snug text-ink">{item.title}</h3>
-                <a className="mt-6 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink hover:text-gold" href={item.href}>
-                  前往查看
-                </a>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ArticleSection
+        title={"风险清单不是为了拖慢项目，\n而是为了提高判断质量"}
+        body={principleBody}
+        width="default"
+      />
 
-      <section className="bg-deep py-12 text-white md:py-24">
-        <div className="container-shell grid gap-8 md:grid-cols-[1.5fr_1fr] md:items-end">
-          <div>
-            <h2 className="font-sans text-2xl font-bold leading-tight md:text-4xl">如果你正在看一个美国房地产项目，可以先做一次风险清单初筛。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-400 md:text-base">
-              你可以提交项目资料、审批状态、预算、融资计划或合作需求。SAREC 会根据资料完整度和项目阶段，判断下一步是否适合继续沟通。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:justify-end">
-            <Button href="/zh/services/strategy/" variant="gold">
-              提交项目初筛
-            </Button>
-            <Button href="/zh/contact#inquiry-form" variant="light">
-              联系我们
-            </Button>
-          </div>
-        </div>
-      </section>
-    </article>
+      <ArticleSection
+        title="SAREC 如何帮助客户做项目初筛？"
+        body={sarecScreeningBody}
+        width="default"
+      />
+
+      <RiskLedger
+        eyebrow="SAREC SCREENING · 初筛关注"
+        title="初筛关注"
+        items={screeningFocus}
+      />
+
+      <ArticleSection
+        title="重要说明"
+        body={noticeBody}
+        width="default"
+      />
+
+      <RelatedResearch
+        items={relatedEntries.map((r) => ({
+          label: r.title,
+          href: r.href,
+          eyebrow: 'SAREC RESEARCH'
+        }))}
+      />
+
+      <ConversionBlock
+        question="如果你正在看一个美国房地产项目，可以先做一次风险清单初筛。"
+        intents={conversionIntents}
+        contactLine="你可以提交项目资料、审批状态、预算、融资计划或合作需求。SAREC 会根据资料完整度和项目阶段，判断下一步是否适合继续沟通。"
+      />
+    </main>
   );
 }

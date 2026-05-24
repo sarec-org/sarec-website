@@ -60,3 +60,26 @@
   width: 100%;
   text-align: left;
 }
+
+/* 含手动换行的 judgment:放宽宽度避免裁切 */
+.hasManualBreak {
+  max-width: min(1120px, 100%);
+  width: max-content;
+  overflow: visible;
+}
+
+/* 手动换行 line:同行不再自动断 */
+.manualLine {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .hasManualBreak {
+    width: auto;
+    max-width: 100%;
+  }
+  .manualLine {
+    white-space: normal;
+  }
+}

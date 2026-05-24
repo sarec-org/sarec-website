@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { createPageMetadata } from '@/lib/seo';
+import { ArticleHero } from '@/components/sections/research/ArticleHero';
+import { ArticleSection } from '@/components/sections/research/ArticleSection';
+import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
+import { OpeningJudgment } from '@/components/sections/research/OpeningJudgment';
+import { ResearchMap } from '@/components/sections/research/ResearchMap';
+import { RiskLedger } from '@/components/sections/research/RiskLedger';
+import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import { ConversionBlock } from '@/components/sections/research/ConversionBlock';
 
 export const metadata: Metadata = createPageMetadata({
   title: '中国投资人美国房地产常见风险｜SAREC Insights',
@@ -108,180 +113,125 @@ const relatedLinks = [
   { title: '案例研究', href: '/zh/case-studies/' }
 ];
 
+const introParagraphs = [
+  '很多中国投资人来到美国后，会自然地把过去熟悉的房地产经验带入美国市场。中国房地产曾经经历高速开发、快速销售和强市场周期，美国房地产则更强调规则、审批、合同、融资、持有成本、信息披露和专业分工。',
+  '美国房地产并不简单，也不天然安全。它的机会往往建立在清晰规则之上，但风险也藏在规则细节之中。对于跨境投资人而言，真正重要的是建立一套可以反复使用的项目判断框架。'
+];
+
+const conclusionParagraphs = [
+  '美国房地产市场有长期价值，也有真实机会。但对中国投资人和美国华人投资人而言，专业不是把一个项目讲得更诱人，而是把项目背后的风险、条件、结构和假设讲清楚。',
+  '如果一个项目经不起土地、审批、融资、建设、租赁、退出和合作结构的连续追问，就不应该急着推进。SAREC 希望帮助跨境客户在美国房地产市场中，先建立判断能力，再讨论合作机会。'
+];
+
+const noticeBody =
+  '本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。房地产投资、项目开发、融资、保险、税务、法律、EB-5 和跨境交易均涉及风险。具体事项应结合项目资料、合同文件和相关持牌或专业人士意见审慎判断。';
+
+const researchMapKeywords = [
+  { keyword: '信息不对称', anchor: 'section-01' },
+  { keyword: '经验迁移', anchor: 'section-02' },
+  { keyword: '审批风险', anchor: 'section-03' },
+  { keyword: '融资风险', anchor: 'section-04' },
+  { keyword: '市场风险', anchor: 'section-05' },
+  { keyword: '建设风险', anchor: 'section-06' },
+  { keyword: '合作结构', anchor: 'section-07' },
+  { keyword: '退出风险', anchor: 'section-08' },
+  { keyword: 'EB-5 风险', anchor: 'section-09' }
+];
+
+const researchMapItems = researchMapKeywords.map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: riskSections[i].title
+}));
+
+const heroAnchors = researchMapKeywords.slice(0, 3).map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: riskSections[i].title
+}));
+
+const conversionIntents = [
+  { label: '你有具体项目', ctaText: '提交项目初筛', href: '/zh/services/strategy/' },
+  { label: '你想继续研究', ctaText: '返回研究中心', href: '/zh/research' },
+  { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
+];
+
 export default function ChineseInvestorsUsRealEstateRisksPage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">SAREC Insights</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">中国投资人美国房地产常见风险</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
-            美国房地产市场规则稳定、资产透明度较高，但对跨境投资人而言，真正的风险往往不在“有没有项目”，而在是否理解土地、审批、融资、建设、租赁、退出和合作结构背后的真实逻辑。
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span className="rounded-[2px] border border-white/15 bg-white/5 px-3 py-1.5 font-sans text-xs font-semibold text-zinc-300" key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/legal/risk-disclosure/" variant="gold">
-              查看风险披露
-            </Button>
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-          </div>
-        </div>
-      </section>
+    <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
+      <ArticleHero
+        eyebrow="SAREC INSIGHTS · 跨境投资风险"
+        title="中国投资人美国房地产常见风险"
+        summary="美国房地产市场规则稳定、资产透明度较高，但对跨境投资人而言，真正的风险往往不在“有没有项目”，而在是否理解土地、审批、融资、建设、租赁、退出和合作结构背后的真实逻辑。"
+        tags={tags}
+        heroVideo={{
+          src: '/videos/research/chinese-investors-us-real-estate-risks-hero.mp4',
+          poster: '/images/research/chinese-investors-us-real-estate-risks-poster.jpg'
+        }}
+        primaryCta={{ label: '查看风险披露', href: '/zh/legal/risk-disclosure/' }}
+        secondaryCta={{ label: '提交项目初筛', href: '/zh/services/strategy/' }}
+        anchors={heroAnchors}
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Introduction</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">先建立一套可以反复使用的判断框架</h2>
-          </div>
-          <Card className="md:p-10">
-            <div className="grid gap-5 text-base leading-8 text-muted md:text-lg md:leading-9">
-              <p>
-                很多中国投资人来到美国后，会自然地把过去熟悉的房地产经验带入美国市场。中国房地产曾经经历高速开发、快速销售和强市场周期，美国房地产则更强调规则、审批、合同、融资、持有成本、信息披露和专业分工。
-              </p>
-              <p>
-                美国房地产并不简单，也不天然安全。它的机会往往建立在清晰规则之上，但风险也藏在规则细节之中。对于跨境投资人而言，真正重要的是建立一套可以反复使用的
-                <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/framework/">
-                  项目判断框架
-                </Link>
-                。
-              </p>
-            </div>
-          </Card>
-        </div>
-      </section>
+      <OpeningJudgment
+        judgment="先建立一套可以反复使用的判断框架"
+        introParagraphs={introParagraphs}
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Risk Framework</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">九类常见风险</h2>
-            <p className="mt-4 text-sm leading-7 text-muted md:text-base">
-              以下内容用于建立初步风险意识。更完整的项目风险边界，可继续查看
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/risk-checklist/">
-                美国房地产风险清单
-              </Link>
-              与
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/legal/risk-disclosure/">
-                风险披露
-              </Link>
-              。
-            </p>
-          </div>
+      <ResearchMap
+        eyebrow="RESEARCH MAP · 本文导读"
+        title="九类常见风险"
+        items={researchMapItems}
+      />
 
-          <div className="mt-10 grid gap-6">
-            {riskSections.map((section) => (
-              <Card className="bg-white md:p-9" key={section.title}>
-                <h3 className="font-sans text-xl font-semibold leading-snug text-ink md:text-2xl">{section.title}</h3>
-                <p className="mt-5 text-base leading-8 text-muted">{section.body}</p>
-                <div className="mt-6 rounded-md border border-line bg-zinc-50 p-5">
-                  <p className="font-sans text-sm font-semibold text-ink">{section.pointsTitle}</p>
-                  <ul className="mt-3 grid gap-2 text-sm leading-7 text-muted md:grid-cols-2">
-                    {section.points.map((point) => (
-                      <li className="border-l-2 border-gold pl-4" key={point}>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="mt-5 border-l-2 border-ink pl-4 font-sans text-sm font-semibold leading-7 text-ink">{section.summary}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ArticleSection id="section-01" index={1} {...riskSections[0]} width="default" />
+      <ArticleSection id="section-02" index={2} {...riskSections[1]} width="default" />
+      <ArticleSection id="section-03" index={3} {...riskSections[2]} width="default" />
+      <ArticleSection id="section-04" index={4} {...riskSections[3]} width="default" />
+      <ArticleSection id="section-05" index={5} {...riskSections[4]} width="default" />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">SAREC Screening</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">SAREC 如何帮助客户先做项目初筛？</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              SAREC 的价值不是替客户做最终投资决定，而是帮助客户在早期阶段先把问题问清楚、资料列完整、风险分层、判断是否值得继续推进。你也可以结合
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/case-studies/">
-                案例研究
-              </Link>
-              理解不同项目的判断方法。
-            </p>
-          </div>
-          <Card className="md:p-9">
-            <ul className="grid gap-3 text-sm leading-7 text-muted md:text-base">
-              {screeningPoints.map((point) => (
-                <li className="border-l-2 border-gold pl-4" key={point}>
-                  {point}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8">
-              <Button href="/zh/services/strategy/">了解项目初筛服务</Button>
-            </div>
-          </Card>
-        </div>
-      </section>
+      <MidArticleCTA
+        body="如果你正在判断一个美国房地产项目，可以先做一次项目初筛。"
+        ctaLabel="提交项目初筛"
+        ctaHref="/zh/services/strategy/"
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-2">
-          <Card className="bg-white md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">Conclusion</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">真正的机会，首先应该经得起问题</h2>
-            <div className="mt-6 grid gap-5 text-base leading-8 text-muted">
-              <p>美国房地产市场有长期价值，也有真实机会。但对中国投资人和美国华人投资人而言，专业不是把一个项目讲得更诱人，而是把项目背后的风险、条件、结构和假设讲清楚。</p>
-              <p>如果一个项目经不起土地、审批、融资、建设、租赁、退出和合作结构的连续追问，就不应该急着推进。SAREC 希望帮助跨境客户在美国房地产市场中，先建立判断能力，再讨论合作机会。</p>
-            </div>
-          </Card>
-          <Card className="border-gold/40 bg-white md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">重要说明</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">重要说明</h2>
-            <p className="mt-6 text-base leading-8 text-muted">
-              本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。房地产投资、项目开发、融资、保险、税务、法律、EB-5 和跨境交易均涉及风险。具体事项应结合项目资料、合同文件和相关持牌或专业人士意见审慎判断。
-            </p>
-          </Card>
-        </div>
-      </section>
+      <ArticleSection id="section-06" index={6} {...riskSections[5]} width="default" />
+      <ArticleSection id="section-07" index={7} {...riskSections[6]} width="default" />
+      <ArticleSection id="section-08" index={8} {...riskSections[7]} width="default" />
+      <ArticleSection id="section-09" index={9} {...riskSections[8]} width="default" />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Related</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">相关入口</h2>
-          </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {relatedLinks.map((item) => (
-              <Link className="group block rounded-md border border-line bg-white p-5 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:border-zinc-400 md:p-6" href={item.href} key={item.href}>
-                <h3 className="font-sans text-lg font-semibold leading-snug text-ink group-hover:text-gold">{item.title}</h3>
-                <span className="mt-6 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink group-hover:text-gold">前往查看</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <RiskLedger
+        eyebrow="SAREC SCREENING · 项目初筛"
+        title="项目初筛要点"
+        items={screeningPoints}
+      />
 
-      <section className="border-t border-line bg-deep py-12 text-white md:py-20">
-        <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">如果你正在判断一个美国房地产项目，可以先做一次项目初筛。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">
-              你可以提交项目资料、项目介绍或合作需求。SAREC 会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-            <Button href="/zh/contact/" variant="gold">
-              联系我们
-            </Button>
-          </div>
-        </div>
-      </section>
-    </article>
+      <ArticleSection
+        title="真正的机会，首先应该经得起问题"
+        paragraphs={conclusionParagraphs}
+        width="default"
+      />
+
+      <ArticleSection
+        title="重要说明"
+        body={noticeBody}
+        width="default"
+      />
+
+      <RelatedResearch
+        items={relatedLinks.map((r) => ({
+          label: r.title,
+          href: r.href,
+          eyebrow: 'SAREC RESEARCH'
+        }))}
+      />
+
+      <ConversionBlock
+        question="你现在最需要做什么决定?"
+        intents={conversionIntents}
+        contactLine="你可以提交项目资料、项目介绍或合作需求。SAREC 会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。"
+      />
+    </main>
   );
 }

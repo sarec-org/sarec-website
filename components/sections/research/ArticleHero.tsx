@@ -18,6 +18,8 @@ export type ArticleHeroProps = {
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   anchors?: Array<{ keyword: string; anchor: string; fullTitle?: string }>;
+  mediaCaption?: string;
+  variant?: 'default' | 'compactWide';
 };
 
 export function ArticleHero({
@@ -29,10 +31,12 @@ export function ArticleHero({
   heroVideo,
   primaryCta,
   secondaryCta,
-  anchors
+  anchors,
+  mediaCaption = 'EVIDENCE / LOS ANGELES / DEVELOPMENT CONTEXT',
+  variant = 'default'
 }: ArticleHeroProps) {
   return (
-    <section className={styles.hero}>
+    <section className={`${styles.hero} ${variant === 'compactWide' ? styles.compactWide : ''}`}>
       <div className={styles.inner}>
         <div className={styles.titleSide}>
           <RevealOnView as="div" className={styles.titleBlock}>
@@ -86,9 +90,7 @@ export function ArticleHero({
               />
             ) : null}
           </div>
-          <p className={styles.mediaCaption}>
-            EVIDENCE / LOS ANGELES / DEVELOPMENT CONTEXT
-          </p>
+          <p className={styles.mediaCaption}>{mediaCaption}</p>
         </div>
       </div>
 
