@@ -1,8 +1,18 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { createPageMetadata } from '@/lib/seo';
+import { ArticleHero } from '@/components/sections/research/ArticleHero';
+import { ArticleSection } from '@/components/sections/research/ArticleSection';
+import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
+import { OpeningJudgment } from '@/components/sections/research/OpeningJudgment';
+import { ResearchMap } from '@/components/sections/research/ResearchMap';
+import { AssetBreak } from '@/components/sections/research/AssetBreak';
+import { PullQuote } from '@/components/sections/research/PullQuote';
+import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import { RiskLedger } from '@/components/sections/research/RiskLedger';
+import { ProjectEvidenceStrip } from '@/components/sections/research/ProjectEvidenceStrip';
+import { SarecFramework } from '@/components/sections/research/SarecFramework';
+import { ConversionBlock } from '@/components/sections/research/ConversionBlock';
+import styles from './ed1.module.css';
 
 export const metadata: Metadata = createPageMetadata({
   title: '洛杉矶 ED1 与经济适用房开发观察｜SAREC Insights',
@@ -114,208 +124,231 @@ const relatedLinks = [
   { title: '风险披露', href: '/zh/legal/risk-disclosure/' }
 ];
 
+const introParagraphs = [
+  '洛杉矶长期面临住房供应不足和住房可负担性压力。为了加快住房建设，洛杉矶推出了 ED1 等审批加速工具，重点支持符合条件的 100% 经济适用房项目。',
+  '对项目方而言，ED1 可能改变一个项目的审批效率和土地利用逻辑；对投资人而言，它也可能让原本看起来不具备开发价值的土地，突然出现新的项目可能性。',
+  '但 ED1 不是项目成功的保证，也不是融资、施工、出租和退出的替代品。真正专业的判断，是把政策红利放进完整开发链条中，逐项验证项目是否成立。'
+];
+
+const frameworkIntroBody =
+  'ED1 后续政策和执行口径可能变化，洛杉矶也在持续推进更广泛的 permitting reform。本文只做一般观察，不构成任何政策承诺。涉及 zoning、entitlement、permit、affordable housing covenant、贷款、税务、法律、证券、EB-5 等事项，应咨询相应专业人士。';
+
+const caseLensParagraphs = [
+  '4136 Rosewood 用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。',
+  '3434 Chesapeake 适合说明 ED1 政策下的 RTI Ready、审批效率、土地利用提升和项目推进能力。',
+  '2215 Wellesley 适合说明复杂规划区、Plan Check、公用事业协调、LADWP / LAFD 技术问题和跨部门推进能力。'
+];
+
+const caseLensCases = [
+  { name: '4136 Rosewood', body: '用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。' },
+  { name: '3434 Chesapeake', body: '适合说明 ED1 政策下的 RTI Ready、审批效率、土地利用提升和项目推进能力。' },
+  { name: '2215 Wellesley', body: '适合说明复杂规划区、Plan Check、公用事业协调、LADWP / LAFD 技术问题和跨部门推进能力。' }
+];
+
+const sarecFrameworkBody =
+  'SAREC 不把 ED1 看成简单的政策红利，而是把它放进完整开发链条中判断。我们关注的不只是项目是否符合政策，而是政策能否真正转化为项目推进能力。合作结构也应结合 LP / GP 合作结构 和 指标假设 一起判断。';
+
+const conclusionParagraphs = [
+  'ED1 改变了洛杉矶部分 100% 经济适用房项目的审批效率，也为开发商和投资人带来了新的项目观察窗口。但政策本身不能替代项目判断。',
+  '对于中国投资人、美国华人投资人和项目方而言，真正重要的是看懂：这个项目是否符合政策，审批是否真实推进，融资是否可落实，建设成本是否可控，运营和退出是否可验证，合作结构是否清楚。',
+  'SAREC 希望帮助跨境客户把政策机会转化为可讨论、可验证、可推进的项目判断，而不是只停留在政策红利想象中。'
+];
+
+const noticeBody =
+  '本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。ED1、经济适用房、房地产开发、项目投资、融资、税务、保险、法律和跨境交易均涉及复杂风险。具体事项应结合最新政策、项目资料、合同文件和相关持牌或专业人士意见审慎判断。';
+
+const pullQuotes = [
+  '审批不是形式问题，而是项目是否真实可推进的核心问题。',
+  'ED1 改变的是审批路径，但项目成败仍取决于完整开发能力。'
+];
+
+const researchMapKeywords = [
+  { keyword: 'ED1 核心', anchor: 'section-01' },
+  { keyword: '开发商动机', anchor: 'section-02' },
+  { keyword: '土地适用性', anchor: 'section-03' },
+  { keyword: '审批节奏', anchor: 'section-04' },
+  { keyword: '融资可行性', anchor: 'section-05' },
+  { keyword: '建设成本', anchor: 'section-06' },
+  { keyword: '长期运营', anchor: 'section-07' },
+  { keyword: '退出路径', anchor: 'section-08' }
+];
+
+const researchMapItems = researchMapKeywords.map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: sections[i].title
+}));
+
+const heroAnchors = researchMapKeywords.slice(0, 3).map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: sections[i].title
+}));
+
+const projectEvidenceCases = [
+  { name: '4136 Rosewood', tag: 'ED1 / Development', body: caseLensCases[0].body, href: '/zh/case-studies/' },
+  { name: '3434 Chesapeake', tag: 'RTI / Entitlement', body: caseLensCases[1].body, href: '/zh/case-studies/' },
+  { name: '2215 Wellesley', tag: 'Utilities / Coordination', body: caseLensCases[2].body, href: '/zh/case-studies/' }
+];
+
+const conversionIntents = [
+  { label: '你有具体项目', ctaText: '提交项目初筛', href: '/zh/contact?intent=project' },
+  { label: '你想继续研究', ctaText: '返回研究中心', href: '/zh/research' },
+  { label: '你想保持联系', ctaText: '订阅研究简报', href: '/zh/contact?intent=newsletter' }
+];
+
 export default function LosAngelesEd1AffordableHousingPage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">SAREC Insights</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">洛杉矶 ED1 与经济适用房开发观察</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
-            ED1 改变了洛杉矶部分 100% 经济适用房项目的审批节奏，也吸引了大量开发商和投资人关注。但政策红利并不等于项目安全，真正的判断仍然要回到土地、分区、审批、融资、建设、运营和退出。
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span className="rounded-[2px] border border-white/15 bg-white/5 px-3 py-1.5 font-sans text-xs font-semibold text-zinc-300" key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/case-studies/" variant="gold">
-              查看案例研究
-            </Button>
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-          </div>
+    <main className={styles.page}>
+      <ArticleHero
+        eyebrow="ED1 · 政策深度 · LA"
+        title="洛杉矶 ED1 与经济适用房开发观察"
+        summary="ED1 改变了洛杉矶部分 100% 经济适用房项目的审批节奏，也吸引了大量开发商和投资人关注。但政策红利并不等于项目安全，真正的判断仍然要回到土地、分区、审批、融资、建设、运营和退出。"
+        tags={tags}
+        heroVideo={{
+          src: '/videos/research-ed1-hero.mp4',
+          poster: '/images/research/research-ed1-poster.jpg'
+        }}
+        primaryCta={{ label: '查看案例研究', href: '/zh/case-studies/' }}
+        secondaryCta={{ label: '提交项目初筛', href: '/zh/services/strategy/' }}
+        anchors={heroAnchors}
+      />
+
+      <OpeningJudgment
+        judgment="政策机会越明显，越需要冷静判断"
+        introParagraphs={introParagraphs}
+      />
+
+      <ResearchMap
+        eyebrow="RESEARCH MAP · 本文导读"
+        title="从政策工具回到项目判断"
+        items={researchMapItems}
+      />
+
+      <div className={styles.body}>
+        <ArticleSection
+          id="section-01"
+          index={1}
+          {...sections[0]}
+          width="default"
+        />
+        <ArticleSection
+          id="section-02"
+          index={2}
+          {...sections[1]}
+          width="default"
+        />
+      </div>
+
+      <AssetBreak
+        videoSrc="/videos/research-ed1-asset-break-01.mp4"
+        videoPoster="/images/research/research-ed1-asset-break-01-poster.jpg"
+        leftEyebrow="项目证据 · 从案例看 ED1"
+        leftTitle="政策机会要落到真实项目推进能力"
+        leftBody="这一段用于把前文的项目判断，从文字讨论拉回到真实城市、住宅密度和项目推进场景。"
+      />
+
+      <div className={styles.body}>
+        <ArticleSection
+          id="section-03"
+          index={3}
+          {...sections[2]}
+          width="default"
+        />
+        <ArticleSection
+          id="section-04"
+          index={4}
+          {...sections[3]}
+          width="default"
+        />
+      </div>
+
+      <PullQuote text={pullQuotes[0]} attribution="SAREC RESEARCH" />
+
+      <MidArticleCTA
+        body="如果你正在判断一个 ED1 或经济适用房开发项目，可以先从项目阶段和资料完整度开始。"
+        ctaLabel="提交项目初筛"
+        ctaHref="/zh/services/strategy/"
+      />
+
+      <div className={styles.body}>
+        <ArticleSection
+          id="section-05"
+          index={5}
+          {...sections[4]}
+          width="default"
+        />
+        <ArticleSection
+          id="section-06"
+          index={6}
+          {...sections[5]}
+          width="default"
+        />
+        <ArticleSection
+          id="section-07"
+          index={7}
+          {...sections[6]}
+          width="default"
+        />
+        <ArticleSection
+          id="section-08"
+          index={8}
+          {...sections[7]}
+          width="default"
+        />
+      </div>
+
+      <PullQuote text={pullQuotes[1]} attribution="SAREC RESEARCH" />
+
+      <RiskLedger
+        eyebrow="RISK LEDGER · 常见误区"
+        title="ED1 项目常见的 8 个误区"
+        items={mistakes}
+      />
+
+      <ProjectEvidenceStrip
+        eyebrow="PROJECT EVIDENCE · 从案例看 ED1"
+        title="政策机会要落到真实项目推进能力"
+        cases={projectEvidenceCases}
+      />
+
+      <SarecFramework
+        eyebrow="SAREC FRAMEWORK · 机构方法论"
+        title="SAREC 的 ED1 项目判断框架"
+        body={sarecFrameworkBody}
+        bottomTag="STRUCTURE ASSESSMENT"
+        items={sarecFramework}
+      />
+
+      <section className={styles.finalCopyBlock}>
+        <div className={styles.finalCopyInner}>
+          <h2>ED1 带来机会，但真正的价值来自专业判断</h2>
+          {conclusionParagraphs.map((p) => (
+            <p key={p}>{p}</p>
+          ))}
         </div>
       </section>
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Introduction</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">政策机会越明显，越需要冷静判断</h2>
-          </div>
-          <Card className="md:p-10">
-            <div className="grid gap-5 text-base leading-8 text-muted md:text-lg md:leading-9">
-              <p>洛杉矶长期面临住房供应不足和住房可负担性压力。为了加快住房建设，洛杉矶推出了 ED1 等审批加速工具，重点支持符合条件的 100% 经济适用房项目。</p>
-              <p>对项目方而言，ED1 可能改变一个项目的审批效率和土地利用逻辑；对投资人而言，它也可能让原本看起来不具备开发价值的土地，突然出现新的项目可能性。</p>
-              <p>
-                但 ED1 不是项目成功的保证，也不是融资、施工、出租和退出的替代品。真正专业的判断，是把政策红利放进
-                <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/us-real-estate-development-process/">
-                  完整开发链条
-                </Link>
-                中，逐项验证项目是否成立。
-              </p>
-            </div>
-          </Card>
+      <section className={styles.finalCopyBlock}>
+        <div className={styles.finalCopyInner}>
+          <h2>重要说明</h2>
+          <p>{noticeBody}</p>
         </div>
       </section>
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Framework</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">从政策工具回到项目判断</h2>
-            <p className="mt-4 text-sm leading-7 text-muted md:text-base">
-              ED1 后续政策和执行口径可能变化，洛杉矶也在持续推进更广泛的 permitting reform。本文只做一般观察，不构成任何政策承诺。涉及 zoning、entitlement、permit、affordable housing covenant、贷款、税务、法律、证券、EB-5 等事项，应咨询相应专业人士。
-            </p>
-          </div>
-          <div className="mt-10 grid gap-6">
-            {sections.map((section) => (
-              <Card className="bg-white md:p-9" key={section.title}>
-                <h3 className="font-sans text-xl font-semibold leading-snug text-ink md:text-2xl">{section.title}</h3>
-                <p className="mt-5 text-base leading-8 text-muted">{section.body}</p>
-                {section.note ? <p className="mt-4 rounded-md border border-line bg-zinc-50 p-4 text-sm leading-7 text-muted">{section.note}</p> : null}
-                <div className="mt-6 rounded-md border border-line bg-zinc-50 p-5">
-                  <p className="font-sans text-sm font-semibold text-ink">{section.pointsTitle}</p>
-                  <ul className="mt-3 grid gap-2 text-sm leading-7 text-muted md:grid-cols-2">
-                    {section.points.map((point) => (
-                      <li className="border-l-2 border-gold pl-4" key={point}>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="mt-5 border-l-2 border-ink pl-4 font-sans text-sm font-semibold leading-7 text-ink">{section.summary}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <RelatedResearch
+        items={relatedLinks.map((r) => ({
+          label: r.title,
+          href: r.href,
+          eyebrow: 'SAREC RESEARCH'
+        }))}
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-2">
-          <Card className="md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">Common Mistakes</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">ED1 项目常见的 8 个误区</h2>
-            <ul className="mt-6 grid gap-3 text-sm leading-7 text-muted md:text-base">
-              {mistakes.map((item) => (
-                <li className="border-l-2 border-gold pl-4" key={item}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </Card>
-          <Card className="md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">Case Lens</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">从案例看 ED1：政策机会要落到真实项目推进能力</h2>
-            <div className="mt-6 grid gap-4 text-sm leading-7 text-muted md:text-base">
-              <p>4136 Rosewood 用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。</p>
-              <p>3434 Chesapeake 适合说明 ED1 政策下的 RTI Ready、审批效率、土地利用提升和项目推进能力。</p>
-              <p>2215 Wellesley 适合说明复杂规划区、Plan Check、公用事业协调、LADWP / LAFD 技术问题和跨部门推进能力。</p>
-            </div>
-            <div className="mt-8">
-              <Button href="/zh/case-studies/" variant="secondary">
-                查看案例研究
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">SAREC Framework</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">SAREC 的 ED1 项目判断框架</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              SAREC 不把 ED1 看成简单的政策红利，而是把它放进完整开发链条中判断。我们关注的不只是项目是否符合政策，而是政策能否真正转化为项目推进能力。合作结构也应结合
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/lp-gp-structure/">
-                LP / GP 合作结构
-              </Link>
-              和
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/cap-rate-irr-roe/">
-                指标假设
-              </Link>
-              一起判断。
-            </p>
-          </div>
-          <Card className="bg-white md:p-9">
-            <ul className="grid gap-3 text-sm leading-7 text-muted md:text-base">
-              {sarecFramework.map((item) => (
-                <li className="border-l-2 border-gold pl-4" key={item}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-      </section>
-
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-2">
-          <Card className="md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">Conclusion</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">ED1 带来机会，但真正的价值来自专业判断</h2>
-            <div className="mt-6 grid gap-5 text-base leading-8 text-muted">
-              <p>ED1 改变了洛杉矶部分 100% 经济适用房项目的审批效率，也为开发商和投资人带来了新的项目观察窗口。但政策本身不能替代项目判断。</p>
-              <p>对于中国投资人、美国华人投资人和项目方而言，真正重要的是看懂：这个项目是否符合政策，审批是否真实推进，融资是否可落实，建设成本是否可控，运营和退出是否可验证，合作结构是否清楚。</p>
-              <p>SAREC 希望帮助跨境客户把政策机会转化为可讨论、可验证、可推进的项目判断，而不是只停留在政策红利想象中。</p>
-            </div>
-          </Card>
-          <Card className="border-gold/40 md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">重要说明</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">重要说明</h2>
-            <p className="mt-6 text-base leading-8 text-muted">
-              本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。ED1、经济适用房、房地产开发、项目投资、融资、税务、保险、法律和跨境交易均涉及复杂风险。具体事项应结合最新政策、项目资料、合同文件和相关持牌或专业人士意见审慎判断。
-            </p>
-            <div className="mt-8">
-              <Button href="/zh/legal/risk-disclosure/" variant="secondary">
-                查看风险披露
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Related</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">相关入口</h2>
-          </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {relatedLinks.map((item) => (
-              <Link className="group block rounded-md border border-line bg-white p-5 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:border-zinc-400 md:p-6" href={item.href} key={item.href}>
-                <h3 className="font-sans text-lg font-semibold leading-snug text-ink group-hover:text-gold">{item.title}</h3>
-                <span className="mt-6 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink group-hover:text-gold">前往查看</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-t border-line bg-deep py-12 text-white md:py-20">
-        <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">如果你正在判断一个 ED1 或经济适用房开发项目，可以先从项目阶段和资料完整度开始。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">
-              你可以提交项目地址、图纸、审批状态、RTI / Permit 进展、预算或合作需求。SAREC 会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-            <Button href="/zh/contact/" variant="gold">
-              联系我们
-            </Button>
-          </div>
-        </div>
-      </section>
-    </article>
+      <ConversionBlock
+        question="你现在最需要做什么决定?"
+        intents={conversionIntents}
+        contactLine="无论你处于哪个阶段，SAREC 都可以提供一次具体的对话窗口。"
+      />
+    </main>
   );
 }

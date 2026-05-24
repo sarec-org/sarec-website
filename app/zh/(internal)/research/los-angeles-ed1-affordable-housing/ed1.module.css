@@ -1,0 +1,54 @@
+.page {
+  background: var(--ink-deepest);
+  color: var(--ivory);
+}
+
+/* body 不分栏 / 不限宽,各 ArticleSection 自己用 width variant 控制 */
+.body {
+  padding-top: clamp(2rem, 5vh, 4rem);
+  padding-bottom: clamp(2rem, 5vh, 4rem);
+}
+
+/* ============================================================
+   finalCopyBlock — 底部 conclusion + notice 专用宽栏
+   仅用于 ED1 conclusion / notice,不影响 ArticleSection 1-8
+   宽度与 RelatedResearch 4 卡区对齐(1280px)
+   ============================================================ */
+.finalCopyBlock {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-top: 1px solid rgba(212, 180, 131, 0.18);
+  background: var(--ink-deepest);
+}
+
+.finalCopyInner {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: clamp(4rem, 7vh, 6rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.finalCopyInner h2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.25rem, 4vw, 3.25rem);
+  line-height: 1.15;
+  color: var(--ivory);
+  margin: 0 0 clamp(1.5rem, 3vh, 2rem) 0;
+  max-width: 100%;
+}
+
+.finalCopyInner p {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.45vw, 1.25rem);
+  line-height: 1.85;
+  color: var(--ivory-warm);
+  max-width: 100%;
+  margin: 0 0 1.25rem 0;
+  text-align: left;
+}
+
+.finalCopyInner p:last-child {
+  margin-bottom: 0;
+}
