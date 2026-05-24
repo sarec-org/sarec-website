@@ -1,8 +1,13 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { createPageMetadata } from '@/lib/seo';
+import { ArticleHero } from '@/components/sections/research/ArticleHero';
+import { ArticleSection } from '@/components/sections/research/ArticleSection';
+import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
+import { OpeningJudgment } from '@/components/sections/research/OpeningJudgment';
+import { ResearchMap } from '@/components/sections/research/ResearchMap';
+import { SarecFramework } from '@/components/sections/research/SarecFramework';
+import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import { ConversionBlock } from '@/components/sections/research/ConversionBlock';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'LP / GP 合作结构详解｜SAREC Insights',
@@ -129,180 +134,237 @@ const relatedLinks = [
   { title: '服务架构', href: '/zh/services/' }
 ];
 
+const introParagraphs = [
+  '很多投资人看美国房地产项目时，第一反应是看位置、成本、租金、退出价值和收益测算。但在实际项目合作中，项目本身只是一部分。真正决定投资人利益边界的，往往是合作结构。',
+  '一个项目看起来不错，并不代表合作结构安全。一个项目回报测算很吸引人，也不代表投资人能够及时了解项目进度、控制关键风险或在出现延期、超支、融资变化时获得充分保护。',
+  'LP / GP 结构，是很多房地产项目、私募项目和合伙投资中常见的合作安排。理解它，不是为了记住几个法律名词，而是为了看清：谁负责管理，谁承担责任，谁有决策权，谁获得信息，谁承担风险，谁享有收益。更多跨境风险背景可参考中国投资人美国房地产常见风险。'
+];
+
+const sarecFrameworkBody =
+  'SAREC 的价值不是替客户做最终投资决定，而是帮助客户在进入项目之前，把合作结构中的关键问题先提出来、列清楚、分层判断。实际项目也可以结合案例研究与服务架构进一步讨论。';
+
+const conclusionParagraphs = [
+  '一个美国房地产项目是否值得继续推进，不能只看项目介绍、租金测算和退出价值。对投资人而言，真正重要的是：这个项目是否有清晰的管理方、透明的资金路径、合理的费用机制、稳定的信息披露、明确的重大事项决策和可讨论的退出路径。',
+  '好的结构不能消除所有风险，但可以让风险更早被看见、更清楚地被讨论、更有机制地被处理。SAREC 希望帮助跨境客户在美国房地产项目合作中，先看清结构，再讨论机会。'
+];
+
+const noticeBody =
+  '本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。LP / GP 合作结构、房地产项目投资、私募发行、税务处理、贷款安排、保险、EB-5 和跨境交易均涉及复杂风险。具体事项应结合项目文件、合同文本和相关持牌或专业人士意见审慎判断。';
+
+const researchMapKeywords = [
+  { keyword: 'LP / GP 关系', anchor: 'section-01' },
+  { keyword: '结构原理', anchor: 'section-02' },
+  { keyword: 'GP 真实角色', anchor: 'section-03' },
+  { keyword: '资金路径', anchor: 'section-04' },
+  { keyword: '重大事项决策', anchor: 'section-05' },
+  { keyword: '信息披露', anchor: 'section-06' },
+  { keyword: '费用机制', anchor: 'section-07' },
+  { keyword: '利润分配顺序', anchor: 'section-08' },
+  { keyword: '超支应对', anchor: 'section-09' },
+  { keyword: '退出机制', anchor: 'section-10' },
+  { keyword: '跨境额外风险', anchor: 'section-11' }
+];
+
+const researchMapItems = researchMapKeywords.map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: sections[i].title
+}));
+
+const heroAnchors = researchMapKeywords.slice(0, 3).map((k, i) => ({
+  keyword: k.keyword,
+  anchor: k.anchor,
+  fullTitle: sections[i].title
+}));
+
+const conversionIntents = [
+  { label: '你有具体项目', ctaText: '提交项目初筛', href: '/zh/services/strategy/' },
+  { label: '你想继续研究', ctaText: '返回研究中心', href: '/zh/research' },
+  { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
+];
+
 export default function LpGpStructurePage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">SAREC Insights</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">LP / GP 合作结构详解</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
-            美国房地产项目中，投资人真正需要看懂的不只是项目本身，还包括谁管理项目、资金如何进入、信息如何披露、重大事项如何决策、收益如何分配，以及风险发生时由谁承担责任。
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span className="rounded-[2px] border border-white/15 bg-white/5 px-3 py-1.5 font-sans text-xs font-semibold text-zinc-300" key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/legal/risk-disclosure/" variant="gold">
-              查看风险披露
-            </Button>
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-          </div>
-        </div>
-      </section>
+    <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
+      <ArticleHero
+        eyebrow="SAREC INSIGHTS · 合作结构"
+        title="LP / GP 合作结构详解"
+        summary="美国房地产项目中，投资人真正需要看懂的不只是项目本身，还包括谁管理项目、资金如何进入、信息如何披露、重大事项如何决策、收益如何分配，以及风险发生时由谁承担责任。"
+        tags={tags}
+        heroVideo={{
+          src: '/videos/research/lp-gp-structure-hero.mp4',
+          poster: '/images/research/lp-gp-structure-poster.jpg'
+        }}
+        primaryCta={{ label: '查看风险披露', href: '/zh/legal/risk-disclosure/' }}
+        secondaryCta={{ label: '提交项目初筛', href: '/zh/services/strategy/' }}
+        anchors={heroAnchors}
+        mediaCaption="LP / GP STRUCTURE / CAPITAL ALIGNMENT / GOVERNANCE"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Introduction</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">项目本身只是一部分，合作结构决定利益边界</h2>
-          </div>
-          <Card className="md:p-10">
-            <div className="grid gap-5 text-base leading-8 text-muted md:text-lg md:leading-9">
-              <p>很多投资人看美国房地产项目时，第一反应是看位置、成本、租金、退出价值和收益测算。但在实际项目合作中，项目本身只是一部分。真正决定投资人利益边界的，往往是合作结构。</p>
-              <p>一个项目看起来不错，并不代表合作结构安全。一个项目回报测算很吸引人，也不代表投资人能够及时了解项目进度、控制关键风险或在出现延期、超支、融资变化时获得充分保护。</p>
-              <p>
-                LP / GP 结构，是很多房地产项目、私募项目和合伙投资中常见的合作安排。理解它，不是为了记住几个法律名词，而是为了看清：谁负责管理，谁承担责任，谁有决策权，谁获得信息，谁承担风险，谁享有收益。更多跨境风险背景可参考
-                <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/chinese-investors-us-real-estate-risks/">
-                  中国投资人美国房地产常见风险
-                </Link>
-                。
-              </p>
-            </div>
-          </Card>
-        </div>
-      </section>
+      <OpeningJudgment
+        judgment="项目本身只是一部分，合作结构决定利益边界"
+        introParagraphs={introParagraphs}
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Structure Review</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">投资人应该看懂的结构问题</h2>
-            <p className="mt-4 text-sm leading-7 text-muted md:text-base">
-              以下内容用于建立一般性判断框架。具体合作安排应结合项目文件、合同文本和相关持牌或专业人士意见判断。涉及证券、法律、税务、贷款、保险、移民或投资结构问题时，也应先阅读
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/legal/risk-disclosure/">
-                风险披露
-              </Link>
-              。
-            </p>
-          </div>
+      <ResearchMap
+        eyebrow="RESEARCH MAP · 本文导读"
+        title="十一个角度看合作结构"
+        items={researchMapItems}
+      />
 
-          <div className="mt-10 grid gap-6">
-            {sections.map((section) => (
-              <Card className="bg-white md:p-9" key={section.title}>
-                <h3 className="font-sans text-xl font-semibold leading-snug text-ink md:text-2xl">{section.title}</h3>
-                <p className="mt-5 text-base leading-8 text-muted">{section.body}</p>
-                {section.risk ? <p className="mt-4 rounded-md border border-line bg-zinc-50 p-4 text-sm leading-7 text-muted">{section.risk}</p> : null}
-                <div className="mt-6 rounded-md border border-line bg-zinc-50 p-5">
-                  <p className="font-sans text-sm font-semibold text-ink">{section.pointsTitle}</p>
-                  <ul className="mt-3 grid gap-2 text-sm leading-7 text-muted md:grid-cols-2">
-                    {section.points.map((point) => (
-                      <li className="border-l-2 border-gold pl-4" key={point}>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="mt-5 border-l-2 border-ink pl-4 font-sans text-sm font-semibold leading-7 text-ink">{section.summary}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ArticleSection
+        id="section-01"
+        index={1}
+        title={sections[0].title}
+        body={sections[0].body}
+        pointsTitle={sections[0].pointsTitle}
+        points={sections[0].points}
+        summary={sections[0].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-02"
+        index={2}
+        title={sections[1].title}
+        body={sections[1].body}
+        pointsTitle={sections[1].pointsTitle}
+        points={sections[1].points}
+        note={sections[1].risk}
+        summary={sections[1].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-03"
+        index={3}
+        title={sections[2].title}
+        body={sections[2].body}
+        pointsTitle={sections[2].pointsTitle}
+        points={sections[2].points}
+        summary={sections[2].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-04"
+        index={4}
+        title={sections[3].title}
+        body={sections[3].body}
+        pointsTitle={sections[3].pointsTitle}
+        points={sections[3].points}
+        summary={sections[3].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-05"
+        index={5}
+        title={sections[4].title}
+        body={sections[4].body}
+        pointsTitle={sections[4].pointsTitle}
+        points={sections[4].points}
+        note={sections[4].risk}
+        summary={sections[4].summary}
+        width="default"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">SAREC Review</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">SAREC 如何帮助客户理解合作结构？</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              SAREC 的价值不是替客户做最终投资决定，而是帮助客户在进入项目之前，把合作结构中的关键问题先提出来、列清楚、分层判断。实际项目也可以结合
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/case-studies/">
-                案例研究
-              </Link>
-              与
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/services/">
-                服务架构
-              </Link>
-              进一步讨论。
-            </p>
-          </div>
-          <Card className="md:p-9">
-            <ul className="grid gap-3 text-sm leading-7 text-muted md:text-base">
-              {sarecFocus.map((point) => (
-                <li className="border-l-2 border-gold pl-4" key={point}>
-                  {point}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-8">
-              <Button href="/zh/services/strategy/">了解项目初筛服务</Button>
-            </div>
-          </Card>
-        </div>
-      </section>
+      <MidArticleCTA
+        body="如果你正在判断一个美国房地产项目的合作结构，可以先做一次项目初筛。"
+        ctaLabel="提交项目初筛"
+        ctaHref="/zh/services/strategy/"
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-2">
-          <Card className="bg-white md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">Conclusion</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">项目机会要看，合作结构更要看</h2>
-            <div className="mt-6 grid gap-5 text-base leading-8 text-muted">
-              <p>一个美国房地产项目是否值得继续推进，不能只看项目介绍、租金测算和退出价值。对投资人而言，真正重要的是：这个项目是否有清晰的管理方、透明的资金路径、合理的费用机制、稳定的信息披露、明确的重大事项决策和可讨论的退出路径。</p>
-              <p>好的结构不能消除所有风险，但可以让风险更早被看见、更清楚地被讨论、更有机制地被处理。SAREC 希望帮助跨境客户在美国房地产项目合作中，先看清结构，再讨论机会。</p>
-            </div>
-          </Card>
-          <Card className="border-gold/40 bg-white md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">重要说明</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">重要说明</h2>
-            <p className="mt-6 text-base leading-8 text-muted">
-              本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。LP / GP 合作结构、房地产项目投资、私募发行、税务处理、贷款安排、保险、EB-5 和跨境交易均涉及复杂风险。具体事项应结合项目文件、合同文本和相关持牌或专业人士意见审慎判断。
-            </p>
-          </Card>
-        </div>
-      </section>
+      <ArticleSection
+        id="section-06"
+        index={6}
+        title={sections[5].title}
+        body={sections[5].body}
+        pointsTitle={sections[5].pointsTitle}
+        points={sections[5].points}
+        summary={sections[5].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-07"
+        index={7}
+        title={sections[6].title}
+        body={sections[6].body}
+        pointsTitle={sections[6].pointsTitle}
+        points={sections[6].points}
+        summary={sections[6].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-08"
+        index={8}
+        title={sections[7].title}
+        body={sections[7].body}
+        pointsTitle={sections[7].pointsTitle}
+        points={sections[7].points}
+        summary={sections[7].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-09"
+        index={9}
+        title={sections[8].title}
+        body={sections[8].body}
+        pointsTitle={sections[8].pointsTitle}
+        points={sections[8].points}
+        summary={sections[8].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-10"
+        index={10}
+        title={sections[9].title}
+        body={sections[9].body}
+        pointsTitle={sections[9].pointsTitle}
+        points={sections[9].points}
+        summary={sections[9].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="section-11"
+        index={11}
+        title={sections[10].title}
+        body={sections[10].body}
+        pointsTitle={sections[10].pointsTitle}
+        points={sections[10].points}
+        summary={sections[10].summary}
+        width="default"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Related</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">相关入口</h2>
-          </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {relatedLinks.map((item) => (
-              <Link className="group block rounded-md border border-line bg-white p-5 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:border-zinc-400 md:p-6" href={item.href} key={item.href}>
-                <h3 className="font-sans text-lg font-semibold leading-snug text-ink group-hover:text-gold">{item.title}</h3>
-                <span className="mt-6 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink group-hover:text-gold">前往查看</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <SarecFramework
+        eyebrow="SAREC FRAMEWORK · 机构方法论"
+        title="SAREC 如何帮助客户理解合作结构？"
+        body={sarecFrameworkBody}
+        bottomTag="STRUCTURE ASSESSMENT"
+        items={sarecFocus}
+      />
 
-      <section className="border-t border-line bg-deep py-12 text-white md:py-20">
-        <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">如果你正在看一个美国房地产项目，先把合作结构看清楚。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">
-              你可以提交项目资料、合作协议框架或项目介绍。SAREC 会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-            <Button href="/zh/contact/" variant="gold">
-              联系我们
-            </Button>
-          </div>
-        </div>
-      </section>
-    </article>
+      <ArticleSection
+        title="项目机会要看，合作结构更要看"
+        paragraphs={conclusionParagraphs}
+        width="default"
+      />
+
+      <ArticleSection
+        title="重要说明"
+        body={noticeBody}
+        width="default"
+      />
+
+      <RelatedResearch
+        items={relatedLinks.map((r) => ({
+          label: r.title,
+          href: r.href,
+          eyebrow: 'SAREC RESEARCH'
+        }))}
+      />
+
+      <ConversionBlock
+        question="如果你正在看一个美国房地产项目，先把合作结构看清楚。"
+        intents={conversionIntents}
+        contactLine="你可以提交项目资料、合作协议框架或项目介绍。SAREC 会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。"
+      />
+    </main>
   );
 }
