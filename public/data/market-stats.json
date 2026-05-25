@@ -1,0 +1,104 @@
+{
+  "lastUpdated": "2026-05-25",
+  "lastUpdatedLabel": "数据更新于 2026 年 5 月",
+  "kpis": [
+    {
+      "value": "$13.7B",
+      "label": "中国买家美国地产投资",
+      "footnoteRef": "1"
+    },
+    {
+      "value": "6.51%",
+      "label": "30 年抵押贷款利率",
+      "footnoteRef": "2"
+    },
+    {
+      "value": "$417,800",
+      "label": "全美房屋中位价",
+      "footnoteRef": "3"
+    },
+    {
+      "value": "40,000+",
+      "label": "LA ED1 累计单元",
+      "footnoteRef": "4"
+    }
+  ],
+  "crossBorderInvestment": {
+    "title": "中美跨境投资",
+    "total": "$13.7B",
+    "units": "11,700 套",
+    "californiaShare": "36%",
+    "californiaShareLabel": "加州占比",
+    "subLabel": "中国买家是美国房地产最大跨境投资来源",
+    "footnoteRef": "1"
+  },
+  "laHousingGap": {
+    "title": "LA 住房缺口",
+    "target": "456,643",
+    "targetLabel": "RHNA 目标 (2021-2029)",
+    "approved": "81,306",
+    "approvedLabel": "已批准",
+    "completionPercent": 17.8,
+    "completionLabel": "17.8% 完成",
+    "subLabel": "82% 缺口仍未满足,政策窗口持续打开",
+    "footnoteRef": "5"
+  },
+  "timeline": [
+    {
+      "date": "2022.12",
+      "title": "ED1 颁布",
+      "subtitle": "Karen Bass 市长第 1 号行政指令",
+      "footnoteRef": "4"
+    },
+    {
+      "date": "2024.7",
+      "title": "ED1 修订",
+      "subtitle": "新增租户保护条款",
+      "footnoteRef": "4"
+    },
+    {
+      "date": "2025",
+      "title": "SAREC 参与",
+      "subtitle": "4 项目 273 单元在管",
+      "footnoteRef": null
+    },
+    {
+      "date": "2025.12",
+      "title": "ED1 永久化",
+      "subtitle": "进入 LA Municipal Code",
+      "footnoteRef": "6"
+    },
+    {
+      "date": "2026+",
+      "title": "持续观察",
+      "subtitle": "政策窗口与市场周期",
+      "footnoteRef": null
+    }
+  ],
+  "footnotes": [
+    {
+      "id": "1",
+      "text": "NAR 2025 International Transactions in US Residential Real Estate Report (Apr 2024 - Mar 2025)"
+    },
+    {
+      "id": "2",
+      "text": "Freddie Mac Primary Mortgage Market Survey (PMMS), May 21, 2026"
+    },
+    {
+      "id": "3",
+      "text": "NAR Existing-Home Sales Report, April 2026"
+    },
+    {
+      "id": "4",
+      "text": "LA City Planning + TheRealDeal 累计估算, Nov 2025"
+    },
+    {
+      "id": "5",
+      "text": "Los Angeles Business Council Institute (LABCi) Housing Production Study, 2025"
+    },
+    {
+      "id": "6",
+      "text": "Los Angeles City Council, ED1 Permanent Ordinance, December 2025"
+    }
+  ]
+}
