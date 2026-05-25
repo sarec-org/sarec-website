@@ -24,7 +24,8 @@
   line-height: 1.65;
   color: var(--ivory);
   margin: 0;
-  max-width: 56ch;
+  width: 100%;
+  max-width: min(860px, 100%);
 }
 
 .cta {
