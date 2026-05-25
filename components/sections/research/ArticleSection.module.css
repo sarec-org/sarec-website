@@ -128,7 +128,7 @@
   border-left: 1px solid var(--gold-dim);
   border-left-color: var(--gold);
   background: rgba(212, 180, 131, 0.035);
-  max-width: 64ch;
+  max-width: 100%;
 }
 
 /* ===== Data Panel ===== */
@@ -193,7 +193,7 @@
   line-height: 1.65;
   color: var(--ivory);
   font-weight: 500;
-  max-width: 64ch;
+  max-width: 100%;
 }
 
 /* ===== Data Table ===== */
