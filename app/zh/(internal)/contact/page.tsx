@@ -224,7 +224,7 @@ export default function ContactPage() {
 
           <p className={styles.intentNote}>
             如果你属于上述四类的任意组合，或不确定自己属于哪一类 ——
-            选择"预约 30 分钟沟通"，我们一起判断。
+            选择&quot;预约 30 分钟沟通&quot;，我们一起判断。
           </p>
         </div>
       </section>
@@ -288,7 +288,7 @@ export default function ContactPage() {
           <p className={styles.intentNote}>
             <span className={styles.label} style={{ marginRight: 8 }}>[note]</span>
             具体合作方式以单独协议为准。如需推荐 ——
-            请在表单的"你想聊什么"中简要说明你的需求，我们会引荐相应的专业服务伙伴。
+            请在表单的&quot;你想聊什么&quot;中简要说明你的需求，我们会引荐相应的专业服务伙伴。
           </p>
         </div>
       </section>

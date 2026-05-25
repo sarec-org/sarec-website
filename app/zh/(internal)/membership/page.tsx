@@ -374,7 +374,7 @@ export default function MembershipPage() {
             <li className={styles.applyStep}>
               <span className={styles.applyNum}>01</span>
               <h3 className={styles.applyH3}>提交申请</h3>
-              <p className={styles.applyBody}>填写"申请加入会员"表单。</p>
+              <p className={styles.applyBody}>填写&quot;申请加入会员&quot;表单。</p>
               <p className={styles.applyBody}>提供你的背景、当前阶段、合作意向。</p>
             </li>
             <li className={styles.applyStep}>

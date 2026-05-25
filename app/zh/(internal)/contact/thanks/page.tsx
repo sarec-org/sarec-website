@@ -61,7 +61,7 @@ export default function ThanksPage() {
       {/* TK02 / 接下来会发生什么 */}
       <section className={`${styles.section} ${styles.sectionDeep}`}>
         <div className={styles.containerNarrow}>
-          <span className={styles.eyebrow}>WHAT'S NEXT · 接下来会发生什么</span>
+          <span className={styles.eyebrow}>WHAT&apos;S NEXT · 接下来会发生什么</span>
           <h2 className={styles.h2}>接下来会发生什么</h2>
           <ul className={styles.thanksTimeline}>
             {timeline.map((line) => {

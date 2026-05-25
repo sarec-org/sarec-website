@@ -104,7 +104,7 @@ export default function ProjectsPage() {
             SAREC 参与的项目类型
           </RevealOnView>
           <p className={styles.sectionLead}>
-            SAREC 不限定单一项目类型。我们关注符合"项目判断、结构设计、风险控制"原则的多种类型。
+            SAREC 不限定单一项目类型。我们关注符合&quot;项目判断、结构设计、风险控制&quot;原则的多种类型。
           </p>
           <div className={styles.typesGrid}>
             {projectTypes.map((p) => (

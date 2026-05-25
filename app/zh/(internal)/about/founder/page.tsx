@@ -58,7 +58,7 @@ export default function FounderPage() {
                 2016 年我进入中欧国际工商学院 EMBA 系统学习。
               </p>
               <p className={styles.timelineBody}>
-                不是为了"管理学位",而是为了把过去 18 年实操经验放进财务、法律、组织、战略的系统框架。
+                不是为了&quot;管理学位&quot;,而是为了把过去 18 年实操经验放进财务、法律、组织、战略的系统框架。
               </p>
               <p className={styles.timelineBody}>
                 中欧给我的是结构化思维 + 跨行业的视野。
@@ -155,7 +155,7 @@ export default function FounderPage() {
                 美国房地产对中国背景的客户来说,最大的障碍不是信息,而是规则的差异、操作的复杂度、风险的不可见。
               </p>
               <p className={styles.viewsBody}>
-                SAREC 商会层(研究、培训、活动、考察)帮客户先把"规则、生态、机会和风险"看清楚。
+                SAREC 商会层(研究、培训、活动、考察)帮客户先把&quot;规则、生态、机会和风险&quot;看清楚。
               </p>
             </li>
             <li className={styles.viewsItem}>
@@ -174,7 +174,7 @@ export default function FounderPage() {
                 当客户和 SAREC 建立长期信任,当某个项目同时符合双方的判断标准 —— 团队与客户共同出资。
               </p>
               <p className={styles.viewsBody}>
-                不是为了证明"我们也敢投",而是真正做到利益一致、风险共担。
+                不是为了证明&quot;我们也敢投&quot;,而是真正做到利益一致、风险共担。
               </p>
             </li>
           </ol>
