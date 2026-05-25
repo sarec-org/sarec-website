@@ -35,3 +35,23 @@
   color: var(--gold);
   text-transform: uppercase;
 }
+
+/* ============================================================
+   long variant — 长引用专用:更宽容器 + 更小字号 + 左对齐 + 严格 CJK 断行
+   保留 italic 引文调性,避免居中短行+大字号产生的"诗化"碎排
+   ============================================================ */
+.figureLong {
+  max-width: min(1040px, 100%);
+  text-align: left;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.quoteLong {
+  font-size: clamp(1.25rem, 1.85vw, 1.625rem);
+  line-height: 1.75;
+  font-weight: 400;
+  line-break: strict;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}

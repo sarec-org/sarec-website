@@ -61,6 +61,12 @@
   text-align: left;
 }
 
+/* compact variant — judgment 标题字号收紧,让 Hero title 保持最大层级 */
+.compact .judgment {
+  font-size: clamp(2rem, 3vw, 3.25rem);
+  line-height: 1.15;
+}
+
 /* 含手动换行的 judgment:放宽宽度避免裁切 */
 .hasManualBreak {
   max-width: min(1120px, 100%);

@@ -8,16 +8,18 @@ import styles from './OpeningJudgment.module.css';
 export type OpeningJudgmentProps = {
   judgment: string;
   introParagraphs: string[];
+  variant?: 'default' | 'compact';
 };
 
 export function OpeningJudgment({
   judgment,
-  introParagraphs
+  introParagraphs,
+  variant = 'default'
 }: OpeningJudgmentProps) {
   const judgmentLines = judgment.split('\n');
   const hasManualBreak = judgmentLines.length > 1;
   return (
-    <section className={styles.section}>
+    <section className={`${styles.section} ${variant === 'compact' ? styles.compact : ''}`}>
       <div className={styles.inner}>
         <RevealOnView
           as="h2"
