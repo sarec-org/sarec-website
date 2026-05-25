@@ -1,8 +1,12 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { createPageMetadata } from '@/lib/seo';
+import { ArticleHero } from '@/components/sections/research/ArticleHero';
+import { ArticleSection } from '@/components/sections/research/ArticleSection';
+import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
+import { OpeningJudgment } from '@/components/sections/research/OpeningJudgment';
+import { SarecFramework } from '@/components/sections/research/SarecFramework';
+import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import { ConversionBlock } from '@/components/sections/research/ConversionBlock';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'Cap Rate / IRR / ROE 如何理解｜SAREC Insights',
@@ -134,207 +138,214 @@ const relatedLinks = [
   { title: '案例研究', href: '/zh/case-studies/' }
 ];
 
+const introParagraphs = [
+  '中国投资人看美国房地产项目时，经常会看到几个熟悉又容易误解的指标：Cap Rate、IRR、ROE、NOI、Cash Flow、Exit Value、Payback Period 等。',
+  '这些指标有用，但它们不是答案。它们只是把一组假设转化成数字。如果假设不可靠，数字越漂亮，风险可能越大。',
+  '真正专业的项目判断，不是问“这个项目 IRR 有多少”，而是问：这个 IRR 是怎么来的？租金假设是否可靠？建设成本是否充分？融资条件是否真实？退出 cap rate 是否保守？工期是否合理？如果市场变化，结果会怎样？这类问题也需要结合项目判断框架一起看。'
+];
+
+const coreViewBody =
+  'Cap Rate、IRR、ROE 这些指标，本质上都是计算结果。它们反映的是项目在某些假设下可能呈现的收益特征，但不能替代对项目本身的判断。项目开发流程和合作结构的变化，都会重新塑造指标结果。';
+
+const sarecFrameworkBody =
+  'SAREC 不把 Cap Rate、IRR、ROE 当成销售话术，而是把它们作为项目判断的入口。我们更关注这些指标背后的假设是否可靠、风险是否充分披露、结构是否清晰、项目是否经得起压力测试。指标也应结合 LP / GP 合作结构判断。';
+
+const conclusionParagraphs = [
+  'Cap Rate、IRR、ROE 都是有用指标，但它们不是项目本身。一个项目是否值得继续看，不能只由某个漂亮数字决定。',
+  '对中国投资人和美国华人投资人而言，真正重要的是看清：收入如何产生，成本是否完整，融资是否可靠，退出是否现实，时间是否合理，合作结构是否保护投资人。',
+  '指标越漂亮，越应该回到假设。只有当假设经得起验证，风险被清楚披露，结构被认真设计，项目才值得进入下一步讨论。相关风险背景也可以继续阅读中国投资人美国房地产常见风险。'
+];
+
+const noticeBody =
+  '本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。房地产投资、项目开发、融资、税务、保险、法律和跨境交易均涉及复杂风险。具体事项应结合项目资料、财务模型、合同文件和相关持牌或专业人士意见审慎判断。';
+
+const heroAnchors = [
+  { keyword: 'NOI', anchor: 'metric-01', fullTitle: articleSections[0].title },
+  { keyword: 'Cap Rate', anchor: 'metric-02', fullTitle: articleSections[1].title },
+  { keyword: 'IRR', anchor: 'metric-04', fullTitle: articleSections[3].title }
+];
+
+const conversionIntents = [
+  { label: '你有具体项目', ctaText: '提交项目初筛', href: '/zh/services/strategy/' },
+  { label: '你想继续研究', ctaText: '返回研究中心', href: '/zh/research' },
+  { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
+];
+
 export default function CapRateIrrRoePage() {
   return (
-    <article>
-      <section className="bg-deep py-16 text-white md:py-24">
-        <div className="container-shell max-w-5xl">
-          <p className="font-sans text-sm font-semibold text-gold">SAREC Insights</p>
-          <h1 className="mt-5 font-sans text-[2rem] font-bold leading-tight md:text-6xl">Cap Rate / IRR / ROE 如何理解</h1>
-          <p className="mt-6 max-w-4xl text-base leading-8 text-zinc-300 md:text-xl">
-            美国房地产项目中，很多投资人第一眼看的是收益指标。但真正专业的判断，不是记住一个 Cap Rate、IRR 或 ROE 数字，而是看清这些指标背后的收入、成本、融资、时间、退出和风险假设。
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span className="rounded-[2px] border border-white/15 bg-white/5 px-3 py-1.5 font-sans text-xs font-semibold text-zinc-300" key={tag}>
-                {tag}
-              </span>
-            ))}
-          </div>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <Button href="/zh/research/framework/" variant="gold">
-              查看项目判断框架
-            </Button>
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-          </div>
-        </div>
-      </section>
+    <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
+      <ArticleHero
+        eyebrow="SAREC INSIGHTS · 投资指标"
+        title="Cap Rate / IRR / ROE 如何理解"
+        summary="美国房地产项目中，很多投资人第一眼看的是收益指标。但真正专业的判断，不是记住一个 Cap Rate、IRR 或 ROE 数字，而是看清这些指标背后的收入、成本、融资、时间、退出和风险假设。"
+        tags={tags}
+        heroVideo={{
+          src: '/videos/research/cap-rate-irr-roe-hero.mp4',
+          poster: '/images/research/cap-rate-irr-roe-poster.jpg'
+        }}
+        primaryCta={{ label: '查看项目判断框架', href: '/zh/research/framework/' }}
+        secondaryCta={{ label: '提交项目初筛', href: '/zh/services/strategy/' }}
+        anchors={heroAnchors}
+        mediaCaption="VALUATION / RETURN METRICS / INVESTMENT JUDGMENT"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Introduction</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">指标有用，但指标不是答案</h2>
-          </div>
-          <Card className="md:p-10">
-            <div className="grid gap-5 text-base leading-8 text-muted md:text-lg md:leading-9">
-              <p>中国投资人看美国房地产项目时，经常会看到几个熟悉又容易误解的指标：Cap Rate、IRR、ROE、NOI、Cash Flow、Exit Value、Payback Period 等。</p>
-              <p>这些指标有用，但它们不是答案。它们只是把一组假设转化成数字。如果假设不可靠，数字越漂亮，风险可能越大。</p>
-              <p>
-                真正专业的项目判断，不是问“这个项目 IRR 有多少”，而是问：这个 IRR 是怎么来的？租金假设是否可靠？建设成本是否充分？融资条件是否真实？退出 cap rate 是否保守？工期是否合理？如果市场变化，结果会怎样？这类问题也需要结合
-                <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/framework/">
-                  项目判断框架
-                </Link>
-                一起看。
-              </p>
-            </div>
-          </Card>
-        </div>
-      </section>
+      <OpeningJudgment
+        judgment="指标有用，但指标不是答案"
+        introParagraphs={introParagraphs}
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">Core View</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">房地产投资指标是结果，不是原因</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              Cap Rate、IRR、ROE 这些指标，本质上都是计算结果。它们反映的是项目在某些假设下可能呈现的收益特征，但不能替代对项目本身的判断。项目开发流程和合作结构的变化，都会重新塑造指标结果。
-            </p>
-          </div>
-          <Card className="bg-white md:p-9">
-            <p className="font-sans text-sm font-semibold text-ink">一个项目的指标通常由以下因素共同决定</p>
-            <ul className="mt-4 grid gap-3 text-sm leading-7 text-muted md:grid-cols-2 md:text-base">
-              {metricDrivers.map((item) => (
-                <li className="border-l-2 border-gold pl-4" key={item}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-6 border-l-2 border-ink pl-4 font-sans text-sm font-semibold leading-7 text-ink">如果只看指标，不看假设，就像只看体检报告上的一个数字，却不问身体真实状况。</p>
-          </Card>
-        </div>
-      </section>
+      <ArticleSection
+        title="房地产投资指标是结果，不是原因"
+        body={coreViewBody}
+        pointsTitle="一个项目的指标通常由以下因素共同决定"
+        points={metricDrivers}
+        summary="如果只看指标，不看假设，就像只看体检报告上的一个数字，却不问身体真实状况。"
+        width="default"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Metrics</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">常见指标背后的判断逻辑</h2>
-            <p className="mt-4 text-sm leading-7 text-muted md:text-base">
-              以下内容用于一般性教育，不构成投资建议或收益承诺。具体项目应结合财务模型、合同文件、税务处理、融资条件和相关持牌或专业人士意见判断。更多流程背景可参考
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/us-real-estate-development-process/">
-                美国房地产开发完整流程
-              </Link>
-              。
-            </p>
-          </div>
-          <div className="mt-10 grid gap-6">
-            {articleSections.map((section) => (
-              <Card className="md:p-9" key={section.title}>
-                <h3 className="font-sans text-xl font-semibold leading-snug text-ink md:text-2xl">{section.title}</h3>
-                <p className="mt-5 text-base leading-8 text-muted">{section.body}</p>
-                {section.note ? <p className="mt-4 rounded-md border border-line bg-zinc-50 p-4 text-sm leading-7 text-muted">{section.note}</p> : null}
-                <div className="mt-6 rounded-md border border-line bg-zinc-50 p-5">
-                  <p className="font-sans text-sm font-semibold text-ink">{section.pointsTitle}</p>
-                  <ul className="mt-3 grid gap-2 text-sm leading-7 text-muted md:grid-cols-2">
-                    {section.points.map((point) => (
-                      <li className="border-l-2 border-gold pl-4" key={point}>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <p className="mt-5 border-l-2 border-ink pl-4 font-sans text-sm font-semibold leading-7 text-ink">{section.summary}</p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ArticleSection
+        id="metric-01"
+        index={1}
+        title={articleSections[0].title}
+        body={articleSections[0].body}
+        pointsTitle={articleSections[0].pointsTitle}
+        points={articleSections[0].points}
+        summary={articleSections[0].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-02"
+        index={2}
+        title={articleSections[1].title}
+        body={articleSections[1].body}
+        pointsTitle={articleSections[1].pointsTitle}
+        points={articleSections[1].points}
+        note={articleSections[1].note}
+        summary={articleSections[1].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-03"
+        index={3}
+        title={articleSections[2].title}
+        body={articleSections[2].body}
+        pointsTitle={articleSections[2].pointsTitle}
+        points={articleSections[2].points}
+        summary={articleSections[2].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-04"
+        index={4}
+        title={articleSections[3].title}
+        body={articleSections[3].body}
+        pointsTitle={articleSections[3].pointsTitle}
+        points={articleSections[3].points}
+        note={articleSections[3].note}
+        summary={articleSections[3].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-05"
+        index={5}
+        title={articleSections[4].title}
+        body={articleSections[4].body}
+        pointsTitle={articleSections[4].pointsTitle}
+        points={articleSections[4].points}
+        summary={articleSections[4].summary}
+        width="default"
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="font-sans text-sm font-semibold text-gold">SAREC Framework</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">SAREC 的指标判断框架</h2>
-            <p className="mt-5 text-sm leading-7 text-muted md:text-base">
-              SAREC 不把 Cap Rate、IRR、ROE 当成销售话术，而是把它们作为项目判断的入口。我们更关注这些指标背后的假设是否可靠、风险是否充分披露、结构是否清晰、项目是否经得起压力测试。指标也应结合
-              <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/lp-gp-structure/">
-                LP / GP 合作结构
-              </Link>
-              判断。
-            </p>
-          </div>
-          <Card className="bg-white md:p-9">
-            <ul className="grid gap-3 text-sm leading-7 text-muted md:text-base">
-              {sarecFramework.map((item) => (
-                <li className="border-l-2 border-gold pl-4" key={item}>
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </Card>
-        </div>
-      </section>
+      <MidArticleCTA
+        body="如果你正在判断一个美国房地产项目的财务模型，可以先做一次项目初筛。"
+        ctaLabel="提交项目初筛"
+        ctaHref="/zh/services/strategy/"
+      />
 
-      <section className="py-12 md:py-24">
-        <div className="container-shell grid gap-8 lg:grid-cols-2">
-          <Card className="md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">Conclusion</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">真正专业的投资判断，是从数字回到假设</h2>
-            <div className="mt-6 grid gap-5 text-base leading-8 text-muted">
-              <p>Cap Rate、IRR、ROE 都是有用指标，但它们不是项目本身。一个项目是否值得继续看，不能只由某个漂亮数字决定。</p>
-              <p>对中国投资人和美国华人投资人而言，真正重要的是看清：收入如何产生，成本是否完整，融资是否可靠，退出是否现实，时间是否合理，合作结构是否保护投资人。</p>
-              <p>
-                指标越漂亮，越应该回到假设。只有当假设经得起验证，风险被清楚披露，结构被认真设计，项目才值得进入下一步讨论。相关风险背景也可以继续阅读
-                <Link className="border-b border-gold font-sans font-semibold text-ink hover:text-gold" href="/zh/research/chinese-investors-us-real-estate-risks/">
-                  中国投资人美国房地产常见风险
-                </Link>
-                。
-              </p>
-            </div>
-          </Card>
-          <Card className="border-gold/40 md:p-10">
-            <p className="font-sans text-sm font-semibold text-gold">重要说明</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">重要说明</h2>
-            <p className="mt-6 text-base leading-8 text-muted">
-              本文仅供一般信息参考，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。房地产投资、项目开发、融资、税务、保险、法律和跨境交易均涉及复杂风险。具体事项应结合项目资料、财务模型、合同文件和相关持牌或专业人士意见审慎判断。
-            </p>
-            <div className="mt-8">
-              <Button href="/zh/legal/risk-disclosure/" variant="secondary">
-                查看风险披露
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </section>
+      <ArticleSection
+        id="metric-06"
+        index={6}
+        title={articleSections[5].title}
+        body={articleSections[5].body}
+        pointsTitle={articleSections[5].pointsTitle}
+        points={articleSections[5].points}
+        summary={articleSections[5].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-07"
+        index={7}
+        title={articleSections[6].title}
+        body={articleSections[6].body}
+        pointsTitle={articleSections[6].pointsTitle}
+        points={articleSections[6].points}
+        summary={articleSections[6].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-08"
+        index={8}
+        title={articleSections[7].title}
+        body={articleSections[7].body}
+        pointsTitle={articleSections[7].pointsTitle}
+        points={articleSections[7].points}
+        summary={articleSections[7].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-09"
+        index={9}
+        title={articleSections[8].title}
+        body={articleSections[8].body}
+        pointsTitle={articleSections[8].pointsTitle}
+        points={articleSections[8].points}
+        summary={articleSections[8].summary}
+        width="default"
+      />
+      <ArticleSection
+        id="metric-10"
+        index={10}
+        title={articleSections[9].title}
+        body={articleSections[9].body}
+        pointsTitle={articleSections[9].pointsTitle}
+        points={articleSections[9].points}
+        summary={articleSections[9].summary}
+        width="default"
+      />
 
-      <section className="border-y border-line bg-zinc-50 py-12 md:py-24">
-        <div className="container-shell">
-          <div className="max-w-4xl">
-            <p className="font-sans text-sm font-semibold text-gold">Related</p>
-            <h2 className="mt-3 font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">相关入口</h2>
-          </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {relatedLinks.map((item) => (
-              <Link className="group block rounded-md border border-line bg-white p-5 shadow-soft transition duration-150 hover:-translate-y-0.5 hover:border-zinc-400 md:p-6" href={item.href} key={item.href}>
-                <h3 className="font-sans text-lg font-semibold leading-snug text-ink group-hover:text-gold">{item.title}</h3>
-                <span className="mt-6 inline-flex border-b border-gold pb-1 font-sans text-sm font-semibold text-ink group-hover:text-gold">前往查看</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <SarecFramework
+        eyebrow="SAREC FRAMEWORK · 机构方法论"
+        title="SAREC 的指标判断框架"
+        body={sarecFrameworkBody}
+        bottomTag="METRICS ASSESSMENT"
+        items={sarecFramework}
+      />
 
-      <section className="border-t border-line bg-deep py-12 text-white md:py-20">
-        <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">如果你正在看一个美国房地产项目，先不要只看收益数字。</h2>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-zinc-300 md:text-base">
-              你可以提交项目测算、项目介绍或合作需求。SAREC 会根据项目阶段、资料完整度和合作可能性，帮助你初步判断关键假设是否值得继续验证。
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row md:flex-col lg:flex-row">
-            <Button href="/zh/services/strategy/" variant="light">
-              提交项目初筛
-            </Button>
-            <Button href="/zh/contact/" variant="gold">
-              联系我们
-            </Button>
-          </div>
-        </div>
-      </section>
-    </article>
+      <ArticleSection
+        title="真正专业的投资判断，是从数字回到假设"
+        paragraphs={conclusionParagraphs}
+        width="default"
+      />
+
+      <ArticleSection
+        title="重要说明"
+        body={noticeBody}
+        width="default"
+      />
+
+      <RelatedResearch
+        items={relatedLinks.map((r) => ({
+          label: r.title,
+          href: r.href,
+          eyebrow: 'SAREC RESEARCH'
+        }))}
+      />
+
+      <ConversionBlock
+        question="如果你正在看一个美国房地产项目，先不要只看收益数字。"
+        intents={conversionIntents}
+        contactLine="你可以提交项目测算、项目介绍或合作需求。SAREC 会根据项目阶段、资料完整度和合作可能性，帮助你初步判断关键假设是否值得继续验证。"
+      />
+    </main>
   );
 }
