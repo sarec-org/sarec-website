@@ -2,6 +2,19 @@ import Link from 'next/link';
 import { RevealOnView } from '@/components/shared/RevealOnView';
 import styles from './ArticleHero.module.css';
 
+const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE ?? '';
+
+function resolveMediaUrl(path: string): string {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!MEDIA_BASE) return path;
+  // R2 bucket is flat at root — strip /videos/ prefix when present
+  const stripped = path.startsWith('/videos/')
+    ? path.replace(/^\/videos\//, '/')
+    : (path.startsWith('/') ? path : `/${path}`);
+  return `${MEDIA_BASE}${stripped}`;
+}
+
 /**
  * ArticleHero v4 — Investment Report Cover
  *   左 64% 标题区(eyebrow + H1 + summary + tags + 双 CTA)
@@ -80,7 +93,7 @@ export function ArticleHero({
                 preload="metadata"
                 poster={heroVideo.poster}
               >
-                <source src={heroVideo.src} type="video/mp4" />
+                <source src={resolveMediaUrl(heroVideo.src)} type="video/mp4" />
               </video>
             ) : heroImage ? (
               <div
