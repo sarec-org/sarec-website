@@ -41,13 +41,7 @@ export function InternalNav() {
             </span>
             <span>Sino-American Real Estate Chamber</span>
           </div>
-          <div className={styles.utilBarRight}>
-            <span className={`${styles.lang} ${styles.langActive}`}>中</span>
-            <span style={{ color: 'var(--ivory-faint)' }} aria-hidden="true">
-              /
-            </span>
-            <span className={styles.lang}>EN</span>
-          </div>
+          <div className={styles.utilBarRight} />
         </div>
 
         {/* Main nav */}

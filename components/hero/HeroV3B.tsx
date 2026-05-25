@@ -282,11 +282,7 @@ export function HeroV3B() {
           </span>
           <span>Sino-American Real Estate Chamber</span>
         </div>
-        <div className={styles.right}>
-          <span className={cx('lang', 'active')}>中</span>
-          <span style={{ color: 'var(--ivory-faint)' }}>/</span>
-          <span className={styles.lang}>EN</span>
-        </div>
+        <div className={styles.right} />
       </div>
 
       {/* Nav */}
