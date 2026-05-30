@@ -1,0 +1,84 @@
+/* ============================================================
+   ArticleCTA — Research 文章底部 CTA Banner
+   上下金线 + 黑底 + .h2 含 word-break: keep-all(教训 P5-CTA-Visual-01)
+   ============================================================ */
+
+.cta {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(4rem, 10vh, 8rem) clamp(1.5rem, 5vw, 3rem);
+  background: var(--ink-deepest);
+  border-top: 1px solid rgba(212, 180, 131, 0.4);
+  border-bottom: 1px solid rgba(212, 180, 131, 0.4);
+  text-align: center;
+}
+
+.inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.h2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+  margin: 0 0 clamp(1.5rem, 3vh, 2rem) 0;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.subtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.25vw, 1.125rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(2rem, 4vh, 3rem) 0;
+  max-width: 56ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.row {
+  display: flex;
+  gap: clamp(12px, 2vw, 20px);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.primary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 18px 36px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.primary:hover {
+  opacity: 0.88;
+}
+
+.secondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 18px 36px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.secondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
