@@ -1,0 +1,916 @@
+/* ============================================================
+   10 大陷阱 旗舰文章专用样式
+   只服务这一篇,不影响共享 research 组件
+   ============================================================ */
+
+.page {
+  background: var(--ink-deepest);
+  color: var(--ivory);
+}
+
+/* ============================================================
+   共用宽栏容器(陷阱块 / Checklist / FAQ / 免责 / 资料来源 等)
+   ============================================================ */
+.wide {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: var(--ink-deepest);
+}
+
+.wideInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(3rem, 6vh, 5rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+/* ============================================================
+   顶部 ⚠️ 重要声明 callout
+   ============================================================ */
+.notice {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: rgba(212, 180, 131, 0.04);
+  border-top: 1px solid rgba(212, 180, 131, 0.18);
+  border-bottom: 1px solid rgba(212, 180, 131, 0.18);
+}
+
+.noticeInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 3vh, 2.25rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.noticeMark {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  flex-shrink: 0;
+  padding-top: 0.15rem;
+}
+
+.noticeBody {
+  font-family: var(--serif-zh);
+  font-size: clamp(0.9375rem, 1.1vw, 1rem);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+/* ============================================================
+   30 秒摘要 (TL;DR) Block
+   ============================================================ */
+.tldrBlock {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: rgba(212, 180, 131, 0.025);
+}
+
+.tldrInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(3rem, 5vh, 4rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.tldrEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 1rem 0;
+}
+
+.tldrTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.75rem, 2.6vw, 2.25rem);
+  line-height: 1.2;
+  color: var(--ivory);
+  margin: 0 0 1.75rem 0;
+}
+
+.tldrList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tldrItem {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.8;
+  color: var(--ivory-warm);
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.tldrItem::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.85rem;
+  width: 0.5rem;
+  height: 1px;
+  background: var(--gold);
+}
+
+/* ============================================================
+   Asset 待定 占位块
+   ============================================================ */
+.assetPlaceholder {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: var(--ink-deep);
+  border-top: 1px solid rgba(212, 180, 131, 0.12);
+  border-bottom: 1px solid rgba(212, 180, 131, 0.12);
+  min-height: clamp(180px, 28vh, 280px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: clamp(2rem, 4vh, 3rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.assetPlaceholderText {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.assetPlaceholderText strong {
+  display: block;
+  color: var(--ivory-warm);
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  margin-top: 0.5rem;
+  opacity: 0.7;
+}
+
+/* ============================================================
+   泛海广场崩盘时间线
+   ============================================================ */
+.timeline {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-top: 1px solid rgba(212, 180, 131, 0.15);
+}
+
+.timelineInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(3.5rem, 7vh, 5.5rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.timelineEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 1rem 0;
+}
+
+.timelineTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+  line-height: 1.2;
+  color: var(--ivory);
+  margin: 0 0 1.5rem 0;
+}
+
+.timelineLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.25vw, 1.125rem);
+  line-height: 1.8;
+  color: var(--ivory-warm);
+  max-width: 68ch;
+  margin: 0 0 2.5rem 0;
+}
+
+.tableScroller {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 2rem;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ivory-warm);
+  min-width: 640px;
+}
+
+.dataTable thead th {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-transform: uppercase;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(212, 180, 131, 0.4);
+  font-weight: 500;
+}
+
+.dataTable tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(212, 180, 131, 0.1);
+  vertical-align: top;
+}
+
+.dataTable tbody td:first-child {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  white-space: nowrap;
+  width: 18%;
+}
+
+.dataTable tbody tr:hover td {
+  background: rgba(212, 180, 131, 0.04);
+}
+
+.dataTable strong {
+  color: var(--ivory);
+  font-weight: 600;
+}
+
+.timelineSummary {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.8;
+  color: var(--ivory-warm);
+  margin: 0 0 1rem 0;
+}
+
+.timelineSummary strong {
+  color: var(--ivory);
+}
+
+.timelineKicker {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+  line-height: 1.5;
+  color: var(--gold);
+  font-weight: 500;
+  margin: 2rem 0 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(212, 180, 131, 0.2);
+}
+
+/* ============================================================
+   单个陷阱块
+   ============================================================ */
+.trap {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-top: 1px solid rgba(212, 180, 131, 0.12);
+}
+
+.trapInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(3.5rem, 7vh, 5.5rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.trapHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin-bottom: 2rem;
+}
+
+.trapIndex {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.trapTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.875rem, 3vw, 2.5rem);
+  line-height: 1.2;
+  color: var(--ivory);
+  margin: 0;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.trapSubtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.1875rem, 1.5vw, 1.375rem);
+  line-height: 1.35;
+  color: var(--ivory);
+  margin: 2rem 0 1rem 0;
+  font-weight: 500;
+  padding-left: 1rem;
+  border-left: 2px solid var(--gold);
+}
+
+.trapSubtitleSmall {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.1875rem);
+  line-height: 1.35;
+  color: var(--ivory);
+  margin: 1.75rem 0 0.75rem 0;
+  font-weight: 500;
+}
+
+.trapBody {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.85;
+  color: var(--ivory-warm);
+  margin: 0 0 1.125rem 0;
+  max-width: 72ch;
+}
+
+.trapBody:last-child {
+  margin-bottom: 0;
+}
+
+.trapBody strong {
+  color: var(--ivory);
+  font-weight: 600;
+}
+
+.trapBlockquote {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.1875rem);
+  line-height: 1.7;
+  color: var(--gold);
+  font-style: italic;
+  margin: 1.25rem 0;
+  padding: 0.5rem 0 0.5rem 1.25rem;
+  border-left: 2px solid var(--gold);
+  max-width: 70ch;
+}
+
+.trapList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.trapList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.trapList li::before {
+  content: '·';
+  color: var(--gold);
+  position: absolute;
+  left: 0.25rem;
+  top: 0;
+  font-weight: 600;
+}
+
+.trapList li strong {
+  color: var(--ivory);
+}
+
+.trapNumberList {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0 0 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.trapNumberList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  padding-left: 0.5rem;
+}
+
+.trapNumberList li::marker {
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 0.85em;
+}
+
+.trapNumberList li strong {
+  color: var(--ivory);
+}
+
+/* 避坑要点(✅) */
+.trapTips {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.trapTips li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  padding-left: 1.75rem;
+  position: relative;
+}
+
+.trapTips li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.trapTips li strong {
+  color: var(--ivory);
+}
+
+/* ⚠️ inline 警示行 */
+.warnList {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.warnList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(0.9375rem, 1.1vw, 1rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  padding-left: 1.75rem;
+  position: relative;
+}
+
+.warnList li::before {
+  content: '⚠';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--gold);
+  font-size: 0.875rem;
+}
+
+.warnList li strong {
+  color: var(--ivory);
+}
+
+/* ❌ list (逃税错误等) */
+.crossList {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.crossList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  padding-left: 1.75rem;
+  position: relative;
+}
+
+.crossList li::before {
+  content: '✕';
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  color: rgba(212, 180, 131, 0.55);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.crossList li strong {
+  color: var(--ivory);
+}
+
+/* 嵌入式 callout(陷阱内部的"重要提醒""认知盲区"等) */
+.trapCallout {
+  background: rgba(212, 180, 131, 0.05);
+  border-left: 2px solid var(--gold);
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0;
+}
+
+.trapCallout p {
+  font-family: var(--serif-zh);
+  font-size: clamp(0.9375rem, 1.1vw, 1rem);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  margin: 0 0 0.625rem 0;
+}
+
+.trapCallout p:last-child {
+  margin-bottom: 0;
+}
+
+.trapCallout strong {
+  color: var(--ivory);
+}
+
+.calloutLabel {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  margin: 0 0 0.5rem 0;
+}
+
+/* ============================================================
+   5 步合规 Checklist Block
+   ============================================================ */
+.checklist {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: rgba(212, 180, 131, 0.025);
+  border-top: 1px solid rgba(212, 180, 131, 0.18);
+  border-bottom: 1px solid rgba(212, 180, 131, 0.18);
+}
+
+.checklistInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(4rem, 7vh, 6rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.checklistEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 1rem 0;
+}
+
+.checklistTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 3vw, 2.625rem);
+  line-height: 1.2;
+  color: var(--ivory);
+  margin: 0 0 2.5rem 0;
+}
+
+.checklistLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.25vw, 1.125rem);
+  line-height: 1.8;
+  color: var(--ivory-warm);
+  margin: 0 0 2.5rem 0;
+  max-width: 72ch;
+}
+
+.checklistGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.checklistStep {
+  padding: 1.5rem 0 0 0;
+  border-top: 1px solid rgba(212, 180, 131, 0.15);
+}
+
+.checklistStepIndex {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 0.5rem 0;
+}
+
+.checklistStepTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.7vw, 1.4375rem);
+  line-height: 1.3;
+  color: var(--ivory);
+  margin: 0 0 1rem 0;
+  font-weight: 500;
+}
+
+.checklistStepList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.checklistStepList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(0.9375rem, 1.1vw, 1rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.checklistStepList li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.checklistStepList li strong {
+  color: var(--ivory);
+}
+
+/* ============================================================
+   FAQ Block
+   ============================================================ */
+.faq {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-top: 1px solid rgba(212, 180, 131, 0.18);
+}
+
+.faqInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(4rem, 7vh, 6rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.faqEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 1rem 0;
+}
+
+.faqTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 3vw, 2.625rem);
+  line-height: 1.2;
+  color: var(--ivory);
+  margin: 0 0 2.5rem 0;
+}
+
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
+
+.faqItem {
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(212, 180, 131, 0.12);
+}
+
+.faqQuestion {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.45vw, 1.25rem);
+  line-height: 1.45;
+  color: var(--ivory);
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+}
+
+.faqAnswer {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.85;
+  color: var(--ivory-warm);
+  margin: 0 0 0.75rem 0;
+  max-width: 72ch;
+}
+
+.faqAnswer:last-child {
+  margin-bottom: 0;
+}
+
+.faqAnswer strong {
+  color: var(--ivory);
+}
+
+.faqAnswerList {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.faqAnswerList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  padding-left: 0.5rem;
+}
+
+.faqAnswerList li::marker {
+  color: var(--gold);
+  font-family: var(--mono);
+}
+
+.faqBulletList {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.faqBulletList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.75;
+  color: var(--ivory-warm);
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.faqBulletList li::before {
+  content: '·';
+  position: absolute;
+  left: 0.25rem;
+  top: 0;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* ============================================================
+   finalCopyBlock — 免责声明 / 公开资料来源 / 作者署名
+   ============================================================ */
+.finalCopyBlock {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border-top: 1px solid rgba(212, 180, 131, 0.18);
+  background: var(--ink-deepest);
+}
+
+.finalCopyInner {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: clamp(3.5rem, 6vh, 5rem) clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.finalCopyEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 1rem 0;
+}
+
+.finalCopyInner h2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.875rem, 2.6vw, 2.25rem);
+  line-height: 1.2;
+  color: var(--ivory);
+  margin: 0 0 1.5rem 0;
+  max-width: 100%;
+}
+
+.finalCopyInner p {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.0625rem);
+  line-height: 1.8;
+  color: var(--ivory-warm);
+  max-width: 72ch;
+  margin: 0 0 1rem 0;
+  text-align: left;
+}
+
+.finalCopyInner p:last-child {
+  margin-bottom: 0;
+}
+
+.finalCopyInner p strong {
+  color: var(--ivory);
+}
+
+.sourceList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.sourceList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(0.9375rem, 1.1vw, 1rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  padding-left: 1.25rem;
+  position: relative;
+}
+
+.sourceList li::before {
+  content: '·';
+  position: absolute;
+  left: 0.25rem;
+  top: 0;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.sourceList li strong {
+  color: var(--ivory);
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+@media (max-width: 768px) {
+  .trapTitle,
+  .checklistTitle,
+  .faqTitle,
+  .timelineTitle {
+    font-size: clamp(1.625rem, 5.5vw, 2.125rem);
+  }
+
+  .trapBody,
+  .trapList li,
+  .trapTips li,
+  .trapNumberList li,
+  .crossList li,
+  .warnList li,
+  .checklistStepList li,
+  .faqAnswer,
+  .faqAnswerList li,
+  .faqBulletList li {
+    font-size: 1rem;
+  }
+
+  .dataTable {
+    font-size: 0.875rem;
+  }
+
+  .dataTable thead th,
+  .dataTable tbody td {
+    padding: 0.625rem 0.75rem;
+  }
+
+  .noticeInner {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
