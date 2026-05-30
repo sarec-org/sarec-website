@@ -33,6 +33,8 @@ export type ArticleHeroProps = {
   anchors?: Array<{ keyword: string; anchor: string; fullTitle?: string }>;
   mediaCaption?: string;
   variant?: 'default' | 'compactWide';
+  author?: { name: string; title?: string };
+  dates?: { published: string; modified?: string };
 };
 
 export function ArticleHero({
@@ -46,7 +48,9 @@ export function ArticleHero({
   secondaryCta,
   anchors,
   mediaCaption = 'EVIDENCE / LOS ANGELES / DEVELOPMENT CONTEXT',
-  variant = 'default'
+  variant = 'default',
+  author,
+  dates
 }: ArticleHeroProps) {
   return (
     <section className={`${styles.hero} ${variant === 'compactWide' ? styles.compactWide : ''}`}>
@@ -57,6 +61,30 @@ export function ArticleHero({
             <h1 className={styles.title}>{title}</h1>
             <p className={styles.summary}>{summary}</p>
           </RevealOnView>
+          {author || dates ? (
+            <div className={styles.byline}>
+              {author ? (
+                <p className={styles.bylineAuthor}>
+                  <span className={styles.bylineLabel}>作者</span>
+                  <span className={styles.bylineName}>{author.name}</span>
+                  {author.title ? (
+                    <span className={styles.bylineTitle}>{author.title}</span>
+                  ) : null}
+                </p>
+              ) : null}
+              {dates ? (
+                <p className={styles.bylineDates}>
+                  <time dateTime={dates.published}>发布 {dates.published}</time>
+                  {dates.modified ? (
+                    <>
+                      <span className={styles.bylineDot} aria-hidden="true">·</span>
+                      <time dateTime={dates.modified}>更新 {dates.modified}</time>
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {tags && tags.length > 0 ? (
             <ul className={styles.tags}>
               {tags.map((t) => (

@@ -72,6 +72,66 @@
   text-align: left;
 }
 
+/* ===== Byline:作者署名 + 发布/更新日期 ===== */
+.byline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 0 1.75rem 0;
+  padding: 0.875rem 0 0;
+  border-top: 1px solid rgba(212, 180, 131, 0.18);
+}
+
+.bylineAuthor {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 0.75rem;
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ivory);
+}
+
+.bylineLabel {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.bylineName {
+  font-weight: 600;
+  color: var(--ivory);
+}
+
+.bylineTitle {
+  color: var(--ivory-warm);
+  opacity: 0.85;
+  font-size: 0.875rem;
+}
+
+.bylineDates {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  color: var(--ivory-warm);
+  opacity: 0.75;
+  text-transform: uppercase;
+}
+
+.bylineDot {
+  color: var(--gold);
+  opacity: 0.5;
+}
+
 .tags {
   list-style: none;
   margin: 0 0 2.5rem 0;
