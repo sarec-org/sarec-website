@@ -34,6 +34,9 @@ sarec-website.zip
 /public/videos/
 /public/downloads/
 
+# Internal prompt drafts — keep on backup branch only, do not commit to main
+_handoff_to_claude/4c-2-V2*.md
+
 # IDE
 .vscode/
 .idea/
