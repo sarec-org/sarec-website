@@ -62,6 +62,16 @@
   display: block;
 }
 
+/* Hero 视频窄屏:降高一档 + object-position 带回主体(电脑端不变) */
+@media (max-width: 768px) {
+  .heroSection {
+    min-height: 62vh;
+  }
+  .heroVideo {
+    object-position: center 45%;
+  }
+}
+
 .heroVignette {
   position: absolute;
   inset: 0;

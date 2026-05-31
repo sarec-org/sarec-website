@@ -93,6 +93,16 @@
   }
 }
 
+/* Hero 窄屏:降高一档 + object-position 带回主体(电脑端不变) */
+@media (max-width: 768px) {
+  .heroSection {
+    min-height: 62vh;
+  }
+  .heroImage {
+    object-position: center 45%;
+  }
+}
+
 .heroOverlay {
   position: absolute;
   inset: 0;
@@ -132,6 +142,8 @@
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: normal;
   color: var(--ivory);
   margin: 0 0 clamp(28px, 3.5vh, 40px) 0;
   display: block;
@@ -711,6 +723,8 @@
   line-height: 1.1;
   color: var(--ivory);
   margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .ctaSubtitle {

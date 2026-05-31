@@ -93,6 +93,16 @@
   }
 }
 
+/* Hero 窄屏:降高一档 + object-position 带回主体(电脑端不变) */
+@media (max-width: 768px) {
+  .heroSection {
+    min-height: 62vh;
+  }
+  .heroImage {
+    object-position: center 45%;
+  }
+}
+
 /* 左下径向 vignette:只压暗文字所在区(25% / 80% 位置),天空 + 右侧建筑保留原色 */
 .heroOverlay {
   position: absolute;
@@ -133,6 +143,8 @@
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: normal;
   color: var(--ivory);
   margin: 0 0 clamp(28px, 3.5vh, 40px) 0;
   display: block;

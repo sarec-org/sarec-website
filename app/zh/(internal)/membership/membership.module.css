@@ -197,6 +197,12 @@
   .maskedMarqueeText {
     font-size: clamp(3rem, 10vw, 6rem);
   }
+  /* M01 H1 窄屏:降字号下限,放得下、不触顶/不被 overflow:hidden 裁(电脑端不变) */
+  .heroH1 {
+    font-size: clamp(2.4rem, 11vw, 3.6rem);
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
 }
 
 /* prefers-reduced-motion 兜底:停 marquee,字静态居中显示一份 */

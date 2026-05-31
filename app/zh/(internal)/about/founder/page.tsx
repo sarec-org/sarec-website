@@ -84,8 +84,8 @@ export default function FounderPage() {
         </div>
       </section>
 
-      {/* F04 — 4 个方法论(Proof Grid 2x2) */}
-      <section className={styles.methodSection}>
+      {/* F04 — 4 个方法论(Proof Grid 2x2);#methodology 锚点供案例页"查看判断方法论"CTA 跳转(deck 锁定路由) */}
+      <section id="methodology" className={styles.methodSection}>
         <div className={styles.methodInner}>
           <span className={styles.eyebrow}>METHODOLOGY · 方法论</span>
           <RevealOnView as="h2" className={styles.sectionH2}>

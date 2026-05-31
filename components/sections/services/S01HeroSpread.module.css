@@ -138,6 +138,13 @@
     padding: clamp(80px, 14vh, 120px) 0 clamp(60px, 10vh, 80px);
   }
 
+  /* "美国地产语境" 标签窄屏:缩字距 + 允许换行,避免方括号/中英混排折断错位 */
+  .imageCaption {
+    letter-spacing: 0.12em;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
   .grid {
     grid-template-columns: 1fr;
     gap: 32px;

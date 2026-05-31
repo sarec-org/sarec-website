@@ -737,14 +737,26 @@
    Mobile responsive(<= 768px)
    ============================================================ */
 @media (max-width: 768px) {
-  /* A01 Cinematic Hero — mobile 字号自然缩到 clamp 下限 4rem */
+  /* A01 Cinematic Hero — 窄屏降高 + 图带回主体 */
   .heroSection {
     height: auto;
-    min-height: 100vh;
+    min-height: 72vh;
+  }
+  .heroImageMotion img {
+    object-position: center 38%;
   }
 
   .heroContent {
     padding: clamp(80px, 14vh, 120px) clamp(24px, 5vw, 40px);
+  }
+
+  /* A01 H1 窄屏:解除 nowrap、降字号到放得下、keep-all 防孤字(电脑端不变) */
+  .heroH1 {
+    white-space: normal;
+    font-size: clamp(2.4rem, 9vw, 3.4rem);
+    word-break: keep-all;
+    overflow-wrap: normal;
+    margin-bottom: 28px;
   }
 
   /* A02 / A04 / Editorial Split — 单列堆叠 */
