@@ -1,0 +1,57 @@
+/* ============================================================
+   Hero 蓝色 A/B/C/D 对比预览 — /zh/design-preview/hero-blue-test
+   仅对比 Hero 背景蓝 / overlay(scrim);视频/poster/文案/CTA/字体/布局全一致。
+   noindex,不进 sitemap,不改正式 Hero。
+   ============================================================ */
+
+.harness { background:#E4E3DF; min-height:100vh; padding:28px 16px 80px; font-family:var(--sans); }
+.head { max-width:1200px; margin:0 auto 8px; }
+.title { font-family:'Noto Serif SC',serif; font-weight:600; font-size:22px; color:#1B2A33; }
+.sub { font-size:13px; color:#5A6670; margin-top:4px; }
+.banner { max-width:1200px; margin:14px auto 26px; padding:11px 16px; background:#17242C; color:#F4F3EE; border-left:3px solid #DBBA7C; border-radius:4px; font-size:12.5px; line-height:1.6; }
+.banner strong { color:#DBBA7C; }
+
+.grid { max-width:1200px; margin:0 auto; display:flex; flex-wrap:wrap; gap:28px; justify-content:center; }
+.cardWrap { width:360px; max-width:100%; }
+.tag { font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#1B2A33; margin-bottom:8px; font-weight:600; }
+.spec { font-family:var(--mono); font-size:11px; line-height:1.7; color:#5A6670; margin-top:10px; }
+.spec b { color:#1B2A33; }
+.chip { display:inline-block; width:14px; height:14px; border-radius:3px; vertical-align:middle; margin-right:6px; border:1px solid rgba(0,0,0,.15); }
+
+/* ---- 手机 Hero 卡(尺寸一致)---- */
+.phone { border:9px solid #2A2A2A; border-radius:34px; overflow:hidden; box-shadow:0 22px 54px rgba(0,0,0,.26); height:640px; }
+.hero { position:relative; width:100%; height:100%; display:flex; flex-direction:column; overflow:hidden; isolation:isolate; }
+.media { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; filter:saturate(0.92) contrast(1.04); }
+.scrim { position:absolute; inset:0; z-index:1; pointer-events:none; }
+.glow { position:absolute; inset:0; z-index:0; pointer-events:none; } /* 变体辉光层 */
+
+.eyebrow { position:relative; z-index:3; display:inline-flex; align-items:center; gap:12px; font-family:var(--mono); font-size:.625rem; letter-spacing:.22em; text-transform:uppercase; color:#DBBA7C; padding:0 22px; margin-top:auto; }
+.eyebrow::before { content:''; width:32px; height:1px; background:#DBBA7C; opacity:.85; }
+.h1 { position:relative; z-index:3; font-family:var(--serif-zh),serif; font-weight:500; font-size:2.1rem; line-height:1.2; letter-spacing:.02em; color:#F4F3EE; margin:14px 0 12px; padding:0 22px; text-shadow:0 2px 24px rgba(0,0,0,.4); word-break:keep-all; }
+.h1 .accent { color:#DBBA7C; }
+.subline { position:relative; z-index:3; font-family:var(--sans); font-size:.8125rem; line-height:1.7; color:rgba(244,243,238,.78); padding:0 22px; margin:0 0 16px; }
+.ctaRow { position:relative; z-index:3; display:flex; gap:10px; padding:0 22px 26px; }
+.ctaPrimary { font-family:var(--sans); font-size:.8125rem; font-weight:500; padding:11px 18px; border-radius:2px; background:#DBBA7C; color:#1B130A; border:1px solid #DBBA7C; }
+.ctaGhost { font-family:var(--sans); font-size:.8125rem; font-weight:500; padding:11px 18px; border-radius:2px; background:transparent; color:#F4F3EE; border:1px solid rgba(244,243,238,.4); }
+
+/* ============================================================
+   变体:仅 hero 背景 + glow + scrim 不同
+   ============================================================ */
+
+/* A — Current Hero(HeroV5 现状) */
+.varA { background: linear-gradient(180deg, #0A1730 0%, #050C18 100%); }
+.varA .glow { background: radial-gradient(ellipse 110% 72% at 50% 4%, rgba(28,52,102,.42) 0%, rgba(10,23,48,0) 56%); }
+.varA .scrim { background: linear-gradient(180deg, rgba(8,20,46,.42) 0%, rgba(8,18,38,.26) 36%, rgba(3,9,20,.74) 100%); }
+
+/* B — V5 Baseline #17242C / #20313A */
+.varB { background: linear-gradient(180deg, #20313A 0%, #17242C 100%); }
+.varB .scrim { background: linear-gradient(180deg, rgba(23,36,44,.46) 0%, rgba(23,36,44,.26) 36%, rgba(15,24,30,.74) 100%); }
+
+/* C — Consulting Page Blue #040B16(--ink-deep,咨询撮合 S04) */
+.varC { background: #040B16; }
+.varC .scrim { background: linear-gradient(180deg, rgba(4,11,22,.46) 0%, rgba(4,11,22,.26) 36%, rgba(4,11,22,.74) 100%); }
+
+/* D — Project Page Blue #020610(--ink-deepest,4136 Rosewood)+ 原页 vignette */
+.varD { background: #020610; }
+.varD .glow { background: radial-gradient(ellipse 60% 70% at 25% 80%, rgba(2,7,14,.72) 0%, rgba(2,7,14,.4) 35%, rgba(2,7,14,0) 70%); }
+.varD .scrim { background: linear-gradient(180deg, rgba(2,6,16,.46) 0%, rgba(2,6,16,.26) 36%, rgba(2,6,16,.74) 100%); }
