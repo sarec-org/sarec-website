@@ -43,6 +43,7 @@
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   min-height: clamp(85vh, 92vh, 100vh);
+  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏伸缩不重算高度→不抖;desktop 等同 vh */
   background: var(--ink-deepest);
   overflow: hidden;
 }
@@ -278,11 +279,11 @@
 @media (max-width: 768px) {
   .kpiNum {
     font-size: clamp(1.625rem, 8vw, 2.5rem);
-    overflow-wrap: break-word;
+    overflow-wrap: normal;
   }
   .kpiLabel {
     letter-spacing: 0.12em;
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
 }
 

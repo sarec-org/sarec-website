@@ -239,6 +239,7 @@
   margin: 0;
   padding: 0;
   min-height: clamp(80vh, 88vh, 92vh);
+  min-height: clamp(80svh, 88svh, 92svh); /* iOS 地址栏不抖;desktop 等同 vh */
 }
 
 @media (max-width: 1024px) {
@@ -559,6 +560,7 @@
   margin: 0;
   padding: 0;
   min-height: clamp(80vh, 88vh, 92vh);
+  min-height: clamp(80svh, 88svh, 92svh); /* iOS 地址栏不抖;desktop 等同 vh */
 }
 
 @media (max-width: 1024px) {

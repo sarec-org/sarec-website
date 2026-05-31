@@ -26,6 +26,15 @@
   overflow-wrap: break-word;
 }
 
+/* 手机端:降字号 + 中文可换行 + 英文短词(SAREC/EB-5)整词不断字母级拆行;仅 @media,文案不动 */
+@media (max-width: 768px) {
+  .question {
+    font-size: clamp(1.375rem, 5.5vw, 1.875rem);
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
 .grid {
   list-style: none;
   margin: 0 0 clamp(3rem, 5vh, 4rem) 0;

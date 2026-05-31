@@ -115,6 +115,7 @@
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100svh; /* iOS 地址栏伸缩不重算高度→滚动不抖;desktop 等同 vh */
   min-height: 720px;
   overflow: hidden;
   background: var(--ink-deepest);

@@ -168,9 +168,25 @@ const run = async () => {
 
   for (const { w, label } of WIDTHS) {
     const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148' });
+    // 每次导航前注入 layout-shift 观察器,累计 CLS(布局抖动)
+    await ctx.addInitScript(() => {
+      window.__cls = 0; window.__clsSrc = [];
+      try {
+        new PerformanceObserver((list) => {
+          for (const e of list.getEntries()) {
+            if (e.hadRecentInput) continue;
+            window.__cls += e.value;
+            for (const s of (e.sources || [])) {
+              const n = s.node;
+              if (n && n.nodeType === 1) window.__clsSrc.push((n.tagName || '').toLowerCase() + '.' + ((n.className || '').toString().trim().split(' ')[0] || '').slice(0, 26));
+            }
+          }
+        }).observe({ type: 'layout-shift', buffered: true });
+      } catch (err) {}
+    });
     const page = await ctx.newPage();
     for (const p of PAGES) {
-      const rec = { page: p.slug, url: p.url, width: w, label, ok: true, http: null, issues: [], data: null, shot: null };
+      const rec = { page: p.slug, url: p.url, width: w, label, ok: true, http: null, issues: [], data: null, shot: null, cls: null };
       try {
         const resp = await page.goto(BASE + p.url, { waitUntil: 'networkidle', timeout: 45000 });
         rec.http = resp ? resp.status() : null;
@@ -192,6 +208,19 @@ const run = async () => {
         const badV = d.videos.filter((v) => v.videoW === 0 && !v.poster);
         if (badV.length) rec.issues.push(`视频可能黑(无 poster 兜底): ${badV.map((v) => `${v.src} rs=${v.readyState}`).join('; ')}`);
         if (d.missingContent.length) rec.issues.push(`关键内容缺失: ${d.missingContent.join(', ')}`);
+
+        // CLS 布局抖动:逐步滚动(触发懒加载/字体/reveal)+ 模拟 iOS 地址栏高度变化(触发 vh 重算)
+        await page.evaluate(async () => {
+          const h = document.body.scrollHeight;
+          for (let y = 0; y < h; y += 500) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 45)); }
+          window.scrollTo(0, Math.round(h / 2));
+        });
+        await page.setViewportSize({ width: w, height: 720 }); await page.waitForTimeout(180);
+        await page.setViewportSize({ width: w, height: 900 }); await page.waitForTimeout(180);
+        const cls = await page.evaluate(() => ({ v: +(window.__cls || 0).toFixed(3), src: [...new Set(window.__clsSrc || [])].slice(0, 8) }));
+        rec.cls = cls.v;
+        if (cls.v > 0.1) rec.issues.push(`⚠CLS布局抖动 ${cls.v} 源:${cls.src.join(', ')}`);
+        else if (cls.v > 0.03) rec.issues.push(`CLS轻微 ${cls.v} 源:${cls.src.slice(0, 4).join(', ')}`);
       } catch (e) {
         rec.ok = false; rec.issues.push('异常: ' + (e.message || e).slice(0, 80));
       }
@@ -206,6 +235,11 @@ const run = async () => {
   const withIssues = findings.filter((f) => f.issues.length);
   let md = `# SAREC 手机端自动审查报告\n\nBASE=${BASE} · 尺寸 ${WIDTHS.map((x) => x.w).join('/')} · 页面 ${PAGES.length} · 截图 ${shots} 张(${OUT})\n\n`;
   md += `## 有问题的 页×尺寸:${withIssues.length} / ${findings.length}\n\n`;
+  const highCls = findings.filter((f) => f.cls > 0.1).sort((a, b) => b.cls - a.cls);
+  const maxCls = findings.reduce((m, f) => Math.max(m, f.cls || 0), 0);
+  md += `## CLS 布局抖动(>0.1 报警):${highCls.length} 页×尺寸 · 全站最大 CLS=${maxCls.toFixed(3)}\n`;
+  for (const f of highCls) md += `- ⚠ ${f.page} ${f.width}px: CLS=${f.cls}\n`;
+  md += `\n`;
   // 按页聚合
   for (const p of PAGES) {
     const rows = findings.filter((f) => f.page === p.slug);

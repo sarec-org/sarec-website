@@ -8,6 +8,7 @@
   align-items: center;
   justify-content: center;
   min-height: clamp(35vh, 40vh, 45vh);
+  min-height: clamp(35svh, 40svh, 45svh); /* iOS 地址栏不抖;desktop 等同 vh */
 }
 
 .inner {
@@ -96,7 +97,7 @@
   .judgment {
     font-size: clamp(1.5rem, 6.5vw, 2.25rem);
     word-break: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: normal;
     max-width: 100%;
   }
   .compact .judgment {

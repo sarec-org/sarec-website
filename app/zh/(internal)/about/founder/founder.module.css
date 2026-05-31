@@ -32,6 +32,7 @@
   margin-right: calc(50% - 50vw);
   background: var(--ink-deepest);
   min-height: clamp(85vh, 92vh, 100vh);
+  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏不抖;desktop 等同 vh */
   padding-top: clamp(64px, 10vh, 120px);
   overflow: hidden;
 }

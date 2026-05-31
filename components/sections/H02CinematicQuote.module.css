@@ -1,6 +1,7 @@
 .section {
   position: relative;
   min-height: 100vh;
+  min-height: 100svh; /* iOS 地址栏伸缩不重算高度→滚动不抖;desktop 等同 vh */
   display: flex;
   align-items: center;
   justify-content: center;

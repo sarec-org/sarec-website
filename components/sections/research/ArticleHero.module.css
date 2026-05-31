@@ -12,6 +12,7 @@
   display: grid;
   grid-template-columns: 30fr 70fr;
   grid-template-rows: minmax(560px, min(72vh, 720px)) auto;
+  grid-template-rows: minmax(560px, min(72svh, 720px)) auto; /* iOS 地址栏不抖;desktop 等同 */
   align-items: stretch;
   position: relative;
   overflow: hidden;
@@ -291,6 +292,7 @@
     height: auto;
     grid-template-columns: 1fr;
     grid-template-rows: 50vh auto auto;
+    grid-template-rows: 50svh auto auto; /* iOS 地址栏不抖 */
   }
   .mediaSide {
     grid-column: 1;
@@ -318,10 +320,10 @@
   .title {
     font-size: clamp(1.875rem, 5.5vw, 2.5rem);
     word-break: normal; /* 允许中文换行,消除超宽 min-content 撑爆网格 */
-    overflow-wrap: break-word;
+    overflow-wrap: normal; /* 英文短词(SAREC/EB-5)不被字母级拆行 */
   }
   .eyebrow {
-    overflow-wrap: anywhere;
+    overflow-wrap: normal;
   }
   .summary {
     max-width: 100%;
