@@ -50,7 +50,7 @@ const LINK_WATCH = ['查看判断方法论', '活动与考察', '查看会员权
 
 const audit = ({ must: mustList, watch: watchList }) => {
   const W = window.innerWidth;
-  const out = { horizontalOverflow: false, scrollW: 0, innerW: W, offenders: [], clippedText: [], orphanHeadings: [], brokenImages: [], videos: [], missingContent: [], watchedLinks: [] };
+  const out = { horizontalOverflow: false, scrollW: 0, innerW: W, offenders: [], clippedText: [], clippedCards: [], orphanHeadings: [], brokenImages: [], videos: [], missingContent: [], watchedLinks: [] };
   out.scrollW = document.documentElement.scrollWidth;
   out.horizontalOverflow = out.scrollW > W + 1;
 
@@ -83,6 +83,20 @@ const audit = ({ must: mustList, watch: watchList }) => {
       const t = (el.textContent || '').trim().slice(0, 24);
       if (t) out.clippedText.push(`"${t}" (${el.scrollWidth}>${el.clientWidth})`);
       if (out.clippedText.length >= 8) break;
+    }
+  }
+
+  // 卡片标题竖向裁切(scrollHeight>clientHeight 且自身/祖先 overflow 隐藏,或 line-clamp)
+  for (const el of document.querySelectorAll('h2,h3,h4,[class*="Title"],[class*="title"]')) {
+    const cs = getComputedStyle(el);
+    const clamp = cs.webkitLineClamp && cs.webkitLineClamp !== 'none';
+    const selfClip = (cs.overflow === 'hidden' || cs.overflowY === 'hidden') && el.scrollHeight > el.clientHeight + 2;
+    let ancClip = false, pe = el.parentElement, hops = 0;
+    while (pe && hops < 4) { const p = getComputedStyle(pe); if ((p.overflowY === 'hidden' || p.overflow === 'hidden') && pe.scrollHeight > pe.clientHeight + 2 && el.getBoundingClientRect().bottom > pe.getBoundingClientRect().bottom + 1) { ancClip = true; break; } pe = pe.parentElement; hops++; }
+    if (clamp || selfClip || ancClip) {
+      const t = (el.textContent || '').trim().slice(0, 26);
+      if (t) out.clippedCards.push(`"${t}" ${clamp ? 'line-clamp' : selfClip ? 'self-hidden' : 'anc-hidden'} ${el.scrollHeight}>${el.clientHeight}`);
+      if (out.clippedCards.length >= 10) break;
     }
   }
 
@@ -150,6 +164,7 @@ const run = async () => {
         if (d.horizontalOverflow) rec.issues.push(`横向溢出 scrollW=${d.scrollW}>${d.innerW}`);
         if (d.offenders.length) rec.issues.push(`越界元素: ${d.offenders.slice(0, 4).join(' | ')}`);
         if (d.clippedText.length) rec.issues.push(`文字截断: ${d.clippedText.slice(0, 4).join(' | ')}`);
+        if (d.clippedCards.length) rec.issues.push(`卡片标题裁切: ${d.clippedCards.slice(0, 5).join(' | ')}`);
         if (d.orphanHeadings.length) rec.issues.push(`标题孤字: ${d.orphanHeadings.slice(0, 4).join(' | ')}`);
         if (d.brokenImages.length) rec.issues.push(`图片加载失败: ${d.brokenImages.join(', ')}`);
         // 仅当「视频未出画 且 无 poster 兜底」才算可能黑(有 poster 则有兜底图,不黑)
