@@ -1,7 +1,7 @@
 .section {
   position: relative;
-  background: var(--ink-deep);
-  padding: 160px 6vw;
+  background: var(--v5-base, #F7F6F2);
+  padding: clamp(96px, 12vw, 160px) 6vw;
   overflow: hidden;
 }
 
@@ -32,7 +32,7 @@
   font-size: var(--text-label);
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--v5-gold-line, #9C7A3C);
   margin-bottom: 24px;
 }
 
@@ -43,7 +43,7 @@
   left: 0;
   width: 48px;
   height: 1px;
-  background: var(--gold-dim);
+  background: var(--v5-gold-line, #9C7A3C);
 }
 
 .h2 {
@@ -52,8 +52,10 @@
   font-weight: 500;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: var(--ivory-warm);
+  color: var(--v5-ink, #1B2A33);
   margin: 0 0 32px 0;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .h2Line {
@@ -66,7 +68,7 @@
   font-size: var(--text-tagline);
   font-weight: 400;
   line-height: 1.6;
-  color: var(--ivory-dim);
+  color: var(--v5-ink-body, #3A4750);
   margin: 0;
 }
 
@@ -83,11 +85,11 @@
 }
 
 .card + .card {
-  border-top: 1px solid var(--line-3);
+  border-top: 1px solid var(--v5-line, rgba(27, 42, 51, 0.12));
 }
 
 .card:first-child {
-  border-top: 1px solid var(--gold-dim);
+  border-top: 1px solid var(--v5-gold-line, #9C7A3C);
 }
 
 .cardNumber {
@@ -100,7 +102,7 @@
   font-size: clamp(7rem, 11vw, 12rem);
   font-weight: 400;
   line-height: 1;
-  color: var(--gold-faint);
+  color: rgba(156, 122, 60, 0.12);
   pointer-events: none;
   user-select: none;
 }
@@ -112,8 +114,10 @@
   font-size: var(--text-subhead);
   font-weight: 500;
   line-height: 1.35;
-  color: var(--ivory-warm);
+  color: var(--v5-ink, #1B2A33);
   margin: 0 0 16px 0;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .cardBody {
@@ -122,9 +126,26 @@
   font-family: var(--sans);
   font-size: var(--text-body);
   line-height: 1.85;
-  color: var(--ivory-dim);
+  color: var(--v5-ink-body, #3A4750);
   margin: 0;
   max-width: 540px;
+}
+
+/* ===== V5 资产大图(克制留白,全宽出血) ===== */
+.figure {
+  position: relative;
+  max-width: 1440px;
+  margin: clamp(64px, 9vw, 112px) auto 0;
+  overflow: hidden;
+  border-radius: 4px;
+}
+.figureImg {
+  display: block;
+  width: 100%;
+  height: clamp(280px, 42vw, 460px);
+  object-fit: cover;
+  filter: saturate(0.92) contrast(1.04);
+  will-change: transform;
 }
 
 /* ===== Tablet ===== */

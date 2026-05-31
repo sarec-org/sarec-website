@@ -1,0 +1,280 @@
+/* ============================================================
+   HeroV5 — 正式首页视频 Hero(移植自 design-preview/sarec-v5)
+   feature/v5-apply · 视频 + poster 兜底 + 单层 scrim + 文案逐字沿用 HeroV3B
+   作用域:在 <main.v5root> 内,继承 --v5-* token(带兜底)
+   ⚠ HeroV3B 原文件保留不删,改回 import 即可回滚
+   ============================================================ */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  min-height: 100vh; /* 老浏览器兜底 */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  isolation: isolate;
+  /* Hero 专用「深藏蓝」:真 navy(--navy-deep #0A1730)→ 近黑渐变 + 顶部藏蓝辉光;仅 Hero,不污染全局 token */
+  background:
+    radial-gradient(ellipse 110% 72% at 50% 4%, rgba(28, 52, 102, 0.42) 0%, rgba(10, 23, 48, 0) 56%),
+    linear-gradient(180deg, var(--navy-deep, #0A1730) 0%, #050C18 100%);
+}
+
+/* ---- 媒体层:video + poster 兜底 ---- */
+.media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: saturate(0.92) contrast(1.04);
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* scrim 带藏蓝调(rgb 8,20,46 偏 navy → 底部压深),让视频读出"深藏蓝"而非死黑 */
+  background: linear-gradient(
+    180deg,
+    rgba(8, 20, 46, 0.42) 0%,
+    rgba(8, 18, 38, 0.26) 36%,
+    rgba(3, 9, 20, 0.74) 100%
+  );
+}
+
+/* ---- util bar ---- */
+.utilBar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px clamp(20px, 5vw, 56px) 0;
+  font-family: var(--mono, monospace);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--v5-on-dark-mute, #A7B0B5);
+}
+.utilLeft { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
+.liveDot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold-warm, #DBBA7C);
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* ---- nav(站点导航,文案逐字沿用) ---- */
+.nav {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 18px clamp(20px, 5vw, 56px);
+}
+.brand { display: flex; flex-direction: column; line-height: 1.1; }
+.mark {
+  font-family: var(--serif-en, Georgia, serif);
+  font-weight: 600;
+  font-size: 1.5rem;
+  letter-spacing: 0.18em;
+  color: var(--v5-on-dark, #F4F3EE);
+}
+.brandSub {
+  font-family: var(--serif-zh, serif);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--v5-on-dark-mute, #A7B0B5);
+  margin-top: 3px;
+}
+.navMenu {
+  display: flex;
+  gap: clamp(14px, 2.4vw, 30px);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.navMenu a {
+  font-family: var(--serif-zh, serif);
+  font-size: 0.95rem;
+  color: var(--v5-on-dark, #F4F3EE);
+  letter-spacing: 0.04em;
+  transition: color 0.25s var(--v5-ease, ease);
+}
+.navMenu a:hover { color: var(--gold-warm, #DBBA7C); }
+.navCta {
+  font-family: var(--sans, sans-serif);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 10px 20px;
+  border: 1px solid rgba(244, 243, 238, 0.4);
+  border-radius: 2px;
+  color: var(--v5-on-dark, #F4F3EE);
+  letter-spacing: 0.04em;
+  transition: border-color 0.25s var(--v5-ease, ease), color 0.25s var(--v5-ease, ease);
+}
+.navCta:hover { border-color: var(--gold-warm, #DBBA7C); color: var(--gold-warm, #DBBA7C); }
+
+/* ---- 主内容 ---- */
+.content {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(40px, 8vh, 96px) clamp(20px, 5vw, 56px);
+}
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--mono, monospace);
+  font-size: 0.6875rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold-warm, #DBBA7C);
+  margin-bottom: clamp(20px, 3vh, 32px);
+}
+/* 香槟金细线(克制点缀,呼应咨询撮合/共投的金 hairline) */
+.eyebrow::before {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--gold-warm, #DBBA7C);
+  opacity: 0.85;
+}
+.h1 {
+  font-family: var(--serif-zh, serif);
+  font-weight: 500;
+  font-size: clamp(2.5rem, 8vw, 4.25rem);
+  line-height: 1.18;
+  letter-spacing: 0.02em;
+  color: var(--v5-on-dark, #F4F3EE);
+  margin: 0 0 clamp(20px, 3vh, 32px);
+  text-shadow: 0 2px 28px rgba(0, 0, 0, 0.4);
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+.h1 .row { display: block; }
+.accent { color: var(--gold-warm, #DBBA7C); }
+.sub {
+  font-family: var(--sans, sans-serif);
+  font-size: clamp(1rem, 1.4vw, 1.1875rem);
+  line-height: 1.85;
+  color: var(--v5-on-dark-mute, #A7B0B5);
+  max-width: 40em;
+  margin: 0 0 clamp(28px, 4vh, 44px);
+}
+.sub strong { color: var(--v5-on-dark, #F4F3EE); font-weight: 600; }
+
+.ctaRow { display: flex; flex-wrap: wrap; gap: 14px; }
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--sans, sans-serif);
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 15px 28px;
+  border-radius: 2px;
+  background: var(--gold-warm, #DBBA7C);
+  color: #1B130A;
+  border: 1px solid var(--gold-warm, #DBBA7C);
+  letter-spacing: 0.02em;
+  transition: background 0.25s var(--v5-ease, ease), transform 0.25s var(--v5-ease, ease);
+}
+.ctaPrimary:hover { background: #C29A52; transform: translateY(-2px); }
+.ctaGhost {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--sans, sans-serif);
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 15px 28px;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--v5-on-dark, #F4F3EE);
+  border: 1px solid rgba(244, 243, 238, 0.4);
+  letter-spacing: 0.02em;
+  transition: border-color 0.25s var(--v5-ease, ease), color 0.25s var(--v5-ease, ease);
+}
+.ctaGhost:hover { border-color: var(--gold-warm, #DBBA7C); color: var(--gold-warm, #DBBA7C); }
+
+/* ---- 底部数据条(文案逐字沿用) ---- */
+.bottomStrip {
+  position: relative;
+  z-index: 3;
+  border-top: 1px solid rgba(219, 186, 124, 0.30); /* 香槟金细线 */
+  padding: 18px clamp(20px, 5vw, 56px) 22px;
+  display: flex;
+  gap: clamp(16px, 4vw, 56px);
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.tsCell { display: flex; flex-direction: column; }
+.tsNum {
+  font-family: var(--serif-en, Georgia, serif);
+  font-weight: 600;
+  font-size: 1.6rem;
+  color: var(--v5-on-dark, #F4F3EE);
+  line-height: 1;
+}
+.tsNum small {
+  font-family: var(--mono, monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: var(--gold-warm, #DBBA7C);
+  margin-left: 4px;
+}
+.tsLbl {
+  font-family: var(--mono, monospace);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--v5-on-dark-mute, #A7B0B5);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.scrollHint { margin-left: auto; align-items: center; gap: 8px; }
+.scrollHint span {
+  font-family: var(--mono, monospace);
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--v5-on-dark-mute, #A7B0B5);
+}
+.scrollLine {
+  width: 1px; height: 28px; margin-top: 8px;
+  background: var(--gold-warm, #DBBA7C);
+  opacity: 0.6;
+}
+
+/* 载入淡入(克制,支持 reduced-motion) */
+.fade { animation: heroFade 900ms var(--v5-ease, ease) both; }
+@keyframes heroFade { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+.media { animation: heroScale 1400ms var(--v5-ease, ease) both; }
+@keyframes heroScale { from { transform: scale(1.04); } to { transform: scale(1); } }
+
+@media (max-width: 768px) {
+  .h1 { font-size: clamp(2.25rem, 11vw, 3rem); }
+  .navMenu { gap: 12px 16px; }
+  .navMenu a { font-size: 0.9rem; }
+  .bottomStrip { gap: 16px 28px; }
+  .scrollHint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade, .media { animation: none; }
+}

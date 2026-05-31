@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Noto+Serif+SC:wght@400;500;600;700;900&display=swap');
+
+/* ============================================================
+   SAREC V4 设计预览 v2 — 大幅摄影 + 奢侈留白 + 超大衬线标题
+   方向:固定亮底主视觉 + 深色资产区块 + 克制暗金 · 参考 Hines / Tishman Speyer
+   作用域:token 锁在 .v4,不写 :root,不泄漏全站 · 仅预览,未应用正式页
+   ============================================================ */
+
+.v4 {
+  /* ---- 颜色 ---- */
+  --v4-base:#F7F6F2; --v4-surface:#FFFFFF; --v4-surface-2:#F0EFEB;
+  --v4-ink:#1B2A33; --v4-ink-body:#3A4750; --v4-ink-mute:#6B7780;
+  --v4-dark:#101820; --v4-dark-2:#15232B; --v4-on-dark:#F4F3EE; --v4-on-dark-mute:#A7B0B5;
+  --v4-gold-line:#9C7A3C; --v4-gold-solid:#B18A45;
+  --v4-line:rgba(27,42,51,.12); --v4-line-2:rgba(27,42,51,.20); --v4-line-dark:rgba(244,243,238,.16);
+
+  /* ---- 字体 ---- */
+  --v4-serif-zh:'Noto Serif SC','Songti SC',serif;
+  --v4-serif-en:'Cormorant Garamond',Georgia,'Times New Roman',serif;
+  --v4-sans:var(--sans,'Inter Tight',sans-serif);
+  --v4-mono:var(--mono,'JetBrains Mono',monospace);
+
+  /* ---- mobile typography(放大标题,clamp 上限提高) ---- */
+  --v4-fs-display: clamp(2.5rem, 8vw, 3.25rem);  /* 40→52px Hero 视觉主角(配 ≤6 字行,keep-all 不溢出) */
+  --v4-fs-display-en: clamp(1.75rem, 5.5vw, 2.5rem);
+  --v4-fs-h1: clamp(1.875rem, 6vw, 2.5rem);
+  --v4-fs-h2: clamp(1.4rem, 5vw, 1.75rem);
+  --v4-fs-h3: 1.1875rem;
+  --v4-fs-lead: 1.0625rem; --v4-fs-body: 1rem; --v4-fs-small: .875rem; --v4-fs-eyebrow: .6875rem;
+  --v4-lh-display: 1.18; --v4-lh-tight: 1.3; --v4-lh-body: 1.78; --v4-ls-eyebrow: .24em;
+
+  /* ---- spacing(奢侈留白) ---- */
+  --v4-s2:8px; --v4-s3:12px; --v4-s4:16px; --v4-s5:24px; --v4-s6:32px; --v4-s7:48px; --v4-s8:64px;
+  --v4-gutter: 24px;
+  --v4-section: clamp(88px, 14vw, 120px);   /* 区块上下奢侈留白 */
+}
+
+/* ============================================================ 预览外壳 ============================================================ */
+.harness { background:#E4E3DF; min-height:100vh; padding:32px 20px 80px; font-family:var(--sans); }
+.harnessHead { max-width:1180px; margin:0 auto 8px; }
+.harnessTitle { font-family:'Noto Serif SC',serif; font-weight:700; font-size:22px; color:#1B2A33; }
+.harnessSub { font-size:13px; color:#5A6670; margin-top:4px; }
+.banner { max-width:1180px; margin:14px auto 28px; padding:12px 18px; background:#15232B; color:#F4F3EE; border-left:3px solid #B18A45; border-radius:4px; font-size:13px; line-height:1.6; }
+.banner strong { color:#DBBA7C; }
+
+.frames { max-width:1180px; margin:0 auto; display:flex; flex-wrap:wrap; gap:30px; justify-content:center; }
+.frameWrap { width:390px; max-width:100%; }
+.frameLabel { font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#5A6670; margin-bottom:8px; text-align:center; }
+.phone { border:10px solid #2A2A2A; border-radius:38px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.28); height:760px; overflow-y:auto; background:var(--v4-base); }
+
+.ph { display:inline-block; font-family:var(--v4-mono); font-size:9px; letter-spacing:.08em; color:var(--v4-ink-mute); border:1px dashed var(--v4-line-2); border-radius:3px; padding:2px 6px; margin-top:var(--v4-s6); }
+
+/* ============================================================ V4 区块 ============================================================ */
+.screen { background:var(--v4-base); color:var(--v4-ink-body); }
+.section { padding:var(--v4-section) var(--v4-gutter); }
+.sectionDark { background:var(--v4-dark); color:var(--v4-on-dark); }
+.sectionTight { padding-top:var(--v4-s8); }
+
+.eyebrow { display:block; font-family:var(--v4-mono); font-size:var(--v4-fs-eyebrow); letter-spacing:var(--v4-ls-eyebrow); text-transform:uppercase; color:var(--v4-gold-line); margin-bottom:var(--v4-s5); }
+.sectionDark .eyebrow, .onPhoto .eyebrow { color:var(--v4-gold-solid); }
+
+/* 中文超大衬线标题:重字重 + 字距,不溢出/不孤字 */
+.display {
+  font-family:var(--v4-serif-zh); font-weight:700; font-size:var(--v4-fs-display);
+  line-height:var(--v4-lh-display); letter-spacing:.04em; color:var(--v4-ink);
+  margin:0 0 var(--v4-s5); word-break:keep-all; overflow-wrap:normal;
+}
+.sectionDark .display, .onPhoto .display { color:var(--v4-on-dark); }
+
+/* 英文衬线副标题:Cormorant Garamond */
+.displayEn {
+  font-family:var(--v4-serif-en); font-weight:600; font-style:italic;
+  font-size:var(--v4-fs-display-en); line-height:1.15; letter-spacing:.005em;
+  color:var(--v4-ink); margin:0 0 var(--v4-s5);
+}
+.sectionDark .displayEn, .onPhoto .displayEn { color:var(--v4-on-dark); }
+
+.h2 { font-family:var(--v4-serif-zh); font-weight:600; font-size:var(--v4-fs-h2); line-height:var(--v4-lh-tight); letter-spacing:.03em; color:var(--v4-ink); margin:0 0 var(--v4-s4); word-break:keep-all; overflow-wrap:normal; }
+.sectionDark .h2 { color:var(--v4-on-dark); }
+
+.lead { font-size:var(--v4-fs-lead); line-height:var(--v4-lh-body); color:var(--v4-ink-body); margin:0 0 var(--v4-s7); max-width:30em; }
+.sectionDark .lead, .onPhoto .lead { color:var(--v4-on-dark-mute); }
+.body { font-size:var(--v4-fs-body); line-height:var(--v4-lh-body); color:var(--v4-ink-body); }
+
+.goldRule { height:1px; width:64px; background:var(--v4-gold-line); margin:var(--v4-s6) 0 var(--v4-s7); }
+
+/* 按钮 */
+.ctaRow { display:flex; flex-direction:column; gap:var(--v4-s3); margin-top:var(--v4-s7); }
+/* 亮底主 CTA = 深青黑(非金);金按钮仅出现在深色区块 / 压图语境 */
+.btnPrimary { font-family:var(--v4-sans); font-size:var(--v4-fs-body); font-weight:500; padding:16px 26px; border-radius:2px; border:1px solid var(--v4-dark); background:var(--v4-dark); color:var(--v4-on-dark); text-align:center; cursor:pointer; letter-spacing:.02em; }
+.sectionDark .btnPrimary, .onPhoto .btnPrimary { background:var(--v4-gold-solid); border-color:var(--v4-gold-solid); color:#1B130A; }
+.btnGhost { font-family:var(--v4-sans); font-size:var(--v4-fs-body); font-weight:500; padding:16px 26px; border-radius:2px; cursor:pointer; text-align:center; background:transparent; color:var(--v4-ink); border:1px solid var(--v4-line-2); letter-spacing:.02em; }
+.sectionDark .btnGhost, .onPhoto .btnGhost { color:var(--v4-on-dark); border-color:var(--v4-line-dark); }
+
+/* ---- 大幅摄影(视觉主导) ---- */
+.heroFull { position:relative; width:100%; height:clamp(380px,62vw,460px); overflow:hidden; }
+.heroFull .img { width:100%; height:100%; object-fit:cover; filter:saturate(0.92) contrast(1.04); display:block; }
+.heroFull .scrim { position:absolute; inset:0; background:linear-gradient(180deg, rgba(16,24,32,.18) 0%, rgba(16,24,32,.10) 42%, rgba(16,24,32,.78) 100%); }
+.onPhoto { position:absolute; left:0; right:0; bottom:0; padding:var(--v4-s8) var(--v4-gutter) var(--v4-s7); }
+.onPhoto .display { text-shadow:0 2px 24px rgba(0,0,0,.35); }
+
+/* 内容图(块状大图,占视觉主导) */
+.figure { margin:var(--v4-s8) calc(var(--v4-gutter) * -1) 0; height:clamp(300px,52vw,380px); overflow:hidden; }
+.figure .img { width:100%; height:100%; object-fit:cover; filter:saturate(0.92) contrast(1.04); display:block; }
+.figCaption { font-family:var(--v4-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--v4-ink-mute); padding:var(--v4-s3) var(--v4-gutter) 0; }
+
+/* 文章元信息 */
+.articleMeta { display:flex; gap:var(--v4-s3); align-items:center; flex-wrap:wrap; font-family:var(--v4-mono); font-size:var(--v4-fs-small); color:var(--v4-ink-mute); margin:0 0 var(--v4-s6); }
+.metaDot { width:3px; height:3px; border-radius:50%; background:var(--v4-gold-line); }
+
+/* 30 秒摘要卡 */
+.tldr { margin-top:var(--v4-s8); background:var(--v4-surface); border:1px solid var(--v4-line); border-left:3px solid var(--v4-gold-solid); border-radius:6px; padding:var(--v4-s6); box-shadow:0 18px 44px rgba(27,42,51,.07); }
+.tldrLabel { font-family:var(--v4-mono); font-size:var(--v4-fs-eyebrow); letter-spacing:var(--v4-ls-eyebrow); text-transform:uppercase; color:var(--v4-gold-line); margin-bottom:var(--v4-s3); }
+.tldrTitle { font-family:var(--v4-serif-zh); font-weight:600; font-size:var(--v4-fs-h3); color:var(--v4-ink); margin-bottom:var(--v4-s5); letter-spacing:.02em; }
+.tldrList { list-style:none; margin:0; padding:0; }
+.tldrItem { position:relative; padding-left:var(--v4-s5); margin-bottom:var(--v4-s4); font-size:var(--v4-fs-small); line-height:1.65; color:var(--v4-ink-body); }
+.tldrItem::before { content:''; position:absolute; left:0; top:10px; width:12px; height:1px; background:var(--v4-gold-line); }
+
+/* 深块数据条(图+数据+CTA,杂志式横向切割,避免"黑底纯文字") */
+.stats { display:flex; gap:var(--v4-s6); flex-wrap:wrap; margin-top:var(--v4-s6); padding-top:var(--v4-s6); border-top:1px solid var(--v4-line-dark); }
+.stat { flex:1 1 30%; min-width:88px; }
+.statNum { font-family:var(--v4-serif-zh); font-weight:700; font-size:var(--v4-fs-h2); color:var(--v4-on-dark); line-height:1.1; }
+.statLabel { display:block; margin-top:var(--v4-s2); font-family:var(--v4-mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--v4-gold-solid); }
+
+/* 会员 tier 卡(深底) */
+.tierCard { margin-top:var(--v4-s7); padding:var(--v4-s6); border:1px solid var(--v4-line-dark); border-radius:6px; background:rgba(244,243,238,.03); }
+.priceGold { font-family:var(--v4-serif-zh); font-weight:700; font-size:var(--v4-fs-h1); color:var(--v4-gold-solid); margin:var(--v4-s3) 0; }
+
+/* ---- legend ---- */
+.legend { max-width:1180px; margin:40px auto 0; color:#1B2A33; }
+.legendH { font-family:'Noto Serif SC',serif; font-size:16px; margin:24px 0 10px; }
+.swatchRow { display:flex; flex-wrap:wrap; gap:10px; }
+.sw { display:flex; align-items:center; gap:8px; font-size:12px; font-family:var(--mono); color:#3A4750; }
+.swBox { width:28px; height:28px; border-radius:5px; border:1px solid rgba(0,0,0,.12); }
+.legendP { font-family:var(--mono); font-size:12px; color:#3A4750; line-height:1.9; }

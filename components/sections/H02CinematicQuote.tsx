@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, type Variants } from 'framer-motion';
+import { motion, MotionConfig, type Variants } from 'framer-motion';
 import styles from './H02CinematicQuote.module.css';
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE = [0.22, 0.61, 0.36, 1] as const;
 
 const quoteMarkVariants: Variants = {
   hidden: { opacity: 0 },
@@ -38,6 +38,7 @@ export function H02CinematicQuote() {
   const [underlineReady, setUnderlineReady] = useState(false);
 
   return (
+    <MotionConfig reducedMotion="user">
     <section id="h02-cinematic-quote" className={styles.section}>
       <div className={styles.grain} aria-hidden="true" />
 
@@ -87,5 +88,6 @@ export function H02CinematicQuote() {
         </motion.p>
       </motion.div>
     </section>
+    </MotionConfig>
   );
 }

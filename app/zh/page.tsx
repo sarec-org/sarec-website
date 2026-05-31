@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { HeroV3B } from '@/components/hero/HeroV3B';
+import { HeroV5 } from '@/components/hero/HeroV5';
 import { H02CinematicQuote } from '@/components/sections/H02CinematicQuote';
 import { H03WhySarec } from '@/components/sections/H03WhySarec';
 import { H04ThreeLayers } from '@/components/sections/H04ThreeLayers';
@@ -10,6 +10,7 @@ import { H08ResearchPreview } from '@/components/sections/H08ResearchPreview';
 import { H09FAQ } from '@/components/sections/H09FAQ';
 import { H10CTABanner } from '@/components/sections/H10CTABanner';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import homeV5 from './home-v5.module.css';
 
 export const metadata: Metadata = {
   title: 'SAREC · 中美房地产商会 — 跨境地产资本与项目协作平台',
@@ -22,9 +23,9 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <main>
-      {/* H01 — Hero v3-B Final (with embedded nav) */}
-      <HeroV3B />
+    <main className={homeV5.v5root}>
+      {/* H01 — V5 视频 Hero(替换 HeroV3B;HeroV3B 文件保留供回滚) */}
+      <HeroV5 />
 
       {/* H02–H10 — Placeholders for Phase 1 visual implementation.
           Each is a 100vh dark section with a section ID and copy stub.

@@ -1,17 +1,18 @@
 .section {
   position: relative;
-  min-height: 100vh;
+  /* V5:不再强制满屏(修复移动端大片空白),高而克制 */
+  min-height: clamp(560px, 86vh, 880px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 120px 6vw;
+  padding: clamp(96px, 14vh, 140px) 6vw;
   background:
     radial-gradient(
       ellipse 60% 40% at 50% 50%,
-      rgba(201, 165, 103, 0.08) 0%,
+      rgba(177, 138, 69, 0.10) 0%,
       transparent 70%
     ),
-    var(--ink-deepest);
+    var(--v5-dark, #17242C);
   overflow: hidden;
   isolation: isolate;
 }
@@ -27,8 +28,8 @@
   transform: translateX(-50%);
   width: 1px;
   height: 32px;
-  background: var(--gold-dim);
-  opacity: 0.6;
+  background: var(--v5-gold-line, #9C7A3C);
+  opacity: 0.5;
   z-index: 2;
   pointer-events: none;
 }
@@ -42,9 +43,9 @@
   font-family: var(--mono);
   font-size: var(--text-label);
   letter-spacing: 0.32em;
-  color: var(--ivory-mute);
+  color: var(--v5-on-dark-mute, #A7B0B5);
   text-transform: uppercase;
-  opacity: 0.6;
+  opacity: 0.7;
   z-index: 2;
   pointer-events: none;
 }
@@ -75,7 +76,7 @@
   font-style: italic;
   font-weight: 400;
   font-size: clamp(20rem, 28vw, 32rem);
-  color: var(--gold-faint);
+  color: rgba(156, 122, 60, 0.14);
   line-height: 0.8;
 }
 
@@ -96,8 +97,10 @@
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: -0.01em;
-  color: var(--ivory);
+  color: var(--v5-on-dark, #F4F3EE);
   text-shadow: 0 2px 18px rgba(4, 11, 22, 0.55);
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .accent {
@@ -106,7 +109,7 @@
   padding: 0 0.05em;
   font-family: var(--serif-en);
   font-style: italic;
-  color: var(--gold-warm);
+  color: var(--v5-gold-solid, #B18A45);
 }
 
 .accent::after {
@@ -119,8 +122,8 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--gold) 15%,
-    var(--gold) 85%,
+    var(--v5-gold-line, #9C7A3C) 15%,
+    var(--v5-gold-line, #9C7A3C) 85%,
     transparent 100%
   );
   transform: scaleX(0);
@@ -138,7 +141,7 @@
   font-size: var(--text-label);
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--ivory-mute);
+  color: var(--v5-on-dark-mute, #A7B0B5);
 }
 
 @media (max-width: 1279px) {

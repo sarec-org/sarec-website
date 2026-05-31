@@ -1,0 +1,33 @@
+/* ============================================================
+   首页 V5 作用域 token 层 — feature/v5-apply
+   作用域锁在 .v5root(挂在 app/zh/page.tsx 的 <main>),
+   变量沿 DOM 继承给各区块 module;不写 :root、不污染全局、不动 globals.css。
+   所有引用方一律带兜底值,wrapper 缺失也不致崩。
+   ============================================================ */
+.v5root {
+  --v5-base:#F7F6F2;        /* 主背景 · 冷石灰白 */
+  --v5-surface:#FFFFFF;     /* 卡片 · 白 */
+  --v5-surface-2:#F0EFEB;   /* 卡片 · 浅灰白 */
+
+  --v5-ink:#1B2A33;         /* 标题墨 */
+  --v5-ink-body:#3A4750;    /* 正文 */
+  --v5-ink-mute:#6B7780;    /* 次级 */
+
+  --v5-dark:#17242C;        /* 深色资产区块(更透气) */
+  --v5-dark-2:#20313A;      /* 深块替代 */
+  --v5-on-dark:#F4F3EE;     /* 深块文字 */
+  --v5-on-dark-mute:#A7B0B5;/* 深块次级 */
+
+  --v5-gold-line:#9C7A3C;   /* 暗金 · 线/字/编号 */
+  --v5-gold-solid:#B18A45;  /* 暗金 · 块面/深块按钮 */
+
+  --v5-line:rgba(27,42,51,.12);
+  --v5-line-2:rgba(27,42,51,.20);
+  --v5-line-dark:rgba(244,243,238,.16);
+
+  --v5-ease:cubic-bezier(.22,.61,.36,1);
+
+  /* 首页正式页主体改亮底(仅 .v5root 作用域,Hero 用自己的全局 token 不受影响) */
+  background: var(--v5-base);
+  color: var(--v5-ink-body);
+}

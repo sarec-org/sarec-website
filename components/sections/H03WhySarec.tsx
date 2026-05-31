@@ -1,9 +1,9 @@
 'use client';
 
-import { motion, type Variants } from 'framer-motion';
+import { motion, MotionConfig, type Variants } from 'framer-motion';
 import styles from './H03WhySarec.module.css';
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE = [0.22, 0.61, 0.36, 1] as const;
 
 const leftVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -63,6 +63,7 @@ const CARDS: Card[] = [
 
 export function H03WhySarec() {
   return (
+    <MotionConfig reducedMotion="user">
     <section id="h03-why-sarec" className={styles.section}>
       <div className={styles.container}>
         <motion.div
@@ -106,6 +107,26 @@ export function H03WhySarec() {
           ))}
         </motion.div>
       </div>
+
+      <motion.figure
+        className={styles.figure}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 1.0, ease: EASE }}
+      >
+        <motion.img
+          className={styles.figureImg}
+          src="/images/artgrid/services-hero-la-city.jpg"
+          alt="洛杉矶城市天际线（本地 Artgrid 素材）"
+          loading="lazy"
+          initial={{ scale: 1.04 }}
+          whileInView={{ scale: 1 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 1.4, ease: EASE }}
+        />
+      </motion.figure>
     </section>
+    </MotionConfig>
   );
 }
