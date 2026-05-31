@@ -302,6 +302,10 @@
     align-items: flex-start;
     text-align: left;
     padding: clamp(5vh, 7vh, 8vh) clamp(1.25rem, 5vw, 2rem) clamp(3vh, 5vh, 6vh);
+    min-width: 0; /* 让 1fr 轨道可缩回视口(否则标题 keep-all 的 min-content 撑爆列宽) */
+  }
+  .mediaSide {
+    min-width: 0;
   }
   .anchors {
     grid-column: 1;
@@ -313,12 +317,20 @@
   }
   .title {
     font-size: clamp(1.875rem, 5.5vw, 2.5rem);
+    word-break: normal; /* 允许中文换行,消除超宽 min-content 撑爆网格 */
+    overflow-wrap: break-word;
+  }
+  .eyebrow {
+    overflow-wrap: anywhere;
+  }
+  .summary {
+    max-width: 100%;
   }
 }
 
 @media (max-width: 640px) {
   .title {
-    font-size: clamp(2rem, 8vw, 2.75rem);
+    font-size: clamp(1.75rem, 7vw, 2.4rem);
   }
 }
 

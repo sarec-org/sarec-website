@@ -567,6 +567,15 @@
   overflow-wrap: normal;
 }
 
+/* 手机端:CTA 大标题降字号 + 允许中文换行(keep-all 在窄屏锁一行会出屏);仅 @media,文案不动 */
+@media (max-width: 768px) {
+  .ctaH2 {
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+}
+
 .ctaSubtitle {
   font-family: var(--serif-zh);
   font-size: clamp(1.0625rem, 1.3vw, 1.25rem);

@@ -274,6 +274,18 @@
   margin-top: 8px;
 }
 
+/* 手机端:KPI 数字 44px 在 2 列窄卡里出屏 → 降字号(置于基础规则之后,确保覆盖生效);仅 @media */
+@media (max-width: 768px) {
+  .kpiNum {
+    font-size: clamp(1.625rem, 8vw, 2.5rem);
+    overflow-wrap: break-word;
+  }
+  .kpiLabel {
+    letter-spacing: 0.12em;
+    overflow-wrap: anywhere;
+  }
+}
+
 /* ===== Dashboard 双栏 ===== */
 .dashboardGrid {
   display: grid;

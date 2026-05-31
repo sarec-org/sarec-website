@@ -50,7 +50,7 @@ const LINK_WATCH = ['查看判断方法论', '活动与考察', '查看会员权
 
 const audit = ({ must: mustList, watch: watchList }) => {
   const W = window.innerWidth;
-  const out = { horizontalOverflow: false, scrollW: 0, innerW: W, offenders: [], clippedText: [], clippedCards: [], orphanHeadings: [], brokenImages: [], videos: [], missingContent: [], watchedLinks: [] };
+  const out = { horizontalOverflow: false, scrollW: 0, innerW: W, offenders: [], offscreen: [], clippedText: [], clippedCards: [], orphanHeadings: [], brokenImages: [], videos: [], missingContent: [], watchedLinks: [] };
   out.scrollW = document.documentElement.scrollWidth;
   out.horizontalOverflow = out.scrollW > W + 1;
 
@@ -83,6 +83,26 @@ const audit = ({ must: mustList, watch: watchList }) => {
       const t = (el.textContent || '').trim().slice(0, 24);
       if (t) out.clippedText.push(`"${t}" (${el.scrollWidth}>${el.clientWidth})`);
       if (out.clippedText.length >= 8) break;
+    }
+  }
+
+  // 内容出屏(关键):rect.right > 视口宽,即便 overflow-x:hidden 裁掉了滚动条也算「文字被裁出屏」。
+  // 只看带自身文字的元素;排除 SVG / aria-hidden / off-canvas 菜单 / 隐藏 / 位移出屏。
+  const TXT = ['h1', 'h2', 'h3', 'h4', 'p', 'blockquote', 'span', 'div', 'li', 'figcaption'];
+  const ownText = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim().length > 0);
+  for (const el of document.querySelectorAll(TXT.join(','))) {
+    if (el.closest('[aria-hidden="true"],[class*="mobilePanel"],[class*="mobileMenu"],[class*="drawer"],[class*="offcanvas"]')) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.display === 'none' || cs.position === 'fixed') continue;
+    const tr = cs.transform;
+    if (tr && tr !== 'none' && /,\s*-?\d{3,}(\.\d+)?,\s*-?\d+(\.\d+)?\)\s*$/.test(tr)) continue; // translate 出屏
+    if (!ownText(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0 && r.right > W + 2) {
+      const t = ([...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim() || el.textContent.trim()).slice(0, 24);
+      const cls = (el.className && el.className.toString) ? el.className.toString().trim().split(' ')[0].slice(0, 30) : '';
+      out.offscreen.push(`${el.tagName.toLowerCase()}.${cls} R${Math.round(r.right)}>${W} fs${cs.fontSize} "${t}"`);
+      if (out.offscreen.length >= 14) break;
     }
   }
 
@@ -163,6 +183,7 @@ const run = async () => {
         rec.data = d;
         if (d.horizontalOverflow) rec.issues.push(`横向溢出 scrollW=${d.scrollW}>${d.innerW}`);
         if (d.offenders.length) rec.issues.push(`越界元素: ${d.offenders.slice(0, 4).join(' | ')}`);
+        if (d.offscreen.length) rec.issues.push(`⭐内容出屏被裁: ${d.offscreen.slice(0, 6).join(' || ')}`);
         if (d.clippedText.length) rec.issues.push(`文字截断: ${d.clippedText.slice(0, 4).join(' | ')}`);
         if (d.clippedCards.length) rec.issues.push(`卡片标题裁切: ${d.clippedCards.slice(0, 5).join(' | ')}`);
         if (d.orphanHeadings.length) rec.issues.push(`标题孤字: ${d.orphanHeadings.slice(0, 4).join(' | ')}`);
