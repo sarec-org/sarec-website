@@ -6,6 +6,23 @@
    ============================================================ */
 
 .section {
+  /* V5 亮底重映射(作用域仅本段:ink→亮底, ivory→墨, gold→暗金, line→浅线) */
+  --ink-deepest: var(--v5-base, #F7F6F2);
+  --ink-deep: var(--v5-base, #F7F6F2);
+  --ink: var(--v5-base, #F7F6F2);
+  --ink-2: var(--v5-surface, #FFFFFF);
+  --navy-deep: var(--v5-base, #F7F6F2);
+  --ivory: var(--v5-ink, #1B2A33);
+  --ivory-warm: var(--v5-ink, #1B2A33);
+  --ivory-dim: var(--v5-ink-body, #3A4750);
+  --ivory-mute: var(--v5-ink-mute, #6B7780);
+  --gold: var(--v5-gold-line, #9C7A3C);
+  --gold-warm: var(--v5-gold-line, #9C7A3C);
+  --gold-dim: rgba(156, 122, 60, 0.30);
+  --gold-faint: rgba(156, 122, 60, 0.12);
+  --line-2: var(--v5-line, rgba(27, 42, 51, 0.12));
+  --line-3: var(--v5-line-2, rgba(27, 42, 51, 0.20));
+
   position: relative;
   padding-top: clamp(80px, 10vh, 140px);
   padding-bottom: clamp(80px, 10vh, 140px);

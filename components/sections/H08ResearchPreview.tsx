@@ -112,6 +112,25 @@ export function H08ResearchPreview() {
             </motion.article>
           ))}
         </motion.div>
+
+        <motion.figure
+          className={styles.figure}
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 1.0, ease: EASE }}
+        >
+          <motion.img
+            className={styles.figureImg}
+            src="/images/artgrid/la-city-02.jpg"
+            alt="洛杉矶城市（本地 Artgrid 素材）"
+            loading="lazy"
+            initial={{ scale: 1.04 }}
+            whileInView={{ scale: 1 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 1.4, ease: EASE }}
+          />
+        </motion.figure>
       </div>
     </section>
   );

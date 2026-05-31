@@ -10,6 +10,7 @@ import { H08ResearchPreview } from '@/components/sections/H08ResearchPreview';
 import { H09FAQ } from '@/components/sections/H09FAQ';
 import { H10CTABanner } from '@/components/sections/H10CTABanner';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { MotionReduced } from '@/components/sections/MotionReduced';
 import homeV5 from './home-v5.module.css';
 
 export const metadata: Metadata = {
@@ -27,26 +28,19 @@ export default function HomePage() {
       {/* H01 — V5 视频 Hero(替换 HeroV3B;HeroV3B 文件保留供回滚) */}
       <HeroV5 />
 
-      {/* H02–H10 — Placeholders for Phase 1 visual implementation.
-          Each is a 100vh dark section with a section ID and copy stub.
-          Will be replaced by full implementations in subsequent prompts. */}
-
-      <H02CinematicQuote />
-      <H03WhySarec />
-
-      <H04ThreeLayers />
-
-      <H05TrustAnchors />
-
-      <H06ProjectsFeatured />
-
-      <H07FounderIntro />
-
-      <H08ResearchPreview />
-
-      <H09FAQ />
-
-      <H10CTABanner />
+      {/* H02–H10 — V5 复刻(亮底 + 深色资产区块 + 克制暗金);
+          动效统一 prefers-reduced-motion 降级 */}
+      <MotionReduced>
+        <H02CinematicQuote />
+        <H03WhySarec />
+        <H04ThreeLayers />
+        <H05TrustAnchors />
+        <H06ProjectsFeatured />
+        <H07FounderIntro />
+        <H08ResearchPreview />
+        <H09FAQ />
+        <H10CTABanner />
+      </MotionReduced>
 
       <SiteFooter />
     </main>

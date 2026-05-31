@@ -31,3 +31,9 @@
   background: var(--v5-base);
   color: var(--v5-ink-body);
 }
+
+/* 全站首页标题硬化:中文不溢出、不孤字(作用域内所有 h1/h2/h3) */
+.v5root :is(h1, h2, h3) {
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
