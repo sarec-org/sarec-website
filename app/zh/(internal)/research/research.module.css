@@ -43,6 +43,7 @@
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   min-height: clamp(85vh, 92vh, 100vh);
+  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏伸缩不重算高度→不抖;desktop 等同 vh */
   background: var(--ink-deepest);
   overflow: hidden;
 }
@@ -60,6 +61,16 @@
   object-fit: cover;
   object-position: center center;
   display: block;
+}
+
+/* Hero 视频窄屏:降高一档 + object-position 带回主体(电脑端不变) */
+@media (max-width: 768px) {
+  .heroSection {
+    min-height: 62vh;
+  }
+  .heroVideo {
+    object-position: center 45%;
+  }
 }
 
 .heroVignette {
@@ -262,6 +273,18 @@
   color: var(--gold);
   text-transform: uppercase;
   margin-top: 8px;
+}
+
+/* 手机端:KPI 数字 44px 在 2 列窄卡里出屏 → 降字号(置于基础规则之后,确保覆盖生效);仅 @media */
+@media (max-width: 768px) {
+  .kpiNum {
+    font-size: clamp(1.625rem, 8vw, 2.5rem);
+    overflow-wrap: normal;
+  }
+  .kpiLabel {
+    letter-spacing: 0.12em;
+    overflow-wrap: normal;
+  }
 }
 
 /* ===== Dashboard 双栏 ===== */
@@ -672,6 +695,19 @@
   color: var(--ivory);
   margin: 0 0 clamp(16px, 2vh, 22px) 0;
   line-height: 1.3;
+}
+
+/* 研究卡片标题窄屏:字号偏大致换行不佳(末行剩 2 字),手机上调小、换行更干净、完整显示
+   (仅 @media,电脑端不变;不改任何文案) */
+@media (max-width: 768px) {
+  .publishedH3 {
+    font-size: clamp(1.1875rem, 5vw, 1.375rem);
+    line-height: 1.4;
+  }
+  .indexCardTitle {
+    font-size: clamp(1.0625rem, 4.4vw, 1.1875rem);
+    line-height: 1.45;
+  }
 }
 
 .publishedDesc {

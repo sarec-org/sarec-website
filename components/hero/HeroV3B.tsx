@@ -47,7 +47,14 @@ export function HeroV3B() {
     <section className={styles.hero}>
       {/* Layer 0: VIDEO */}
       <div className={styles['video-bg']}>
-        <video autoPlay muted loop playsInline preload="auto">
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="/images/home/los-angeles-hero.jpg"
+        >
           <source src={resolveMediaUrl('/videos/la-hero-main.mp4')} type="video/mp4" />
           Your browser does not support video.
         </video>

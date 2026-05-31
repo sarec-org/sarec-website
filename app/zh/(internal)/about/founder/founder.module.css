@@ -32,6 +32,7 @@
   margin-right: calc(50% - 50vw);
   background: var(--ink-deepest);
   min-height: clamp(85vh, 92vh, 100vh);
+  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏不抖;desktop 等同 vh */
   padding-top: clamp(64px, 10vh, 120px);
   overflow: hidden;
 }
@@ -327,6 +328,7 @@
   background: var(--ink-deepest);
   padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
   border-top: 1px solid var(--line-3);
+  scroll-margin-top: clamp(72px, 10vh, 110px); /* #methodology 锚点落位留白 */
 }
 
 .methodInner {
@@ -344,6 +346,19 @@
 @media (max-width: 768px) {
   .methodGrid {
     grid-template-columns: 1fr;
+  }
+  /* Hero 图窄屏带回人物主体(电脑端不变) */
+  .heroImage {
+    object-position: center 28%;
+  }
+  /* 标题 / 引用 / CTA 窄屏:防手动换行处孤字、长句不溢出 */
+  .heroTitle,
+  .heroTagline,
+  .quoteText,
+  .ctaH2,
+  .ctaSubtitle {
+    word-break: keep-all;
+    overflow-wrap: normal;
   }
 }
 

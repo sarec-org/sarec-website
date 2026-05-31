@@ -224,3 +224,14 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .reveal-line { animation: none !important; }
 }
+
+/* ============================================================
+   手机端标题防孤字(仅窄屏,不动电脑端、不改任何 token)
+   text-wrap: pretty 优化末行,消除中文标题第二行只剩 1 字的孤字。
+   单点覆盖全站所有 h1/h2/h3(含各页章节标题、研究文章 h2)。
+   ============================================================ */
+@media (max-width: 768px) {
+  h1, h2, h3 {
+    text-wrap: pretty;
+  }
+}

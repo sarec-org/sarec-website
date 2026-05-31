@@ -32,6 +32,15 @@
   overflow-wrap: break-word;
 }
 
+/* 手机端:降字号 + 中文可换行 + 英文短词不被字母级拆行;仅 @media,文案不动 */
+@media (max-width: 768px) {
+  .h2 {
+    font-size: clamp(1.5rem, 5.5vw, 2rem);
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
 .subtitle {
   font-family: var(--serif-zh);
   font-size: clamp(1rem, 1.25vw, 1.125rem);

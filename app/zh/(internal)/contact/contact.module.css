@@ -8,6 +8,7 @@
   background: var(--ink-deepest);
   color: var(--ivory);
   min-height: 100vh;
+  min-height: 100svh; /* iOS 地址栏不抖;desktop 等同 vh */
 }
 
 /* ===== Section base ===== */

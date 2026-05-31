@@ -54,6 +54,7 @@
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   min-height: clamp(85vh, 92vh, 100vh);
+  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏伸缩不重算高度→不抖;desktop 等同 vh */
   background: var(--ink-deepest);
   overflow: hidden;
 }
@@ -78,6 +79,16 @@
   }
   100% {
     transform: scale(1.06) translate(-1%, 1%);
+  }
+}
+
+/* Hero 窄屏:降高一档 + object-position 带回建筑主体(电脑端不变) */
+@media (max-width: 768px) {
+  .heroSection {
+    min-height: 60vh;
+  }
+  .heroImage {
+    object-position: center 40%;
   }
 }
 
@@ -120,6 +131,8 @@
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: normal;
   color: var(--ivory);
   margin: 0 0 clamp(28px, 3.5vh, 40px) 0;
   display: block;
@@ -551,6 +564,17 @@
   line-height: 1.1;
   color: var(--ivory);
   margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+/* 手机端:CTA 大标题降字号 + 允许中文换行(keep-all 在窄屏锁一行会出屏);仅 @media,文案不动 */
+@media (max-width: 768px) {
+  .ctaH2 {
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
+    word-break: normal;
+    overflow-wrap: normal;
+  }
 }
 
 .ctaSubtitle {

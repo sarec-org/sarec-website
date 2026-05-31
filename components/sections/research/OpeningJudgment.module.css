@@ -8,6 +8,7 @@
   align-items: center;
   justify-content: center;
   min-height: clamp(35vh, 40vh, 45vh);
+  min-height: clamp(35svh, 40svh, 45svh); /* iOS 地址栏不抖;desktop 等同 vh */
 }
 
 .inner {
@@ -87,5 +88,27 @@
   }
   .manualLine {
     white-space: normal;
+  }
+}
+
+/* 手机端:大字号判断句必须降字号 + 允许中文换行(keep-all 会锁成一行冲出视口)
+   仅 @media,电脑端不变,文案不动 */
+@media (max-width: 768px) {
+  .judgment {
+    font-size: clamp(1.5rem, 6.5vw, 2.25rem);
+    word-break: normal;
+    overflow-wrap: normal;
+    max-width: 100%;
+  }
+  .compact .judgment {
+    font-size: clamp(1.375rem, 6vw, 2rem);
+  }
+  .manualLine {
+    white-space: normal;
+    word-break: normal;
+  }
+  .hasManualBreak {
+    width: auto;
+    max-width: 100%;
   }
 }
