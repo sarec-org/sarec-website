@@ -1,0 +1,271 @@
+/* ============================================================
+   CtaBlock — 统一 CTA(实施方案 D 节 · tone 三维降权)
+   视觉语言对齐现有 research/ArticleCTA:金线 + 黑底 + 实心主按钮
+   全部用 globals 作用域 token,不引入新色(navy 待 Andy 确认配色)
+
+   三维降权:
+     颜色 = color 轴(--cta-accent)
+     尺寸 = weight 轴(--cta-pad + 标题字号)
+     形状 = weight 轴(primary/medium 实心,muted 描边)
+   ============================================================ */
+
+.cta {
+  position: relative;
+  /* 默认 = gold / primary,具体由 color/weight 类覆盖 */
+  --cta-accent: var(--gold);
+  --cta-on: var(--ink-deepest);
+  --cta-line: var(--gold-dim);
+  --cta-pad: 17px 38px;
+}
+
+.inner {
+  margin: 0 auto;
+}
+
+/* ---------- 颜色轴(配色待 Andy 最终确认)---------- */
+.colorGold {
+  --cta-accent: var(--gold);
+  --cta-on: var(--ink-deepest);
+  --cta-line: var(--gold-dim);
+}
+.colorNeutral {
+  /* 仍是品牌金,但更克制(muted),用于副线/兜底 */
+  --cta-accent: var(--gold-muted);
+  --cta-on: var(--ink-deepest);
+  --cta-line: var(--line-2);
+}
+.colorNavy {
+  /* ⚠️ 占位:navy 实心按钮在深底上对比弱,若 Andy 选 navy 需提供更亮 hex;暂用描边表达 */
+  --cta-accent: var(--navy-deep);
+  --cta-on: var(--ivory);
+  --cta-line: var(--line-3);
+}
+
+/* ---------- 文字 ---------- */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--cta-accent);
+  margin: 0 0 1.25rem 0;
+}
+
+.title {
+  font-family: var(--serif-zh);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+  margin: 0 0 1rem 0;
+  /* 桌面:CJK 不拆 + 英文短词不字母级拆行(教训 P5-CTA-Visual-01) */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.description {
+  font-family: var(--serif-zh);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 2rem 0;
+}
+
+/* ---------- 按钮 ---------- */
+.row {
+  display: flex;
+  gap: clamp(12px, 2vw, 20px);
+  flex-wrap: wrap;
+}
+
+.primary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: var(--cta-pad);
+  text-decoration: none;
+  transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+
+.secondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: var(--cta-pad);
+  color: var(--ivory);
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+.secondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ---------- 权重轴:形状(实心↔描边)+ 尺寸 ---------- */
+/* primary / medium = 实心 */
+.wPrimary .primary,
+.wMedium .primary {
+  background: var(--cta-accent);
+  color: var(--cta-on);
+  border: 1px solid var(--cta-accent);
+}
+.wPrimary .primary:hover,
+.wMedium .primary:hover {
+  opacity: 0.88;
+}
+/* muted = 描边(明显降权) */
+.wMuted .primary {
+  background: transparent;
+  color: var(--cta-accent);
+  border: 1px solid var(--cta-accent);
+}
+.wMuted .primary:hover {
+  background: var(--gold-faint);
+}
+
+/* 尺寸(weight 轴) */
+.wPrimary {
+  --cta-pad: 17px 38px;
+}
+.wMedium {
+  --cta-pad: 14px 30px;
+}
+.wMuted {
+  --cta-pad: 12px 24px;
+}
+.wMuted .primary {
+  font-size: 0.875rem;
+}
+
+/* ============================================================
+   position: full —— 整宽 banner(页底默认)
+   ============================================================ */
+.full {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(4rem, 10vh, 8rem) clamp(1.5rem, 5vw, 3rem);
+  background: var(--ink-deepest);
+  border-top: 1px solid var(--cta-line);
+  border-bottom: 1px solid var(--cta-line);
+  text-align: center;
+}
+.full .inner {
+  max-width: 880px;
+}
+.full .description {
+  max-width: 56ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+.full .row {
+  justify-content: center;
+}
+/* 标题字号随权重降级(同一 full 位也能看出 1>2>3) */
+.full.wPrimary .title {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+.full.wMedium .title {
+  font-size: clamp(1.75rem, 3.2vw, 2.75rem);
+}
+.full.wMuted .title {
+  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+}
+.full.wPrimary .description,
+.full.wMedium .description {
+  font-size: clamp(1rem, 1.25vw, 1.125rem);
+}
+.full.wMuted .description {
+  font-size: 1rem;
+}
+
+/* ============================================================
+   position: inline —— 正文中部嵌入块(描边卡,左对齐)
+   ============================================================ */
+.inline {
+  padding: clamp(2rem, 4vw, 2.75rem) clamp(1.5rem, 3vw, 2.5rem);
+  background: var(--ink-deep);
+  border: 1px solid var(--cta-line);
+  text-align: left;
+}
+.inline .inner {
+  max-width: 720px;
+}
+.inline .title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+}
+.inline .description {
+  font-size: 1rem;
+  max-width: 60ch;
+}
+
+/* ============================================================
+   position: card —— 紧凑卡片(侧栏 / 卡片位)
+   ============================================================ */
+.card {
+  padding: 1.75rem 1.5rem;
+  background: var(--ink-deep);
+  border: 1px solid var(--cta-line);
+  text-align: left;
+  max-width: 360px;
+}
+.card .inner {
+  max-width: none;
+}
+.card .eyebrow {
+  font-size: 0.6875rem;
+  margin-bottom: 0.875rem;
+}
+.card .title {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.card .description {
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+.card .row {
+  flex-direction: column;
+}
+.card .primary,
+.card .secondary {
+  text-align: center;
+  white-space: normal;
+}
+
+/* ============================================================
+   手机端:标题降字号 + CJK 可换行(keep-all 锁行会冲出视口);仅 @media,文案不动
+   ============================================================ */
+@media (max-width: 768px) {
+  .title {
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+  .full.wPrimary .title {
+    font-size: clamp(1.5rem, 5.5vw, 2rem);
+  }
+  .full.wMedium .title {
+    font-size: clamp(1.375rem, 5vw, 1.75rem);
+  }
+  .full.wMuted .title {
+    font-size: clamp(1.25rem, 4.5vw, 1.5rem);
+  }
+  .inline {
+    padding: 1.75rem 1.25rem;
+  }
+  .inline .title {
+    font-size: clamp(1.375rem, 5vw, 1.75rem);
+  }
+  .row {
+    flex-direction: column;
+  }
+  .primary,
+  .secondary {
+    text-align: center;
+    white-space: normal;
+  }
+}

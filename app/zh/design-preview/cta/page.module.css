@@ -1,0 +1,134 @@
+/* 临时预览页骨架(无横向 padding,让 full 变体能干净 break-out 到视口宽) */
+.page {
+  background: var(--ink);
+  min-height: 100vh;
+  padding: clamp(3rem, 6vh, 5rem) 0;
+  overflow-x: hidden;
+}
+
+.head,
+.groupHead,
+.pair,
+.foot {
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1.5rem, 5vw, 3rem);
+  padding-right: clamp(1.5rem, 5vw, 3rem);
+}
+
+.head {
+  margin-bottom: clamp(3rem, 8vh, 5rem);
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 1rem 0;
+}
+
+.h1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 1.25rem 0;
+}
+
+.lead {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.8;
+  color: var(--ivory-mute);
+  max-width: 70ch;
+  margin: 0;
+}
+
+.lead code,
+.head code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  color: var(--gold-warm);
+  background: var(--line);
+  padding: 0.1em 0.4em;
+}
+
+.group {
+  margin: clamp(3rem, 7vh, 5rem) 0;
+}
+
+.groupHead {
+  margin-bottom: 1.5rem;
+}
+
+.groupName {
+  font-family: var(--serif-zh);
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 0.4rem 0;
+}
+
+.groupNote {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--ivory-faint);
+  margin: 0;
+}
+
+.variantLabel {
+  max-width: 1080px;
+  margin: 1.5rem auto 0.75rem;
+  padding-left: clamp(1.5rem, 5vw, 3rem);
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+
+.enLabel {
+  color: var(--ivory-faint);
+}
+
+.langTag {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+  padding: 2px 8px;
+  font-family: var(--mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.18em;
+  color: var(--ink-deepest);
+  background: var(--gold-muted);
+}
+
+.enTag {
+  background: var(--ivory-faint);
+  color: var(--ink-deepest);
+}
+
+.pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+}
+
+.pairCol {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.foot {
+  margin-top: clamp(3rem, 6vh, 4rem);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: var(--ivory-faint);
+  text-align: center;
+}
