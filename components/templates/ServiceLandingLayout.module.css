@@ -1,0 +1,138 @@
+/* ============================================================
+   ServiceLandingLayout — 解决方案页通用模板(M2)
+   hero 复用 InternalHero;内容区块用站内编辑调性,token 全用 globals
+   ============================================================ */
+
+.page {
+  display: block;
+}
+
+/* ---- 面包屑(置于 hero 上方,同 darkest 底色,视觉连续)---- */
+.breadcrumb {
+  background: var(--ink-deepest);
+  padding: clamp(1rem, 2.5vh, 1.5rem) 0 0;
+}
+.crumbList {
+  list-style: none;
+  margin: 0 auto;
+  max-width: 1080px;
+  padding: 0 clamp(1.5rem, 5vw, 3rem);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+.crumbItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.crumbLink {
+  color: var(--ivory-faint);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+.crumbLink:hover {
+  color: var(--gold);
+}
+.crumbCurrent {
+  color: var(--gold);
+}
+.crumbSep {
+  color: var(--gold-faint);
+}
+
+.section {
+  padding: clamp(3.5rem, 8vh, 6rem) 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--ink);
+}
+.section:nth-child(even) {
+  background: var(--ink-deep);
+}
+
+.inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 clamp(1.5rem, 5vw, 3rem);
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 1rem 0;
+}
+
+.heading {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+  margin: 0 0 1.25rem 0;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.body {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
+  line-height: 1.8;
+  color: var(--ivory-warm);
+  margin: 0;
+  max-width: 64ch;
+}
+
+.points {
+  list-style: none;
+  margin: clamp(2rem, 4vh, 3rem) 0 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+}
+
+.point {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.5rem 1.5rem 1.5rem 0;
+  border-top: 1px solid var(--gold-faint);
+}
+
+.pointLabel {
+  font-family: var(--serif-zh);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--ivory);
+  line-height: 1.4;
+}
+
+.pointDesc {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ivory-mute);
+}
+
+/* ---- 手机端 ---- */
+@media (max-width: 768px) {
+  .heading {
+    word-break: normal;
+    overflow-wrap: normal;
+    font-size: clamp(1.375rem, 5vw, 1.75rem);
+  }
+  .points {
+    grid-template-columns: 1fr;
+  }
+  .point {
+    padding: 1.25rem 0;
+  }
+}

@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 /**
- * 入口 2(项目方)合规禁词检查 —— 中英双语(实施方案 G.5)
+ * 合规禁词检查 —— 两层 · 按入口 scope 生效 · 中英双语(实施方案 G.5)
  * ------------------------------------------------------------------
- * 第一道「查死词」:从 lib/compliance/forbiddenWords.ts 取中英禁词表(单一事实源),
- * 扫描目标文件(中文 includes / 英文大小写不敏感),命中即非零退出。
+ * A. universal —— 全站绝对禁词(收益/回报类承诺),每个目标都查。
+ * B. project-owner —— 仅入口 2(路径含 project-owner)及 CTA 单一事实源 registry.ts 额外强制。
+ *    入口 1 投资人页只查 universal,允许 融资可行性 / 资金结构 等专业词。
+ *
+ * 单一事实源:lib/compliance/forbiddenWords.ts(脚本解析,不重抄)。
  *
  * 用法:
- *   node scripts/check-compliance.mjs                 # 扫默认目标(registry + project-owners 内容)
- *   node scripts/check-compliance.mjs <文件...>       # 扫指定文件
- *   node scripts/check-compliance.mjs --selftest      # 自测:中英坏串各喂一条,验证能检出
+ *   node scripts/check-compliance.mjs                 # 扫默认目标(各自按 scope)
+ *   node scripts/check-compliance.mjs <文件...>       # 扫指定文件(scope 由路径推断)
+ *   node scripts/check-compliance.mjs --selftest      # 两层自测(含"入口1中性词不被误伤"验证)
  *
- * ⚠️ 仅查死词。组合表达(中:「让您的资产更快流转」/ 英:"move your assets faster")grep 检不出,
- *    必须叠加战略 Claude 人工复读 + Andy/律师终审。
+ * ⚠️ 仅查死词。组合表达需战略 Claude 人工复读 + Andy/律师终审。
  */
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -19,60 +21,84 @@ import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
+const SRC = readFileSync(resolve(ROOT, 'lib/compliance/forbiddenWords.ts'), 'utf8');
 
-// ---- 从 forbiddenWords.ts 解析中英禁词表(保持单一事实源,不在脚本里重抄)----
-function loadForbiddenWords() {
-  const src = readFileSync(resolve(ROOT, 'lib/compliance/forbiddenWords.ts'), 'utf8');
-  const pick = (lang) => {
-    const block = src.match(new RegExp(`${lang}:\\s*\\[([\\s\\S]*?)\\]`));
-    if (!block) return [];
-    // 提取单引号或双引号字符串
-    return [...block[1].matchAll(/(['"])(.*?)\1/g)].map((m) => m[2]);
-  };
-  const zh = pick('zh');
-  const en = pick('en');
-  if (zh.length === 0 || en.length === 0) {
-    console.error(`✗ 禁词表解析异常(zh=${zh.length} en=${en.length}),检查 forbiddenWords.ts 结构`);
+function parseTable(name) {
+  const blk = SRC.match(new RegExp(`${name}[\\s\\S]*?=\\s*\\{([\\s\\S]*?)\\n\\};`));
+  if (!blk) {
+    console.error(`✗ 无法解析 ${name}(结构变了?)`);
     process.exit(2);
   }
-  return { zh, en };
+  const pick = (lang) => {
+    const a = blk[1].match(new RegExp(`${lang}:\\s*\\[([\\s\\S]*?)\\]`));
+    return a ? [...a[1].matchAll(/(['"])(.*?)\1/g)].map((m) => m[2]) : [];
+  };
+  return { zh: pick('zh'), en: pick('en') };
 }
 
-function scan(text, words) {
+const UNI = parseTable('UNIVERSAL_FORBIDDEN_WORDS');
+const PO = parseTable('PROJECT_OWNER_FORBIDDEN_WORDS');
+
+const hasLatin = (w) => /[a-z]/i.test(w);
+function matchList(text, lower, list) {
+  return list.filter((w) => (hasLatin(w) ? lower.includes(w.toLowerCase()) : text.includes(w)));
+}
+function scan(text, scope) {
   const lower = text.toLowerCase();
-  const hitZh = words.zh.filter((w) => text.includes(w));
-  const hitEn = words.en.filter((w) => lower.includes(w.toLowerCase()));
-  return [...hitZh, ...hitEn];
+  const hits = [...matchList(text, lower, UNI.zh), ...matchList(text, lower, UNI.en)];
+  if (scope === 'project-owner') {
+    hits.push(...matchList(text, lower, PO.zh), ...matchList(text, lower, PO.en));
+  }
+  return hits;
+}
+function scopeFor(rel) {
+  return rel.includes('project-owner') || rel.endsWith('lib/cta/registry.ts') ? 'project-owner' : 'universal';
 }
 
-const WORDS = loadForbiddenWords();
 const args = process.argv.slice(2);
 
-// ---- 自测模式 ----
+// ---------- 自测 ----------
 if (args.includes('--selftest')) {
-  console.log(`禁词表载入:中文 ${WORDS.zh.length} 条 / 英文 ${WORDS.en.length} 条`);
+  console.log(`禁词表载入:universal zh=${UNI.zh.length}/en=${UNI.en.length} · project-owner zh=${PO.zh.length}/en=${PO.en.length}`);
 
-  const zhBad = '我们帮你卖房、帮你募资,保证收益还能按成交分成,帮你找投资人。';
-  const enBad = 'We will raise capital, guarantee returns, and find investors for you, with guaranteed leads.';
+  const uniZh = scan('本产品保证收益、承诺回报、保收益。', 'universal');
+  const uniEn = scan('We promise guaranteed returns and promised returns.', 'universal');
 
-  const zhHits = scan(zhBad, { zh: WORDS.zh, en: [] });
-  const enHits = scan(enBad, { zh: [], en: WORDS.en });
+  const poZh = '我们帮你卖房、帮你融资、募集资金、帮你找买家、按成交分成。';
+  const poEn = 'We will raise capital, fundraising, find buyers, broker-dealer, placement agent.';
+  const poZhPO = scan(poZh, 'project-owner');
+  const poZhUNI = scan(poZh, 'universal'); // 应为 0:证明入口1不会误伤这些入口2词
+  const poEnPO = scan(poEn, 'project-owner');
+  const poEnUNI = scan(poEn, 'universal');
 
-  console.log(`\n[自测·中文] 坏样本:「${zhBad}」`);
-  console.log(`[自测·中文] 命中 ${zhHits.length} 条:`, zhHits.join(' / '));
-  console.log(`\n[自测·英文] 坏样本:「${enBad}」`);
-  console.log(`[自测·英文] 命中 ${enHits.length} 条:`, enHits.join(' / '));
+  const neutral = '融资可行性、资金结构、贷款条件、还款来源、退出路径。';
+  const neutralUNI = scan(neutral, 'universal'); // 应为 0:入口1专业词在 universal 下放行
 
-  const ok = zhHits.length >= 4 && enHits.length >= 4;
-  console.log(ok ? '\n✓ 自测通过:中英检测逻辑均工作正常' : '\n✗ 自测失败:应检出却没检出');
+  console.log(`\n[universal·中] 保证收益/承诺回报/保收益 → 命中 ${uniZh.length}:`, uniZh.join(' / '));
+  console.log(`[universal·英] guaranteed/promised returns → 命中 ${uniEn.length}:`, uniEn.join(' / '));
+  console.log(`\n[project-owner·中] 坏串 → PO scope 命中 ${poZhPO.length}:`, poZhPO.join(' / '));
+  console.log(`[隔离验证·中] 同串在 universal scope 命中 ${poZhUNI.length}(应 0)`);
+  console.log(`[project-owner·英] 坏串 → PO scope 命中 ${poEnPO.length}:`, poEnPO.join(' / '));
+  console.log(`[隔离验证·英] 同串在 universal scope 命中 ${poEnUNI.length}(应 0)`);
+  console.log(`\n[入口1中性词] 融资可行性/资金结构/贷款条件/还款来源/退出路径 → universal 命中 ${neutralUNI.length}(应 0)`);
+
+  const ok =
+    uniZh.length >= 2 &&
+    uniEn.length >= 2 &&
+    poZhPO.length >= 4 &&
+    poZhUNI.length === 0 &&
+    poEnPO.length >= 4 &&
+    poEnUNI.length === 0 &&
+    neutralUNI.length === 0;
+  console.log(ok ? '\n✓ 自测通过:两层 + 入口隔离 + 中性词放行均正常' : '\n✗ 自测失败');
   process.exit(ok ? 0 : 1);
 }
 
-// ---- 正常扫描 ----
+// ---------- 正常扫描 ----------
 const DEFAULT_TARGETS = [
-  'lib/cta/registry.ts', // 含 project-growth 中英文案
-  'app/zh/(internal)/services/project-owners/page.tsx', // M3 落地,现可能不存在
-  'app/zh/services/project-owners/page.tsx'
+  'lib/cta/registry.ts',
+  'app/zh/(internal)/services/project-owners/page.tsx',
+  'app/zh/(internal)/services/investors/page.tsx'
 ];
 
 const targets = (args.length ? args : DEFAULT_TARGETS)
@@ -80,27 +106,25 @@ const targets = (args.length ? args : DEFAULT_TARGETS)
   .filter((p) => existsSync(p));
 
 if (targets.length === 0) {
-  console.log('（无可扫描的目标文件;project-owners 页面将在 M3 落地后纳入)');
-  console.log(`禁词表已就绪:中文 ${WORDS.zh.length} 条 / 英文 ${WORDS.en.length} 条`);
+  console.log('（无可扫描目标)');
   process.exit(0);
 }
 
-let totalHits = 0;
+let total = 0;
 for (const file of targets) {
-  const text = readFileSync(file, 'utf8');
-  const hits = scan(text, WORDS);
   const rel = file.replace(ROOT + '/', '');
+  const scope = scopeFor(rel);
+  const hits = scan(readFileSync(file, 'utf8'), scope);
   if (hits.length) {
-    totalHits += hits.length;
-    console.log(`✗ ${rel} —— 命中禁词:${hits.join(' / ')}`);
+    total += hits.length;
+    console.log(`✗ [${scope}] ${rel} —— 命中:${hits.join(' / ')}`);
   } else {
-    console.log(`✓ ${rel} —— 干净(中英)`);
+    console.log(`✓ [${scope}] ${rel} —— 干净`);
   }
 }
-
 console.log(
-  totalHits
-    ? `\n✗ 共命中 ${totalHits} 处禁词,文案不通过第一道。`
-    : `\n✓ 全部通过第一道(查死词,中英)。提醒:组合表达仍需战略 Claude 人工复读 + Andy/律师终审。`
+  total
+    ? `\n✗ 共命中 ${total} 处,文案不通过第一道。`
+    : `\n✓ 全部通过第一道(两层 · 中英)。组合表达仍需战略 Claude 复读 + Andy/律师终审。`
 );
-process.exit(totalHits ? 1 : 0);
+process.exit(total ? 1 : 0);
