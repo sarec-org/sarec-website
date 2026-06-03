@@ -174,7 +174,7 @@ export default function FounderPage() {
                 当客户和 SAREC 建立长期信任,当某个项目同时符合双方的判断标准 —— 围绕合作结构与风险共担机制推进协作。
               </p>
               <p className={styles.viewsBody}>
-                不是为了证明&quot;我们也敢投&quot;,而是真正做到利益一致、风险共担。
+                不是为了展示参与姿态,而是围绕结构设计、信息对齐与风险分配机制,帮助合作更稳健地推进。
               </p>
             </li>
           </ol>

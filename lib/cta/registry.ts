@@ -146,7 +146,7 @@ export const CTA_REGISTRY: Record<CtaId, CtaConfig> = {
     },
     description: {
       zh: '无论是项目判断、华人市场增长,还是 AI 搜索内容底座,告诉我们你的情况,我们会安排合适的人跟进。',
-      en: "Whether it's project judgment, Chinese-market growth, or an AI search content foundation, tell us your situation and we'll connect you with the right person."
+      en: "Whether it's project judgment, Chinese-market growth, or an AI search content foundation, tell us your situation and we'll have the right team member follow up."
     },
     intent: 'contact-general',
     primary: {
