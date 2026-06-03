@@ -26,7 +26,7 @@ const PAGES = [
   { slug: 'home', url: '/zh', must: ['连接中美'] },
   { slug: 'about', url: '/zh/about', must: ['关于'] },
   { slug: 'founder', url: '/zh/about/founder', must: ['Andy'] },
-  { slug: 'services', url: '/zh/services', must: ['三层服务'] },
+  { slug: 'services', url: '/zh/services', must: ['中美房地产项目判断与增长服务', '服务入口'] },
   { slug: 'services-investors', url: '/zh/services/investors', must: ['项目风险初诊'] },
   { slug: 'services-project-owners', url: '/zh/services/project-owners', must: ['华人市场增长服务'] },
   { slug: 'services-professional-firms', url: '/zh/services/professional-firms', must: ['官网内容底座'] },

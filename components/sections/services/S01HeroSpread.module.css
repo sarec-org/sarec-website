@@ -6,20 +6,23 @@
 }
 
 .container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 clamp(24px, 5vw, 80px);
+  /* M4-S1:Hero 图出血 —— 容器放全宽,图片左列铺到视口左缘;文字列单独右内边距 */
+  width: 100%;
 }
 
 .grid {
   display: grid;
   grid-template-columns: 7fr 5fr;
-  gap: clamp(40px, 5vw, 64px);
+  gap: clamp(40px, 5vw, 72px);
   align-items: center;
 }
 
 .imageColumn {
-  /* 60% */
+  /* 左列图片:section 0 横向 padding + container 全宽 → 左缘出血 */
+}
+
+.textColumn {
+  padding-right: clamp(24px, 5vw, 80px);
 }
 
 .imageWrapper {
@@ -148,6 +151,11 @@
   .grid {
     grid-template-columns: 1fr;
     gap: 32px;
+  }
+
+  /* 堆叠时图片仍全宽出血,文字列补两侧 padding */
+  .textColumn {
+    padding: 0 clamp(24px, 6vw, 32px);
   }
 
   .imageWrapper {

@@ -5,6 +5,8 @@ import { S02ThreeLayersOverview } from '@/components/sections/services/S02ThreeL
 import { S03Chamber } from '@/components/sections/services/S03Chamber';
 import { S04Advisory } from '@/components/sections/services/S04Advisory';
 import { S06PartnerNetwork } from '@/components/sections/services/S06PartnerNetwork';
+import { CTA_REGISTRY } from '@/lib/cta/registry';
+import { localize } from '@/lib/i18n/types';
 import { createPageMetadata } from '@/lib/seo';
 
 export const metadata: Metadata = createPageMetadata({
@@ -15,6 +17,7 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default function ServicesPage() {
+  const risk = CTA_REGISTRY['risk-review'];
   return (
     <>
       <S01HeroSpread />
@@ -26,24 +29,13 @@ export default function ServicesPage() {
 
       <InternalCTABanner
         eyebrow="BEGIN · 开始合作"
-        title="不确定从哪一层开始？"
-        subtitle={
-          <>
-            预约 30 分钟沟通，
-            <br />
-            我们一起判断最匹配你的合作路径。
-          </>
-        }
+        title="中美房地产项目，先做一次风险初诊。"
+        subtitle={localize(risk.description)}
         ctas={[
           {
-            label: '预约 30 分钟沟通',
-            href: '/zh/contact',
+            label: localize(risk.primary.label),
+            href: risk.primary.route.zh,
             variant: 'primary'
-          },
-          {
-            label: '申请加入会员',
-            href: '/zh/membership',
-            variant: 'secondary'
           }
         ]}
       />

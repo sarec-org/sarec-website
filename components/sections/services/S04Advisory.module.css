@@ -1,6 +1,6 @@
 /* ============================================================
-   S04 / Layer 2 咨询撮合 (id="advisory")
-   4 services in 2x2 grid + [note] + 适合谁 list + inline CTA.
+   S04 / 项目深度服务 · 入口1 展开 (id="advisory")
+   3 services in 3-col grid + 适合谁 list + inline CTA(risk-review).
    Background: var(--ink-deep).
    ============================================================ */
 
@@ -68,7 +68,7 @@
 /* ===== Services 2x2 grid ===== */
 .servicesGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: clamp(20px, 2.5vw, 40px);
   margin-bottom: clamp(40px, 5vh, 64px);
 }

@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
 import { SaVideo } from '@/components/shared/SaVideo';
+import { CTA_REGISTRY } from '@/lib/cta/registry';
+import { localize } from '@/lib/i18n/types';
 import styles from './S04Advisory.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -76,6 +78,7 @@ const itemVariants: Variants = {
 };
 
 export function S04Advisory() {
+  const risk = CTA_REGISTRY['risk-review'];
   return (
     <section id="advisory" className={styles.section}>
       <div className={styles.container}>
@@ -101,10 +104,10 @@ export function S04Advisory() {
             viewport={{ once: true, amount: 0.3 }}
           >
             <motion.span className={styles.eyebrow} variants={headerItem}>
-              LAYER 02 · ADVISORY &amp; DEAL COORDINATION
+              ADVISORY · 项目深度服务
             </motion.span>
             <motion.h2 className={styles.h2} variants={headerItem}>
-              项目咨询与结构设计
+              项目判断、结构设计与全程顾问
             </motion.h2>
             <motion.p className={styles.tagline} variants={headerItem}>
               项目判断只是第一步，把控才是核心。
@@ -174,8 +177,8 @@ export function S04Advisory() {
           viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 0.6, ease: EASE }}
         >
-          <Link href="/zh/contact#project-evaluation" className={styles.cta}>
-            <span>项目评估 · 30 分钟</span>
+          <Link href={risk.primary.route.zh} className={styles.cta}>
+            <span>{localize(risk.primary.label)}</span>
             <span className={styles.ctaArrow} aria-hidden="true">
               →
             </span>

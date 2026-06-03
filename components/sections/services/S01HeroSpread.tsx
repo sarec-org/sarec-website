@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { SaImage, SectionChapterMark } from '@/components/shared';
+import { CTA_REGISTRY } from '@/lib/cta/registry';
+import { localize } from '@/lib/i18n/types';
 import styles from './S01HeroSpread.module.css';
 
 /**
@@ -8,6 +10,7 @@ import styles from './S01HeroSpread.module.css';
  * the prior S01 InternalHero props.
  */
 export function S01HeroSpread() {
+  const risk = CTA_REGISTRY['risk-review'];
   return (
     <section
       className={styles.heroSpread}
@@ -37,23 +40,19 @@ export function S01HeroSpread() {
             <p className={styles.eyebrow}>SERVICES · 服务架构</p>
 
             <h1 id="services-hero-h1" className={styles.h1}>
-              三层服务架构
+              中美房地产项目判断与增长服务
             </h1>
 
             <p className={styles.sub}>
-              SAREC 围绕项目判断、结构设计、风险控制与资源协同，
-              <br />
-              按客户参与深度分为三层：
-              <br />
-              商会 · 项目咨询与结构设计 · 合作结构设计。
+              面向投资人、项目方与专业服务机构,SAREC 以项目判断、内容资产与 AI 搜索可见度,帮助跨境房地产合作更清晰、更稳健地推进。
             </p>
 
             <div className={styles.ctaGroup}>
-              <Link href="/zh/contact" className={styles.ctaPrimary}>
-                预约 30 分钟沟通
+              <Link href={risk.primary.route.zh} className={styles.ctaPrimary}>
+                {localize(risk.primary.label)}
               </Link>
-              <Link href="/zh/membership" className={styles.ctaSecondary}>
-                查看会员服务
+              <Link href="#service-entries" className={styles.ctaSecondary}>
+                查看三类服务
               </Link>
             </div>
           </div>

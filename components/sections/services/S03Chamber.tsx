@@ -163,10 +163,10 @@ export function S03Chamber() {
           viewport={{ once: true, amount: 0.3 }}
         >
           <motion.span className={styles.eyebrow} variants={headerItem}>
-            LAYER 01 · CHAMBER
+            PLATFORM · 平台
           </motion.span>
           <motion.h2 className={styles.h2} variants={headerItem}>
-            商会
+            平台信任与服务深度
           </motion.h2>
           <motion.p className={styles.tagline} variants={headerItem}>
             围绕真实项目的高含金量内容。
@@ -210,7 +210,7 @@ export function S03Chamber() {
           viewport={{ once: true, amount: 0.3 }}
         >
           <motion.span className={styles.subEyebrow} variants={headerItem}>
-            MEMBERSHIP TIERS · 会员级别（商会型命名）
+            MEMBERSHIP · 会员级别
           </motion.span>
           <motion.h3 className={styles.subH3} variants={headerItem}>
             3 个会员级别
@@ -265,11 +265,8 @@ export function S03Chamber() {
           viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 0.6, ease: EASE }}
         >
-          <Link href="/zh/membership" className={styles.cta}>
-            <span>查看会员详细</span>
-            <span className={styles.ctaArrow} aria-hidden="true">
-              →
-            </span>
+          <Link href="/zh/membership" className={styles.memberLink}>
+            了解会员服务 →
           </Link>
         </motion.div>
       </div>
