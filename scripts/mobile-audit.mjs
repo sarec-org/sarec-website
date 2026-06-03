@@ -28,6 +28,8 @@ const PAGES = [
   { slug: 'founder', url: '/zh/about/founder', must: ['Andy'] },
   { slug: 'services', url: '/zh/services', must: ['三层服务'] },
   { slug: 'services-investors', url: '/zh/services/investors', must: ['项目风险初诊'] },
+  { slug: 'services-project-owners', url: '/zh/services/project-owners', must: ['华人市场增长服务'] },
+  { slug: 'services-professional-firms', url: '/zh/services/professional-firms', must: ['官网内容底座'] },
   { slug: 'membership', url: '/zh/membership', must: ['加入', '活动与考察', '会员权益'] },
   { slug: 'events', url: '/zh/events', must: ['活动与考察'] },
   { slug: 'projects', url: '/zh/projects', must: ['项目'] },

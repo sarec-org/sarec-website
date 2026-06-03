@@ -98,16 +98,16 @@ export const CTA_REGISTRY: Record<CtaId, CtaConfig> = {
     tone: { color: 'neutral', weight: 'muted' },
     eyebrow: { zh: 'AI 搜索可见度 · GEO AUDIT', en: 'GEO AUDIT' },
     title: {
-      zh: '让官网被客户信任、被 Google 和 AI 搜索理解',
-      en: 'Make your website trusted by clients and understood by Google and AI search'
+      zh: 'AI 搜索与官网内容可见度诊断',
+      en: 'AI Search and Website Content Visibility Review'
     },
     description: {
-      zh: '把专业服务机构的官网从名片网站升级为内容资产:结构化、可被 AI 引用、可建立信任的 GEO 内容底座。',
-      en: "Turn a professional firm's website from a digital business card into a content asset — structured, citable by AI, and built to earn trust: a GEO content foundation."
+      zh: '从 SEO 与 GEO 两个维度,检查官网内容结构、关键信息与跨文化表达,提升官网在 Google 与 AI 搜索中的可见度、解释准确性与表达清晰度。',
+      en: 'Review website content structure, key messaging, and cross-cultural clarity from both SEO and GEO perspectives to improve visibility, interpretability, and clarity in Google and AI search.'
     },
     intent: 'ai-search-audit',
     primary: {
-      label: { zh: '申请 AI 搜索可见度诊断', en: 'Request an AI Visibility Audit' },
+      label: { zh: '预约 AI 搜索可见度诊断', en: 'Request an AI Search Visibility Review' },
       route: { zh: '/zh/contact?intent=ai-search-audit' }
     }
   },

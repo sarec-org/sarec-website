@@ -61,36 +61,51 @@ const args = process.argv.slice(2);
 if (args.includes('--selftest')) {
   console.log(`禁词表载入:universal zh=${UNI.zh.length}/en=${UNI.en.length} · project-owner zh=${PO.zh.length}/en=${PO.en.length}`);
 
+  // 基础:universal 命中 + 入口隔离(入口2坏串在 universal scope 不命中)
   const uniZh = scan('本产品保证收益、承诺回报、保收益。', 'universal');
   const uniEn = scan('We promise guaranteed returns and promised returns.', 'universal');
+  const isoZh = scan('我们帮你卖房、帮你融资、募集资金、帮你找买家、按成交分成。', 'universal');
+  const isoEn = scan('We will raise capital, fundraising, find buyers, broker-dealer, placement agent.', 'universal');
 
-  const poZh = '我们帮你卖房、帮你融资、募集资金、帮你找买家、按成交分成。';
-  const poEn = 'We will raise capital, fundraising, find buyers, broker-dealer, placement agent.';
-  const poZhPO = scan(poZh, 'project-owner');
-  const poZhUNI = scan(poZh, 'universal'); // 应为 0:证明入口1不会误伤这些入口2词
-  const poEnPO = scan(poEn, 'project-owner');
-  const poEnUNI = scan(poEn, 'universal');
+  // A · 撮合性表达必须在 project-owner scope 命中
+  const A = [
+    '资源对接', '投资人对接', '帮你介绍投资人', '牵线搭桥', '撮合资金',
+    'investor introductions', 'connect you with investors', 'partner introductions',
+    'source investors', 'match you with investors', 'bring you investors', 'relationship introductions'
+  ];
+  const aMiss = A.filter((p) => scan(p, 'project-owner').length === 0);
 
-  const neutral = '融资可行性、资金结构、贷款条件、还款来源、退出路径。';
-  const neutralUNI = scan(neutral, 'universal'); // 应为 0:入口1专业词在 universal 下放行
+  // B · Andy 指定中性词在 universal scope 不误伤(入口1 走 universal,含 融资可行性 等专业词)
+  const B = [
+    '内容资源', '市场知识资源', 'Chinese-market resources', 'content resources',
+    'relationship-building materials', 'stakeholder education',
+    '融资可行性', '资金结构', '贷款条件', '还款来源'
+  ];
+  const bHit = B.filter((p) => scan(p, 'universal').length > 0);
 
-  console.log(`\n[universal·中] 保证收益/承诺回报/保收益 → 命中 ${uniZh.length}:`, uniZh.join(' / '));
-  console.log(`[universal·英] guaranteed/promised returns → 命中 ${uniEn.length}:`, uniEn.join(' / '));
-  console.log(`\n[project-owner·中] 坏串 → PO scope 命中 ${poZhPO.length}:`, poZhPO.join(' / '));
-  console.log(`[隔离验证·中] 同串在 universal scope 命中 ${poZhUNI.length}(应 0)`);
-  console.log(`[project-owner·英] 坏串 → PO scope 命中 ${poEnPO.length}:`, poEnPO.join(' / '));
-  console.log(`[隔离验证·英] 同串在 universal scope 命中 ${poEnUNI.length}(应 0)`);
-  console.log(`\n[入口1中性词] 融资可行性/资金结构/贷款条件/还款来源/退出路径 → universal 命中 ${neutralUNI.length}(应 0)`);
+  // B2 · 入口2 允许的中性词在 project-owner scope 也不被组合词误伤(证明只禁组合词、不禁单字)
+  const B2 = [
+    '内容资源', '市场知识资源', 'Chinese-market resources', 'content resources',
+    'relationship-building materials', 'stakeholder education', '华人市场教育材料',
+    '信任建设材料', '关系建设材料', '内容资产', '华人市场定位', '项目说明材料', 'AI 搜索可见度'
+  ];
+  const b2Hit = B2.filter((p) => scan(p, 'project-owner').length > 0);
+
+  console.log(`\n[universal 命中] 中 ${uniZh.length} / 英 ${uniEn.length}(应 ≥2)`);
+  console.log(`[入口隔离] 入口2坏串在 universal scope 命中 中 ${isoZh.length} / 英 ${isoEn.length}(应 0)`);
+  console.log(`[A · 撮合词必命中 @project-owner] ${A.length} 条,漏命中 ${aMiss.length} ${aMiss.length ? '→ ' + aMiss.join(' / ') : '✓'}`);
+  console.log(`[B · 中性词不误伤 @universal] ${B.length} 条,误伤 ${bHit.length} ${bHit.length ? '→ ' + bHit.join(' / ') : '✓'}`);
+  console.log(`[B2 · 入口2允许词不误伤 @project-owner] ${B2.length} 条,误伤 ${b2Hit.length} ${b2Hit.length ? '→ ' + b2Hit.join(' / ') : '✓'}`);
 
   const ok =
     uniZh.length >= 2 &&
     uniEn.length >= 2 &&
-    poZhPO.length >= 4 &&
-    poZhUNI.length === 0 &&
-    poEnPO.length >= 4 &&
-    poEnUNI.length === 0 &&
-    neutralUNI.length === 0;
-  console.log(ok ? '\n✓ 自测通过:两层 + 入口隔离 + 中性词放行均正常' : '\n✗ 自测失败');
+    isoZh.length === 0 &&
+    isoEn.length === 0 &&
+    aMiss.length === 0 &&
+    bHit.length === 0 &&
+    b2Hit.length === 0;
+  console.log(ok ? '\n✓ 自测通过:撮合词全命中 + 中性词零误伤(双 scope)+ 入口隔离成立' : '\n✗ 自测失败');
   process.exit(ok ? 0 : 1);
 }
 
@@ -98,7 +113,8 @@ if (args.includes('--selftest')) {
 const DEFAULT_TARGETS = [
   'lib/cta/registry.ts',
   'app/zh/(internal)/services/project-owners/page.tsx',
-  'app/zh/(internal)/services/investors/page.tsx'
+  'app/zh/(internal)/services/investors/page.tsx',
+  'app/zh/(internal)/services/professional-firms/page.tsx'
 ];
 
 const targets = (args.length ? args : DEFAULT_TARGETS)
