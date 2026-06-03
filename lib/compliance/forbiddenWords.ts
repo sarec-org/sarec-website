@@ -17,17 +17,45 @@ import type { Locale } from '@/lib/i18n/types';
 
 export type ForbiddenScope = 'universal' | 'project-owner';
 
-/** A 层:全站绝对禁词(收益/回报 + 客户/线索/买家 类绝对承诺) */
+/**
+ * A 层:全站绝对禁词(M4-S0 起,撮合/对接/共投/募资类组合词上提至此,全站强制)。
+ * ⚠️ 只录组合词/明确短语,绝不录单字「资源/对接/介绍/撮合/匹配/共同/出资/融资/resources/connect/capital」
+ *    —— 否则误伤 资源协同 / 落地协同 / 融资可行性 / 资金结构 / content resources 等正常用法。
+ */
 export const UNIVERSAL_FORBIDDEN_WORDS: Record<Locale, string[]> = {
-  zh: ['保证收益', '保收益', '承诺收益', '承诺回报', '保证回报', '保证客户线索', '保证线索', '保证客户', '保证买家'],
+  zh: [
+    // 收益/回报 + 客户/线索/买家 类绝对承诺
+    '保证收益', '保收益', '承诺收益', '承诺回报', '保证回报', '保证客户线索', '保证线索', '保证客户', '保证买家',
+    // 募资/募集类
+    '募资', '募集资金', '代募', '帮你融资',
+    // 找/介绍/对接 投资人·买家
+    '找投资人', '帮你找投资人', '介绍投资人', '介绍买家', '对接投资人', '投资人对接',
+    '帮你介绍投资人', '帮你介绍买家', '帮你对接投资人', '帮你对接买家', '帮你对接资金',
+    // 资本/资源/项目/资金 对接 + 匹配
+    '资本对接', '资源对接', '项目对接', '资金对接', '买家对接', '对接买家', '对接资金', '资金与项目的匹配',
+    // 撮合/牵线/搭桥
+    '项目撮合', '撮合交易', '撮合投资人', '撮合买家', '撮合资金', '牵线搭桥', '帮你撮合', '帮你牵线', '帮你搭桥',
+    // 共投/联合开发类
+    '共投', '项目共投', '联合开发', '联合投资', '共同出资'
+  ],
   en: [
-    'guaranteed returns',
-    'guarantee returns',
-    'promised returns',
-    'guaranteed leads',
-    'guaranteed clients',
-    'guaranteed buyers',
-    'guaranteed customers'
+    // guaranteed returns / leads 类
+    'guaranteed returns', 'guarantee returns', 'promised returns',
+    'guaranteed leads', 'guaranteed clients', 'guaranteed buyers', 'guaranteed customers',
+    // raise / fundraising
+    'raise capital', 'raise funds', 'fundraising', 'capital raising', 'capital raise', 'we will raise capital',
+    // find / solicit investors
+    'find investors', 'find investors for you', 'we will find investors',
+    'secure investors', 'solicit investors', 'investor solicitation',
+    // introductions / matchmaking / sourcing / connect
+    'investor introductions', 'capital introductions', 'buyer introductions', 'partner introductions',
+    'source investors', 'source buyers', 'connect with investors', 'connect you with investors', 'connect with buyers',
+    'matchmaking', 'deal facilitation', 'investor sourcing', 'capital sourcing',
+    'introduce you to investors', 'introduce investors', 'introduce buyers',
+    'match you with investors', 'match you with buyers', 'bring investors', 'bring you investors',
+    'relationship introductions', 'investment introductions',
+    // co-invest / joint venture
+    'co-investment', 'co-invest', 'joint venture', 'co-development', 'fund participation'
   ]
 };
 
@@ -37,103 +65,20 @@ export const UNIVERSAL_FORBIDDEN_WORDS: Record<Locale, string[]> = {
  *    —— 否则 includes 会误伤段 A 的 content resources / 市场知识资源 / Chinese-market resources 等正常用法。
  */
 export const PROJECT_OWNER_FORBIDDEN_WORDS: Record<Locale, string[]> = {
+  // 撮合/对接/共投/募资类组合词已上提 UNIVERSAL(全站强制);此处仅留入口2 专属营销红线。
   zh: [
-    // —— 段 B-1 死词 ——
-    '卖房',
-    '帮你卖房',
-    '帮你卖',
-    '帮卖',
-    '募资',
-    '帮你募',
-    '募集资金',
-    '代募',
-    '融资',
-    '帮你融资',
-    '帮你找投资人',
-    '找投资人',
-    '帮你找买家',
-    '找买家',
-    '分成',
-    '按成交分成',
-    '成交分成',
-    '公开募集',
-    '面向公众募集',
-    '帮你成交',
-    '包成交',
-    // —— 段 B-2 撮合性组合词(只组合词)——
-    '资源对接',
-    '投资人对接',
-    '资金对接',
-    '买家对接',
-    '项目撮合',
-    '撮合交易',
-    '牵线搭桥',
-    '介绍投资人',
-    '介绍买家',
-    '对接投资人',
-    '对接买家',
-    '对接资金',
-    '帮你介绍投资人',
-    '帮你介绍买家',
-    '帮你对接投资人',
-    '帮你对接买家',
-    '帮你对接资金',
-    '帮你牵线',
-    '帮你搭桥',
-    '帮你撮合',
-    '撮合投资人',
-    '撮合买家',
-    '撮合资金'
+    '卖房', '帮你卖房', '帮你卖', '帮卖',
+    '帮你募', '融资',
+    '帮你找买家', '找买家',
+    '分成', '按成交分成', '成交分成',
+    '公开募集', '面向公众募集',
+    '帮你成交', '包成交'
   ],
   en: [
-    // —— 段 B-1 死词 ——
-    'sell your property',
-    'sell property',
-    'sell properties',
-    'sell units',
-    'raise capital',
-    'raise funds',
-    'fundraising',
-    'capital raising',
-    'capital raise',
-    'we will raise capital',
-    'find investors',
-    'find investors for you',
-    'we will find investors',
-    'find buyers',
-    'we will find buyers',
-    'secure investors',
-    'solicit investors',
-    'investor solicitation',
-    'commission split',
-    'split commissions',
-    'success-based compensation',
-    'public offering',
-    'broker-dealer',
-    'placement agent',
-    // —— 段 B-2 撮合性组合词(只组合词)——
-    'investor introductions',
-    'capital introductions',
-    'buyer introductions',
-    'partner introductions',
-    'source investors',
-    'source buyers',
-    'connect with investors',
-    'connect you with investors',
-    'connect with buyers',
-    'matchmaking',
-    'deal facilitation',
-    'investor sourcing',
-    'capital sourcing',
-    'introduce you to investors',
-    'introduce investors',
-    'introduce buyers',
-    'match you with investors',
-    'match you with buyers',
-    'bring investors',
-    'bring you investors',
-    'relationship introductions',
-    'investment introductions'
+    'sell your property', 'sell property', 'sell properties', 'sell units',
+    'find buyers', 'we will find buyers',
+    'commission split', 'split commissions', 'success-based compensation',
+    'public offering', 'broker-dealer', 'placement agent'
   ]
 };
 

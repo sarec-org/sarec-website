@@ -7,7 +7,7 @@ import styles from './membership.module.css';
 export const metadata: Metadata = createPageMetadata({
   title: '会员服务｜SAREC 中美房地产商会',
   description:
-    'SAREC 会员是商会层服务的入口。通过会员,系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络,逐步进入更深层的咨询、撮合与项目合作。',
+    'SAREC 会员是商会层服务的入口。通过会员,系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络,逐步进入更深层的项目咨询与项目协作。',
   path: '/zh/membership'
 });
 
@@ -22,7 +22,7 @@ export default function MembershipPage() {
             <span className={styles.heroRevealLine}>加入 SAREC 会员</span>
           </h1>
           <p className={styles.heroLead}>
-            SAREC 会员是商会层服务的入口。通过会员,你可以系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络,并逐步进入更深层的咨询、撮合与项目合作。
+            SAREC 会员是商会层服务的入口。通过会员,你可以系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络,并逐步进入更深层的项目咨询与项目协作。
           </p>
           <div className={styles.ctaGroup}>
             <Link href="/zh/contact" className={styles.ctaPrimary}>
@@ -167,7 +167,7 @@ export default function MembershipPage() {
                 <div>
                   <h3 className={styles.whyJoinH3}>高含金量培训与活动</h3>
                   <p className={styles.whyJoinBody}>
-                    不做泛泛而谈的基础培训。围绕真实项目、市场判断、风险识别和资源对接 —— 包括项目研讨、闭门分享、行业展会。
+                    不做泛泛而谈的基础培训。围绕真实项目、市场判断、风险识别和资源协同 —— 包括项目研讨、闭门分享、行业展会。
                   </p>
                   <p className={styles.whyJoinBody}>
                     详见 →{' '}
@@ -189,7 +189,7 @@ export default function MembershipPage() {
               <li>
                 <span className={styles.whyJoinNum}>04</span>
                 <div>
-                  <h3 className={styles.whyJoinH3}>专业服务伙伴对接</h3>
+                  <h3 className={styles.whyJoinH3}>专业服务伙伴协同</h3>
                   <p className={styles.whyJoinBody}>
                     SAREC 与非竞争性专业服务伙伴建立资源互荐机制。
                   </p>
@@ -199,7 +199,7 @@ export default function MembershipPage() {
                     <li>跨境合规 / 公司架构</li>
                   </ul>
                   <p className={styles.whyJoinBody}>
-                    会员可获得专业服务伙伴的优先对接。
+                    会员可获得专业服务伙伴的优先协同。
                   </p>
                   <p className={styles.complianceNote}>
                     具体合作方式以单独协议为准。
@@ -250,7 +250,7 @@ export default function MembershipPage() {
                 <li>专题报告与闭门分享</li>
                 <li>项目研讨与圆桌讨论</li>
                 <li>美国实地考察优先权</li>
-                <li>专业服务伙伴优先对接</li>
+                <li>专业服务伙伴优先协同</li>
                 <li>与 SAREC 团队定期沟通</li>
               </ul>
               <Link href="/zh/contact" className={styles.tierCta}>
@@ -459,10 +459,10 @@ export default function MembershipPage() {
               </summary>
               <div className={styles.faqAnswer}>
                 <p>
-                  会员服务属于第一层商会层 —— 研究、培训、活动、考察、资源对接。
+                  会员服务属于第一层商会层 —— 研究、培训、活动、考察、资源协同。
                 </p>
                 <p>
-                  具体项目投资属于第二层(咨询撮合)和第三层(共投)服务,需要单独评估匹配度并签署相关文件。
+                  具体项目投资属于第二层(项目咨询与结构设计)和第三层(合作结构设计)服务,需要单独评估匹配度并签署相关文件。
                 </p>
                 <p>
                   会员是建立信任和了解 SAREC 的入口,不直接等同于项目投资资格。
@@ -492,7 +492,7 @@ export default function MembershipPage() {
         <div className={styles.ctaBannerInner}>
           <h2 className={styles.ctaBannerH2}>准备好加入 SAREC 会员了吗</h2>
           <p className={styles.ctaBannerLead}>
-            不是单纯付费访问内容,而是进入一个长期合作和资源对接的网络。
+            不是单纯付费访问内容,而是进入一个长期合作和资源协同的网络。
           </p>
           <div className={styles.ctaBannerGroup}>
             <Link href="/zh/contact" className={styles.ctaPrimary}>

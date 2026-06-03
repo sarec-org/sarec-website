@@ -45,7 +45,7 @@ export function S01HeroSpread() {
               <br />
               按客户参与深度分为三层：
               <br />
-              商会 · 咨询撮合 · 共投。
+              商会 · 项目咨询与结构设计 · 合作结构设计。
             </p>
 
             <div className={styles.ctaGroup}>

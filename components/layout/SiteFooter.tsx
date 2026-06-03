@@ -20,7 +20,7 @@ export function SiteFooter() {
           </div>
           <p className="mt-6 text-[13px] leading-[1.85] text-[var(--ivory-mute)] max-w-[280px]">
             以商会为入口，以项目判断、结构设计和风险控制为核心，
-            连接中国资本、开发项目和专业服务资源。
+            围绕中美跨境地产的项目判断、结构与专业服务。
           </p>
         </div>
 

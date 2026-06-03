@@ -162,16 +162,16 @@ export default function FounderPage() {
               <span className={styles.viewsTier}>第二层 · 咨询层(关键)</span>
               <p className={styles.viewsBody}>看清楚之后,进入具体项目阶段。</p>
               <p className={styles.viewsBody}>
-                这一层最大的问题是 —— 许多服务方做撮合赚一次佣金,但不对项目结果负责。
+                这一层最大的问题是 —— 许多服务方做一次性服务赚佣金,但不对项目结果负责。
               </p>
               <p className={styles.viewsBody}>
                 SAREC 咨询层 —— 做的是用投资人视角持续把控项目,不是介绍完就消失。
               </p>
             </li>
             <li className={styles.viewsItem}>
-              <span className={styles.viewsTier}>第三层 · 共投层(深度)</span>
+              <span className={styles.viewsTier}>第三层 · 合作结构设计(深度)</span>
               <p className={styles.viewsBody}>
-                当客户和 SAREC 建立长期信任,当某个项目同时符合双方的判断标准 —— 团队与客户共同出资。
+                当客户和 SAREC 建立长期信任,当某个项目同时符合双方的判断标准 —— 围绕合作结构与风险共担机制推进协作。
               </p>
               <p className={styles.viewsBody}>
                 不是为了证明&quot;我们也敢投&quot;,而是真正做到利益一致、风险共担。

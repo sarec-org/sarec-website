@@ -9,7 +9,7 @@ import { EventsHero } from './EventsHero';
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 活动与考察｜中美房地产商会',
   description:
-    'SAREC 围绕真实项目、市场判断、风险识别和资源对接,组织培训、研讨、闭门分享、行业展会和美国实地考察。活动不只是内容传播 —— 是会员深度参与跨境地产合作的关键场景。',
+    'SAREC 围绕真实项目、市场判断、风险识别和资源协同,组织培训、研讨、闭门分享、行业展会和美国实地考察。活动不只是内容传播 —— 是会员深度参与跨境地产合作的关键场景。',
   path: '/zh/events'
 });
 

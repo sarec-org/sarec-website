@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
-import { ChamberIcon, AdvisoryIcon, CoInvestIcon } from './icons';
+import { ChamberIcon, AdvisoryIcon } from './icons';
 import styles from './S02ThreeLayersOverview.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -35,25 +35,14 @@ const LAYERS: Layer[] = [
   },
   {
     layerLabel: 'LAYER 02',
-    titleZh: '咨询撮合',
+    titleZh: '项目咨询与结构设计',
     titleEn: 'Advisory & Deal Coordination',
     fit: '已有具体项目方向，希望深度合作的人',
     entry: '咨询服务',
     partnership: '按项目阶段约定',
-    linkLabel: '查看咨询撮合详细',
+    linkLabel: '查看项目咨询详细',
     linkHref: '#advisory',
     Icon: AdvisoryIcon
-  },
-  {
-    layerLabel: 'LAYER 03',
-    titleZh: '共投',
-    titleEn: 'Co-Invest',
-    fit: '在房地产、金融领域有长期合作意向的机构或个人',
-    entry: '项目合作',
-    partnership: '以项目协议为准',
-    linkLabel: '查看共投详细',
-    linkHref: '#co-invest',
-    Icon: CoInvestIcon
   }
 ];
 
@@ -103,7 +92,7 @@ export function S02ThreeLayersOverview() {
             按参与深度分层
           </motion.h2>
           <motion.p className={styles.lead} variants={headerItem}>
-            不同客户在不同阶段进入。商会是入口，共投是深度合作。
+            不同客户在不同阶段进入。商会是入口，深度合作是延伸。
           </motion.p>
         </motion.div>
 

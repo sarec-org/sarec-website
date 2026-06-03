@@ -27,7 +27,7 @@ const ANCHORS: Anchor[] = [
     code: '02',
     title: '同股同权',
     description: [
-      '在符合 SAREC 参与标准的项目共投场景下，团队可与客户共同出资。',
+      '在符合 SAREC 服务标准的项目协作场景下，围绕合作结构与风险共担机制推进。',
       '优先采用利益一致、风险共担的合作结构。'
     ],
     compliance: '具体股权、决策权和退出安排，以项目协议为准。'
@@ -122,7 +122,7 @@ export function H05TrustAnchors() {
           </motion.h2>
 
           <motion.p className={styles.lead} variants={headerItem}>
-            不是承诺收益，而是承诺方法。
+            不是收益承诺，而是方法承诺。
             <br />
             SAREC 在每个项目中坚持的 5 个核心。
           </motion.p>

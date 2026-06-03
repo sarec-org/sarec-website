@@ -61,41 +61,31 @@ const args = process.argv.slice(2);
 if (args.includes('--selftest')) {
   console.log(`禁词表载入:universal zh=${UNI.zh.length}/en=${UNI.en.length} · project-owner zh=${PO.zh.length}/en=${PO.en.length}`);
 
-  // 基础:universal 命中 + 入口隔离(入口2坏串在 universal scope 不命中)
+  // 基础:universal 收益类命中 + 入口隔离(入口2 专属词在 universal 不命中)
   const uniZh = scan('本产品保证收益、承诺回报、保收益。', 'universal');
   const uniEn = scan('We promise guaranteed returns and promised returns.', 'universal');
-  const isoZh = scan('我们帮你卖房、帮你融资、募集资金、帮你找买家、按成交分成。', 'universal');
-  const isoEn = scan('We will raise capital, fundraising, find buyers, broker-dealer, placement agent.', 'universal');
+  const isoZh = scan('我们帮你卖房、帮你找买家、按成交分成。', 'universal'); // 入口2 专属,universal 应 0
+  const isoEn = scan('We will find buyers, broker-dealer, placement agent.', 'universal');
 
-  // A · 撮合性表达必须在 project-owner scope 命中
+  // A · 撮合/对接/共投/募资类(M4-S0 已上提)必须在 universal scope 命中(任意路径)
   const A = [
-    '资源对接', '投资人对接', '帮你介绍投资人', '牵线搭桥', '撮合资金',
-    'investor introductions', 'connect you with investors', 'partner introductions',
-    'source investors', 'match you with investors', 'bring you investors', 'relationship introductions'
+    '资本对接', '资源对接', '项目对接', '资金与项目的匹配', '撮合交易', '牵线搭桥', '找投资人', '募集资金',
+    '共投', '项目共投', '联合开发', '共同出资',
+    'raise capital', 'fundraising', 'find investors', 'matchmaking', 'co-investment', 'joint venture'
   ];
-  const aMiss = A.filter((p) => scan(p, 'project-owner').length === 0);
+  const aMiss = A.filter((p) => scan(p, 'universal').length === 0);
 
-  // B · Andy 指定中性词在 universal scope 不误伤(入口1 走 universal,含 融资可行性 等专业词)
+  // B · 中性词在 universal scope 必须零命中(证明只录组合词、不录单字)
   const B = [
-    '内容资源', '市场知识资源', 'Chinese-market resources', 'content resources',
-    'relationship-building materials', 'stakeholder education',
-    '融资可行性', '资金结构', '贷款条件', '还款来源'
+    '融资可行性', '资金结构', '贷款条件', '还款来源', '资源协同', '落地协同',
+    'content resources', 'capital structure', 'financing feasibility', 'project feasibility', 'cross-cultural clarity'
   ];
   const bHit = B.filter((p) => scan(p, 'universal').length > 0);
 
-  // B2 · 入口2 允许的中性词在 project-owner scope 也不被组合词误伤(证明只禁组合词、不禁单字)
-  const B2 = [
-    '内容资源', '市场知识资源', 'Chinese-market resources', 'content resources',
-    'relationship-building materials', 'stakeholder education', '华人市场教育材料',
-    '信任建设材料', '关系建设材料', '内容资产', '华人市场定位', '项目说明材料', 'AI 搜索可见度'
-  ];
-  const b2Hit = B2.filter((p) => scan(p, 'project-owner').length > 0);
-
-  console.log(`\n[universal 命中] 中 ${uniZh.length} / 英 ${uniEn.length}(应 ≥2)`);
-  console.log(`[入口隔离] 入口2坏串在 universal scope 命中 中 ${isoZh.length} / 英 ${isoEn.length}(应 0)`);
-  console.log(`[A · 撮合词必命中 @project-owner] ${A.length} 条,漏命中 ${aMiss.length} ${aMiss.length ? '→ ' + aMiss.join(' / ') : '✓'}`);
+  console.log(`\n[universal 收益类命中] 中 ${uniZh.length} / 英 ${uniEn.length}(应 ≥2)`);
+  console.log(`[入口隔离] 入口2专属词在 universal 命中 中 ${isoZh.length} / 英 ${isoEn.length}(应 0)`);
+  console.log(`[A · 撮合/共投词必命中 @universal] ${A.length} 条,漏命中 ${aMiss.length} ${aMiss.length ? '→ ' + aMiss.join(' / ') : '✓'}`);
   console.log(`[B · 中性词不误伤 @universal] ${B.length} 条,误伤 ${bHit.length} ${bHit.length ? '→ ' + bHit.join(' / ') : '✓'}`);
-  console.log(`[B2 · 入口2允许词不误伤 @project-owner] ${B2.length} 条,误伤 ${b2Hit.length} ${b2Hit.length ? '→ ' + b2Hit.join(' / ') : '✓'}`);
 
   const ok =
     uniZh.length >= 2 &&
@@ -103,18 +93,43 @@ if (args.includes('--selftest')) {
     isoZh.length === 0 &&
     isoEn.length === 0 &&
     aMiss.length === 0 &&
-    bHit.length === 0 &&
-    b2Hit.length === 0;
-  console.log(ok ? '\n✓ 自测通过:撮合词全命中 + 中性词零误伤(双 scope)+ 入口隔离成立' : '\n✗ 自测失败');
+    bHit.length === 0;
+  console.log(ok ? '\n✓ 自测通过:撮合/共投词全命中 @universal + 中性词零误伤 + 入口隔离成立' : '\n✗ 自测失败');
   process.exit(ok ? 0 : 1);
 }
 
 // ---------- 正常扫描 ----------
 const DEFAULT_TARGETS = [
   'lib/cta/registry.ts',
+  'lib/content.ts',
+  'app/zh/layout.tsx',
+  'app/zh/(internal)/services/page.tsx',
   'app/zh/(internal)/services/project-owners/page.tsx',
   'app/zh/(internal)/services/investors/page.tsx',
-  'app/zh/(internal)/services/professional-firms/page.tsx'
+  'app/zh/(internal)/services/professional-firms/page.tsx',
+  'app/zh/(internal)/services/strategy/page.tsx',
+  'app/zh/(internal)/services/development/page.tsx',
+  'app/zh/(internal)/services/due-diligence/page.tsx',
+  'app/zh/(internal)/services/capital/page.tsx',
+  'app/zh/(internal)/about/page.tsx',
+  'app/zh/(internal)/about/founder/page.tsx',
+  'app/zh/(internal)/membership/page.tsx',
+  'app/zh/(internal)/contact/page.tsx',
+  'app/zh/(internal)/contact/thanks/page.tsx',
+  'app/zh/(internal)/projects/page.tsx',
+  'app/zh/(internal)/case-studies/page.tsx',
+  'app/zh/(internal)/events/page.tsx',
+  'app/zh/(internal)/events/EventsHero.tsx',
+  'components/layout/SiteFooter.tsx',
+  'components/sections/H03WhySarec.tsx',
+  'components/sections/H04ThreeLayers.tsx',
+  'components/sections/H05TrustAnchors.tsx',
+  'components/sections/H06ProjectsFeatured.tsx',
+  'components/sections/H09FAQ.tsx',
+  'components/sections/services/S01HeroSpread.tsx',
+  'components/sections/services/S02ThreeLayersOverview.tsx',
+  'components/sections/services/S03Chamber.tsx',
+  'components/sections/services/S04Advisory.tsx'
 ];
 
 const targets = (args.length ? args : DEFAULT_TARGETS)

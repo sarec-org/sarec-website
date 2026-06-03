@@ -6,7 +6,7 @@ export const site = {
   location: 'Los Angeles, California',
   positioning: '跨境地产项目协作与资源整合平台',
   positioningDetail:
-    '连接中国资本、美国资本与美国项目方。围绕项目判断、结构设计、风险控制与落地协同，推动跨境地产合作更稳健地成立与推进。'
+    '围绕中美跨境地产项目的判断、结构设计、风险控制与落地协同，推动合作稳健成立与推进。'
 };
 
 export const navItems = [
@@ -29,7 +29,7 @@ export const serviceItems = [
   },
   {
     title: '洛杉矶项目开发',
-    description: '精选洛杉矶、尔湾优质土地与开发机会，提供项目对接与开发支持',
+    description: '精选洛杉矶、尔湾优质土地与开发机会，提供项目可行性与开发支持',
     href: '/zh/services/development/'
   },
   {
@@ -38,8 +38,8 @@ export const serviceItems = [
     href: '/zh/services/due-diligence/'
   },
   {
-    title: '资本对接撮合',
-    description: '连接中方资金、美国资金与美国项目方，推动合规结构下的跨境投资落地',
+    title: '资本结构与资金路径评估',
+    description: '就跨境资金路径与项目可行性做结构化判断，推动合规结构下的合作落地',
     href: '/zh/services/capital/'
   }
 ];
@@ -109,7 +109,7 @@ export const homePage = {
     {
       title: '我是美国项目方',
       description: '有真实可推进的项目，希望引入匹配的中方或跨境资本，并建立更高质量的合作路径。',
-      linkText: '了解资本对接服务',
+      linkText: '了解资本结构咨询',
       href: '/zh/services/capital/'
     },
     {
@@ -135,8 +135,8 @@ export const homePage = {
     },
     {
       ...serviceItems[3],
-      title: '资本对接协作',
-      description: '连接中国资本、美国资本与美国项目方，但不把一次性撮合作为核心价值。'
+      title: '资本结构与资金路径评估',
+      description: '核心在于项目判断、结构设计与风险控制，而非一次性服务。'
     }
   ],
   researchTitle: '研究，不是内容装饰，而是判断能力的外显。',
@@ -245,22 +245,22 @@ export const skeletonPages: Record<string, SkeletonPage> = {
     title: 'SAREC核心服务',
     description: '从出海规划到资本落地，SAREC提供全链条专业支持',
     href: '/zh/services/',
-    metaTitle: 'SAREC核心服务 | 出海战略・项目开发・风控尽调・资本对接',
-    metaDescription: 'SAREC为中国开发商和投资人提供四项核心服务：出海战略咨询、洛杉矶项目开发、风控尽调、资本对接撮合。'
+    metaTitle: 'SAREC核心服务 | 出海战略・项目开发・风控尽调・资本结构咨询',
+    metaDescription: 'SAREC为中国开发商和投资人提供四项核心服务：出海战略咨询、洛杉矶项目开发、风控尽调、资本结构与资金路径评估。'
   },
   strategy: {
     title: '中国开发商如何安全进入美国市场？',
     description: '出海不是一次项目决策，是一套系统工程。SAREC帮您在启动前想清楚每一步',
     href: '/zh/services/strategy/',
     metaTitle: '中国开发商如何安全进入美国市场？| 出海战略咨询 | SAREC',
-    metaDescription: 'SAREC为中国开发商提供系统性美国市场进入方案，覆盖选址、架构、合规与资源对接，帮助企业降低出海风险。'
+    metaDescription: 'SAREC为中国开发商提供系统性美国市场进入方案，覆盖选址、架构、合规与资源协同，帮助企业降低出海风险。'
   },
   development: {
     title: '洛杉矶有哪些值得投的房产开发机会？',
     description: 'SAREC长期深耕洛杉矶市场。我们的价值不是告诉你哪里涨，而是帮你判断哪个项目值得进',
     href: '/zh/services/development/',
     metaTitle: '洛杉矶有哪些值得投的房产开发机会？| 项目开发 | SAREC',
-    metaDescription: 'SAREC精选洛杉矶、尔湾优质土地与开发项目，提供项目对接、尽调支持与开发全流程协助。'
+    metaDescription: 'SAREC精选洛杉矶、尔湾优质土地与开发项目，提供项目可行性、尽调支持与开发全流程协助。'
   },
   dueDiligence: {
     title: '投资美国房产之前，这些风险你查清楚了吗？',
@@ -270,18 +270,18 @@ export const skeletonPages: Record<string, SkeletonPage> = {
     metaDescription: 'SAREC提供针对美国房产项目的系统性风险评估与尽职调查，覆盖开发商背景、法律合规、财务结构与退出机制。'
   },
   capital: {
-    title: '中国资本如何合规、高效地对接美国开发机会？',
-    description: 'SAREC 的核心价值不止于资源对接，而是围绕项目判断、结构设计、风险控制与落地协同，推动跨境合作更稳健地成立与推进。',
+    title: '中国资本如何合规、稳健地评估美国开发机会？',
+    description: 'SAREC 的核心价值在于项目判断、结构设计、风险控制与落地协同，推动跨境合作更稳健地成立与推进。',
     href: '/zh/services/capital/',
-    metaTitle: '中国资本如何合规对接美国房产开发商？| 资本对接 | SAREC',
-    metaDescription: 'SAREC连接中方资金与美国优质项目方，推动合规结构下的跨境投资落地，覆盖EB-5、夹层融资、联合开发等结构。'
+    metaTitle: '中国资本如何合规评估美国房产开发商？| 资本结构咨询 | SAREC',
+    metaDescription: 'SAREC 就跨境资金路径与优质项目可行性做结构化判断，推动合规结构下的合作落地，覆盖EB-5、夹层融资、项目协作机制等结构。'
   },
   projects: {
     title: 'SAREC合作项目与案例',
     description: '不是广告，是真实记录。以下是SAREC参与协调的部分项目，展示我们如何在实际工作中帮助客户',
     href: '/zh/projects/',
     metaTitle: 'SAREC合作项目与投资案例 | 洛杉矶房产开发实例',
-    metaDescription: 'SAREC历年合作的洛杉矶房产开发项目与投资案例，展示中美联合开发、EB-5项目及资本对接实例。'
+    metaDescription: 'SAREC历年合作的洛杉矶房产开发项目与投资案例，展示中美跨境投资结构、EB-5项目及资本结构实例。'
   },
   eb5: {
     title: 'EB-5投资移民：2026年还值不值得投？',
@@ -495,7 +495,7 @@ export const servicePages: Record<string, ServicePageContent> = {
           name: 'support_needed',
           required: true,
           type: 'select',
-          options: ['资本对接', '合作伙伴', '市场推广', '法律合规', '其他']
+          options: ['资本结构咨询', '合作伙伴', '市场推广', '法律合规', '其他']
         },
         { label: '简要说明（选填）', name: 'notes', type: 'textarea' }
       ]
@@ -504,7 +504,7 @@ export const servicePages: Record<string, ServicePageContent> = {
   development: {
     slug: 'development',
     metaTitle: '洛杉矶有哪些值得投的房产开发机会？| 项目开发 | SAREC',
-    metaDescription: 'SAREC精选洛杉矶、尔湾优质土地与开发项目，提供项目对接、尽调支持与开发全流程协助。',
+    metaDescription: 'SAREC精选洛杉矶、尔湾优质土地与开发项目，提供项目可行性、尽调支持与开发全流程协助。',
     title: '洛杉矶有哪些值得投的房产开发机会？',
     subtitle: '大多数跨境地产项目的问题，并不在于是否存在机会，而在于是否具备进入的条件。项目从概念到落地，真正的难点在执行与协同。',
     problemIntro: '洛杉矶房产机会多，但真正适合中国开发商的项目很有限：',
@@ -635,11 +635,11 @@ export const servicePages: Record<string, ServicePageContent> = {
   },
   capital: {
     slug: 'capital',
-    metaTitle: '中国资本如何合规对接美国房产开发商？| 资本对接 | SAREC',
+    metaTitle: '中国资本如何合规评估美国房产开发商？| 资本结构咨询 | SAREC',
     metaDescription:
-      'SAREC连接中方资金与美国优质项目方，推动合规结构下的跨境投资落地，覆盖EB-5、夹层融资、联合开发等结构。',
-    title: '中国资本如何合规、高效地对接美国开发机会？',
-    subtitle: '大多数跨境地产项目的问题，并不在于是否存在机会，而在于是否具备进入的条件。资金与项目的匹配，从来不是简单的对接问题，而是结构问题。',
+      'SAREC 就跨境资金路径与优质项目可行性做结构化判断，推动合规结构下的合作落地，覆盖EB-5、夹层融资、项目协作机制等结构。',
+    title: '中国资本如何合规、稳健地评估美国开发机会？',
+    subtitle: '大多数跨境地产项目的问题，并不在于是否存在机会，而在于是否具备进入的条件。资金路径、项目条件与合作角色能否成立，从来不是简单问题，而是结构问题。',
     problemIntro: '中国资本进入美国地产市场有很高的隐性门槛：',
     problems: [
       '找不到真正优质的项目，市面上的机会要么太贵要么有问题',
@@ -649,7 +649,7 @@ export const servicePages: Record<string, ServicePageContent> = {
     ],
     work: [
       {
-        title: '资金与项目的匹配判断',
+        title: '资金结构与项目可行性判断',
         items: ['围绕资金属性、项目阶段与合作目标，判断双方是否具备匹配基础', '明确资金需求与项目需求之间是否在结构上可成立', '识别合作中最容易失衡的角色与利益安排']
       },
       {
@@ -658,14 +658,14 @@ export const servicePages: Record<string, ServicePageContent> = {
       },
       {
         title: '资源协同与推进支持',
-        items: ['在具备明确判断基础上，推动双方沟通进入更有效率的讨论', '协助整理对接材料与关键问题清单', '在推进过程中持续对齐信息、节奏与执行预期']
+        items: ['在具备明确判断基础上，推动双方沟通进入更有效率的讨论', '协助整理项目说明材料与关键问题清单', '在推进过程中持续对齐信息、节奏与执行预期']
       }
     ],
     expertQuote: {
       sarecJudgment:
         '在跨境地产投资中，真正的风险控制，不在于避免所有风险，而在于识别关键风险，并在进入之前完成判断。',
       andyObservation:
-        '资本协同最常见的失败，不是没有见到对手方，而是在结构还没成立时就仓促进入推进。对接之前，先判断结构是否成立，远比把人拉到桌上更重要。',
+        '资本协同最常见的失败，不是没有见到对手方，而是在结构还没成立时就仓促进入推进。进入之前，先判断结构是否成立，远比把人拉到桌上更重要。',
       investorInsight:
         '对投资主体而言，资本与项目的匹配必须建立在结构清晰、角色明确与执行可推进的前提上。'
     },
@@ -708,7 +708,7 @@ export const servicePages: Record<string, ServicePageContent> = {
 export const aboutPage = {
   metaTitle: '关于 SAREC | 跨境地产项目协作与资源整合平台',
   metaDescription:
-    'SAREC 是跨境地产项目协作与资源整合平台，连接中国资本、美国资本与美国项目方，围绕项目判断、结构设计、风险控制与落地协同推进合作。',
+    'SAREC 是跨境地产项目协作平台，围绕项目判断、结构设计、风险控制与落地协同推进合作。',
   title: '关于 SAREC',
   subtitle:
     'SAREC 不是一个单纯的信息平台，也不是一站式“带看美国项目”的中介网站。我们更像跨境地产合作中的判断层与协作层——在中国资本、美国资本与美国项目方之间，把最容易出问题的环节提前看清、对齐、拆解。',
@@ -725,7 +725,7 @@ export const aboutPage = {
     title: '我们的定位',
     intro: '跨境地产项目协作与资源整合平台',
     body:
-      'SAREC 连接中国资本、美国资本与美国项目方。我们的工作不止于资源对接，而是围绕项目判断、结构设计、风险控制与落地协同，推动跨境合作真正成立并向前推进。'
+      'SAREC 的工作围绕项目判断、结构设计、风险控制与落地协同，推动跨境合作真正成立并向前推进。'
   },
   functions: [
     {
@@ -734,7 +734,7 @@ export const aboutPage = {
     },
     {
       title: '跨境资源整合与协作推动',
-      lines: ['连接中国资本、美国资本与美国项目方，并在关键合作节点中推动信息对齐、角色协同与执行落地。']
+      lines: ['围绕中美跨境地产项目，在关键合作节点推动信息对齐、角色协同与执行落地。']
     },
     {
       title: '风控、结构与落地支持',
@@ -771,7 +771,7 @@ export const footerContent = {
         { label: '出海战略咨询', href: '/zh/services/strategy/' },
         { label: '洛杉矶项目开发', href: '/zh/services/development/' },
         { label: '风控尽调服务', href: '/zh/services/due-diligence/' },
-        { label: '资本对接协作', href: '/zh/services/capital/' }
+        { label: '资本结构与资金路径评估', href: '/zh/services/capital/' }
       ]
     },
     {
@@ -808,13 +808,13 @@ export const footerContent = {
 };
 
 export const servicesOverviewPage = {
-  metaTitle: 'SAREC核心服务 | 出海战略・项目开发・风控尽调・资本对接',
-  metaDescription: 'SAREC为中国开发商和投资人提供四项核心服务：出海战略咨询、洛杉矶项目开发、风控尽调、资本对接撮合。',
+  metaTitle: 'SAREC核心服务 | 出海战略・项目开发・风控尽调・资本结构咨询',
+  metaDescription: 'SAREC为中国开发商和投资人提供四项核心服务：出海战略咨询、洛杉矶项目开发、风控尽调、资本结构与资金路径评估。',
   title: '核心服务',
   subtitle: '我们不提供单一服务，而是围绕跨境地产投资的关键环节，提供系统性的判断、结构设计与落地支持。',
   positioningIntro: '在跨境地产合作中，大多数问题并不出现在资源获取，而是出现在判断、结构与执行环节。',
   positioningPoints: ['项目判断', '风险识别', '交易结构设计', '资源协同与执行推进'],
-  positioningOutro: 'SAREC 的服务，并不是简单的撮合或单点支持，而是围绕以上核心能力展开：',
+  positioningOutro: 'SAREC 的服务，并不是简单的一次性服务或单点支持，而是围绕以上核心能力展开：',
   services: [
     {
       title: '项目判断与投资策略',
@@ -833,7 +833,7 @@ export const servicesOverviewPage = {
     },
     {
       title: '资本与项目协同',
-      description: '在具备明确判断基础上，我们协助匹配合适的资金与项目方，并推动合作结构的建立与落地。',
+      description: '在具备明确判断基础上，我们围绕资金结构与项目可行性给出判断，并推动合作结构的建立与落地。',
       href: '/zh/services/capital/'
     }
   ],
@@ -846,7 +846,7 @@ export const servicesOverviewPage = {
 
 export const projectsPage = {
   metaTitle: 'SAREC合作项目与投资案例 | 洛杉矶房产开发实例',
-  metaDescription: 'SAREC历年合作的洛杉矶房产开发项目与投资案例，展示中美联合开发、EB-5项目及资本对接实例。',
+  metaDescription: 'SAREC历年合作的洛杉矶房产开发项目与投资案例，展示中美跨境投资结构、EB-5项目及资本结构实例。',
   title: 'SAREC合作项目与案例',
   subtitle: '不是广告，是真实记录。以下是SAREC参与协调的部分项目，展示我们如何在实际工作中帮助客户',
   active: {
@@ -883,11 +883,11 @@ export const projectsPage = {
       href: '/zh/services/due-diligence/'
     },
     {
-      title: '中美联合开发如何搭建合规结构',
+      title: '中美跨境项目协作如何搭建合规结构',
       background: '一家中国开发商希望在洛杉矶以LP身份参与一个住宅项目。',
-      action: '协助设计Delaware LP结构，完成资金来源文件准备，对接移民律师。',
+      action: '协助设计Delaware LP结构，完成资金来源文件准备，协调移民律师。',
       result: '项目顺利启动，资金合规到位。',
-      linkText: '了解SAREC资本对接服务',
+      linkText: '了解SAREC资本结构咨询',
       href: '/zh/services/capital/'
     }
   ],
@@ -1133,18 +1133,18 @@ export const solutionsPage = {
         cta: { text: '预约项目合作讨论', href: '/zh/contact/' }
       },
       {
-        title: '资本与项目对接',
+        title: '资本结构与项目可行性',
         fit: '有项目需要资金，或有资金希望寻找合适房地产项目的客户。',
         scope: '在完成基本判断与风险识别后，推动资金方、项目方和相关专业资源之间的沟通与协作。',
-        result: '资本对接路径、合作条件梳理、结构建议。',
+        result: '资金路径判断、合作条件梳理、结构建议。',
         fee: '根据合作性质，可采用咨询费、居间佣金、成功费或长期合作方式。',
-        cta: { text: '提交对接需求', href: '/zh/contact/' }
+        cta: { text: '提交项目信息', href: '/zh/contact/' }
       },
       {
         title: '美国家庭资产配置咨询',
         fit: '希望通过房地产、保险、信贷、hard money、基金或其他金融工具进行美国资产配置的客户。',
         scope:
-          '基于客户身份、资金规模、风险偏好和家庭目标，提供美国资产配置方向建议，并在合规范围内对接相关产品或专业机构。',
+          '基于客户身份、资金规模、风险偏好和家庭目标，提供美国资产配置方向建议，并在合规范围内协调相关产品或专业机构。',
         result: '资产配置思路、产品方向建议、后续执行路径。',
         fee: '可根据服务内容收取咨询费，也可能通过合规产品推荐或合作机构获得佣金。',
         cta: { text: '预约资产配置咨询', href: '/zh/contact/' }
@@ -1182,7 +1182,7 @@ export const solutionsPage = {
       },
       {
         title: '确定合作方式',
-        body: '根据客户目标和项目情况，确定咨询、项目合作、资本对接、资产配置或其他合作路径。'
+        body: '根据客户目标和项目情况，确定咨询、项目合作、资本结构咨询、资产配置或其他合作路径。'
       },
       {
         title: '进入执行',

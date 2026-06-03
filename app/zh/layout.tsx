@@ -31,7 +31,7 @@ export default function ZhLayout({ children }: { children: React.ReactNode }) {
         },
         areaServed: ['United States', 'China'],
         description:
-          'SAREC 的核心价值不止于资源对接，而是围绕项目判断、结构设计、风险控制与落地协同，推动跨境合作更稳健地成立与推进。'
+          'SAREC 围绕项目判断、结构设计、风险控制与落地协同，推动跨境合作更稳健地成立与推进。'
       }
     ]
   };

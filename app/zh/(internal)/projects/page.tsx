@@ -28,7 +28,7 @@ const projectTypes = [
     code: '02',
     title: '精品公寓项目',
     body: '洛杉矶核心地段中型住宅开发。',
-    role: 'SAREC 角色:项目筛选 · 资本对接 · 结构设计',
+    role: 'SAREC 角色:项目筛选 · 资本结构咨询 · 结构设计',
     fitLabel: '适合特点:',
     fit: [
       '区位价值清晰',
@@ -71,7 +71,7 @@ const mechanisms = [
     code: '02',
     title: '同股同权',
     body: [
-      '在符合 SAREC 参与标准的项目共投场景下,团队可与客户共同出资。',
+      '在符合 SAREC 服务标准的项目协作场景下,围绕合作结构与风险共担机制推进。',
       '我们优先采用利益一致、风险共担的合作结构。'
     ],
     compliance: '具体股权、决策权和退出安排,以项目协议为准。'
@@ -299,7 +299,7 @@ export default function ProjectsPage() {
               </summary>
               <div className={styles.faqAnswer}>
                 <p>
-                  在符合 SAREC 参与标准的项目共投场景下,团队可与客户共同出资。
+                  在符合 SAREC 服务标准的项目协作场景下,围绕合作结构与风险共担机制推进。
                 </p>
                 <p>优先采用利益一致、风险共担、后端激励的合作结构。</p>
                 <p className={styles.complianceNote}>

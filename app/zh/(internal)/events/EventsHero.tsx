@@ -62,7 +62,7 @@ export function EventsHero() {
           <span className={revealClass}>SAREC 活动与考察</span>
         </h1>
         <p className={styles.heroLead}>
-          SAREC 围绕真实项目、市场判断、风险识别和资源对接,组织培训、研讨、闭门分享、行业展会和美国实地考察。
+          SAREC 围绕真实项目、市场判断、风险识别和资源协同,组织培训、研讨、闭门分享、行业展会和美国实地考察。
         </p>
         <p className={styles.heroLead}>
           活动不只是内容传播 —— 是会员深度参与跨境地产合作的关键场景。

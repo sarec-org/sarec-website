@@ -33,7 +33,7 @@ const LAYERS: Layer[] = [
     en: 'LAYER 01 · CHAMBER',
     zh: '商会',
     tagline: '围绕真实项目的高含金量内容。',
-    services: '· 研究 · 培训 · 展会 · 活动 · 考察 · 教育 · 资源对接',
+    services: '· 研究 · 培训 · 展会 · 活动 · 考察 · 教育 · 资源协同',
     entry: '会员服务',
     entryNote: '研究、培训、活动、考察 —— 长期接触跨境地产合作的入口。',
     partnership: '年度会员费',
@@ -45,9 +45,9 @@ const LAYERS: Layer[] = [
   {
     code: '02',
     en: 'LAYER 02 · ADVISORY & DEAL COORDINATION',
-    zh: '咨询撮合',
-    tagline: '撮合只是入口，把控才是核心。',
-    services: '· 项目尽调 · 财务建模 · 结构设计 · 风险评估 · 撮合介绍',
+    zh: '项目咨询与结构设计',
+    tagline: '项目判断只是第一步，把控才是核心。',
+    services: '· 项目尽调 · 财务建模 · 结构设计 · 风险评估 · 项目判断与说明',
     entry: '咨询服务',
     entryNote: '已有具体项目方向, 希望深度合作的客户。',
     partnership: '按项目阶段约定',
@@ -55,20 +55,6 @@ const LAYERS: Layer[] = [
     linkText: '了解第二层',
     linkHref: '/zh/services#advisory',
     progressLabel: 'ADVISORY'
-  },
-  {
-    code: '03',
-    en: 'LAYER 03 · CO-INVEST',
-    zh: '共投',
-    tagline: '不直接作为施工开发主体，也不设资金池。',
-    services: '· LLC · 同股同权 · Escrow · 后端激励 · 项目监督',
-    entry: '项目合作',
-    entryNote: '在符合 SAREC 参与标准的项目共投场景下。',
-    partnership: '以项目协议为准',
-    partnershipNote: 'LLC 项目公司 · Escrow 托管 · 后端激励。',
-    linkText: '查看项目案例',
-    linkHref: '/zh/case-studies',
-    progressLabel: 'CO-INVEST'
   }
 ];
 
@@ -235,7 +221,7 @@ export function H04ThreeLayers() {
   });
 
   useMotionValueEvent(scrollYProgress, 'change', (latest) => {
-    const next = latest < 0.33 ? 0 : latest < 0.66 ? 1 : 2;
+    const next = latest < 0.5 ? 0 : 1;
     setActiveIndex((prev) => (prev === next ? prev : next));
   });
 

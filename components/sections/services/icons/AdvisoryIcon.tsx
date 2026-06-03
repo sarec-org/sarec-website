@@ -3,7 +3,7 @@ type IconProps = {
   size?: number;
 };
 
-/** Advisory 咨询撮合 — document (rectangle with content lines) +
+/** Advisory 项目咨询与结构设计 — document (rectangle with content lines) +
  *  magnifying lens on the bottom-right corner. */
 export function AdvisoryIcon({ className, size = 32 }: IconProps) {
   return (

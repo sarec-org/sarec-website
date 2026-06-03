@@ -38,14 +38,6 @@ const SERVICES: Service[] = [
       '设计符合投资人利益的法律结构：',
       'LLC 项目公司 · 同股同权 · Escrow 资金路径 · 后端激励机制。'
     ]
-  },
-  {
-    code: '04',
-    title: '撮合介绍',
-    body: [
-      '在尽调通过、结构设计完成后，',
-      '将项目介绍给匹配的投资人或开发商。'
-    ]
   }
 ];
 
@@ -112,10 +104,10 @@ export function S04Advisory() {
               LAYER 02 · ADVISORY &amp; DEAL COORDINATION
             </motion.span>
             <motion.h2 className={styles.h2} variants={headerItem}>
-              咨询撮合
+              项目咨询与结构设计
             </motion.h2>
             <motion.p className={styles.tagline} variants={headerItem}>
-              撮合只是入口，把控才是核心。
+              项目判断只是第一步，把控才是核心。
             </motion.p>
           </motion.div>
         </div>
@@ -145,21 +137,6 @@ export function S04Advisory() {
               </div>
             </motion.article>
           ))}
-        </motion.div>
-
-        {/* Note */}
-        <motion.div
-          className={styles.note}
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 0.6, ease: EASE }}
-        >
-          <p>
-            <span className={styles.noteLabel}>[note]</span>
-            撮合不代表 SAREC 必然作为 GP / 共投方。
-          </p>
-          <p>具体合作方式以单独协议为准。</p>
         </motion.div>
 
         {/* 适合谁 */}

@@ -80,7 +80,7 @@ const projectExperiences = [
     code: '02',
     title: '精品公寓项目',
     body: '洛杉矶核心地段中型住宅开发。',
-    role: 'SAREC 角色:项目筛选 · 资本对接 · 结构设计'
+    role: 'SAREC 角色:项目筛选 · 资本结构咨询 · 结构设计'
   },
   {
     code: '03',

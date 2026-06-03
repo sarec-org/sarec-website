@@ -4,7 +4,6 @@ import { S01HeroSpread } from '@/components/sections/services/S01HeroSpread';
 import { S02ThreeLayersOverview } from '@/components/sections/services/S02ThreeLayersOverview';
 import { S03Chamber } from '@/components/sections/services/S03Chamber';
 import { S04Advisory } from '@/components/sections/services/S04Advisory';
-import { S05CoInvest } from '@/components/sections/services/S05CoInvest';
 import { S06PartnerNetwork } from '@/components/sections/services/S06PartnerNetwork';
 import { createPageMetadata } from '@/lib/seo';
 
@@ -23,7 +22,6 @@ export default function ServicesPage() {
       <S02ThreeLayersOverview />
       <S03Chamber />
       <S04Advisory />
-      <S05CoInvest />
       <S06PartnerNetwork />
 
       <InternalCTABanner

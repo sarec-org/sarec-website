@@ -3,7 +3,7 @@ type IconProps = {
   size?: number;
 };
 
-/** Co-Invest 共投 — 3 nodes forming a triangle (top center, bottom-left,
+/** Co-Invest 合作结构设计 — 3 nodes forming a triangle (top center, bottom-left,
  *  bottom-right), connected by lines. Suggests an LLC equity structure. */
 export function CoInvestIcon({ className, size = 32 }: IconProps) {
   return (
