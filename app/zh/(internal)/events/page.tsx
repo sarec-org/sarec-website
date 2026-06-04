@@ -94,7 +94,7 @@ const tourCards = [
     code: '05',
     title: '跨境合作机制讨论',
     body: [
-      '了解 SAREC 三层服务架构在实际项目中的落地方式:',
+      '了解 SAREC 三类服务入口在实际项目中的落地方式:',
       'LLC 项目公司、Escrow 托管、后端激励等。'
     ]
   }
@@ -356,7 +356,7 @@ export default function EventsPage() {
               加入会员,参与全部活动
             </Link>
             <Link href="/zh/services" className={styles.ctaSecondary}>
-              查看服务架构
+              查看服务入口
             </Link>
           </div>
         </div>

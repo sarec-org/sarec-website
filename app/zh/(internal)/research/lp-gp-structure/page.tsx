@@ -131,7 +131,7 @@ const relatedLinks = [
   { title: '中国投资人美国房地产常见风险', href: '/zh/research/chinese-investors-us-real-estate-risks/' },
   { title: '风险披露', href: '/zh/legal/risk-disclosure/' },
   { title: '项目初筛服务', href: '/zh/services/strategy/' },
-  { title: '服务架构', href: '/zh/services/' }
+  { title: '服务入口', href: '/zh/services/' }
 ];
 
 const introParagraphs = [
@@ -141,7 +141,7 @@ const introParagraphs = [
 ];
 
 const sarecFrameworkBody =
-  'SAREC 的价值不是替客户做最终投资决定，而是帮助客户在进入项目之前，把合作结构中的关键问题先提出来、列清楚、分层判断。实际项目也可以结合案例研究与服务架构进一步讨论。';
+  'SAREC 的价值不是替客户做最终投资决定，而是帮助客户在进入项目之前，把合作结构中的关键问题先提出来、列清楚、分层判断。实际项目也可以结合案例研究与服务入口进一步讨论。';
 
 const conclusionParagraphs = [
   '一个美国房地产项目是否值得继续推进，不能只看项目介绍、租金测算和退出价值。对投资人而言，真正重要的是：这个项目是否有清晰的管理方、透明的资金路径、合理的费用机制、稳定的信息披露、明确的重大事项决策和可讨论的退出路径。',

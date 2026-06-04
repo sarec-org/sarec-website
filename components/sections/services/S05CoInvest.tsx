@@ -30,7 +30,7 @@ const MECHANISMS: Mechanism[] = [
     code: '02',
     title: '同股同权',
     body: [
-      '在符合 SAREC 参与标准的项目共投场景下，',
+      '在符合 SAREC 参与标准的项目合作场景下，',
       '团队可与客户共同出资。',
       '优先采用利益一致、风险共担的合作结构。'
     ],
@@ -106,7 +106,7 @@ export function S05CoInvest() {
             LAYER 03 · CO-INVEST
           </motion.span>
           <motion.h2 className={styles.h2} variants={headerItem}>
-            共投
+            合作结构
           </motion.h2>
           <motion.p className={styles.tagline} variants={headerItem}>
             不直接作为施工开发主体，也不设资金池。

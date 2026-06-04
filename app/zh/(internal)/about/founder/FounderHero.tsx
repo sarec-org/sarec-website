@@ -80,7 +80,7 @@ export function FounderHero() {
             <br />
             而是重新学习美国规则、
             <br />
-            整合本地开发商和跨境资本的长期主义操盘者。
+            整合本地开发商和跨境房地产合作的长期主义操盘者。
           </p>
           <div className={styles.heroCtaRow}>
             <Link href="/zh/contact" className={styles.heroCtaPrimary}>

@@ -65,7 +65,7 @@ export function SiteFooter() {
           <ul className="mt-5 space-y-3 text-[14px] text-[var(--ivory-dim)]">
             <li>
               <Link href="/zh/services" className="hover:text-[var(--gold)] transition-colors">
-                服务架构
+                服务入口
               </Link>
             </li>
             <li>

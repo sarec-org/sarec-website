@@ -15,7 +15,7 @@ export const metadata: Metadata = createPageMetadata({
 const whoLayers = [
   {
     code: '01',
-    title: '商会层',
+    title: '长期学习与交流入口',
     body: '通过会员服务建立长期连接中美房地产相关客户的网络。'
   },
   {
@@ -130,7 +130,7 @@ export default function AboutPage() {
               </span>
             </Link>
             <Link href="/zh/services" className={styles.ctaSecondary}>
-              <span>查看服务架构</span>
+              <span>查看服务入口</span>
               <span className={styles.ctaArrow} aria-hidden="true">
                 →
               </span>
@@ -145,7 +145,7 @@ export default function AboutPage() {
           <div className={`${styles.splitGrid} ${styles.whoGrid}`}>
             <div className={styles.whoTextCol}>
               <span className={styles.eyebrow}>WHO WE ARE · 我们是谁</span>
-              <h2 className={styles.h2}>SAREC 是三层平台</h2>
+              <h2 className={styles.h2}>SAREC 是中美房地产项目判断与服务平台</h2>
             </div>
             <ol className={styles.whoList}>
               {whoLayers.map((layer) => (
@@ -255,7 +255,7 @@ export default function AboutPage() {
               </span>
             </Link>
             <Link href="/zh/services" className={styles.ctaSecondary}>
-              <span>查看服务架构</span>
+              <span>查看服务入口</span>
               <span className={styles.ctaArrow} aria-hidden="true">
                 →
               </span>

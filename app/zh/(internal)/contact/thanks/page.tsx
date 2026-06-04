@@ -29,8 +29,8 @@ const exploreLinks = [
   },
   {
     code: '02',
-    title: '了解 SAREC 完整服务架构',
-    body: '理解 SAREC 服务架构 —— 商会、项目咨询与结构设计、合作结构设计。',
+    title: '了解 SAREC 完整服务入口',
+    body: '理解 SAREC 服务入口 —— 商会、项目咨询与结构设计、合作结构设计。',
     href: '/zh/services'
   },
   {

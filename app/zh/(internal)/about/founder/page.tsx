@@ -9,7 +9,7 @@ import { FounderHero } from './FounderHero';
 export const metadata: Metadata = createPageMetadata({
   title: 'Andy Wang｜SAREC 中美房地产商会创始人',
   description:
-    '一个经历过中国地产完整周期、懂项目、懂资金、懂结构、懂人性,来到美国后整合本地开发商和跨境资本的长期主义操盘者。Andy Wang · SAREC 创始人 · 跨境地产投资人。',
+    '一个经历过中国地产完整周期、懂项目、懂资金、懂结构、懂人性,来到美国后整合本地开发商和跨境房地产合作的长期主义操盘者。Andy Wang · SAREC 创始人 · 跨境地产投资人。',
   path: '/zh/about/founder'
 });
 
@@ -146,30 +146,30 @@ export default function FounderPage() {
         <div className={styles.viewsInner}>
           <span className={styles.eyebrow}>MY VIEW · 我看美国房地产</span>
           <RevealOnView as="h2" className={styles.sectionH2}>
-            三层视角
+            三个实践维度
           </RevealOnView>
           <ol className={styles.viewsList}>
             <li className={styles.viewsItem}>
-              <span className={styles.viewsTier}>第一层 · 商会层(基础)</span>
+              <span className={styles.viewsTier}>长期学习与交流(基础)</span>
               <p className={styles.viewsBody}>
                 美国房地产对中国背景的客户来说,最大的障碍不是信息,而是规则的差异、操作的复杂度、风险的不可见。
               </p>
               <p className={styles.viewsBody}>
-                SAREC 商会层(研究、培训、活动、考察)帮客户先把&quot;规则、生态、机会和风险&quot;看清楚。
+                SAREC 的长期学习与交流服务(研究、培训、活动、考察)帮客户先把&quot;规则、生态、机会和风险&quot;看清楚。
               </p>
             </li>
             <li className={styles.viewsItem}>
-              <span className={styles.viewsTier}>第二层 · 咨询层(关键)</span>
+              <span className={styles.viewsTier}>项目咨询(关键)</span>
               <p className={styles.viewsBody}>看清楚之后,进入具体项目阶段。</p>
               <p className={styles.viewsBody}>
                 这一层最大的问题是 —— 许多服务方做一次性服务赚佣金,但不对项目结果负责。
               </p>
               <p className={styles.viewsBody}>
-                SAREC 咨询层 —— 做的是用投资人视角持续把控项目,不是介绍完就消失。
+                SAREC 的项目咨询服务 —— 做的是用投资人视角持续把控项目,不是介绍完就消失。
               </p>
             </li>
             <li className={styles.viewsItem}>
-              <span className={styles.viewsTier}>第三层 · 合作结构设计(深度)</span>
+              <span className={styles.viewsTier}>合作结构设计(深度)</span>
               <p className={styles.viewsBody}>
                 当客户和 SAREC 建立长期信任,当某个项目同时符合双方的判断标准 —— 围绕合作结构与风险共担机制推进协作。
               </p>

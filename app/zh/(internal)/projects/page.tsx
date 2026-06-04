@@ -231,7 +231,7 @@ export default function ProjectsPage() {
             ))}
           </div>
           <p className={styles.mechanismInlineCta}>
-            完整服务架构详见 →{' '}
+            完整服务入口详见 →{' '}
             <Link href="/zh/services" className={styles.inlineLink}>
               /zh/services
             </Link>
