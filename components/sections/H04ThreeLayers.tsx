@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
 import { CTA_REGISTRY } from '@/lib/cta/registry';
+import { localize } from '@/lib/i18n/types';
 import styles from './H04ThreeLayers.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -82,7 +83,7 @@ export function H04ThreeLayers() {
             </motion.h2>
             <motion.div variants={item}>
               <Link href={risk.primary.route.zh} className={styles.introCta}>
-                <span>做一次项目风险初诊</span>
+                <span>{localize(risk.primary.label)}</span>
                 <span className={styles.introCtaArrow} aria-hidden="true">
                   →
                 </span>
