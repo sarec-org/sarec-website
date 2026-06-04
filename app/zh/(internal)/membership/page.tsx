@@ -7,7 +7,7 @@ import styles from './membership.module.css';
 export const metadata: Metadata = createPageMetadata({
   title: '会员服务｜SAREC 中美房地产商会',
   description:
-    'SAREC 会员是商会层服务的入口。通过会员,系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络,逐步进入更深层的项目咨询与项目协作。',
+    'SAREC 会员是长期学习、交流与机构关系入口。通过会员，系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络，并在需要时进一步了解相应的服务入口。',
   path: '/zh/membership'
 });
 
@@ -22,14 +22,14 @@ export default function MembershipPage() {
             <span className={styles.heroRevealLine}>加入 SAREC 会员</span>
           </h1>
           <p className={styles.heroLead}>
-            SAREC 会员是商会层服务的入口。通过会员,你可以系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络,并逐步进入更深层的项目咨询与项目协作。
+            SAREC 会员是长期学习、交流与机构关系入口。通过会员，你可以系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络，并在需要具体项目判断或服务时，进一步了解相应的服务入口。
           </p>
           <div className={styles.ctaGroup}>
-            <Link href="/zh/contact" className={styles.ctaPrimary}>
-              申请加入会员
+            <Link href="#benefits" className={styles.ctaSoft}>
+              了解会员机制
             </Link>
-            <Link href="#benefits" className={styles.ctaSecondary}>
-              查看会员权益
+            <Link href="/zh/contact" className={styles.inlineLink}>
+              联系 SAREC 了解更多
             </Link>
           </div>
         </div>
@@ -47,16 +47,16 @@ export default function MembershipPage() {
               cy="200"
               r="195"
               fill="none"
-              style={{ stroke: 'var(--gold)' }}
-              strokeWidth="1.5"
+              style={{ stroke: 'var(--gold-muted)' }}
+              strokeWidth="1"
             />
             <circle
               cx="200"
               cy="200"
               r="160"
               fill="none"
-              style={{ stroke: 'var(--gold)' }}
-              strokeWidth="1"
+              style={{ stroke: 'var(--gold-muted)' }}
+              strokeWidth="0.75"
             />
 
             {/* 外圈拉丁文(沿圆周)*/}
@@ -111,18 +111,18 @@ export default function MembershipPage() {
       {/* Membership Manifesto — Masked Text Marquee(字内嵌建筑图,horizontal marquee 无限循环) */}
       <section
         className={styles.membershipManifestoSection}
-        aria-label="SAREC Membership · 长期入口 · 跨境资本 · 专业服务 · 美国房地产"
+        aria-label="SAREC Membership · 长期学习 · 专业服务 · 美国房地产"
       >
         <div className={styles.maskedMarqueeViewport}>
           <div className={styles.maskedMarqueeTrack} aria-hidden="true">
             <span className={styles.maskedMarqueeText}>
-              SAREC MEMBERSHIP · 长期入口 · 跨境资本 · 专业服务 · 美国房地产 ·
+              SAREC MEMBERSHIP · 长期学习 · 专业服务 · 美国房地产 ·
             </span>
             <span className={styles.maskedMarqueeText}>
-              SAREC MEMBERSHIP · 长期入口 · 跨境资本 · 专业服务 · 美国房地产 ·
+              SAREC MEMBERSHIP · 长期学习 · 专业服务 · 美国房地产 ·
             </span>
             <span className={styles.maskedMarqueeText}>
-              SAREC MEMBERSHIP · 长期入口 · 跨境资本 · 专业服务 · 美国房地产 ·
+              SAREC MEMBERSHIP · 长期学习 · 专业服务 · 美国房地产 ·
             </span>
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function MembershipPage() {
             <span className={styles.eyebrow}>WHY JOIN · 为什么加入</span>
             <h2 className={styles.sectionH2}>为什么加入 SAREC 会员</h2>
             <p className={styles.sectionLead}>
-              SAREC 会员不只是访问内容的权限。它是连接美国房地产投资、跨境资本合作和专业服务伙伴网络的长期入口。
+              SAREC 会员不只是访问内容的权限。它是连接美国房地产研究、专业服务与跨境项目判断的长期入口。
             </p>
             <ol className={styles.whyJoinList}>
               <li>
@@ -167,7 +167,7 @@ export default function MembershipPage() {
                 <div>
                   <h3 className={styles.whyJoinH3}>高含金量培训与活动</h3>
                   <p className={styles.whyJoinBody}>
-                    不做泛泛而谈的基础培训。围绕真实项目、市场判断、风险识别和资源协同 —— 包括项目研讨、闭门分享、行业展会。
+                    不做泛泛而谈的基础培训。围绕真实项目、市场判断、风险识别和专业协作 —— 包括项目研讨、闭门分享、行业展会。
                   </p>
                   <p className={styles.whyJoinBody}>
                     详见 →{' '}
@@ -234,7 +234,7 @@ export default function MembershipPage() {
                 <li>美国实地考察报名资格(需符合资格审核)</li>
               </ul>
               <Link href="/zh/contact" className={styles.tierCta}>
-                申请理事会员 →
+                了解理事会员 →
               </Link>
             </article>
             <article className={`${styles.tierCard} ${styles.tierCardFeatured}`}>
@@ -254,7 +254,7 @@ export default function MembershipPage() {
                 <li>与 SAREC 团队定期沟通</li>
               </ul>
               <Link href="/zh/contact" className={styles.tierCta}>
-                申请常务理事 →
+                了解常务理事会员 →
               </Link>
             </article>
             <article className={styles.tierCard}>
@@ -265,7 +265,7 @@ export default function MembershipPage() {
               </p>
               <p className={styles.tierBody}>权益按单独协议约定。</p>
               <Link href="/zh/contact" className={styles.tierCta}>
-                申请副会长单位 →
+                了解副会长单位 →
               </Link>
             </article>
           </div>
@@ -459,13 +459,7 @@ export default function MembershipPage() {
               </summary>
               <div className={styles.faqAnswer}>
                 <p>
-                  会员服务属于第一层商会层 —— 研究、培训、活动、考察、资源协同。
-                </p>
-                <p>
-                  具体项目投资属于第二层(项目咨询与结构设计)和第三层(合作结构设计)服务,需要单独评估匹配度并签署相关文件。
-                </p>
-                <p>
-                  会员是建立信任和了解 SAREC 的入口,不直接等同于项目投资资格。
+                  会员服务是 SAREC 的长期学习、交流与机构关系入口。如果你已经有具体项目需要判断、评估或推进，可以通过服务入口了解投资人、项目方和专业服务机构三类服务。
                 </p>
               </div>
             </details>
@@ -490,22 +484,17 @@ export default function MembershipPage() {
       {/* M07 Conversion Panel — 3 CTA(1 主 + 2 副) */}
       <section className={styles.ctaBannerSection}>
         <div className={styles.ctaBannerInner}>
-          <h2 className={styles.ctaBannerH2}>准备好加入 SAREC 会员了吗</h2>
+          <h2 className={styles.ctaBannerH2}>了解 SAREC 会员机制</h2>
           <p className={styles.ctaBannerLead}>
-            不是单纯付费访问内容,而是进入一个长期合作和资源协同的网络。
+            不是单纯付费访问内容，而是进入一个长期学习、专业交流和机构关系网络。
           </p>
           <div className={styles.ctaBannerGroup}>
-            <Link href="/zh/contact" className={styles.ctaPrimary}>
-              申请加入会员
+            <Link href="#benefits" className={styles.ctaSoft}>
+              了解会员机制
             </Link>
-            <div className={styles.ctaBannerSecondaryRow}>
-              <Link href="/zh/services" className={styles.ctaSecondary}>
-                查看完整服务架构
-              </Link>
-              <Link href="/zh/contact" className={styles.ctaSecondary}>
-                预约 30 分钟沟通
-              </Link>
-            </div>
+            <Link href="/zh/contact" className={styles.inlineLink}>
+              联系 SAREC 了解更多
+            </Link>
           </div>
         </div>
       </section>

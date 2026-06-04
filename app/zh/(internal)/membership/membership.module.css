@@ -39,7 +39,7 @@
 
 .heroH1 {
   font-family: var(--serif-zh);
-  font-size: clamp(4rem, 9vw, 9rem);
+  font-size: clamp(2.6rem, 5vw, 4.2rem);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -119,15 +119,36 @@
   color: var(--gold);
 }
 
+/* M5-S2a 降权:会员入口主 CTA 由强实心金按钮收成克制描边款(不再像强销售按钮) */
+.ctaSoft {
+  display: inline-flex;
+  align-items: center;
+  padding: 13px 26px;
+  background: transparent;
+  color: var(--gold-warm);
+  border: 1px solid var(--gold-dim);
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: border-color 0.3s ease, color 0.3s ease;
+}
+
+.ctaSoft:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
 /* M01 商会 seal — V1 SVG 双圆嵌套印章 wrapper(SVG 直接用 var(--gold) 渲染,不依赖 filter)*/
 .heroSealWrap {
   position: absolute;
   right: clamp(40px, 6vw, 120px);
   top: 50%;
   transform: translateY(-50%);
-  width: clamp(280px, 28vw, 480px);
-  height: clamp(280px, 28vw, 480px);
-  opacity: 0.85;
+  width: clamp(180px, 18vw, 300px);
+  height: clamp(180px, 18vw, 300px);
+  opacity: 0.6;
   pointer-events: none;
   z-index: 0;
 }
@@ -149,7 +170,7 @@
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   background: var(--ink-deepest);
-  min-height: clamp(520px, 72vh, 820px);
+  min-height: clamp(220px, 32vh, 360px);
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -167,19 +188,19 @@
   width: max-content;
   gap: clamp(80px, 8vw, 160px);
   white-space: nowrap;
-  animation: membershipMaskedMarquee 34s linear infinite;
+  animation: membershipMaskedMarquee 90s linear infinite;
   will-change: transform;
 }
 
 .maskedMarqueeText {
   flex: 0 0 auto;
   font-family: var(--serif-zh);
-  font-size: clamp(6rem, 12vw, 15rem);
-  font-weight: 600;
-  line-height: 0.9;
-  letter-spacing: -0.06em;
+  font-size: clamp(2.4rem, 5vw, 4.5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
   white-space: nowrap;
-  color: var(--ivory);
+  color: var(--ivory-mute);
 }
 
 /* N=3 复制 + translateX 0 → -100%/3 = 精确无缝循环 */
@@ -195,7 +216,7 @@
 /* 移动端降级:< 768px 缩小字号 */
 @media (max-width: 768px) {
   .maskedMarqueeText {
-    font-size: clamp(3rem, 10vw, 6rem);
+    font-size: clamp(1.6rem, 6vw, 2.6rem);
   }
   /* M01 H1 窄屏:降字号下限,放得下、不触顶/不被 overflow:hidden 裁(电脑端不变) */
   .heroH1 {
@@ -238,8 +259,8 @@
   max-width: none;
   margin: 0;
   padding: 0;
-  min-height: clamp(80vh, 88vh, 92vh);
-  min-height: clamp(80svh, 88svh, 92svh); /* iOS 地址栏不抖;desktop 等同 vh */
+  min-height: clamp(60vh, 68vh, 74vh);
+  min-height: clamp(60svh, 68svh, 74svh); /* iOS 地址栏不抖;desktop 等同 vh */
 }
 
 @media (max-width: 1024px) {
@@ -559,8 +580,8 @@
   max-width: none;
   margin: 0;
   padding: 0;
-  min-height: clamp(80vh, 88vh, 92vh);
-  min-height: clamp(80svh, 88svh, 92svh); /* iOS 地址栏不抖;desktop 等同 vh */
+  min-height: clamp(60vh, 68vh, 74vh);
+  min-height: clamp(60svh, 68svh, 74svh); /* iOS 地址栏不抖;desktop 等同 vh */
 }
 
 @media (max-width: 1024px) {
