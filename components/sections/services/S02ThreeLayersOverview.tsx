@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
+import { SaImage } from '@/components/shared/SaImage';
 import styles from './S02ThreeLayersOverview.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -16,6 +17,7 @@ type Entry = {
   linkLabel: string;
   linkHref: string;
   weight: Weight;
+  image?: { src: string; alt: string };
 };
 
 // V2.0 三入口(权重 1>2≫3);文案为 Andy 定版,CTA 链向真实解决方案页。
@@ -28,7 +30,8 @@ const ENTRIES: Entry[] = [
     points: ['项目风险初诊', '可行性评估', '开发全程顾问', '跨境架构设计'],
     linkLabel: '查看投资人与开发者服务',
     linkHref: '/zh/services/investors',
-    weight: 'primary'
+    weight: 'primary',
+    image: { src: '/images/projects/4155-wilshire-bronson.webp', alt: '美国房地产开发项目' }
   },
   {
     eyebrow: 'FOR PROJECT TEAMS · 入口 02',
@@ -107,30 +110,70 @@ export function S02ThreeLayersOverview() {
           whileInView="visible"
           viewport={{ once: true, amount: 0.12 }}
         >
-          {ENTRIES.map((entry) => (
-            <motion.article
-              key={entry.title}
-              className={`${styles.card} ${WEIGHT_CLASS[entry.weight]}`}
-              variants={cardVariants}
-            >
-              <span className={styles.cardEyebrow}>{entry.eyebrow}</span>
-              <h3 className={styles.cardTitle}>{entry.title}</h3>
-              <p className={styles.cardDesc}>{entry.description}</p>
-              <ul className={styles.cardPoints}>
-                {entry.points.map((p) => (
-                  <li key={p} className={styles.cardPoint}>
-                    {p}
-                  </li>
-                ))}
-              </ul>
-              <Link href={entry.linkHref} className={styles.cardLink}>
-                <span>{entry.linkLabel}</span>
-                <span className={styles.cardLinkArrow} aria-hidden="true">
-                  →
-                </span>
-              </Link>
-            </motion.article>
-          ))}
+          {ENTRIES.map((entry) =>
+            entry.weight === 'primary' ? (
+              <motion.article
+                key={entry.title}
+                className={`${styles.card} ${styles.cardPrimary}`}
+                variants={cardVariants}
+              >
+                <div className={styles.cardMain}>
+                  <span className={styles.cardEyebrow}>{entry.eyebrow}</span>
+                  <h3 className={styles.cardTitle}>{entry.title}</h3>
+                  <p className={styles.cardDesc}>{entry.description}</p>
+                  <Link href={entry.linkHref} className={styles.cardLink}>
+                    <span>{entry.linkLabel}</span>
+                    <span className={styles.cardLinkArrow} aria-hidden="true">
+                      →
+                    </span>
+                  </Link>
+                </div>
+                <div className={styles.cardAside}>
+                  {entry.image ? (
+                    <div className={styles.cardImage}>
+                      <SaImage
+                        src={entry.image.src}
+                        alt={entry.image.alt}
+                        fill
+                        sizes="(max-width: 1023px) 100vw, 36vw"
+                        filterIntensity="editorial"
+                      />
+                    </div>
+                  ) : null}
+                  <ul className={styles.cardPoints}>
+                    {entry.points.map((p) => (
+                      <li key={p} className={styles.cardPoint}>
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </motion.article>
+            ) : (
+              <motion.article
+                key={entry.title}
+                className={`${styles.card} ${WEIGHT_CLASS[entry.weight]}`}
+                variants={cardVariants}
+              >
+                <span className={styles.cardEyebrow}>{entry.eyebrow}</span>
+                <h3 className={styles.cardTitle}>{entry.title}</h3>
+                <p className={styles.cardDesc}>{entry.description}</p>
+                <ul className={styles.cardPoints}>
+                  {entry.points.map((p) => (
+                    <li key={p} className={styles.cardPoint}>
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={entry.linkHref} className={styles.cardLink}>
+                  <span>{entry.linkLabel}</span>
+                  <span className={styles.cardLinkArrow} aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+              </motion.article>
+            )
+          )}
         </motion.div>
       </div>
     </section>
