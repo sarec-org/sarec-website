@@ -99,7 +99,7 @@
   letter-spacing: -0.02em;
   color: var(--ivory-warm);
   margin: 0 0 clamp(20px, 2.5vh, 32px) 0;
-  white-space: nowrap;
+  text-wrap: balance;
 }
 
 /* Subtitle */
@@ -185,6 +185,30 @@
 .ctaPrimary:hover .ctaArrow,
 .ctaSecondary:hover .ctaArrow {
   transform: translateX(4px);
+}
+
+/* Membership — demoted to a quiet text link, visually well below the
+   bordered secondary CTA: no border/background, muted ivory, smaller. */
+.weakLinkRow {
+  margin-top: clamp(20px, 2.5vh, 28px);
+  text-align: center;
+}
+
+.weakLink {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: var(--text-label);
+  letter-spacing: 0.04em;
+  color: var(--ivory-mute);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.weakLink:hover {
+  color: var(--gold-warm);
+  border-bottom-color: var(--gold-dim);
 }
 
 /* ===== Tablet ===== */
