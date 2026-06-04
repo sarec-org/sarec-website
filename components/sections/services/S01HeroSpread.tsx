@@ -37,7 +37,7 @@ export function S01HeroSpread() {
           <div className={styles.textColumn}>
             <SectionChapterMark number="01" />
 
-            <p className={styles.eyebrow}>SERVICES · 服务架构</p>
+            <p className={styles.eyebrow}>SERVICES · 服务入口</p>
 
             <h1 id="services-hero-h1" className={styles.h1}>
               中美房地产项目判断与增长服务
