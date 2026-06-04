@@ -1,490 +1,246 @@
 /* ============================================================
-   H04 Three Layers — Vertical Sticky Stacked Cards
-   3 cards each position:sticky;top:0;height:100vh inside a 310vh
-   outer. Z-index 1/2/3 makes later cards paint over earlier ones
-   as they reach their sticky boundary. Pure CSS stack; framer-motion
-   only powers per-card content reveal and the progress indicator.
+   H04 — V2.0 三入口轻量预览(non-sticky editorial preview)
+   左列:总判断 + risk-review 主 CTA
+   右列:三入口卡片,权重 1>2≫3(cardLg / cardMd / cardSm)
+   设计语言与 /zh/services hub 一致(金线/留白/卡片/权重),
+   但更轻更短 —— 是预览,不复制 services 完整内容。
+   section 高度由内容决定(无 sticky / 无 100vh / 无滚动叙事)。
    ============================================================ */
 
-.outer {
+.section {
   position: relative;
-  height: 310vh;
   background: var(--ink-deepest);
-}
-
-/* ===== Card base ===== */
-.card {
-  position: sticky;
-  top: 0;
-  width: 100%;
-  height: 100vh;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  grid-template-columns: repeat(12, 1fr);
-  row-gap: 32px;
-  column-gap: 48px;
-  padding: 56px 6vw;
-  border-top: 1px solid var(--gold-dim);
+  padding: clamp(80px, 12vh, 140px) clamp(24px, 5vw, 80px);
   overflow: hidden;
-  isolation: isolate;
+  scroll-margin-top: 96px;
 }
 
-/* ===== Card 1 — Chamber ===== */
-.card1 {
-  background-color: var(--ink-deepest);
-  background-image:
-    linear-gradient(
-      45deg,
-      rgba(201, 165, 103, 0.012) 25%,
-      transparent 25%,
-      transparent 75%,
-      rgba(201, 165, 103, 0.012) 75%
-    ),
-    linear-gradient(
-      135deg,
-      rgba(201, 165, 103, 0.012) 25%,
-      transparent 25%,
-      transparent 75%,
-      rgba(201, 165, 103, 0.012) 75%
-    );
-  background-size: 80px 80px;
-  background-position: 0 0, 40px 40px;
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
 }
 
-/* ===== Card 2 — Advisory ===== */
-.card2 {
-  background:
-    radial-gradient(
-      ellipse 50% 40% at 50% 100%,
-      var(--gold-faint) 0%,
-      transparent 70%
-    ),
-    var(--ink-deep);
+.grid {
+  display: grid;
+  grid-template-columns: 4.2fr 7.8fr;
+  gap: clamp(40px, 5vw, 88px);
+  align-items: start;
 }
 
-/* ===== Card 3 — Co-Invest ===== */
-.card3 {
-  background:
-    radial-gradient(
-      ellipse 35% 70% at 100% 50%,
-      var(--gold-faint) 0%,
-      transparent 60%
-    ),
-    var(--ink);
-}
-
-.card3::before {
-  content: '';
-  position: absolute;
-  top: 144px;
-  bottom: 144px;
-  left: 50%;
-  width: 1px;
-  background: var(--gold-dim);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ===== Top bar ===== */
-.topBar {
-  grid-row: 1;
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--gold-dim);
-  z-index: 1;
-}
-
-.eyebrow {
-  font-family: var(--mono);
-  font-size: var(--text-label);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--gold);
-}
-
-.counter {
-  font-family: var(--mono);
-  font-size: var(--text-label);
-  letter-spacing: 0.22em;
-  color: var(--ivory-mute);
-}
-
-/* ===== Main: left side (cols 1-7) ===== */
-.leftSide {
-  grid-row: 2;
-  grid-column: 1 / span 7;
-  align-self: center;
+/* ===== 左列:intro ===== */
+.intro {
+  position: static;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  max-width: 760px;
-  z-index: 1;
 }
 
-.h2 {
-  font-family: var(--serif-zh);
-  font-size: var(--text-display);
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  color: var(--ivory-warm);
-  margin: 0 0 28px 0;
-  text-shadow: 0 4px 28px rgba(4, 11, 22, 0.5);
-}
-
-.tagline {
+.eyebrow {
   position: relative;
-  display: inline-block;
-  font-family: var(--serif-en);
-  font-style: italic;
-  font-size: var(--text-tagline);
-  font-weight: 400;
-  line-height: 1.4;
-  color: var(--gold-warm);
-  margin: 0 0 56px 0;
-}
-
-.taglineUnderline {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -8px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    var(--gold) 0%,
-    var(--gold-dim) 80%,
-    transparent 100%
-  );
-  transform-origin: left;
-}
-
-.services {
-  font-family: var(--sans);
-  font-size: var(--text-body);
-  letter-spacing: 0.04em;
-  line-height: 1.85;
-  color: var(--ivory-dim);
-  margin: 0;
-  padding: 28px 0;
-  border-top: 1px solid var(--line-2);
-  border-bottom: 1px solid var(--line-2);
-  max-width: 720px;
-}
-
-/* ===== Main: right side (cols 8-12) ===== */
-.rightSide {
-  grid-row: 2;
-  grid-column: 8 / span 5;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  z-index: 1;
-}
-
-/* Hairline separator between Entry block and Partnership block */
-.metaBlock + .metaBlock {
-  border-top: 1px solid var(--line-3);
-  padding-top: 32px;
-  margin-top: 32px;
-}
-
-.metaBlock {
-  position: relative;
-  padding-left: 24px;
-}
-
-.metaBlock::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 1px;
-  background: var(--gold-dim);
-}
-
-.metaLabel {
-  position: relative;
-  display: block;
-  padding-top: 14px;
+  padding-top: 28px;
+  margin: 0 0 22px 0;
   font-family: var(--mono);
-  font-size: var(--text-label);
-  letter-spacing: 0.22em;
+  font-size: 10.5px;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
   color: var(--gold);
 }
-
-.metaLabel::before {
+.eyebrow::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
-  width: 12px;
-  height: 1px;
-  background: var(--gold-dim);
-}
-
-.metaValue {
-  display: block;
-  font-family: var(--serif-zh);
-  font-size: var(--text-subhead);
-  font-weight: 500;
-  color: var(--ivory);
-  margin-top: 8px;
-  line-height: 1.25;
-}
-
-.metaNote {
-  font-family: var(--sans);
-  font-size: var(--text-body);
-  line-height: 1.7;
-  color: var(--ivory-mute);
-  margin: 14px 0 0 0;
-  max-width: 380px;
-}
-
-/* ===== Bottom bar ===== */
-.bottomBar {
-  grid-row: 3;
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 18px;
-  border-top: 1px solid var(--line-2);
-  z-index: 1;
-}
-
-.link {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 28px;
-  border: 1px solid var(--gold-dim);
-  border-radius: 0;
-  font-family: var(--sans);
-  font-size: var(--text-link);
-  letter-spacing: 0.05em;
-  color: var(--gold);
-  text-decoration: none;
-  transition: all 0.4s ease;
-}
-
-.linkArrow {
-  display: inline-block;
-  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.link:hover {
-  border-color: var(--gold);
-  background: rgba(201, 165, 103, 0.04);
-  color: var(--gold-warm);
-}
-
-.link:hover .linkArrow {
-  transform: translateX(4px);
-}
-
-.bottomMark1 {
-  width: 1px;
-  height: 24px;
-  background: var(--gold-dim);
-}
-
-.bottomMark2 {
   width: 24px;
   height: 1px;
   background: var(--gold-dim);
 }
 
-.bottomMark3 {
-  width: 12px;
-  height: 12px;
-  border: 1px solid var(--gold-dim);
-  border-radius: 50%;
+.statement {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.9rem, 3.2vw, 2.9rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 clamp(28px, 4vh, 44px) 0;
+  max-width: 12em;
 }
 
-/* ===== Progress indicator (fixed right, fade-in on intersection) ===== */
-.progress {
-  position: fixed;
-  right: 32px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 50;
+.introCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 30px;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  font-family: var(--sans);
+  font-size: var(--text-link);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+}
+.introCtaArrow {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.introCta:hover {
+  background: var(--gold-warm);
+}
+.introCta:hover .introCtaArrow {
+  transform: translateX(4px);
+}
+
+/* ===== 右列:三入口卡片 ===== */
+.cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s ease;
+  gap: clamp(16px, 2vw, 24px);
 }
 
-.progressVisible {
-  opacity: 1;
-}
-
-.progressItem {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: opacity 0.5s;
-}
-
-.progressDot {
+.card {
   position: relative;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: 1px solid var(--gold-dim);
-  background: transparent;
-  flex-shrink: 0;
-  transition: background 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  gap: clamp(20px, 2.4vw, 36px);
+  background: rgba(2, 6, 16, 0.4);
+  border: 1px solid var(--line-3);
+  transition: border-color 0.4s ease, transform 0.4s ease, background-color 0.4s ease;
+}
+.card:hover {
+  transform: translateY(-4px);
 }
 
-.progressActive .progressDot {
-  background: var(--gold);
-  border-color: var(--gold);
-  box-shadow: 0 0 14px rgba(201, 165, 103, 0.55);
-}
-
-.progressActive .progressDot::after {
-  content: '';
-  position: absolute;
-  inset: -5px;
-  border: 1px solid var(--gold-dim);
-  border-radius: 50%;
-  animation: h04RingPulse 2.4s ease-out infinite;
-}
-
-@keyframes h04RingPulse {
-  0% {
-    transform: scale(0.55);
-    opacity: 0.85;
-  }
-  100% {
-    transform: scale(1.7);
-    opacity: 0;
-  }
-}
-
-.progressConnector {
-  width: 16px;
-  height: 1px;
-  background: var(--gold-dim);
-  flex-shrink: 0;
-}
-
-.progressLabel {
+.cardCounter {
   font-family: var(--mono);
   font-size: var(--text-label);
   letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ivory-mute);
-  white-space: nowrap;
-  transition: color 0.5s;
-}
-
-.progressActive .progressLabel {
-  color: var(--ivory-warm);
-}
-
-.progressNumber {
-  display: inline-block;
-  width: 22px;
   color: var(--gold-dim);
-  transition: color 0.5s;
+  flex-shrink: 0;
 }
 
-.progressActive .progressNumber {
+.cardBody {
+  min-width: 0;
+}
+
+.cardTitle {
+  font-family: var(--serif-zh);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+}
+
+.cardPreview {
+  font-family: var(--sans);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 20px 0;
+  max-width: 48ch;
+}
+
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 14px;
+  letter-spacing: 0.04em;
   color: var(--gold);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+.cardLinkArrow {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cardLink:hover {
+  color: var(--gold-warm);
+}
+.cardLink:hover .cardLinkArrow {
+  transform: translateX(4px);
+}
+
+/* ===== 权重 ① 投资人&开发者:大卡(金边 + 深底 + 大标题)===== */
+.cardLg {
+  border-color: var(--gold);
+  background: var(--ink-deep);
+  padding: clamp(32px, 3.4vw, 48px);
+}
+.cardLg .cardTitle {
+  font-size: clamp(1.6rem, 2.4vw, 2.2rem);
+}
+.cardLg .cardPreview {
+  font-size: 15px;
+}
+.cardLg:hover {
+  border-color: var(--gold-bright);
+}
+
+/* ===== 权重 ② 项目方:中卡(金虚边 + 中标题)===== */
+.cardMd {
+  border-color: var(--gold-dim);
+  padding: clamp(26px, 2.8vw, 38px);
+}
+.cardMd .cardTitle {
+  font-size: clamp(1.3rem, 1.8vw, 1.6rem);
+}
+.cardMd .cardPreview {
+  font-size: 14px;
+}
+.cardMd:hover {
+  border-color: var(--gold);
+}
+
+/* ===== 权重 ③ 专业服务机构:降权小卡(淡金边 + 小标题 + 略淡)===== */
+.cardSm {
+  border-color: var(--gold-faint);
+  background: rgba(2, 6, 16, 0.22);
+  padding: clamp(22px, 2.2vw, 30px);
+}
+.cardSm .cardCounter {
+  color: var(--gold-faint);
+}
+.cardSm .cardTitle {
+  font-size: clamp(1.1rem, 1.5vw, 1.35rem);
+  color: var(--ivory-dim);
+}
+.cardSm .cardPreview {
+  font-size: 13px;
+  color: var(--ivory-mute);
+}
+.cardSm .cardLink {
+  color: var(--gold-muted);
+}
+.cardSm:hover {
+  border-color: var(--gold-dim);
 }
 
 /* ===== Tablet ===== */
 @media (max-width: 1023px) {
-  .card {
-    padding: 48px 5vw;
-    column-gap: 32px;
-    row-gap: 24px;
+  .grid {
+    grid-template-columns: 1fr;
+    gap: clamp(40px, 6vh, 64px);
   }
-  .leftSide {
-    grid-column: 1 / span 7;
+  .intro {
+    position: static;
+    top: auto;
   }
-  .rightSide {
-    grid-column: 8 / span 5;
-    gap: 0;
-  }
-  .h2 {
-    font-size: clamp(3.2rem, 7vw, 5rem);
-  }
-  .services {
-    padding: 22px 0;
+  .statement {
+    max-width: 18em;
   }
 }
 
-/* ===== Wide-screen bounding =====
-   The card itself stays 100% width so the sticky deck's backgrounds and
-   border rules extend edge-to-edge. The 12-col grid lives directly on
-   the card (no inner wrapper), so we bound the grid's effective width
-   by enlarging the card's horizontal padding once the viewport exceeds
-   ~1600px. Below 1600px the default 6vw padding applies unchanged. */
-@media (min-width: 1600px) {
-  .card {
-    padding-inline: calc((100vw - 1440px) / 2);
-  }
-}
-
-/* ===== Mobile fallback ===== */
+/* ===== Mobile ===== */
 @media (max-width: 768px) {
-  .outer {
-    height: auto;
-  }
   .card {
-    position: relative;
-    height: auto;
-    min-height: 100vh;
-    display: flex;
     flex-direction: column;
-    gap: 28px;
-    padding: 48px 24px;
-    overflow: visible;
+    gap: 12px;
   }
-  .card3::before {
-    display: none;
-  }
-  .topBar {
-    flex-shrink: 0;
-  }
-  .leftSide {
-    align-items: flex-start;
-    max-width: 100%;
-  }
-  .rightSide {
-    gap: 0;
-  }
-  .h2 {
-    font-size: clamp(2.8rem, 8vw, 4rem);
-    margin-bottom: 20px;
-  }
-  .tagline {
-    font-size: clamp(1.1rem, 4vw, 1.4rem);
-    margin-bottom: 32px;
-  }
-  .services {
-    font-size: 14px;
-    padding: 20px 0;
-    line-height: 1.75;
-  }
-  .metaValue {
-    font-size: 1.3rem;
-  }
-  .progress {
-    display: none;
+  .cardLg .cardTitle {
+    font-size: clamp(1.5rem, 6.5vw, 1.9rem);
   }
 }

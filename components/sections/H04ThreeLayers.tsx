@@ -1,236 +1,125 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import {
-  motion,
-  useMotionValueEvent,
-  useScroll,
-  type Variants
-} from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
+import { CTA_REGISTRY } from '@/lib/cta/registry';
 import styles from './H04ThreeLayers.module.css';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-type Layer = {
+type Weight = 'primary' | 'secondary' | 'muted';
+
+type Entry = {
   code: string;
-  en: string;
-  zh: string;
-  tagline: string;
-  services: string;
-  entry: string;
-  entryNote: string;
-  partnership: string;
-  partnershipNote: string;
-  linkText: string;
+  title: string;
+  preview: string;
   linkHref: string;
-  progressLabel: string;
+  weight: Weight;
 };
 
-const LAYERS: Layer[] = [
+// V2.0 三入口轻量预览;标题与 /zh/services hub 一致,预览句为锁定版,
+// CTA 链向真实子页。H04 不再含 membership 入口、不再做 sticky 滚动叙事。
+const ENTRIES: Entry[] = [
   {
     code: '01',
-    en: 'LAYER 01 · CHAMBER',
-    zh: '商会',
-    tagline: '围绕真实项目的高含金量内容。',
-    services: '· 研究 · 培训 · 展会 · 活动 · 考察 · 教育 · 资源协同',
-    entry: '会员服务',
-    entryNote: '研究、培训、活动、考察 —— 长期接触跨境地产合作的入口。',
-    partnership: '年度会员费',
-    partnershipNote: '按级别 (理事 / 常务理事 / 副会长单位) 区分。',
-    linkText: '了解第一层',
-    linkHref: '/zh/services#chamber',
-    progressLabel: 'CHAMBER'
+    title: '投资人 & 开发者',
+    preview: '为跨境投资人与开发者提供项目风险判断、可行性评估与开发全程顾问。',
+    linkHref: '/zh/services/investors',
+    weight: 'primary'
   },
   {
     code: '02',
-    en: 'LAYER 02 · ADVISORY & DEAL COORDINATION',
-    zh: '项目咨询与结构设计',
-    tagline: '项目判断只是第一步，把控才是核心。',
-    services: '· 项目尽调 · 财务建模 · 结构设计 · 风险评估 · 项目判断与说明',
-    entry: '咨询服务',
-    entryNote: '已有具体项目方向, 希望深度合作的客户。',
-    partnership: '按项目阶段约定',
-    partnershipNote: '尽调、建模、结构设计等按阶段计费。',
-    linkText: '了解第二层',
-    linkHref: '/zh/services#advisory',
-    progressLabel: 'ADVISORY'
+    title: '项目方',
+    preview: '为项目方提供市场定位、内容资产与投资人教育，建立 AI 搜索可见度与品牌信任。',
+    linkHref: '/zh/services/project-owners',
+    weight: 'secondary'
+  },
+  {
+    code: '03',
+    title: '专业服务机构',
+    preview: '面向律师、会计、顾问等专业服务机构的协作入口。',
+    linkHref: '/zh/services/professional-firms',
+    weight: 'muted'
   }
 ];
 
-const CARD_BG: Record<number, string> = {
-  0: styles.card1,
-  1: styles.card2,
-  2: styles.card3
+const WEIGHT_CLASS: Record<Weight, string> = {
+  primary: styles.cardLg,
+  secondary: styles.cardMd,
+  muted: styles.cardSm
 };
 
-const BOTTOM_MARK: Record<number, string> = {
-  0: styles.bottomMark1,
-  1: styles.bottomMark2,
-  2: styles.bottomMark3
-};
-
-/* ===== Variants ===== */
-const cardVariants: Variants = {
+const container: Variants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.14, delayChildren: 0.15 } }
+  visible: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } }
 };
 
-const groupVariants: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.1 } }
-};
-
-const itemVariants: Variants = {
+const item: Variants = {
   hidden: { opacity: 0, y: 24 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.8, ease: EASE }
-  }
+  visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } }
 };
 
-/* ===== Card ===== */
-function Card({
-  data,
-  index,
-  total
-}: {
-  data: Layer;
-  index: number;
-  total: number;
-}) {
-  const counter = `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`;
-
-  return (
-    <motion.article
-      className={`${styles.card} ${CARD_BG[index]}`}
-      style={{ zIndex: index + 1 }}
-      variants={cardVariants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.5 }}
-      aria-label={data.en}
-    >
-      <motion.div className={styles.topBar} variants={itemVariants}>
-        <span className={styles.eyebrow}>{data.en}</span>
-        <span className={styles.counter}>{counter}</span>
-      </motion.div>
-
-      <motion.div className={styles.leftSide} variants={groupVariants}>
-        <motion.h3 className={styles.h2} variants={itemVariants}>
-          {data.zh}
-        </motion.h3>
-
-        <motion.span className={styles.tagline} variants={itemVariants}>
-          {data.tagline}
-          <motion.span
-            className={styles.taglineUnderline}
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 1.4, ease: EASE, delay: 0.9 }}
-            aria-hidden="true"
-          />
-        </motion.span>
-
-        <motion.p className={styles.services} variants={itemVariants}>
-          {data.services}
-        </motion.p>
-      </motion.div>
-
-      <motion.div className={styles.rightSide} variants={groupVariants}>
-        <motion.div className={styles.metaBlock} variants={itemVariants}>
-          <span className={styles.metaLabel}>入口</span>
-          <span className={styles.metaValue}>{data.entry}</span>
-          <p className={styles.metaNote}>{data.entryNote}</p>
-        </motion.div>
-        <motion.div className={styles.metaBlock} variants={itemVariants}>
-          <span className={styles.metaLabel}>合作方式</span>
-          <span className={styles.metaValue}>{data.partnership}</span>
-          <p className={styles.metaNote}>{data.partnershipNote}</p>
-        </motion.div>
-      </motion.div>
-
-      <motion.div className={styles.bottomBar} variants={itemVariants}>
-        <Link href={data.linkHref} className={styles.link}>
-          <span>{data.linkText}</span>
-          <span className={styles.linkArrow} aria-hidden="true">
-            →
-          </span>
-        </Link>
-        <div className={BOTTOM_MARK[index]} aria-hidden="true" />
-      </motion.div>
-    </motion.article>
-  );
-}
-
-/* ===== Progress indicator ===== */
-function ProgressIndicator({
-  activeIndex,
-  outerRef
-}: {
-  activeIndex: number;
-  outerRef: React.RefObject<HTMLElement>;
-}) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = outerRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(entry.isIntersecting),
-      { rootMargin: '-30% 0px -30% 0px', threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [outerRef]);
-
-  return (
-    <div
-      className={`${styles.progress} ${visible ? styles.progressVisible : ''}`}
-      aria-hidden="true"
-    >
-      {LAYERS.map((layer, i) => (
-        <div
-          key={layer.code}
-          className={`${styles.progressItem} ${
-            activeIndex === i ? styles.progressActive : ''
-          }`}
-        >
-          <span className={styles.progressDot} />
-          <span className={styles.progressConnector} />
-          <span className={styles.progressLabel}>
-            <span className={styles.progressNumber}>{layer.code}</span>
-            {layer.progressLabel}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ===== Main ===== */
 export function H04ThreeLayers() {
-  const outerRef = useRef<HTMLElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  const { scrollYProgress } = useScroll({
-    target: outerRef,
-    offset: ['start start', 'end end']
-  });
-
-  useMotionValueEvent(scrollYProgress, 'change', (latest) => {
-    const next = latest < 0.5 ? 0 : 1;
-    setActiveIndex((prev) => (prev === next ? prev : next));
-  });
+  const risk = CTA_REGISTRY['risk-review'];
 
   return (
-    <section id="h04-three-layers" ref={outerRef} className={styles.outer}>
-      {LAYERS.map((layer, i) => (
-        <Card key={layer.code} data={layer} index={i} total={LAYERS.length} />
-      ))}
-      <ProgressIndicator activeIndex={activeIndex} outerRef={outerRef} />
+    <section id="h04-three-layers" className={styles.section}>
+      <div className={styles.container}>
+        <div className={styles.grid}>
+          {/* 左列:总判断 + risk-review 主 CTA */}
+          <motion.div
+            className={styles.intro}
+            variants={container}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.4 }}
+          >
+            <motion.p className={styles.eyebrow} variants={item}>
+              SERVICES · 服务入口
+            </motion.p>
+            <motion.h2 className={styles.statement} variants={item}>
+              中美房地产项目，判断先于投入。
+            </motion.h2>
+            <motion.div variants={item}>
+              <Link href={risk.primary.route.zh} className={styles.introCta}>
+                <span>做一次项目风险初诊</span>
+                <span className={styles.introCtaArrow} aria-hidden="true">
+                  →
+                </span>
+              </Link>
+            </motion.div>
+          </motion.div>
+
+          {/* 右列:三入口卡片(权重 1>2≫3) */}
+          <motion.ul
+            className={styles.cards}
+            variants={container}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.15 }}
+          >
+            {ENTRIES.map((entry) => (
+              <motion.li
+                key={entry.code}
+                className={`${styles.card} ${WEIGHT_CLASS[entry.weight]}`}
+                variants={item}
+              >
+                <span className={styles.cardCounter}>{entry.code}</span>
+                <div className={styles.cardBody}>
+                  <h3 className={styles.cardTitle}>{entry.title}</h3>
+                  <p className={styles.cardPreview}>{entry.preview}</p>
+                  <Link href={entry.linkHref} className={styles.cardLink}>
+                    <span>了解</span>
+                    <span className={styles.cardLinkArrow} aria-hidden="true">
+                      →
+                    </span>
+                  </Link>
+                </div>
+              </motion.li>
+            ))}
+          </motion.ul>
+        </div>
+      </div>
     </section>
   );
 }
