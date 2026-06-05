@@ -31,7 +31,7 @@ const ENTRIES: Entry[] = [
     linkLabel: '查看投资人与开发者服务',
     linkHref: '/zh/services/investors',
     weight: 'primary',
-    image: { src: '/images/projects/4155-wilshire-bronson.webp', alt: '美国房地产开发项目' }
+    image: { src: '/images/projects/1340-glendale-triangle.webp', alt: '美国房地产开发项目' }
   },
   {
     eyebrow: 'FOR PROJECT TEAMS · 入口 02',

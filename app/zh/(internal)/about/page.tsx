@@ -73,7 +73,7 @@ const differentiators = [
   {
     code: '01',
     title: '先判断项目,再谈合作',
-    body: '培训和展会都围绕真实项目,不做基础卖课。'
+    body: '培训与展会都围绕真实项目展开。'
   },
   {
     code: '02',
@@ -114,10 +114,10 @@ export default function AboutPage() {
           <span className={`${styles.eyebrow} ${styles.heroEyebrow}`}>ABOUT · 关于</span>
           <h1
             className={styles.heroH1}
-            aria-label="一个跨境地产平台,不是一个地产中介。"
+            aria-label="从投资人视角做中美房地产项目判断"
           >
-            <span className={styles.heroRevealLine}>一个跨境地产平台,</span>
-            <span className={styles.heroRevealLine}>不是一个地产中介。</span>
+            <span className={styles.heroRevealLine}>从投资人视角做</span>
+            <span className={styles.heroRevealLine}>中美房地产项目判断</span>
           </h1>
           <p className={styles.heroLead}>
             SAREC 由实操背景出身的跨境地产团队推动,围绕真实项目、长期合作和投资人视角,连接中美房地产资本与项目资源。
@@ -185,8 +185,8 @@ export default function AboutPage() {
           <div className={styles.diffImageBox}>
             <div className={styles.diffImageMotion}>
               <SaImage
-                src="/images/projects/4155-wilshire-bronson.webp"
-                alt="4155 Wilshire 项目实物 — SAREC 差异化"
+                src="/images/projects/4136-rosewood-rendering.png"
+                alt="4136 Rosewood 项目实物 — SAREC 差异化"
                 fill
                 sizes="(max-width: 768px) 100vw, 55vw"
                 filterIntensity="none"

@@ -111,6 +111,7 @@ const DEFAULT_TARGETS = [
   'app/zh/(internal)/services/development/page.tsx',
   'app/zh/(internal)/services/due-diligence/page.tsx',
   'app/zh/(internal)/services/capital/page.tsx',
+  'app/zh/(internal)/solutions/page.tsx',
   'app/zh/(internal)/about/page.tsx',
   'app/zh/(internal)/about/founder/page.tsx',
   'app/zh/(internal)/membership/page.tsx',

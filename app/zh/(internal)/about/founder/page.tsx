@@ -23,9 +23,9 @@ export default function FounderPage() {
       <section className={styles.quoteSection}>
         <div className={styles.quoteInner}>
           <RevealOnView as="blockquote" className={styles.quoteText}>
-            我不做信息中介。
+            我做的是项目判断、结构把控。
             <br />
-            我做的是—— 把我懂的项目、懂的结构、懂的资本逻辑
+            把我懂的项目、懂的结构、懂的资本逻辑
             <br />
             变成可以被复制、被传承、被托付的事。
           </RevealOnView>
