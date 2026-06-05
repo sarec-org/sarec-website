@@ -104,6 +104,34 @@
   }
 }
 
+/* ============================================================
+   Phase 2B — 移动端 hero 安全修复(仅 ≤768px, 桌面端不变)
+   ① content 顶部流式 + sticky nav 安全距离 → 标题不被 nav 遮挡/上沿裁切
+   ② 短视口禁用 clip-path reveal → 标题始终完整显示
+   ③ 顶→底暗色 gradient → 标题区压在足够暗背景上(对比度)
+   ============================================================ */
+@media (max-width: 768px) {
+  .heroSection .heroContent {
+    position: relative;
+    bottom: auto;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 120px);
+    padding-bottom: clamp(40px, 6vh, 64px);
+  }
+  .heroSection .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroSection .heroOverlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(2, 7, 14, 0.82) 0%,
+      rgba(2, 7, 14, 0.58) 42%,
+      rgba(2, 7, 14, 0.3) 72%,
+      rgba(2, 7, 14, 0.45) 100%
+    );
+  }
+}
+
 /* 左下径向 vignette:只压暗文字所在区(25% / 80% 位置),天空 + 右侧建筑保留原色 */
 .heroOverlay {
   position: absolute;
