@@ -85,6 +85,15 @@ export function ServiceScrollRestoration({ pagePath }: ServiceScrollRestorationP
     }
 
     restoreServiceScrollPosition(normalizedPath);
+
+    // 离开本页时把全局 scrollRestoration 复位为 'auto',否则 manual 会持久化、
+    // 破坏 Next App Router 在跨页前进导航时的默认回顶(G2)。本页的"后退恢复"
+    // 仍由本组件挂载期间的 manual + restore 逻辑保证。
+    return () => {
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'auto';
+      }
+    };
   }, [normalizedPath]);
 
   useEffect(() => {

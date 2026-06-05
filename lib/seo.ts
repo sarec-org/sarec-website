@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 export const SITE_URL = 'https://sinoamericanrec.org';
 export const SITE_NAME = 'SAREC 中美房地产商会';
+// 默认社交分享卡图(微信/OG)。JPG(非 webp,微信兼容)、1200x630、绝对 https URL。
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/images/og/sarec-og-default.jpg`;
 
 type PageMetadataInput = {
   title: string;
@@ -38,7 +40,21 @@ export function createPageMetadata({ title, description, path, type = 'website' 
       siteName: SITE_NAME,
       title,
       description,
-      url
+      url,
+      images: [
+        {
+          url: DEFAULT_OG_IMAGE,
+          width: 1200,
+          height: 630,
+          alt: SITE_NAME
+        }
+      ]
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [DEFAULT_OG_IMAGE]
     }
   };
 }

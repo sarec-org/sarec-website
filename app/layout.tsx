@@ -5,7 +5,7 @@ import {
   Inter_Tight,
   JetBrains_Mono
 } from 'next/font/google';
-import { SITE_NAME, SITE_URL } from '@/lib/seo';
+import { SITE_NAME, SITE_URL, DEFAULT_OG_IMAGE } from '@/lib/seo';
 import './globals.css';
 
 const cormorant = Cormorant_Garamond({
@@ -49,7 +49,19 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     type: 'website',
     locale: 'zh_CN',
-    url: SITE_URL
+    url: SITE_URL,
+    images: [
+      {
+        url: DEFAULT_OG_IMAGE,
+        width: 1200,
+        height: 630,
+        alt: SITE_NAME
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: [DEFAULT_OG_IMAGE]
   }
 };
 

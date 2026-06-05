@@ -188,7 +188,7 @@
   width: max-content;
   gap: clamp(80px, 8vw, 160px);
   white-space: nowrap;
-  animation: membershipMaskedMarquee 90s linear infinite;
+  animation: membershipMaskedMarquee 32s linear infinite;
   will-change: transform;
 }
 

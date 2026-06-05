@@ -37,7 +37,7 @@ export function InternalNav() {
           <div className={styles.utilBarLeft}>
             <span>
               <span className={styles.liveDot} aria-hidden="true" />
-              Los Angeles · est. 2024
+              Los Angeles
             </span>
             <span>Sino-American Real Estate Chamber</span>
           </div>

@@ -74,7 +74,7 @@ export default function FounderPage() {
                 不是逃避中国,而是看到一个新的窗口:中国资本需要美国项目,美国项目需要懂中国的合作方。
               </p>
               <p className={styles.timelineBody}>
-                2024 我推动 SAREC 在美国落地。
+                我推动 SAREC 在美国落地。
               </p>
               <p className={styles.timelineBody}>
                 SAREC 不是我的第二份事业,是我 28 年地产经验的延续。

@@ -285,7 +285,7 @@ export function HeroV3B() {
         <div className={styles.left}>
           <span>
             <span className={styles['live-dot']} />
-            Los Angeles · est. 2024
+            Los Angeles
           </span>
           <span>Sino-American Real Estate Chamber</span>
         </div>
