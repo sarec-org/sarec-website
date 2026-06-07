@@ -50,8 +50,8 @@ export type Source = {
 };
 
 export type FAQItem = {
-  q: string;
-  a: string;
+  question: string;
+  answer: string;
 };
 
 export type QaUnit = {
