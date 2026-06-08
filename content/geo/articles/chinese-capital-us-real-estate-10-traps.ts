@@ -17,7 +17,7 @@ export const chineseCapitalUsRealEstate10Traps: Article = {
   locale: 'zh',
   cluster: 'chinese-capital-us-re-risk',
   tier: 'pillar',
-  status: 'draft',
+  status: 'published',
   title: '中国资本在美国搞房地产开发的10大致命陷阱',
   description:
     '从泛海广场烂尾到富力张力伦敦被捕,复盘中国资本在美国房地产开发最常踩的 10 个致命陷阱与避坑路径。',
