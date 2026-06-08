@@ -12,11 +12,13 @@ import type { Article, Case, Cluster, ClusterId, Source } from './types';
 import { clusters } from '../../content/geo/clusters';
 import { sources } from '../../content/geo/sources';
 import { stubArticle } from '../../content/geo/articles/_stub';
+import { chineseCapitalUsRealEstate10Traps } from '../../content/geo/articles/chinese-capital-us-real-estate-10-traps';
 import { stubCase } from '../../content/geo/cases/_stub';
+import { oceanwidePlazaCase } from '../../content/geo/cases/oceanwide-plaza';
 
 // ── 本地数据注册表(Core 阶段唯一数据来源)────────────────────────────
-const articles: Article[] = [stubArticle];
-const cases: Case[] = [stubCase];
+const articles: Article[] = [stubArticle, chineseCapitalUsRealEstate10Traps];
+const cases: Case[] = [stubCase, oceanwidePlazaCase];
 
 type ContentFilter = {
   cluster?: ClusterId;
