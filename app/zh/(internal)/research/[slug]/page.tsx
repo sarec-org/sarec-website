@@ -80,7 +80,7 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
   const faqJsonLd = buildFAQPageJsonLd(faqItems);
 
   return (
-    <main>
+    <main className="bg-[var(--ink-deepest)]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
@@ -98,8 +98,15 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
 
       <GeoArticleRenderer article={article} />
 
-      <section aria-label="免责声明">
-        <p>{DISCLAIMER}</p>
+      <section
+        aria-label="免责声明"
+        className="border-t border-[var(--line-2)] bg-[var(--ink-deepest)] pb-16 pt-8"
+      >
+        <div className="mx-auto w-full max-w-[1440px] px-6 md:px-8 xl:px-10">
+          <p className="max-w-[900px] [font-family:var(--mono)] text-[0.8rem] leading-[1.7] text-[var(--ivory-mute)]">
+            {DISCLAIMER}
+          </p>
+        </div>
       </section>
     </main>
   );
