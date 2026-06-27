@@ -155,7 +155,85 @@ const blocksField = fields.array(
       }),
     }
   ),
-  { label: '正文区块', itemLabel: (p) => p.discriminant }
+  {
+    label: '正文区块',
+    // 折叠列表行显示「中文类型：内容摘要」，便于管理大量区块。
+    // 取值路径经 Gate 3C-3A 实测确认：p.discriminant + p?.value?.fields?.<key>?.value。
+    // 不读取未验证的嵌套数组（keyPoints.items / dataTable.rows），仅用已验证的标量字段。
+    itemLabel: (p) => {
+      const CN: Record<string, string> = {
+        prose: '正文段落',
+        sectionHeading: '小标题',
+        keyPoints: '要点列表',
+        dataTable: '数据表',
+        pullQuote: '重点引用',
+        callout: '风险 / 重点提示',
+        qaUnit: '问答单元',
+        caseRef: '案例引用',
+        assetBreak: '图片 / 媒体块',
+        cta: '行动按钮',
+      };
+      // 安全截断：仅处理 string，trim，最多约 24 个字，超长加 …，空值返回 ''。
+      const cut = (s: unknown): string => {
+        if (typeof s !== 'string') return '';
+        // 显示层清洗：字面量 "\n" → 空格；真实换行 / tab / 多空格 → 单空格；trim。
+        const t = s
+          .replace(/\\n/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!t) return '';
+        return t.length > 24 ? t.slice(0, 24) + '…' : t;
+      };
+      try {
+        const x = p as any;
+        const d: string = x?.discriminant;
+        const read = (key: string): string => {
+          try {
+            return cut(x?.value?.fields?.[key]?.value);
+          } catch {
+            return '';
+          }
+        };
+        const cn = CN[d] ?? (typeof d === 'string' && d ? d : '区块');
+        let summary = '';
+        switch (d) {
+          case 'prose':
+          case 'callout':
+            summary = read('md');
+            break;
+          case 'sectionHeading':
+          case 'pullQuote':
+            summary = read('text');
+            break;
+          case 'qaUnit':
+            summary = read('question');
+            break;
+          case 'caseRef':
+            summary = read('caseSlug');
+            break;
+          case 'cta':
+            summary = read('label');
+            break;
+          case 'keyPoints':
+            // 仅取已验证的标量 title；无 title 则只显示类型（不读未验证的 items 嵌套数组）。
+            summary = read('title');
+            break;
+          case 'dataTable':
+            // 仅取已验证的标量 caption；无 caption 则只显示类型（不读未验证的 rows 嵌套数组）。
+            summary = read('caption');
+            break;
+          case 'assetBreak':
+            summary = read('title') || read('alt') || read('src');
+            break;
+          default:
+            summary = '';
+        }
+        return summary ? `${cn}：${summary}` : cn;
+      } catch {
+        return '区块';
+      }
+    },
+  }
 );
 
 export default config({
