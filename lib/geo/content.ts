@@ -8,7 +8,11 @@
  * Core 阶段:accessor 背后读取本地 TS 数据文件。
  * Pro 阶段:换 CMS / 数据库时,只允许换本文件的实现,签名保持不变。
  */
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
 import type { Article, Case, Cluster, ClusterId, Source } from './types';
+import { fromKeystaticArticle } from './keystatic-adapter';
 import { clusters } from '../../content/geo/clusters';
 import { sources } from '../../content/geo/sources';
 import { stubArticle } from '../../content/geo/articles/_stub';
@@ -16,8 +20,59 @@ import { chineseCapitalUsRealEstate10Traps } from '../../content/geo/articles/ch
 import { stubCase } from '../../content/geo/cases/_stub';
 import { oceanwidePlazaCase } from '../../content/geo/cases/oceanwide-plaza';
 
-// ── 本地数据注册表(Core 阶段唯一数据来源)────────────────────────────
-const articles: Article[] = [stubArticle, chineseCapitalUsRealEstate10Traps];
+// ── 旧 TS 文章(Core 阶段手写注册表)──────────────────────────────────
+const tsArticles: Article[] = [stubArticle, chineseCapitalUsRealEstate10Traps];
+
+// ── 新 YAML 文章(Keystatic local 模式产物;同步读取,accessor 保持同步)──
+const ARTICLES_DIR = join(process.cwd(), 'content', 'geo', 'articles');
+
+// 同步扫描 content/geo/articles/*.yaml,经 adapter 转 Article;
+// YAML 损坏 / 转换失败必须显式抛错,不静默吞掉(无文件则返回 [],旧 TS 仍正常)。
+function loadYamlArticles(): Article[] {
+  let files: string[];
+  try {
+    files = readdirSync(ARTICLES_DIR).filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));
+  } catch {
+    return []; // 目录不存在等:视作无 YAML,退回旧 TS。
+  }
+  return files.map((file) => {
+    const fullPath = join(ARTICLES_DIR, file);
+    let raw: unknown;
+    try {
+      raw = parseYaml(readFileSync(fullPath, 'utf8'));
+    } catch (err) {
+      throw new Error(`[geo] YAML 解析失败: ${file} —— ${(err as Error).message}`);
+    }
+    try {
+      return fromKeystaticArticle(raw);
+    } catch (err) {
+      throw new Error(`[geo] YAML 转 Article 失败: ${file} —— ${(err as Error).message}`);
+    }
+  });
+}
+
+// 按 slug 合并:同 slug 时 YAML(override)覆盖 TS(base),且每个 slug 只保留一份,顺序保持稳定。
+function mergeArticlesBySlug(base: Article[], override: Article[]): Article[] {
+  const overrideBySlug = new Map(override.map((a) => [a.slug, a]));
+  const usedFromOverride = new Set<string>();
+  const merged: Article[] = [];
+  for (const a of base) {
+    const fromYaml = overrideBySlug.get(a.slug);
+    if (fromYaml) {
+      merged.push(fromYaml);
+      usedFromOverride.add(a.slug);
+    } else {
+      merged.push(a);
+    }
+  }
+  for (const a of override) {
+    if (!usedFromOverride.has(a.slug)) merged.push(a);
+  }
+  return merged;
+}
+
+// ── 本地数据注册表(双轨:旧 TS + YAML;同 slug YAML 覆盖)──────────────
+const articles: Article[] = mergeArticlesBySlug(tsArticles, loadYamlArticles());
 const cases: Case[] = [stubCase, oceanwidePlazaCase];
 
 type ContentFilter = {
