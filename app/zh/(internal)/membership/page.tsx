@@ -4,6 +4,22 @@ import { SaImage } from '@/components/shared/SaImage';
 import { createPageMetadata } from '@/lib/seo';
 import styles from './membership.module.css';
 
+const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE ?? '';
+
+// 与 SaVideo / HeroV3B / ArticleHero 同款媒体路径解析:
+// 空 MEDIA_BASE → 回退本地 /public/videos;有 MEDIA_BASE → 剥 /videos/ 前缀拼 R2(桶扁平根)。
+function resolveMediaUrl(path: string): string {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!MEDIA_BASE) return path;
+  const stripped = path.startsWith('/videos/')
+    ? path.replace(/^\/videos\//, '/')
+    : path.startsWith('/')
+      ? path
+      : `/${path}`;
+  return `${MEDIA_BASE}${stripped}`;
+}
+
 export const metadata: Metadata = createPageMetadata({
   title: '会员服务｜SAREC 中美房地产商会',
   description:
@@ -133,7 +149,7 @@ export default function MembershipPage() {
         <div className={styles.whyJoinGrid}>
           <div className={styles.whyJoinMedia}>
             <video
-              src={`${process.env.NEXT_PUBLIC_MEDIA_BASE ?? ''}/videos/advisory-presentation.mp4`}
+              src={resolveMediaUrl('/videos/advisory-presentation.mp4')}
               autoPlay
               muted
               loop

@@ -4,6 +4,22 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import styles from './research.module.css';
 
+const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE ?? '';
+
+// 与 SaVideo / HeroV3B / ArticleHero 同款媒体路径解析:
+// 空 MEDIA_BASE → 回退本地 /public/videos;有 MEDIA_BASE → 剥 /videos/ 前缀拼 R2(桶扁平根)。
+function resolveMediaUrl(path: string): string {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!MEDIA_BASE) return path;
+  const stripped = path.startsWith('/videos/')
+    ? path.replace(/^\/videos\//, '/')
+    : path.startsWith('/')
+      ? path
+      : `/${path}`;
+  return `${MEDIA_BASE}${stripped}`;
+}
+
 /**
  * RC01 Research Hero — 全屏 Cinematic 视频背景
  * 4K Infographic 视频 (autoplay/loop/muted/playsInline) + radial vignette + clip-path reveal H1
@@ -45,8 +61,8 @@ export function ResearchHero() {
       <div className={styles.heroVideoWrap} aria-hidden="true">
         <video
           className={styles.heroVideo}
-          src="/videos/research-hero-nyc.mp4"
-          poster="/videos/research-hero-nyc-poster.jpg"
+          src={resolveMediaUrl('/videos/research-hero-nyc.mp4')}
+          poster={resolveMediaUrl('/videos/research-hero-nyc-poster.jpg')}
           autoPlay
           loop
           muted
