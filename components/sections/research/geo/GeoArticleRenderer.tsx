@@ -17,6 +17,7 @@ import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { PullQuote } from '@/components/sections/research/PullQuote';
 import { AssetBreak } from '@/components/sections/research/AssetBreak';
 import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import styles from './GeoArticleRenderer.module.css';
 
 // 把 prose 的 md 文本按空行拆成段落(纯文本,不引 markdown 库)。
 function toParagraphs(md: string): string[] {
@@ -33,7 +34,7 @@ function renderBlock(block: Block, index: number): ReactNode {
   switch (block.type) {
     case 'prose':
       return (
-        <section key={key}>
+        <section key={key} className={styles.reading}>
           {toParagraphs(block.data.md).map((para, i) => (
             <p key={i}>{para}</p>
           ))}
@@ -42,7 +43,7 @@ function renderBlock(block: Block, index: number): ReactNode {
 
     case 'sectionHeading':
       return (
-        <h2 key={key} id={block.data.id}>
+        <h2 key={key} id={block.data.id} className={styles.heading}>
           {block.data.text}
         </h2>
       );
@@ -50,9 +51,14 @@ function renderBlock(block: Block, index: number): ReactNode {
     case 'keyPoints':
       // data.title 可选:存在则用 ArticleSection(其 title 为必填,不臆造);否则保守 <ul>。
       return block.data.title ? (
-        <ArticleSection key={key} title={block.data.title} points={block.data.items} />
+        <ArticleSection
+          key={key}
+          title={block.data.title}
+          points={block.data.items}
+          width="wide"
+        />
       ) : (
-        <section key={key}>
+        <section key={key} className={styles.reading}>
           <ul>
             {block.data.items.map((item, i) => (
               <li key={i}>{item}</li>
@@ -68,10 +74,10 @@ function renderBlock(block: Block, index: number): ReactNode {
           key={key}
           title={block.data.caption}
           table={block.data.rows}
-          width="data"
+          width="wide"
         />
       ) : (
-        <section key={key}>
+        <section key={key} className={styles.reading}>
           <table>
             <tbody>
               {block.data.rows.map((row, i) => (
@@ -93,7 +99,7 @@ function renderBlock(block: Block, index: number): ReactNode {
     case 'callout':
       // 保守渲染:tone 仅作 data 属性(上色留后),文本不丢。
       return (
-        <section key={key} data-callout-tone={block.data.tone}>
+        <section key={key} className={styles.reading} data-callout-tone={block.data.tone}>
           {toParagraphs(block.data.md).map((para, i) => (
             <p key={i}>{para}</p>
           ))}
@@ -104,7 +110,7 @@ function renderBlock(block: Block, index: number): ReactNode {
       // 保守 card:question→标题,judgment→正文,evidence 为 Source ID 原样列出(本步不解析),
       // boundary / riskNote 作注。不丢任何字段。
       return (
-        <section key={key} id={block.data.id} data-qa-unit>
+        <section key={key} id={block.data.id} className={styles.reading} data-qa-unit>
           <h3>{block.data.question}</h3>
           <p>{block.data.judgment}</p>
           {block.data.evidence.length > 0 ? (
@@ -122,7 +128,7 @@ function renderBlock(block: Block, index: number): ReactNode {
     case 'caseRef':
       // 保守 card:显示 caseSlug 原值(本步不解析 case、不出真实 href,路由尚未建)。
       return (
-        <section key={key} data-case-ref={block.data.caseSlug}>
+        <section key={key} className={styles.reading} data-case-ref={block.data.caseSlug}>
           <p>案例引用:{block.data.caseSlug}</p>
         </section>
       );
@@ -143,7 +149,7 @@ function renderBlock(block: Block, index: number): ReactNode {
         );
       }
       return (
-        <section key={key}>
+        <section key={key} className={styles.reading}>
           {block.data.eyebrow ? <p>{block.data.eyebrow}</p> : null}
           {block.data.title ? <h3>{block.data.title}</h3> : null}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -175,25 +181,54 @@ function renderBlock(block: Block, index: number): ReactNode {
 export function GeoArticleRenderer(props: { article: Article }): ReactElement {
   const { article } = props;
 
+  // 有实际 hero media 才用 ArticleHero 的左右分栏;否则用居中 hero,避免右侧空黑块。
+  const heroImage = article.heroMedia?.kind === 'image' ? article.heroMedia.src : undefined;
+  const heroVideo =
+    article.heroMedia?.kind === 'video' && article.heroMedia.poster
+      ? { src: article.heroMedia.src, poster: article.heroMedia.poster }
+      : undefined;
+  const hasHeroMedia = Boolean(heroImage || heroVideo);
+
   return (
-    <article>
-      <ArticleHero
-        eyebrow={article.cluster}
-        title={article.title}
-        summary={article.summary.join(' ')}
-        author={{
-          name: article.author.name,
-          ...(article.author.title ? { title: article.author.title } : {})
-        }}
-        dates={{
-          published: article.publishedAt,
-          ...(article.updatedAt ? { modified: article.updatedAt } : {})
-        }}
-        {...(article.heroMedia?.kind === 'image' ? { heroImage: article.heroMedia.src } : {})}
-        {...(article.heroMedia?.kind === 'video' && article.heroMedia.poster
-          ? { heroVideo: { src: article.heroMedia.src, poster: article.heroMedia.poster } }
-          : {})}
-      />
+    <article className={styles.article}>
+      {hasHeroMedia ? (
+        <ArticleHero
+          eyebrow={article.cluster}
+          title={article.title}
+          summary={article.summary.join(' ')}
+          author={{
+            name: article.author.name,
+            ...(article.author.title ? { title: article.author.title } : {})
+          }}
+          dates={{
+            published: article.publishedAt,
+            ...(article.updatedAt ? { modified: article.updatedAt } : {})
+          }}
+          {...(heroImage ? { heroImage } : {})}
+          {...(heroVideo ? { heroVideo } : {})}
+        />
+      ) : (
+        <header className={styles.centeredHero}>
+          <p className={styles.centeredEyebrow}>{article.cluster}</p>
+          <h1 className={styles.centeredTitle}>{article.title}</h1>
+          <p className={styles.centeredSummary}>{article.summary.join(' ')}</p>
+          <div className={styles.centeredByline}>
+            <span>
+              作者
+              <span className={styles.bylineName}>{article.author.name}</span>
+              {article.author.title ? (
+                <span className={styles.bylineTitle}>{article.author.title}</span>
+              ) : null}
+            </span>
+            <span>
+              <time dateTime={article.publishedAt}>发布 {article.publishedAt}</time>
+              {article.updatedAt ? (
+                <time dateTime={article.updatedAt}> · 更新 {article.updatedAt}</time>
+              ) : null}
+            </span>
+          </div>
+        </header>
+      )}
       {article.blocks.map((block, index) => renderBlock(block, index))}
     </article>
   );
