@@ -6,6 +6,10 @@ import styles from './research.module.css';
 import { ResearchHero } from './ResearchHero';
 import { SubscribeForm } from './SubscribeForm';
 import marketStats from '@/public/data/market-stats.json';
+import { listArticles } from '@/lib/geo/content';
+
+// 旗舰研究置顶 slug —— 排序时钉在最前(其余 published 文章按 publishedAt 倒序)。
+const FLAGSHIP_SLUG = 'chinese-capital-us-real-estate-10-traps';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 研究中心｜中美房地产商会',
@@ -141,6 +145,24 @@ const publishedResearch: PublishedCard[] = [
 ];
 
 export default function ResearchPage() {
+  // 内容层已发布文章(draft 天然排除);旗舰置顶,其余按 publishedAt 倒序。
+  const geoPublished = listArticles({ status: 'published' })
+    .slice()
+    .sort((a, b) => {
+      if (a.slug === FLAGSHIP_SLUG) return -1;
+      if (b.slug === FLAGSHIP_SLUG) return 1;
+      return (b.publishedAt ?? '').localeCompare(a.publishedAt ?? '');
+    });
+
+  // 去重(内容层为准):href 与某篇 GEO 文章相同的硬编码卡剔除,由 GEO 版接管。
+  const geoHrefs = new Set(geoPublished.map((a) => `/zh/research/${a.slug}`));
+  const dedupedCategories = indexCategories
+    .map((cat) => ({
+      ...cat,
+      articles: cat.articles.filter((art) => !geoHrefs.has(art.href))
+    }))
+    .filter((cat) => cat.articles.length > 0);
+
   return (
     <main>
       {/* RC01 — Cinematic 全屏视频 Hero */}
@@ -334,7 +356,32 @@ export default function ResearchPage() {
             围绕美国房地产投资、开发流程、资本结构、风险控制与 EB-5 相关议题,持续沉淀 SAREC 的研究框架与实务观察。
           </p>
           <div className={styles.indexCategories}>
-            {indexCategories.map((cat) => (
+            {/* 旗舰研究 —— 自动读取内容层 published 文章,置顶 */}
+            {geoPublished.length > 0 ? (
+              <div className={styles.indexCategory}>
+                <div className={styles.indexCategoryHeader}>
+                  <span className={styles.indexCategoryEyebrow}>
+                    FLAGSHIP · 旗舰研究
+                  </span>
+                  <h3 className={styles.indexCategoryTitle}>旗舰研究</h3>
+                </div>
+                <div className={styles.indexCardGrid}>
+                  {geoPublished.map((article) => (
+                    <Link
+                      key={article.slug}
+                      href={`/zh/research/${article.slug}`}
+                      className={styles.indexCard}
+                    >
+                      <span className={styles.indexCardNum}>★</span>
+                      <h4 className={styles.indexCardTitle}>{article.title}</h4>
+                      <p className={styles.indexCardDesc}>{article.description}</p>
+                      <span className={styles.indexCardCta}>阅读全文 →</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {dedupedCategories.map((cat) => (
               <div key={cat.title} className={styles.indexCategory}>
                 <div className={styles.indexCategoryHeader}>
                   <span className={styles.indexCategoryEyebrow}>{cat.eyebrow}</span>
