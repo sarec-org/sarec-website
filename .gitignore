@@ -40,3 +40,7 @@ _handoff_to_claude/4c-2-V2*.md
 # IDE
 .vscode/
 .idea/
+
+# Internal handoff/transfer materials — archived outside repo 2026-07-03 (Option C).
+# Full-history purge deferred to a pre-public专项 (Option A).
+_handoff_to_claude/
