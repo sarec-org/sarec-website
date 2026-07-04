@@ -35,7 +35,7 @@ const routes = [
   '/zh/events',
   '/zh/legal',
   '/zh/legal/risk-disclosure',
-  '/zh/legal/privacy',
+  '/legal/privacy',
   '/zh/legal/disclaimer'
 ];
 

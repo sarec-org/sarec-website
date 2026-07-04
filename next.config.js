@@ -2,8 +2,10 @@
 const nextConfig = {
   async redirects() {
     return [
-      { source: '/zh/join', destination: '/zh/contact/#membership', permanent: true },
-      { source: '/zh/join/', destination: '/zh/contact/#membership', permanent: true },
+      // /zh/join 现为在线入会真实页面（Gate 2 M2），旧的 join→contact 重定向已移除。
+      // 隐私政策统一到站点级 /legal/privacy，旧 /zh/legal/privacy 301 归并（不维护两份）。
+      { source: '/zh/legal/privacy', destination: '/legal/privacy', permanent: true },
+      { source: '/zh/legal/privacy/', destination: '/legal/privacy', permanent: true },
       { source: '/zh/investigate', destination: '/zh/research', permanent: true },
       { source: '/zh/investigate/', destination: '/zh/research', permanent: true },
       { source: '/zh/reg', destination: '/zh/contact/#membership', permanent: true },
