@@ -63,12 +63,12 @@ export type AgreementLanguageMode = 'bilingual_english_controls';
 export type ReminderTarget = 'applicant' | 'admin';
 
 export type ReminderType =
-  | 'expiry_30'
-  | 'expiry_7'
-  | 'expiry_0'
-  | 'second_payment_30'
-  | 'second_payment_7'
-  | 'second_payment_0';
+  | 'membership_expiry_30_days'
+  | 'membership_expiry_7_days'
+  | 'membership_expiry_today'
+  | 'second_payment_due_30_days'
+  | 'second_payment_due_7_days'
+  | 'second_payment_due_today';
 
 /** 档位配置形状（对应 membership_tiers 表；金额一律 cents）。 */
 export type MembershipTierSeed = {
