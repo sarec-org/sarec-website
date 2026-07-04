@@ -20,11 +20,11 @@ export default function CheckoutSuccessPage() {
         <p className={styles.eyebrow}>CHECKOUT</p>
         <h1 className={styles.h1}>感谢您的申请</h1>
         <p className={styles.lead}>
-          您的入会 / 合作申请已收到。付款与确认流程将在后续开放；SAREC
-          团队会在流程上线后与您联系，确认资料与权益安排。
+          您的付款正在由 Stripe 处理。付款完成后，我们将核对并确认您的记录。 Payment
+          confirmation will be processed. SAREC 团队会与您联系，确认资料与权益安排。
         </p>
         <p className={styles.reviewNote}>
-          本页为付款完成占位页，付款功能尚未开放。如有疑问，请通过{' '}
+          说明：系统尚未自动标记为已完成付款，我们会在核对后确认。如有疑问，请通过{' '}
           <Link href="/zh/contact">联系我们</Link> 与 SAREC 取得联系。
         </p>
         <div className={styles.linkRow}>

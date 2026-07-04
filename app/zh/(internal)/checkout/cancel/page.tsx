@@ -20,11 +20,10 @@ export default function CheckoutCancelPage() {
         <p className={styles.eyebrow}>CHECKOUT</p>
         <h1 className={styles.h1}>付款未完成</h1>
         <p className={styles.lead}>
-          您本次未完成付款。您的资料未被提交，也未产生任何费用。您可以稍后再试，或与 SAREC 团队联系。
+          您本次未完成付款，未产生任何费用。您可以稍后回到申请页重新提交，或与 SAREC 团队联系。
         </p>
         <p className={styles.reviewNote}>
-          本页为付款取消占位页，付款功能尚未开放。如需协助，请通过{' '}
-          <Link href="/zh/contact">联系我们</Link>。
+          如需协助，请通过 <Link href="/zh/contact">联系我们</Link>。
         </p>
         <div className={styles.linkRow}>
           <Link href="/zh/join" className={styles.btnLink}>

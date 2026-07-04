@@ -257,3 +257,59 @@
 .centered { text-align: center; max-width: 640px; margin: 0 auto; }
 .centered .h1 { margin-top: 1rem; }
 .linkRow { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-top: 2rem; }
+
+/* ── M3 交互表单 ───────────────────────────────────────────── */
+.form {
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 1.75rem;
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+  max-width: 680px;
+}
+.fieldRequired { color: var(--gold); margin-left: 0.15rem; }
+
+/* 付款方式单选（战略合作伙伴） */
+.planOptions { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.planOption {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.16));
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+}
+.planOptionActive { border-color: var(--gold); background: var(--gold-faint, rgba(201, 165, 103, 0.1)); }
+.planOption strong { color: var(--ivory); font-family: var(--serif-zh); font-size: 1rem; }
+.planOption span { display: block; font-size: 0.82rem; color: var(--ivory-mute); line-height: 1.5; }
+
+/* 提交按钮（可用态，金色实心） */
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  color: var(--navy-deep, #0b1a2b);
+  background: var(--gold);
+  border: none;
+  border-radius: 6px;
+  padding: 0.8rem 1.6rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.btnPrimary:hover { opacity: 0.9; }
+.btnPrimary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.formError {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #f0a9a0;
+  border: 1px solid rgba(240, 169, 160, 0.4);
+  border-left: 3px solid #f0a9a0;
+  border-radius: 4px;
+  padding: 0.7rem 1rem;
+}
+.formHint { font-size: 0.82rem; color: var(--ivory-mute); line-height: 1.6; margin: 0.3rem 0 0 0; }

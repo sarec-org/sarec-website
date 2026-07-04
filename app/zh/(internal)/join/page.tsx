@@ -8,6 +8,7 @@ import {
   PROMOTION_DISCLAIMER,
   SAREC_REVIEW_NOTE
 } from '@/lib/membership/tiers';
+import { JoinForm } from '@/components/membership/JoinForm';
 import styles from '@/components/membership/membership.module.css';
 
 export const metadata: Metadata = createPageMetadata({
@@ -20,6 +21,13 @@ export const metadata: Metadata = createPageMetadata({
 // 价格与档位来自唯一价格源 lib/membership/tiers.ts（页面不硬编码任何价格）。
 export default function JoinPage() {
   const tiers = listMembershipTiers();
+  const formTiers = tiers
+    .filter((t) => t.isActive)
+    .map((t) => ({
+      slug: t.slug,
+      nameZh: t.nameZh,
+      currentPriceLabel: formatCents(t.currentPriceCents)
+    }));
 
   return (
     <div className={styles.page}>
@@ -82,9 +90,9 @@ export default function JoinPage() {
                 {invite ? (
                   <span className={styles.btnDisabled}>仅限邀请</span>
                 ) : (
-                  <button type="button" className={styles.btnDisabled} disabled>
-                    付款功能下一步开放 / Checkout coming next
-                  </button>
+                  <a href="#apply" className={styles.btnLink}>
+                    选择此档位 →
+                  </a>
                 )}
               </div>
             </article>
@@ -97,65 +105,11 @@ export default function JoinPage() {
         不承诺任何客户、成交、融资或投资收益，亦不承诺固定客户来源。
       </p>
 
-      <h2 className={styles.sectionH2}>申请资料（骨架）</h2>
-      <form className={styles.formSkeleton} aria-label="入会申请骨架（暂不提交）">
-        <div className={styles.field}>
-          <label htmlFor="tier">选择档位</label>
-          <select id="tier" name="tier" disabled defaultValue="">
-            <option value="" disabled>
-              请选择
-            </option>
-            {tiers
-              .filter((t) => t.isActive)
-              .map((t) => (
-                <option key={t.slug} value={t.slug}>
-                  {t.nameZh} — {formatCents(t.currentPriceCents)}/年
-                </option>
-              ))}
-          </select>
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="company">公司 / 机构名称</label>
-          <input id="company" name="company" type="text" disabled placeholder="公司 / 机构名称" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="contact">联系人姓名</label>
-          <input id="contact" name="contact" type="text" disabled placeholder="联系人姓名" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="email">邮箱</label>
-          <input id="email" name="email" type="email" disabled placeholder="you@example.com" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="phone">电话</label>
-          <input id="phone" name="phone" type="tel" disabled placeholder="电话" />
-        </div>
-
-        <div className={styles.agreeRow}>
-          <input type="checkbox" id="agree" disabled aria-describedby="agree-text" />
-          <div id="agree-text">
-            <p>
-              I have read and agree to the{' '}
-              <Link href="/legal/membership-agreement">SAREC Membership Agreement</Link> and{' '}
-              <Link href="/legal/privacy">Privacy Policy</Link>.
-            </p>
-            <p>
-              我已阅读并同意{' '}
-              <Link href="/legal/membership-agreement">SAREC 入会协议</Link>及
-              <Link href="/legal/privacy">隐私政策</Link>。
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <button type="button" className={styles.btnDisabled} disabled>
-            下一步：付款（下一步开放）/ Continue to payment (coming next)
-          </button>
-        </div>
-      </form>
+      <h2 className={styles.sectionH2}>在线申请</h2>
+      <JoinForm tiers={formTiers} />
 
       <p className={styles.reviewNote}>
-        本页为在线入会骨架，付款与资料提交将在后续开放。战略合作伙伴请见{' '}
+        付款由 Stripe 安全处理。战略合作伙伴请见{' '}
         <Link href="/zh/strategic-partners">战略合作伙伴</Link>。
       </p>
     </div>

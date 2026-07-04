@@ -8,6 +8,7 @@ import {
   SAREC_REVIEW_NOTE,
   STRATEGIC_PARTNER_INDUSTRIES
 } from '@/lib/membership/tiers';
+import { PartnerForm } from '@/components/membership/PartnerForm';
 import styles from '@/components/membership/membership.module.css';
 
 export const metadata: Metadata = createPageMetadata({
@@ -85,76 +86,17 @@ export default function StrategicPartnersPage() {
           )}
       </div>
 
-      <h2 className={styles.sectionH2}>申请资料（骨架）</h2>
-      <form className={styles.formSkeleton} aria-label="战略合作伙伴申请骨架（暂不提交）">
-        <div className={styles.field}>
-          <label htmlFor="company">公司 / 机构名称</label>
-          <input id="company" name="company" type="text" disabled placeholder="公司 / 机构名称" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="industry">行业分类</label>
-          <select id="industry" name="industry" disabled defaultValue="">
-            <option value="" disabled>
-              请选择
-            </option>
-            {STRATEGIC_PARTNER_INDUSTRIES.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="contact">联系人姓名</label>
-          <input id="contact" name="contact" type="text" disabled placeholder="联系人姓名" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="email">邮箱</label>
-          <input id="email" name="email" type="email" disabled placeholder="you@example.com" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="phone">电话</label>
-          <input id="phone" name="phone" type="tel" disabled placeholder="电话" />
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="plan">付款方式</label>
-          <select id="plan" name="plan" disabled defaultValue="">
-            <option value="" disabled>
-              请选择
-            </option>
-            <option value="full">一次性付清</option>
-            {tier.supportsSemiAnnual && <option value="semi_annual">半年两期</option>}
-          </select>
-        </div>
-
-        <div className={styles.agreeRow}>
-          <input type="checkbox" id="agree" disabled aria-describedby="agree-text" />
-          <div id="agree-text">
-            <p>
-              I have read and agree to the{' '}
-              <Link href="/legal/strategic-partnership-agreement">
-                SAREC Strategic Partnership Agreement
-              </Link>{' '}
-              and <Link href="/legal/privacy">Privacy Policy</Link>.
-            </p>
-            <p>
-              我已阅读并同意{' '}
-              <Link href="/legal/strategic-partnership-agreement">SAREC 战略合作伙伴协议</Link>及
-              <Link href="/legal/privacy">隐私政策</Link>。
-            </p>
-          </div>
-        </div>
-
-        <div>
-          <button type="button" className={styles.btnDisabled} disabled>
-            下一步：付款（下一步开放）/ Continue to payment (coming next)
-          </button>
-        </div>
-      </form>
+      <h2 className={styles.sectionH2}>在线申请</h2>
+      <PartnerForm
+        industries={STRATEGIC_PARTNER_INDUSTRIES}
+        fullPriceLabel={formatCents(tier.currentPriceCents)}
+        firstPaymentLabel={formatCents(tier.firstPaymentAmountCents ?? 0)}
+        secondPaymentLabel={formatCents(tier.secondPaymentAmountCents ?? 0)}
+        supportsSemiAnnual={tier.supportsSemiAnnual}
+      />
 
       <p className={styles.reviewNote}>
-        本页为战略合作伙伴在线申请骨架，付款与资料提交将在后续开放。会员档位请见{' '}
-        <Link href="/zh/join">加入 SAREC</Link>。
+        付款由 Stripe 安全处理。会员档位请见 <Link href="/zh/join">加入 SAREC</Link>。
       </p>
     </div>
   );
