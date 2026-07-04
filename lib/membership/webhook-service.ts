@@ -8,6 +8,7 @@
  */
 import type Stripe from 'stripe';
 import { query, withTransaction } from '@/lib/db/client';
+import { dispatchPaymentNotificationsSafe } from '@/lib/email/notifications';
 
 export type WebhookOutcome = {
   outcome: 'processed' | 'skipped' | 'ignored' | 'failed';
@@ -223,6 +224,9 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
     await recordEvent(event, 'failed', { appId: row.app_id, payId: row.pay_id, error: msg });
     return { outcome: 'failed', detail: msg };
   }
+
+  // 付款回写已提交成功后再发邮件；邮件失败不抛错、不回滚、不影响 200 响应。
+  await dispatchPaymentNotificationsSafe(row.app_id, row.pay_id);
 
   return {
     outcome: 'processed',
