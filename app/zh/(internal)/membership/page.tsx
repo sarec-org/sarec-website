@@ -12,7 +12,6 @@ import {
   MEMBERSHIP_TIER_CONTENT,
   tierAddedBenefits,
   tierFullBenefits,
-  previousCardSlug,
   MEMBERSHIP_OVERVIEW_ZH,
   PROMOTION_DISCLAIMER
 } from '@/lib/membership/tiers';
@@ -261,7 +260,7 @@ export default function MembershipPage() {
             <p>{PROMOTION_DISCLAIMER.zh}</p>
           </div>
 
-          {/* 各档阶梯式权益卡（本档新增高亮 + 已包含累计;完整权益逐级叠加派生） */}
+          {/* 各档权益卡：标题 / 价格 / 定位 / 本档新增重点 / 全部权益（全部权益默认全部可见,不折叠） */}
           <div className={styles.tierDetailGrid}>
             {MEMBERSHIP_CARD_SLUGS.map((slug) => {
               const tier = getTierSeed(slug);
@@ -271,9 +270,7 @@ export default function MembershipPage() {
                 tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
               const isMember = slug === 'member';
               const added = tierAddedBenefits(slug);
-              const inherited = tierFullBenefits(slug).filter((b) => b.addedAt !== slug);
-              const prev = previousCardSlug(slug);
-              const prevName = prev ? getTierSeed(prev)?.nameZh : null;
+              const full = tierFullBenefits(slug);
               return (
                 <article key={slug} className={styles.tierDetailCard}>
                   <h3 className={styles.tierTitle}>{tier.nameZh}</h3>
@@ -290,22 +287,13 @@ export default function MembershipPage() {
                   <p className={styles.tierFit}>{content.positioningZh}</p>
                   <p className={styles.tierDetailFocus}>{content.focusZh}</p>
 
-                  <p className={styles.addedLabel}>{isMember ? '基础权益' : '本档新增'}</p>
-                  <ul className={styles.tierList}>
-                    {added.map((b, i) => (
-                      <li key={i} className={isMember ? undefined : styles.benefitNew}>
-                        {b.text}
-                        {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {!isMember && inherited.length > 0 && (
+                  {/* 本档新增重点（member 无「新增」概念,直接进「全部权益」） */}
+                  {!isMember && (
                     <>
-                      <p className={styles.includedLabel}>已包含（{prevName ?? '下级'}及以下全部权益）</p>
-                      <ul className={styles.tierListMuted}>
-                        {inherited.map((b, i) => (
-                          <li key={i}>
+                      <p className={styles.addedLabel}>本档新增重点</p>
+                      <ul className={styles.tierList}>
+                        {added.map((b, i) => (
+                          <li key={i} className={styles.benefitNew}>
                             {b.text}
                             {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
                           </li>
@@ -313,6 +301,19 @@ export default function MembershipPage() {
                       </ul>
                     </>
                   )}
+
+                  {/* 全部权益 —— 默认全部直接可见,不折叠;本档新增项高亮 */}
+                  <p className={styles.includedLabel}>
+                    {isMember ? '会员权益' : '全部权益（含以下全部）'}
+                  </p>
+                  <ul className={styles.tierList}>
+                    {full.map((b, i) => (
+                      <li key={i} className={b.addedAt === slug && !isMember ? styles.benefitNew : undefined}>
+                        {b.text}
+                        {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
+                      </li>
+                    ))}
+                  </ul>
                 </article>
               );
             })}

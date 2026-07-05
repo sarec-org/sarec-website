@@ -98,8 +98,8 @@ export const MEMBERSHIP_TIER_CONTENT: Record<MembershipCardSlug, MembershipTierC
       { text: '官网企业展示板块展示公司名称、Logo、简介', core: true, reviewGated: true },
       { text: 'SAREC 活动优先报名、优先通知', core: true },
       { text: '年会基础名单 / Logo 露出', core: true, reviewGated: true },
-      { text: '可提交行业观点、项目动态,经审核后发布或转发', reviewGated: true },
-      { text: '可申请进入 SAREC 会员资源协同网络', core: true, reviewGated: true }
+      { text: '内容投稿 / 项目动态经审核后发布或转发', core: true, reviewGated: true },
+      { text: '可申请进入 SAREC 会员资源协同网络', reviewGated: true }
     ]
   },
   exec_board: {
@@ -108,11 +108,11 @@ export const MEMBERSHIP_TIER_CONTENT: Record<MembershipCardSlug, MembershipTierC
     addedBenefits: [
       { text: '可使用「SAREC 常务理事单位」身份展示', core: true },
       { text: '官网更高优先级展示公司、项目或服务', core: true, reviewGated: true },
-      { text: '年会更高优先级 Logo / 名称露出', reviewGated: true },
+      { text: '年会更高优先级 Logo / 名称露出', core: true, reviewGated: true },
       { text: '每年可申请 1 次年会或重点活动展架 / 资料展示', core: true, reviewGated: true },
       { text: '可申请在活动中进行企业介绍、主题分享', core: true, reviewGated: true },
       { text: '可获得 SAREC 常务理事单位证书或牌匾', core: true },
-      { text: '可参与 SAREC 文章、访谈、活动预告等内容合作', core: true, reviewGated: true },
+      { text: '可参与 SAREC 文章、访谈、活动预告等内容合作', reviewGated: true },
       { text: '在律师、会计、贷款、保险、投资、项目等专业服务协同时享优先级', reviewGated: true }
     ]
   },
