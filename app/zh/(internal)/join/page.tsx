@@ -5,10 +5,6 @@ import {
   listMembershipTiers,
   formatCents,
   MEMBERSHIP_CARD_SLUGS,
-  MEMBERSHIP_TIER_CONTENT,
-  coreAddedBenefits,
-  previousCardSlug,
-  getTierSeed,
   getStrategicPartnerTier,
   PROMOTION_DISCLAIMER,
   COMPLIANCE_FOOTNOTE,
@@ -16,6 +12,7 @@ import {
   HOW_TO_CHOOSE
 } from '@/lib/membership/tiers';
 import { JoinForm } from '@/components/membership/JoinForm';
+import { TierCard } from '@/components/membership/TierCard';
 import styles from '@/components/membership/membership.module.css';
 
 export const metadata: Metadata = createPageMetadata({
@@ -49,60 +46,17 @@ export default function JoinPage() {
       </div>
 
       <h2 className={styles.sectionH2}>四档会员 · 2026 Launch Rate</h2>
+      <p className={styles.gridHint}>
+        每档均逐条列出【全部权益】(含下级全部)与【本档新增 / 升级重点】。
+      </p>
       <div className={styles.tierGridJoin}>
-        {MEMBERSHIP_CARD_SLUGS.map((slug) => {
-          const tier = getTierSeed(slug);
-          if (!tier) return null;
-          const content = MEMBERSHIP_TIER_CONTENT[slug];
-          const hasPromo =
-            tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
-          const prev = previousCardSlug(slug);
-          const prevName = prev ? getTierSeed(prev)?.nameZh : null;
-          const isMember = slug === 'member';
-          return (
-            <article key={slug} className={styles.tierCard}>
-              <h3 className={styles.tierName}>{tier.nameZh}</h3>
-              <p className={styles.tierNameEn}>{tier.nameEn}</p>
-
-              {hasPromo && <span className={styles.promoTag}>2026 Launch Rate</span>}
-              <div className={styles.priceRow}>
-                <span className={styles.priceCurrent}>{formatCents(tier.currentPriceCents)}</span>
-                {hasPromo && (
-                  <span className={styles.priceStandard}>
-                    {formatCents(tier.standardPriceCents)}
-                  </span>
-                )}
-              </div>
-              <p className={styles.priceTerm}>/ 年（{tier.membershipTermMonths} 个月会员年度）</p>
-
-              <p className={styles.tierTagline}>{content.positioningZh}</p>
-
-              <p className={styles.includedNote}>
-                {isMember ? 'SAREC 基础会员权益' : `已包含${prevName ?? '下级'}全部权益`}
-              </p>
-              <p className={styles.addedLabel}>{isMember ? '核心权益' : '本档新增'}</p>
-              <ul className={styles.benefitList}>
-                {coreAddedBenefits(slug).map((item, i) => (
-                  <li key={i}>
-                    {item.text}
-                    {item.reviewGated && <span className={styles.gatedMark}> ＊</span>}
-                  </li>
-                ))}
-              </ul>
-
-              <div className={styles.tierCta}>
-                <a href={`/zh/join?tier=${slug}#apply`} className={styles.btnLink}>
-                  申请{tier.nameZh} →
-                </a>
-              </div>
-            </article>
-          );
-        })}
+        {MEMBERSHIP_CARD_SLUGS.map((slug) => (
+          <TierCard key={slug} slug={slug} variant="compact" />
+        ))}
       </div>
 
       <p className={styles.reviewNote}>
-        完整四档逐级权益与对比见{' '}
-        <Link href="/zh/membership">会员权益说明</Link>。＊ {COMPLIANCE_FOOTNOTE}
+        完整说明与四档对比见 <Link href="/zh/membership">会员权益说明</Link>。＊ {COMPLIANCE_FOOTNOTE}
       </p>
 
       {/* 如何选择：会员档 vs 战略合作伙伴 */}

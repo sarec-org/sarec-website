@@ -638,6 +638,7 @@
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: clamp(16px, 2vw, 28px);
   margin-top: clamp(32px, 4vh, 48px);
+  align-items: start;
 }
 
 .tierDetailCard {

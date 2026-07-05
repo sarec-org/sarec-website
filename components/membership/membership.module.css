@@ -68,12 +68,18 @@
 .pageWide {
   max-width: 1280px;
 }
+.gridHint {
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  margin: 0 0 1.25rem 0;
+}
 .tierGridJoin {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1.25rem;
   margin: 1.5rem 0;
-  align-items: stretch;
+  align-items: start;
 }
 @media (min-width: 640px) {
   .tierGridJoin {

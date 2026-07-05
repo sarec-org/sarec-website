@@ -3,15 +3,12 @@ import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { createPageMetadata } from '@/lib/seo';
 import { BenefitMatrix } from '@/components/membership/BenefitMatrix';
+import { TierCard } from '@/components/membership/TierCard';
 import {
   listMembershipTiers,
   getStrategicPartnerTier,
-  getTierSeed,
   formatCents,
   MEMBERSHIP_CARD_SLUGS,
-  MEMBERSHIP_TIER_CONTENT,
-  tierAddedBenefits,
-  tierFullBenefits,
   MEMBERSHIP_OVERVIEW_ZH,
   PROMOTION_DISCLAIMER
 } from '@/lib/membership/tiers';
@@ -260,63 +257,12 @@ export default function MembershipPage() {
             <p>{PROMOTION_DISCLAIMER.zh}</p>
           </div>
 
-          {/* 各档权益卡：标题 / 价格 / 定位 / 本档新增重点 / 全部权益（全部权益默认全部可见,不折叠） */}
+          {/* 各档权益卡（与 /zh/join 同一组件）：每档逐条列出【全部权益】(含下级全部)
+              + 【本档新增 / 升级重点】；全部权益默认全部可见,不折叠。 */}
           <div className={styles.tierDetailGrid}>
-            {MEMBERSHIP_CARD_SLUGS.map((slug) => {
-              const tier = getTierSeed(slug);
-              if (!tier) return null;
-              const content = MEMBERSHIP_TIER_CONTENT[slug];
-              const promo =
-                tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
-              const isMember = slug === 'member';
-              const added = tierAddedBenefits(slug);
-              const full = tierFullBenefits(slug);
-              return (
-                <article key={slug} className={styles.tierDetailCard}>
-                  <h3 className={styles.tierTitle}>{tier.nameZh}</h3>
-                  <p className={styles.tierEn}>{tier.nameEn}</p>
-                  <p className={styles.tierDetailPrice}>
-                    {formatCents(tier.currentPriceCents)}
-                    <span className={styles.tierDetailTerm}> / 年</span>
-                    {promo && (
-                      <span className={styles.tierDetailStrike}>
-                        原价 {formatCents(tier.standardPriceCents)}
-                      </span>
-                    )}
-                  </p>
-                  <p className={styles.tierFit}>{content.positioningZh}</p>
-                  <p className={styles.tierDetailFocus}>{content.focusZh}</p>
-
-                  {/* 本档新增重点（member 无「新增」概念,直接进「全部权益」） */}
-                  {!isMember && (
-                    <>
-                      <p className={styles.addedLabel}>本档新增重点</p>
-                      <ul className={styles.tierList}>
-                        {added.map((b, i) => (
-                          <li key={i} className={styles.benefitNew}>
-                            {b.text}
-                            {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-
-                  {/* 全部权益 —— 默认全部直接可见,不折叠;本档新增项高亮 */}
-                  <p className={styles.includedLabel}>
-                    {isMember ? '会员权益' : '全部权益（含以下全部）'}
-                  </p>
-                  <ul className={styles.tierList}>
-                    {full.map((b, i) => (
-                      <li key={i} className={b.addedAt === slug && !isMember ? styles.benefitNew : undefined}>
-                        {b.text}
-                        {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
-                      </li>
-                    ))}
-                  </ul>
-                </article>
-              );
-            })}
+            {MEMBERSHIP_CARD_SLUGS.map((slug) => (
+              <TierCard key={slug} slug={slug} variant="full" />
+            ))}
           </div>
 
           {/* 战略合作伙伴单独入口（非普通会员层级） */}
