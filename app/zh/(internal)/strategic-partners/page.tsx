@@ -4,8 +4,8 @@ import { createPageMetadata } from '@/lib/seo';
 import {
   getStrategicPartnerTier,
   formatCents,
-  TIER_BENEFITS,
-  SAREC_REVIEW_NOTE,
+  STRATEGIC_PARTNER_CONTENT,
+  COMPLIANCE_FOOTNOTE,
   STRATEGIC_PARTNER_INDUSTRIES
 } from '@/lib/membership/tiers';
 import { PartnerForm } from '@/components/membership/PartnerForm';
@@ -21,7 +21,7 @@ export const metadata: Metadata = createPageMetadata({
 // 价格与付款计划均来自唯一价格源 lib/membership/tiers.ts。
 export default function StrategicPartnersPage() {
   const tier = getStrategicPartnerTier();
-  const benefits = TIER_BENEFITS.strategic_partner;
+  const content = STRATEGIC_PARTNER_CONTENT;
 
   if (!tier) {
     return (
@@ -37,30 +37,28 @@ export default function StrategicPartnersPage() {
       <p className={styles.eyebrow}>STRATEGIC PARTNER · 战略合作伙伴</p>
       <h1 className={styles.h1}>成为 SAREC 战略合作伙伴</h1>
       <p className={styles.lead}>
-        战略合作伙伴面向为中美跨境房地产提供专业服务的机构 ——
-        深度资源协同、联合内容与活动、官网优先展示。SAREC
-        不承诺任何客户、成交、融资或投资收益，合作权益须经 SAREC 审核与排期。
+        战略合作伙伴不是普通会员层级，而是面向专业服务机构的深度合作 ——
+        官网展示、联合内容与活动、专题推介与资源协同。合作权益须经 SAREC 审核、排期与内容标准确认。
       </p>
 
-      <h2 className={styles.sectionH2}>合作权益</h2>
-      <ul className={styles.benefitList}>
-        {benefits.benefits.map((item, i) => (
-          <li key={i}>
-            {item.text}
-            {item.gated && <span className={styles.gatedMark}> ＊</span>}
-          </li>
-        ))}
-      </ul>
-      <p className={styles.reviewNote}>
-        ＊ 标注项：{SAREC_REVIEW_NOTE.zh} / {SAREC_REVIEW_NOTE.en}
-      </p>
-
-      <h2 className={styles.sectionH2}>适合的行业</h2>
+      <h2 className={styles.sectionH2}>适合谁</h2>
+      <p className={styles.lead}>{content.positioningZh}</p>
       <ul className={styles.industryList}>
         {STRATEGIC_PARTNER_INDUSTRIES.map((name) => (
           <li key={name}>{name}</li>
         ))}
       </ul>
+
+      <h2 className={styles.sectionH2}>合作权益</h2>
+      <ul className={styles.benefitList}>
+        {content.benefits.map((item, i) => (
+          <li key={i}>
+            {item.text}
+            {item.reviewGated && <span className={styles.gatedMark}> ＊</span>}
+          </li>
+        ))}
+      </ul>
+      <p className={styles.reviewNote}>＊ {COMPLIANCE_FOOTNOTE}</p>
 
       <h2 className={styles.sectionH2}>年度费用与付款方式</h2>
       <div className={styles.planGrid}>

@@ -3,7 +3,15 @@ import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { createPageMetadata } from '@/lib/seo';
 import { BenefitMatrix } from '@/components/membership/BenefitMatrix';
-import { listMembershipTiers, getStrategicPartnerTier, formatCents } from '@/lib/membership/tiers';
+import {
+  listMembershipTiers,
+  getStrategicPartnerTier,
+  getTierSeed,
+  formatCents,
+  MEMBERSHIP_CARD_SLUGS,
+  MEMBERSHIP_TIER_CONTENT,
+  PROMOTION_DISCLAIMER
+} from '@/lib/membership/tiers';
 import styles from './membership.module.css';
 
 const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE ?? '';
@@ -235,53 +243,79 @@ export default function MembershipPage() {
         </div>
       </section>
 
-      {/* M03 — 会员档位与 2026 Launch Rate + 权益对比矩阵 */}
+      {/* M03 — 会员档位:公开价格 + 各档详细权益 + 对比表 */}
       <section className={styles.tiersSection} id="tiers">
         <div className={styles.tiersInner}>
-          <span className={styles.eyebrow}>MEMBERSHIP LEVELS · 会员档位与价格</span>
-          <h2 className={styles.sectionH2}>会员档位与 2026 Launch Rate</h2>
+          <span className={styles.eyebrow}>MEMBERSHIP LEVELS · 会员档位与权益</span>
+          <h2 className={styles.sectionH2}>四档会员与 2026 Launch Rate</h2>
           <p className={styles.sectionLead}>
-            SAREC 会员分四档,另设面向专业机构的战略合作伙伴。2026 年度推广价为限时优惠,SAREC
-            可根据实际情况随时调整或结束。下表为各档位当前价格与权益对比。
+            SAREC 会员分四档,另设面向专业机构的战略合作伙伴(单独说明)。以下为各档定位、公开价格与完整权益。
           </p>
 
-          <ul className={styles.priceList}>
-            {membershipTiers
-              .filter((t) => t.isActive)
-              .map((t) => {
-                const promo =
-                  t.isPromotionActive && t.currentPriceCents < t.standardPriceCents;
-                return (
-                  <li key={t.slug} className={styles.priceItem}>
-                    <span className={styles.priceName}>{t.nameZh}</span>
-                    <span className={styles.priceValue}>
-                      {formatCents(t.currentPriceCents)} / 年
-                      {promo && (
-                        <span className={styles.priceStandard}>
-                          原价 {formatCents(t.standardPriceCents)}
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            {sp && (
-              <li className={styles.priceItem}>
-                <span className={styles.priceName}>{sp.nameZh}</span>
-                <span className={styles.priceValue}>
-                  {formatCents(sp.currentPriceCents)} / 年,或{' '}
-                  {formatCents(sp.firstPaymentAmountCents ?? 0)} +{' '}
-                  {formatCents(sp.secondPaymentAmountCents ?? 0)} 半年两期
-                </span>
-              </li>
-            )}
-          </ul>
+          {/* Launch Rate 免责说明 —— 复用价格源既有定稿,紧贴划线价 */}
+          <div className={styles.promoNote}>
+            <p>{PROMOTION_DISCLAIMER.en}</p>
+            <p>{PROMOTION_DISCLAIMER.zh}</p>
+          </div>
 
+          {/* 各档详细权益卡（完整权益,单一数据源派生） */}
+          <div className={styles.tierDetailGrid}>
+            {MEMBERSHIP_CARD_SLUGS.map((slug) => {
+              const tier = getTierSeed(slug);
+              if (!tier) return null;
+              const content = MEMBERSHIP_TIER_CONTENT[slug];
+              const promo =
+                tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
+              return (
+                <article key={slug} className={styles.tierDetailCard}>
+                  <h3 className={styles.tierTitle}>{tier.nameZh}</h3>
+                  <p className={styles.tierEn}>{tier.nameEn}</p>
+                  <p className={styles.tierDetailPrice}>
+                    {formatCents(tier.currentPriceCents)}
+                    <span className={styles.tierDetailTerm}> / 年</span>
+                    {promo && (
+                      <span className={styles.tierDetailStrike}>
+                        原价 {formatCents(tier.standardPriceCents)}
+                      </span>
+                    )}
+                  </p>
+                  <p className={styles.tierFit}>{content.positioningZh}</p>
+                  <p className={styles.tierDetailFocus}>{content.focusZh}</p>
+                  <ul className={styles.tierList}>
+                    {content.benefits.map((b, i) => (
+                      <li key={i}>
+                        {b.text}
+                        {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              );
+            })}
+          </div>
+
+          {/* 战略合作伙伴单独入口（非普通会员层级） */}
+          {sp && (
+            <div className={styles.partnerRow}>
+              <p className={styles.partnerRowText}>
+                <strong>{sp.nameZh}</strong>(非普通会员层级,面向专业服务机构):
+                {formatCents(sp.currentPriceCents)} / 年,或{' '}
+                {formatCents(sp.firstPaymentAmountCents ?? 0)} +{' '}
+                {formatCents(sp.secondPaymentAmountCents ?? 0)} 半年两期。
+              </p>
+              <Link href="/zh/strategic-partners" className={styles.inlineLink}>
+                了解战略合作伙伴 →
+              </Link>
+            </div>
+          )}
+
+          {/* 四档权益对比表 */}
+          <h3 className={styles.tiersSubH3}>四档权益对比</h3>
           <BenefitMatrix />
 
           <div className={styles.tiersCtaRow}>
             <Link href="/zh/join" className={styles.ctaPrimary}>
-              在线选择档位并申请 →
+              在线入会 / 立即申请 →
             </Link>
             <Link href="/zh/strategic-partners" className={styles.ctaSecondary}>
               战略合作伙伴入口 →

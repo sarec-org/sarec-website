@@ -312,7 +312,7 @@ export function HeroV3B() {
             <Link href="/zh/research">研究</Link>
           </li>
           <li>
-            <Link href="/zh/membership">会员</Link>
+            <Link href="/zh/join">会员入会</Link>
           </li>
           <li>
             <Link href="/zh/events">活动</Link>

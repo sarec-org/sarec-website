@@ -50,102 +50,121 @@ export const SAREC_REVIEW_NOTE = {
   zh: '须经 SAREC 审核、排期及内容标准确认。'
 };
 
-/** 权益摘要（内容，非价格；仅页面用，不进 seed）。gated=true 的条目带 SAREC review 限制。 */
-export type TierBenefit = { text: string; gated?: boolean };
-export type TierBenefitBlock = { taglineZh: string; benefits: TierBenefit[] };
+/** ────────────────────────────────────────────────────────────
+ * 会员权益 —— 单一数据源（内容，非价格；不进 seed）。
+ * /zh/join 紧凑卡取 core=true 的 4-6 条；/zh/membership 展示完整列表 + 对比表由此派生。
+ * 【改权益只改这里一处，两页不各存一份。】
+ * reviewGated=true = 展示 / 发言 / 推介 / 专访 / 联合 / 协同 / 私董会类，带合规脚注（＊）。
+ * 措辞安全线：一律「可 / 可申请 / 优先申请 / 经审核与排期后安排」，绝不写「保证获得 /
+ * 一定安排 / 每年享有 / 必得 / 固定提供」。私董会须写成「后续如推出…可享首批准入优先资格」。
+ * ──────────────────────────────────────────────────────────── */
+export type TierBenefit = { text: string; core?: boolean; reviewGated?: boolean };
 
-export const TIER_BENEFITS: Record<string, TierBenefitBlock> = {
+export type MembershipTierContent = {
+  /** 适合谁 / 定位 */
+  positioningZh: string;
+  /** 页面表达重点（一句话） */
+  focusZh: string;
+  /** 完整权益（单一源）；core 入 /zh/join 卡，reviewGated 带 ＊ */
+  benefits: TierBenefit[];
+};
+
+/** 可在线购买的四档普通会员 slug（有序，战略合作伙伴与仅邀请的 svp 均不在内）。 */
+export const MEMBERSHIP_CARD_SLUGS = ['member', 'board', 'exec_board', 'vp'] as const;
+export type MembershipCardSlug = (typeof MEMBERSHIP_CARD_SLUGS)[number];
+
+export const MEMBERSHIP_TIER_CONTENT: Record<MembershipCardSlug, MembershipTierContent> = {
   member: {
-    taglineZh: '在场 —— 加入 SAREC 会员网络，形成社会证明。',
+    positioningZh: '适合个人会员、行业从业者、投资人、地产相关服务人员。',
+    focusZh: '入门会员：重点是身份、活动、资讯、社群。',
     benefits: [
-      { text: '列入 SAREC 会员名录' },
-      { text: '线下 / 线上活动参与权' },
-      { text: '公开研究与市场简报优先获取' },
-      { text: '会员社群参与' }
+      { text: 'SAREC 年度会员身份', core: true },
+      { text: '可列入 SAREC 会员名录', core: true },
+      { text: '可参加 SAREC 公开活动、讲座、沙龙', core: true },
+      { text: '优先获取 SAREC 市场简报、行业资讯、活动通知', core: true },
+      { text: '可加入会员社群或活动通知群', core: true },
+      { text: '部分付费活动可享会员优惠价', core: true }
     ]
   },
   board: {
-    taglineZh: '企业露出 —— 官网展示位 + 活动优先。',
+    positioningZh: '适合中小企业、地产经纪团队、贷款、保险、装修、材料、服务商等。',
+    focusZh: '正式企业身份、官网露出、活动优先、基础品牌曝光。',
     benefits: [
-      { text: '包含「会员」全部权益' },
-      { text: '官网会员企业展示位', gated: true },
-      { text: '活动优先报名' },
-      { text: '每年 1 次企业推荐机会', gated: true }
+      { text: '包含会员全部权益', core: true },
+      { text: '可使用「SAREC 理事单位」身份展示', core: true },
+      { text: '可在官网会员 / 企业展示板块展示公司名称、Logo、简介', core: true, reviewGated: true },
+      { text: 'SAREC 活动优先报名、优先通知', core: true },
+      { text: '年会或重点活动中可获得基础名单 / Logo 露出', core: true, reviewGated: true },
+      { text: '可申请进入 SAREC 会员资源协同网络', core: true, reviewGated: true },
+      { text: '可提交行业观点、项目动态，经审核后发布或转发', reviewGated: true }
     ]
   },
   exec_board: {
-    taglineZh: '项目露出 —— 项目展示 + 发言与内容合作。',
+    positioningZh: '适合希望在商会中获得更多曝光、活动资源和企业展示机会的企业。',
+    focusZh: '重点展示、展架、上台申请、牌匾、内容合作、资源协同优先。',
     benefits: [
-      { text: '包含「理事单位」全部权益' },
-      { text: '会员项目展示位', gated: true },
-      { text: '年度活动发言申请权', gated: true },
-      { text: '内容合作机会', gated: true }
+      { text: '包含理事单位全部权益', core: true },
+      { text: '可使用「SAREC 常务理事单位」身份展示', core: true },
+      { text: '可在官网更高优先级展示公司、项目或服务', core: true, reviewGated: true },
+      { text: '每年可申请 1 次年会或重点活动展架 / 资料展示机会', core: true, reviewGated: true },
+      { text: '可申请在活动中进行企业介绍、主题分享或项目介绍', core: true, reviewGated: true },
+      { text: '可获得 SAREC 常务理事单位证书或牌匾', core: true },
+      { text: '可参与 SAREC 文章、访谈、活动预告等内容合作', reviewGated: true },
+      { text: '在律师、会计、贷款、保险、投资、项目等专业服务协同时享优先级', reviewGated: true }
     ]
   },
   vp: {
-    taglineZh: '领导层露出 —— 主动推介、专访与优先资源协同。',
+    positioningZh:
+      '适合核心企业、重点服务机构、项目方、开发商、金融服务机构、希望深度绑定 SAREC 的企业。',
+    focusZh: '副会长身份、核心展示、重点露出、视频专访、项目推介、联合活动、私董会优先资格。',
     benefits: [
-      { text: '包含「常务理事单位」全部权益' },
-      { text: '领导层 / 副会长展示', gated: true },
-      { text: '主题分享 / 专访 / 视频内容机会', gated: true },
-      { text: '项目推介机会', gated: true },
-      { text: '优先资源协同', gated: true }
-    ]
-  },
-  svp: {
-    taglineZh: '常务副会长单位 —— 仅限邀请（By invitation）。',
-    benefits: [{ text: '仅限邀请，V1 不开放在线购买。' }]
-  },
-  strategic_partner: {
-    taglineZh: '战略层合作 —— 深度资源协同、联合内容与活动。',
-    benefits: [
-      { text: '深度资源协同机会', gated: true },
-      { text: '联合内容与活动合作机会', gated: true },
-      { text: '官网优先展示', gated: true },
-      { text: '项目 / 主题推介机会', gated: true }
+      { text: '包含常务理事单位全部权益', core: true },
+      { text: '可使用「SAREC 副会长单位」身份展示', core: true },
+      { text: '在官网副会长单位 / 核心支持单位板块展示', core: true, reviewGated: true },
+      { text: '年会或大型活动中获得更高优先级 Logo / 名称露出', reviewGated: true },
+      { text: '优先申请主题发言、项目介绍、企业介绍', reviewGated: true },
+      { text: '每年可申请 1 次 SAREC YouTube / 视频专访', core: true, reviewGated: true },
+      { text: '每年可申请 1–2 次项目或服务推介机会', core: true, reviewGated: true },
+      { text: '可优先申请与 SAREC 联合举办专题沙龙、讲座或闭门会', reviewGated: true },
+      { text: '在律师、会计、贷款、保险、投资、开发商、经纪等资源协同时享高优先级', reviewGated: true },
+      {
+        text: '如 SAREC 后续推出私董会 / 闭门资源圈，副会长单位可享首批准入优先资格',
+        core: true,
+        reviewGated: true
+      },
+      { text: '可获得副会长单位年度合作牌匾或证书' }
     ]
   }
 };
 
-/** ────────────────────────────────────────────────────────────
- * 权益对比矩阵 —— 4 个会员档位横向对比（战略合作伙伴单列说明）。
- * 价格不在此处：矩阵表头价格由 formatCents(tier.currentPriceCents) 从
- * 唯一价格源渲染，本结构只描述「哪档含哪项权益」，不写任何金额。
- * ──────────────────────────────────────────────────────────── */
-export const MATRIX_TIER_SLUGS = ['member', 'board', 'exec_board', 'vp'] as const;
-
-/** 单元格：true = 含（✓）；false = 不含（—）；字符串 = 限定说明（如「基础」「每年 1 次」）。 */
-export type MatrixCell = boolean | string;
-export type BenefitMatrixRow = {
-  label: string;
-  /** 展示 / 发言 / 推介 / 专访类权益 —— 带 SAREC 审核限制脚注（＊）。 */
-  reviewGated?: boolean;
-  /** 对应 MATRIX_TIER_SLUGS 顺序：会员 / 理事单位 / 常务理事单位 / 副会长单位。 */
-  cells: [MatrixCell, MatrixCell, MatrixCell, MatrixCell];
+/** 战略合作伙伴（非普通会员层级，单独页 /zh/strategic-partners 展示）。 */
+export const STRATEGIC_PARTNER_CONTENT: {
+  positioningZh: string;
+  benefits: TierBenefit[];
+} = {
+  positioningZh:
+    '适合律师事务所、会计师事务所、保险经纪、贷款公司、券商、财富管理、地产经纪公司、开发商、建筑公司、装修公司、材料商、物业管理、跨境服务机构。',
+  benefits: [
+    { text: '可使用「SAREC Strategic Partner / 战略合作伙伴」身份' },
+    { text: '在官网战略合作伙伴板块展示公司 Logo、简介、服务方向', reviewGated: true },
+    { text: '可与 SAREC 联合发布专业文章、市场解读、视频内容', reviewGated: true },
+    { text: '可申请参与或联合举办专题讲座、线上分享、线下沙龙', reviewGated: true },
+    { text: '可申请进行专业服务、项目或产品推介', reviewGated: true },
+    { text: '年会或重点活动中获得战略合作伙伴露出', reviewGated: true },
+    { text: '可申请 SAREC 视频访谈或专题内容合作', reviewGated: true },
+    { text: '与 SAREC 会员、理事单位、常务理事单位、副会长单位之间进行资源协同', reviewGated: true },
+    { text: '可获得战略合作伙伴证书或牌匾' }
+  ]
 };
 
-export const BENEFIT_MATRIX: BenefitMatrixRow[] = [
-  { label: 'SAREC 会员名录', cells: [true, true, true, true] },
-  { label: '公开活动参与权', cells: [true, true, true, true] },
-  { label: '市场简报 / 研究内容优先获取', cells: [true, true, true, true] },
-  { label: '会员社群', cells: [true, true, true, true] },
-  { label: '官网会员 / 企业展示', reviewGated: true, cells: [false, true, true, true] },
-  { label: '年会 / 活动展架', reviewGated: true, cells: [false, '基础', true, true] },
-  {
-    label: '年会 / 活动上台介绍或主题分享申请',
-    reviewGated: true,
-    cells: [false, false, true, '优先']
-  },
-  { label: '授牌 / 会员证书 / 年度合作牌匾', reviewGated: true, cells: [false, false, true, true] },
-  { label: '官网项目或公司宣传展示', reviewGated: true, cells: [false, false, true, true] },
-  { label: 'YouTube / 视频专访机会', reviewGated: true, cells: [false, false, false, '每年 1 次'] },
-  { label: '项目推介机会', reviewGated: true, cells: [false, false, false, '每年 1–2 次'] },
-  { label: '私董会 / 闭门资源协同优先资格', reviewGated: true, cells: [false, false, false, true] }
-];
+/** 全站统一合规脚注（展示 / 发言 / 推介 / 专访 / 联合活动 / 资源协同类权益）。 */
+export const COMPLIANCE_FOOTNOTE =
+  '以上展示、发言、推介、专访、联合活动及资源协同权益，须经 SAREC 审核、排期及内容标准确认。SAREC 不承诺客户数量、成交结果、融资结果、投资收益、业务收入或固定客户来源。';
 
-/** 展示 / 发言 / 推介 / 专访类权益统一合规脚注（对应矩阵中带 ＊ 的行）。 */
-export const BENEFIT_MATRIX_NOTE =
-  '须经 SAREC 审核、排期及内容标准确认。SAREC 不承诺客户、成交、融资、投资收益或固定客户来源。';
+/** 取某档核心权益（用于 /zh/join 紧凑卡，最多 6 条）。 */
+export function coreBenefits(slug: MembershipCardSlug): TierBenefit[] {
+  return MEMBERSHIP_TIER_CONTENT[slug].benefits.filter((b) => b.core).slice(0, 6);
+}
 
 /** 战略合作伙伴行业分类。 */
 export const STRATEGIC_PARTNER_INDUSTRIES: string[] = [

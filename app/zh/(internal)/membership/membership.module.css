@@ -612,6 +612,106 @@
   margin-top: clamp(32px, 4vh, 48px);
 }
 
+/* Launch Rate 免责说明条（复用价格源 PROMOTION_DISCLAIMER） */
+.promoNote {
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  padding: 1rem 1.25rem;
+  margin: clamp(28px, 3.5vh, 44px) 0 0 0;
+  border-radius: 4px;
+  max-width: 900px;
+}
+.promoNote p {
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 0.5rem 0;
+}
+.promoNote p:last-child {
+  margin-bottom: 0;
+}
+
+/* 各档详细权益卡网格（4 档,自适应换行,移动端单列） */
+.tierDetailGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: clamp(16px, 2vw, 28px);
+  margin-top: clamp(32px, 4vh, 48px);
+}
+
+.tierDetailCard {
+  background: var(--ink-deep);
+  border: 1px solid var(--gold-dim);
+  border-radius: 10px;
+  padding: clamp(24px, 2.5vw, 36px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tierDetailPrice {
+  font-family: var(--mono);
+  font-size: 1.6rem;
+  color: var(--gold);
+  margin: 6px 0 2px 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.tierDetailTerm {
+  font-size: 0.75rem;
+  color: var(--ivory-mute);
+}
+.tierDetailStrike {
+  font-size: 0.8rem;
+  color: var(--ivory-mute);
+  text-decoration: line-through;
+}
+.tierDetailFocus {
+  font-family: var(--serif-zh);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--gold-warm, var(--gold));
+  margin: 0 0 6px 0;
+}
+.gatedMark {
+  color: var(--gold);
+}
+
+/* 战略合作伙伴单独入口行 */
+.partnerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  border-top: 1px solid var(--line-3);
+  margin-top: clamp(32px, 4vh, 48px);
+  padding-top: clamp(20px, 2.5vh, 28px);
+}
+.partnerRowText {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+  max-width: 70ch;
+}
+.partnerRowText strong {
+  color: var(--ivory);
+}
+
+/* 对比表小标题 */
+.tiersSubH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.4rem, 2vw, 1.9rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: clamp(48px, 6vh, 72px) 0 0 0;
+}
+
 /* FAQ 价格清单 */
 .faqPriceList {
   list-style: none;

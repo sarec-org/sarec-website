@@ -170,6 +170,34 @@
   text-decoration: none;
 }
 
+/* 战略合作伙伴明显入口（join / membership 页复用） */
+.partnerCallout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  padding: 1.5rem 1.75rem;
+  margin: 2rem 0 0 0;
+  background: rgba(201, 165, 103, 0.04);
+}
+.partnerCalloutH2 {
+  font-family: var(--serif-zh);
+  font-size: 1.2rem;
+  color: var(--ivory);
+  margin: 0 0 0.5rem 0;
+}
+.partnerCalloutBody {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+  max-width: 62ch;
+}
+
 /* SAREC review 限制说明 */
 .reviewNote {
   font-size: 0.82rem;

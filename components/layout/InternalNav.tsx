@@ -10,7 +10,7 @@ const MENU = [
   { label: '服务', href: '/zh/services' },
   { label: '项目', href: '/zh/projects' },
   { label: '研究', href: '/zh/research' },
-  { label: '会员', href: '/zh/membership' },
+  { label: '会员入会', href: '/zh/join' },
   { label: '活动', href: '/zh/events' }
 ] as const;
 

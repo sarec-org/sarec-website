@@ -4,24 +4,28 @@ import { createPageMetadata } from '@/lib/seo';
 import {
   listMembershipTiers,
   formatCents,
-  TIER_BENEFITS,
+  MEMBERSHIP_CARD_SLUGS,
+  MEMBERSHIP_TIER_CONTENT,
+  coreBenefits,
+  getTierSeed,
+  getStrategicPartnerTier,
   PROMOTION_DISCLAIMER,
-  SAREC_REVIEW_NOTE
+  COMPLIANCE_FOOTNOTE
 } from '@/lib/membership/tiers';
 import { JoinForm } from '@/components/membership/JoinForm';
-import { BenefitMatrix } from '@/components/membership/BenefitMatrix';
 import styles from '@/components/membership/membership.module.css';
 
 export const metadata: Metadata = createPageMetadata({
   title: '加入 SAREC｜在线入会申请',
   description:
-    'SAREC 中美房地产商会在线入会申请：会员、理事单位、常务理事单位、副会长单位。2026 年度推广价限时开放。',
+    'SAREC 中美房地产商会在线入会申请：会员 $200、理事单位 $500、常务理事单位 $1,000、副会长单位 $3,000。2026 年度推广价限时开放。',
   path: '/zh/join'
 });
 
-// 价格与档位来自唯一价格源 lib/membership/tiers.ts（页面不硬编码任何价格）。
+// 价格与权益均来自唯一数据源 lib/membership/tiers.ts（页面不硬编码价格或权益文案）。
 export default function JoinPage() {
   const tiers = listMembershipTiers();
+  const sp = getStrategicPartnerTier();
   const formTiers = tiers
     .filter((t) => t.isActive)
     .map((t) => ({
@@ -39,62 +43,50 @@ export default function JoinPage() {
         在线选择档位、了解权益、填写资料并同意入会协议，即可进入下一步付款。
       </p>
 
+      {/* Launch Rate 免责说明 —— 紧贴价格卡上方，复用价格源既有定稿 */}
       <div className={styles.promoNote}>
         <p>{PROMOTION_DISCLAIMER.en}</p>
         <p>{PROMOTION_DISCLAIMER.zh}</p>
       </div>
 
-      <h2 className={styles.sectionH2}>会员档位与权益梯度</h2>
+      <h2 className={styles.sectionH2}>四档会员 · 2026 Launch Rate</h2>
       <div className={styles.tierGrid}>
-        {tiers.map((tier) => {
-          const b = TIER_BENEFITS[tier.slug];
-          const invite = !tier.isActive; // svp = 仅限邀请
-          const hasPromo = tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
+        {MEMBERSHIP_CARD_SLUGS.map((slug) => {
+          const tier = getTierSeed(slug);
+          if (!tier) return null;
+          const content = MEMBERSHIP_TIER_CONTENT[slug];
+          const hasPromo =
+            tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
           return (
-            <article
-              key={tier.slug}
-              className={`${styles.tierCard} ${invite ? styles.tierCardInvite : ''}`}
-            >
+            <article key={slug} className={styles.tierCard}>
               <h3 className={styles.tierName}>{tier.nameZh}</h3>
               <p className={styles.tierNameEn}>{tier.nameEn}</p>
 
-              {invite ? (
-                <span className={styles.inviteTag}>By invitation / 仅限邀请</span>
-              ) : (
-                <>
-                  {hasPromo && <span className={styles.promoTag}>2026 Launch Rate</span>}
-                  <div className={styles.priceRow}>
-                    <span className={styles.priceCurrent}>{formatCents(tier.currentPriceCents)}</span>
-                    {hasPromo && (
-                      <span className={styles.priceStandard}>
-                        {formatCents(tier.standardPriceCents)}
-                      </span>
-                    )}
-                  </div>
-                  <p className={styles.priceTerm}>/ 年（{tier.membershipTermMonths} 个月会员年度）</p>
-                </>
-              )}
+              {hasPromo && <span className={styles.promoTag}>2026 Launch Rate</span>}
+              <div className={styles.priceRow}>
+                <span className={styles.priceCurrent}>{formatCents(tier.currentPriceCents)}</span>
+                {hasPromo && (
+                  <span className={styles.priceStandard}>
+                    {formatCents(tier.standardPriceCents)}
+                  </span>
+                )}
+              </div>
+              <p className={styles.priceTerm}>/ 年（{tier.membershipTermMonths} 个月会员年度）</p>
 
-              {b && <p className={styles.tierTagline}>{b.taglineZh}</p>}
-              {b && (
-                <ul className={styles.benefitList}>
-                  {b.benefits.map((item, i) => (
-                    <li key={i}>
-                      {item.text}
-                      {item.gated && <span className={styles.gatedMark}> ＊</span>}
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <p className={styles.tierTagline}>{content.positioningZh}</p>
+              <ul className={styles.benefitList}>
+                {coreBenefits(slug).map((item, i) => (
+                  <li key={i}>
+                    {item.text}
+                    {item.reviewGated && <span className={styles.gatedMark}> ＊</span>}
+                  </li>
+                ))}
+              </ul>
 
               <div className={styles.tierCta}>
-                {invite ? (
-                  <span className={styles.btnDisabled}>仅限邀请</span>
-                ) : (
-                  <a href="#apply" className={styles.btnLink}>
-                    选择此档位 →
-                  </a>
-                )}
+                <a href="#apply" className={styles.btnLink}>
+                  选择此档位 →
+                </a>
               </div>
             </article>
           );
@@ -102,20 +94,33 @@ export default function JoinPage() {
       </div>
 
       <p className={styles.reviewNote}>
-        ＊ 标注项：{SAREC_REVIEW_NOTE.zh} / {SAREC_REVIEW_NOTE.en} SAREC
-        不承诺任何客户、成交、融资或投资收益，亦不承诺固定客户来源。
+        完整分档权益对比见{' '}
+        <Link href="/zh/membership">会员权益说明</Link>。＊ {COMPLIANCE_FOOTNOTE}
       </p>
 
-      <h2 className={styles.sectionH2}>权益对比一览</h2>
-      <BenefitMatrix />
+      {/* 战略合作伙伴明显入口（非普通会员层级） */}
+      <div className={styles.partnerCallout}>
+        <div>
+          <h2 className={styles.partnerCalloutH2}>战略合作伙伴</h2>
+          <p className={styles.partnerCalloutBody}>
+            面向律师、会计、保险、贷款、券商、财富管理、地产经纪、开发商、建筑、装修、材料等专业机构。
+            {sp &&
+              `${formatCents(sp.currentPriceCents)} / 年，或 ${formatCents(
+                sp.firstPaymentAmountCents ?? 0
+              )} + ${formatCents(sp.secondPaymentAmountCents ?? 0)} 半年两期。`}
+          </p>
+        </div>
+        <Link href="/zh/strategic-partners" className={styles.btnLink}>
+          了解战略合作伙伴 →
+        </Link>
+      </div>
 
-      <h2 className={styles.sectionH2}>在线申请</h2>
+      <h2 className={styles.sectionH2} id="apply">
+        在线申请
+      </h2>
       <JoinForm tiers={formTiers} />
 
-      <p className={styles.reviewNote}>
-        付款由 Stripe 安全处理。战略合作伙伴请见{' '}
-        <Link href="/zh/strategic-partners">战略合作伙伴</Link>。
-      </p>
+      <p className={styles.reviewNote}>付款由 Stripe 安全处理。</p>
     </div>
   );
 }
