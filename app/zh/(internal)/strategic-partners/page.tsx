@@ -6,7 +6,8 @@ import {
   formatCents,
   STRATEGIC_PARTNER_CONTENT,
   COMPLIANCE_FOOTNOTE,
-  STRATEGIC_PARTNER_INDUSTRIES
+  STRATEGIC_PARTNER_INDUSTRIES,
+  HOW_TO_CHOOSE
 } from '@/lib/membership/tiers';
 import { PartnerForm } from '@/components/membership/PartnerForm';
 import styles from '@/components/membership/membership.module.css';
@@ -40,6 +41,18 @@ export default function StrategicPartnersPage() {
         战略合作伙伴不是普通会员层级，而是面向专业服务机构的深度合作 ——
         官网展示、联合内容与活动、专题推介与资源协同。合作权益须经 SAREC 审核、排期与内容标准确认。
       </p>
+
+      {/* 如何选择：会员档 vs 战略合作伙伴 */}
+      <div className={styles.chooseBlock}>
+        <h2 className={styles.chooseH2}>如何选择</h2>
+        <ul className={styles.chooseList}>
+          <li>{HOW_TO_CHOOSE.memberPath}</li>
+          <li>{HOW_TO_CHOOSE.partnerPath}</li>
+        </ul>
+        <p className={styles.chooseNote}>
+          {HOW_TO_CHOOSE.bothNote} 会员档请见 <Link href="/zh/join">在线入会</Link>。
+        </p>
+      </div>
 
       <h2 className={styles.sectionH2}>适合谁</h2>
       <p className={styles.lead}>{content.positioningZh}</p>

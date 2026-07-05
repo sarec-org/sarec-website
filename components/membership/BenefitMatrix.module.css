@@ -99,6 +99,26 @@
   color: var(--gold-dim);
 }
 
+/* 本档新增项高亮 */
+.colItemNew {
+  color: var(--ivory);
+}
+.colItemNew::before {
+  color: var(--gold);
+}
+.newTag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-deepest);
+  background: var(--gold);
+  border-radius: 3px;
+  padding: 0.05rem 0.35rem;
+  margin-right: 0.4rem;
+  vertical-align: 0.08em;
+}
+
 .gate {
   color: var(--gold);
 }

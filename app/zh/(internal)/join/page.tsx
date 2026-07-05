@@ -6,11 +6,14 @@ import {
   formatCents,
   MEMBERSHIP_CARD_SLUGS,
   MEMBERSHIP_TIER_CONTENT,
-  coreBenefits,
+  coreAddedBenefits,
+  previousCardSlug,
   getTierSeed,
   getStrategicPartnerTier,
   PROMOTION_DISCLAIMER,
-  COMPLIANCE_FOOTNOTE
+  COMPLIANCE_FOOTNOTE,
+  MEMBERSHIP_OVERVIEW_ZH,
+  HOW_TO_CHOOSE
 } from '@/lib/membership/tiers';
 import { JoinForm } from '@/components/membership/JoinForm';
 import styles from '@/components/membership/membership.module.css';
@@ -35,28 +38,27 @@ export default function JoinPage() {
     }));
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${styles.pageWide}`}>
       <p className={styles.eyebrow}>MEMBERSHIP · 在线入会</p>
       <h1 className={styles.h1}>加入 SAREC 中美房地产商会</h1>
-      <p className={styles.lead}>
-        SAREC 面向中美跨境房地产的机构与专业力量，提供会员身份、展示机会、活动权益与资源协同。
-        在线选择档位、了解权益、填写资料并同意入会协议，即可进入下一步付款。
-      </p>
+      <p className={styles.lead}>{MEMBERSHIP_OVERVIEW_ZH}</p>
 
-      {/* Launch Rate 免责说明 —— 紧贴价格卡上方，复用价格源既有定稿 */}
+      {/* Launch Rate 免责说明 —— 紧贴价格卡上方，复用价格源既有定稿（中文） */}
       <div className={styles.promoNote}>
-        <p>{PROMOTION_DISCLAIMER.en}</p>
         <p>{PROMOTION_DISCLAIMER.zh}</p>
       </div>
 
       <h2 className={styles.sectionH2}>四档会员 · 2026 Launch Rate</h2>
-      <div className={styles.tierGrid}>
+      <div className={styles.tierGridJoin}>
         {MEMBERSHIP_CARD_SLUGS.map((slug) => {
           const tier = getTierSeed(slug);
           if (!tier) return null;
           const content = MEMBERSHIP_TIER_CONTENT[slug];
           const hasPromo =
             tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
+          const prev = previousCardSlug(slug);
+          const prevName = prev ? getTierSeed(prev)?.nameZh : null;
+          const isMember = slug === 'member';
           return (
             <article key={slug} className={styles.tierCard}>
               <h3 className={styles.tierName}>{tier.nameZh}</h3>
@@ -74,8 +76,13 @@ export default function JoinPage() {
               <p className={styles.priceTerm}>/ 年（{tier.membershipTermMonths} 个月会员年度）</p>
 
               <p className={styles.tierTagline}>{content.positioningZh}</p>
+
+              <p className={styles.includedNote}>
+                {isMember ? 'SAREC 基础会员权益' : `已包含${prevName ?? '下级'}全部权益`}
+              </p>
+              <p className={styles.addedLabel}>{isMember ? '核心权益' : '本档新增'}</p>
               <ul className={styles.benefitList}>
-                {coreBenefits(slug).map((item, i) => (
+                {coreAddedBenefits(slug).map((item, i) => (
                   <li key={i}>
                     {item.text}
                     {item.reviewGated && <span className={styles.gatedMark}> ＊</span>}
@@ -84,8 +91,8 @@ export default function JoinPage() {
               </ul>
 
               <div className={styles.tierCta}>
-                <a href="#apply" className={styles.btnLink}>
-                  选择此档位 →
+                <a href={`/zh/join?tier=${slug}#apply`} className={styles.btnLink}>
+                  申请{tier.nameZh} →
                 </a>
               </div>
             </article>
@@ -94,16 +101,26 @@ export default function JoinPage() {
       </div>
 
       <p className={styles.reviewNote}>
-        完整分档权益对比见{' '}
+        完整四档逐级权益与对比见{' '}
         <Link href="/zh/membership">会员权益说明</Link>。＊ {COMPLIANCE_FOOTNOTE}
       </p>
+
+      {/* 如何选择：会员档 vs 战略合作伙伴 */}
+      <div className={styles.chooseBlock}>
+        <h2 className={styles.chooseH2}>如何选择</h2>
+        <ul className={styles.chooseList}>
+          <li>{HOW_TO_CHOOSE.memberPath}</li>
+          <li>{HOW_TO_CHOOSE.partnerPath}</li>
+        </ul>
+        <p className={styles.chooseNote}>{HOW_TO_CHOOSE.bothNote}</p>
+      </div>
 
       {/* 战略合作伙伴明显入口（非普通会员层级） */}
       <div className={styles.partnerCallout}>
         <div>
           <h2 className={styles.partnerCalloutH2}>战略合作伙伴</h2>
           <p className={styles.partnerCalloutBody}>
-            面向律师、会计、保险、贷款、券商、财富管理、地产经纪、开发商、建筑、装修、材料等专业机构。
+            面向为 SAREC 会员群体提供专业服务的机构与赞助合作方。
             {sp &&
               `${formatCents(sp.currentPriceCents)} / 年，或 ${formatCents(
                 sp.firstPaymentAmountCents ?? 0

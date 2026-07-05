@@ -314,7 +314,7 @@ export function PartnerForm({
 
       <div>
         <button type="submit" className={styles.btnPrimary} disabled={!form.agree || submitting}>
-          {submitting ? '正在跳转付款…' : '继续安全付款 / Continue to secure checkout'}
+          {submitting ? '正在跳转付款…' : '继续安全付款'}
         </button>
         <p className={styles.formHint}>
           付款由 Stripe 安全处理；提交后将跳转至 Stripe 付款页。半年两期本次仅收第一期，付款完成后我们将确认记录。

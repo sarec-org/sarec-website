@@ -10,6 +10,10 @@ import {
   formatCents,
   MEMBERSHIP_CARD_SLUGS,
   MEMBERSHIP_TIER_CONTENT,
+  tierAddedBenefits,
+  tierFullBenefits,
+  previousCardSlug,
+  MEMBERSHIP_OVERVIEW_ZH,
   PROMOTION_DISCLAIMER
 } from '@/lib/membership/tiers';
 import styles from './membership.module.css';
@@ -249,16 +253,15 @@ export default function MembershipPage() {
           <span className={styles.eyebrow}>MEMBERSHIP LEVELS · 会员档位与权益</span>
           <h2 className={styles.sectionH2}>四档会员与 2026 Launch Rate</h2>
           <p className={styles.sectionLead}>
-            SAREC 会员分四档,另设面向专业机构的战略合作伙伴(单独说明)。以下为各档定位、公开价格与完整权益。
+            {MEMBERSHIP_OVERVIEW_ZH}权益逐级叠加:高档含低档全部权益,并在其上新增。以下按档展示「本档新增」与「已包含」。
           </p>
 
-          {/* Launch Rate 免责说明 —— 复用价格源既有定稿,紧贴划线价 */}
+          {/* Launch Rate 免责说明 —— 复用价格源既有定稿(中文),紧贴划线价 */}
           <div className={styles.promoNote}>
-            <p>{PROMOTION_DISCLAIMER.en}</p>
             <p>{PROMOTION_DISCLAIMER.zh}</p>
           </div>
 
-          {/* 各档详细权益卡（完整权益,单一数据源派生） */}
+          {/* 各档阶梯式权益卡（本档新增高亮 + 已包含累计;完整权益逐级叠加派生） */}
           <div className={styles.tierDetailGrid}>
             {MEMBERSHIP_CARD_SLUGS.map((slug) => {
               const tier = getTierSeed(slug);
@@ -266,6 +269,11 @@ export default function MembershipPage() {
               const content = MEMBERSHIP_TIER_CONTENT[slug];
               const promo =
                 tier.isPromotionActive && tier.currentPriceCents < tier.standardPriceCents;
+              const isMember = slug === 'member';
+              const added = tierAddedBenefits(slug);
+              const inherited = tierFullBenefits(slug).filter((b) => b.addedAt !== slug);
+              const prev = previousCardSlug(slug);
+              const prevName = prev ? getTierSeed(prev)?.nameZh : null;
               return (
                 <article key={slug} className={styles.tierDetailCard}>
                   <h3 className={styles.tierTitle}>{tier.nameZh}</h3>
@@ -281,14 +289,30 @@ export default function MembershipPage() {
                   </p>
                   <p className={styles.tierFit}>{content.positioningZh}</p>
                   <p className={styles.tierDetailFocus}>{content.focusZh}</p>
+
+                  <p className={styles.addedLabel}>{isMember ? '基础权益' : '本档新增'}</p>
                   <ul className={styles.tierList}>
-                    {content.benefits.map((b, i) => (
-                      <li key={i}>
+                    {added.map((b, i) => (
+                      <li key={i} className={isMember ? undefined : styles.benefitNew}>
                         {b.text}
                         {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
                       </li>
                     ))}
                   </ul>
+
+                  {!isMember && inherited.length > 0 && (
+                    <>
+                      <p className={styles.includedLabel}>已包含（{prevName ?? '下级'}及以下全部权益）</p>
+                      <ul className={styles.tierListMuted}>
+                        {inherited.map((b, i) => (
+                          <li key={i}>
+                            {b.text}
+                            {b.reviewGated && <span className={styles.gatedMark}> ＊</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </article>
               );
             })}

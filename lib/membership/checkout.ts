@@ -112,9 +112,12 @@ export function validateCheckout(body: CheckoutRequest): ValidationResult {
     if (!tier.isActive) {
       return { ok: false, error: '该档位暂不开放在线购买。' };
     }
-    const companyName = (body.companyName ?? body.memberName ?? '').trim();
+    // 个人会员档（member）允许不填单位名称：回退用联系人姓名作为记录名，避免个人申请误 400。
+    // 单位档（board / exec_board / vp）仍强制单位名称必填。DB 结构不变（company_name 仍非空）。
+    const rawCompany = (body.companyName ?? body.memberName ?? '').trim();
+    const companyName = rawCompany || (tier.slug === 'member' ? contactName : '');
     if (!companyName) {
-      return { ok: false, error: '请填写公司 / 会员名称。' };
+      return { ok: false, error: '请填写单位名称。' };
     }
     if (tier.currentPriceCents <= 0) {
       return { ok: false, error: '档位金额配置有误。' };

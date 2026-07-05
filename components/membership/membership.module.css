@@ -63,6 +63,110 @@
   gap: 1.25rem;
   margin: 1.5rem 0;
 }
+
+/* /zh/join：更宽容器 + 四档卡片 4/2/1 响应式，卡片等高 */
+.pageWide {
+  max-width: 1280px;
+}
+.tierGridJoin {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+  align-items: stretch;
+}
+@media (min-width: 640px) {
+  .tierGridJoin {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .tierGridJoin {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* 卡片内：已包含 / 本档新增 分块 */
+.includedNote {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--ivory-mute);
+  margin: 0.5rem 0 0.25rem 0;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--line-soft, rgba(255, 255, 255, 0.1));
+}
+.addedLabel {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 0.4rem 0;
+}
+
+/* 表单顶部：当前申请档位条 */
+.applyingBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.75rem;
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  border-radius: 6px;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 0.5rem;
+  background: rgba(201, 165, 103, 0.05);
+}
+.applyingLabel {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--ivory-mute);
+}
+.applyingTier {
+  font-family: var(--serif-zh);
+  font-size: 1.05rem;
+  color: var(--gold);
+}
+
+/* 如何选择块 */
+.chooseBlock {
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  padding: 1.5rem 1.75rem;
+  margin: 2rem 0 0 0;
+}
+.chooseH2 {
+  font-family: var(--serif-zh);
+  font-size: 1.2rem;
+  color: var(--ivory);
+  margin: 0 0 0.85rem 0;
+}
+.chooseList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.chooseList li {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  padding-left: 1.1rem;
+  position: relative;
+}
+.chooseList li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--gold);
+}
+.chooseNote {
+  font-size: 0.85rem;
+  color: var(--ivory-mute);
+  margin: 0.85rem 0 0 0;
+}
 .tierCard {
   border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.12));
   border-radius: 8px;

@@ -1,6 +1,7 @@
 import {
   MEMBERSHIP_CARD_SLUGS,
   MEMBERSHIP_TIER_CONTENT,
+  tierFullBenefits,
   COMPLIANCE_FOOTNOTE,
   getTierSeed,
   formatCents
@@ -8,22 +9,23 @@ import {
 import styles from './BenefitMatrix.module.css';
 
 /**
- * 四档普通会员权益对比 —— 每列一档，完整列出该档权益（非 ✓/— 表格）。
- * 数据全部来自单一源 MEMBERSHIP_TIER_CONTENT；价格由 formatCents 从价格源渲染。
- * 移动端整表横向滚动，页面本身不横向溢出。战略合作伙伴不在此表（单独页）。
+ * 四档普通会员权益对比 —— 每列一档,列出该档【完整】权益(逐级叠加派生),
+ * 并高亮「本档新增」项,一眼看出升级差异。数据全部来自单一源(tierFullBenefits)。
+ * 移动端整表横向滚动,页面本身不横向溢出。战略合作伙伴不在此表(单独页)。
  */
 export function BenefitMatrix() {
   const cols = MEMBERSHIP_CARD_SLUGS.map((slug) => ({
     slug,
     seed: getTierSeed(slug),
-    content: MEMBERSHIP_TIER_CONTENT[slug]
+    focusZh: MEMBERSHIP_TIER_CONTENT[slug].focusZh,
+    full: tierFullBenefits(slug)
   })).filter((c) => c.seed);
 
   return (
     <div className={styles.wrap}>
       <div className={styles.scroll} role="region" aria-label="四档会员权益对比" tabIndex={0}>
         <div className={styles.grid}>
-          {cols.map(({ slug, seed, content }) => {
+          {cols.map(({ slug, seed, focusZh, full }) => {
             const t = seed!;
             const promo = t.isPromotionActive && t.currentPriceCents < t.standardPriceCents;
             return (
@@ -39,20 +41,27 @@ export function BenefitMatrix() {
                       原价 {formatCents(t.standardPriceCents)}
                     </span>
                   )}
-                  <span className={styles.colFocus}>{content.focusZh}</span>
+                  <span className={styles.colFocus}>{focusZh}</span>
                 </div>
                 <ul className={styles.colList}>
-                  {content.benefits.map((b, i) => (
-                    <li key={i} className={styles.colItem}>
-                      {b.text}
-                      {b.reviewGated && (
-                        <span className={styles.gate} aria-hidden="true">
-                          {' '}
-                          ＊
-                        </span>
-                      )}
-                    </li>
-                  ))}
+                  {full.map((b, i) => {
+                    const isNew = b.addedAt === slug && slug !== 'member';
+                    return (
+                      <li
+                        key={i}
+                        className={`${styles.colItem} ${isNew ? styles.colItemNew : ''}`}
+                      >
+                        {isNew && <span className={styles.newTag}>本档新增</span>}
+                        {b.text}
+                        {b.reviewGated && (
+                          <span className={styles.gate} aria-hidden="true">
+                            {' '}
+                            ＊
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );

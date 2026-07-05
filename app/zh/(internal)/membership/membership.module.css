@@ -680,6 +680,53 @@
   color: var(--gold);
 }
 
+/* 阶梯式权益:本档新增标签 + 高亮,已包含累计弱化 */
+.addedLabel {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 14px 0 8px 0;
+}
+.benefitNew {
+  color: var(--ivory);
+}
+.benefitNew::before {
+  color: var(--gold) !important;
+}
+.includedLabel {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ivory-mute);
+  margin: 16px 0 8px 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-3);
+}
+.tierListMuted {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.tierListMuted li {
+  font-family: var(--serif-zh);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+.tierListMuted li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
 /* 战略合作伙伴单独入口行 */
 .partnerRow {
   display: flex;

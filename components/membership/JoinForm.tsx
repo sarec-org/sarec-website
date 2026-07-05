@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './membership.module.css';
 
@@ -44,14 +44,31 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 卡片按钮通过 /zh/join?tier=<slug>#apply 预选档位；挂载时读取 query。
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get('tier');
+    if (t && tiers.some((x) => x.slug === t)) {
+      setForm((curr) => ({ ...curr, tierSlug: t }));
+    }
+  }, [tiers]);
+
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((curr) => ({ ...curr, [key]: value }));
   }
+
+  const selected = tiers.find((t) => t.slug === form.tierSlug) ?? null;
+  // member = 个人会员档：单位名称选填；三个单位档：单位名称必填。
+  const isUnitTier = selected != null && selected.slug !== 'member';
+  const companyLabel = isUnitTier ? '单位名称' : '公司 / 机构名称';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) return;
     setError(null);
+    if (!selected) {
+      setError('请先选择申请档位。');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch('/api/checkout', {
@@ -78,7 +95,7 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
         setSubmitting(false);
         return;
       }
-      // 跳转到 Stripe Checkout（test mode）。
+      // 跳转到 Stripe Checkout。
       window.location.href = data.url;
     } catch {
       setError('网络异常，请稍后再试。');
@@ -88,6 +105,20 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
 
   return (
     <form id="apply" className={styles.form} onSubmit={handleSubmit}>
+      {/* 当前申请档位 + 年费 */}
+      <div className={styles.applyingBar}>
+        {selected ? (
+          <>
+            <span className={styles.applyingLabel}>当前申请档位</span>
+            <span className={styles.applyingTier}>
+              {selected.nameZh} · 年费 {selected.currentPriceLabel}
+            </span>
+          </>
+        ) : (
+          <span className={styles.applyingLabel}>请在下方选择申请档位</span>
+        )}
+      </div>
+
       <div className={styles.field}>
         <label htmlFor="tierSlug">
           选择档位<span className={styles.fieldRequired}>*</span>
@@ -111,15 +142,16 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
 
       <div className={styles.field}>
         <label htmlFor="companyName">
-          公司 / 机构 / 会员名称<span className={styles.fieldRequired}>*</span>
+          {companyLabel}
+          {isUnitTier && <span className={styles.fieldRequired}>*</span>}
         </label>
         <input
           id="companyName"
           type="text"
-          required
+          required={isUnitTier}
           value={form.companyName}
           onChange={(e) => update('companyName', e.target.value)}
-          placeholder="公司 / 机构 / 会员名称"
+          placeholder={isUnitTier ? '单位名称' : '公司 / 机构名称（选填）'}
         />
       </div>
 
@@ -163,13 +195,16 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="phone">电话</label>
+        <label htmlFor="phone">
+          电话<span className={styles.fieldRequired}>*</span>
+        </label>
         <input
           id="phone"
           type="tel"
+          required
           value={form.phone}
           onChange={(e) => update('phone', e.target.value)}
-          placeholder="电话（选填）"
+          placeholder="电话"
         />
       </div>
 
@@ -246,7 +281,11 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
 
       <div>
         <button type="submit" className={styles.btnPrimary} disabled={!form.agree || submitting}>
-          {submitting ? '正在跳转付款…' : '继续安全付款 / Continue to secure checkout'}
+          {submitting
+            ? '正在跳转付款…'
+            : selected
+              ? `继续支付${selected.nameZh}年费 ${selected.currentPriceLabel}`
+              : '继续安全付款'}
         </button>
         <p className={styles.formHint}>
           付款由 Stripe 安全处理；提交后将跳转至 Stripe 付款页。付款完成后我们将确认记录。
