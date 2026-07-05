@@ -249,7 +249,7 @@ export default function MembershipPage() {
           <span className={styles.eyebrow}>MEMBERSHIP LEVELS · 会员档位与权益</span>
           <h2 className={styles.sectionH2}>四档会员与 2026 Launch Rate</h2>
           <p className={styles.sectionLead}>
-            {MEMBERSHIP_OVERVIEW_ZH}权益逐级叠加:高档含低档全部权益,并在其上新增。以下每档逐条列出【全部权益】与【本档新增 / 升级重点】。
+            {MEMBERSHIP_OVERVIEW_ZH}权益逐级叠加:高档含低档全部权益,并在其上新增。以下每档分两块逐条列出【已包含权益】(下级各档全部)与【本档新增 / 升级重点】。
           </p>
 
           {/* Launch Rate 免责说明 —— 复用价格源既有定稿(中文),紧贴划线价 */}

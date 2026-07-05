@@ -47,7 +47,7 @@ export default function JoinPage() {
 
       <h2 className={styles.sectionH2}>四档会员 · 2026 Launch Rate</h2>
       <p className={styles.gridHint}>
-        每档均逐条列出【全部权益】(含下级全部)与【本档新增 / 升级重点】。
+        每档分两块逐条列出:【已包含权益】(下级各档全部)与【本档新增 / 升级重点】。
       </p>
       <div className={styles.tierGridJoin}>
         {MEMBERSHIP_CARD_SLUGS.map((slug) => (
