@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { createPageMetadata } from '@/lib/seo';
+import { BenefitMatrix } from '@/components/membership/BenefitMatrix';
+import { listMembershipTiers, getStrategicPartnerTier, formatCents } from '@/lib/membership/tiers';
 import styles from './membership.module.css';
 
 const MEDIA_BASE = process.env.NEXT_PUBLIC_MEDIA_BASE ?? '';
@@ -28,6 +30,9 @@ export const metadata: Metadata = createPageMetadata({
 });
 
 export default function MembershipPage() {
+  const membershipTiers = listMembershipTiers();
+  const sp = getStrategicPartnerTier();
+
   return (
     <main>
       {/* M01 Hero — Editorial Split 文字版变体(无图无视频,简洁机构感 + 双圆嵌套商会 SVG 印章)*/}
@@ -41,11 +46,14 @@ export default function MembershipPage() {
             SAREC 会员是长期学习、交流与机构关系入口。通过会员，你可以系统接触美国房地产研究、培训、活动、考察和专业服务伙伴网络，并在需要具体项目判断或服务时，进一步了解相应的服务入口。
           </p>
           <div className={styles.ctaGroup}>
-            <Link href="#benefits" className={styles.ctaSoft}>
-              了解会员机制
+            <Link href="/zh/join" className={styles.ctaPrimary}>
+              在线入会 / 立即申请
             </Link>
-            <Link href="/zh/contact" className={styles.inlineLink}>
-              联系 SAREC 了解更多
+            <Link href="/zh/strategic-partners" className={styles.ctaSecondary}>
+              战略合作伙伴
+            </Link>
+            <Link href="#tiers" className={styles.ctaSoft}>
+              了解会员权益
             </Link>
           </div>
         </div>
@@ -227,67 +235,58 @@ export default function MembershipPage() {
         </div>
       </section>
 
-      {/* M03 — Proof Grid 3 卡 §5.3 变体:三档会员,中间金边强调 */}
-      <section className={styles.tiersSection}>
+      {/* M03 — 会员档位与 2026 Launch Rate + 权益对比矩阵 */}
+      <section className={styles.tiersSection} id="tiers">
         <div className={styles.tiersInner}>
-          <span className={styles.eyebrow}>MEMBERSHIP LEVELS · 会员级别</span>
-          <h2 className={styles.sectionH2}>三档会员</h2>
+          <span className={styles.eyebrow}>MEMBERSHIP LEVELS · 会员档位与价格</span>
+          <h2 className={styles.sectionH2}>会员档位与 2026 Launch Rate</h2>
           <p className={styles.sectionLead}>
-            SAREC 会员目前设有三个级别,对应不同的参与深度和合作意向。
+            SAREC 会员分四档,另设面向专业机构的战略合作伙伴。2026 年度推广价为限时优惠,SAREC
+            可根据实际情况随时调整或结束。下表为各档位当前价格与权益对比。
           </p>
-          <div className={styles.tiersGrid}>
-            <article className={styles.tierCard}>
-              <h3 className={styles.tierTitle}>理事会员</h3>
-              <p className={styles.tierEn}>Council Member</p>
-              <p className={styles.tierFit}>
-                适合:希望系统了解美国房地产投资和跨境合作的人
-              </p>
-              <p className={styles.tierIncludes}>权益包括:</p>
-              <ul className={styles.tierList}>
-                <li>研究内容优先访问</li>
-                <li>市场观察简报</li>
-                <li>参加公开活动与培训</li>
-                <li>美国实地考察报名资格(需符合资格审核)</li>
-              </ul>
-              <Link href="/zh/contact" className={styles.tierCta}>
-                了解理事会员 →
-              </Link>
-            </article>
-            <article className={`${styles.tierCard} ${styles.tierCardFeatured}`}>
-              <h3 className={styles.tierTitle}>常务理事</h3>
-              <p className={styles.tierEn}>Executive Council Member</p>
-              <p className={styles.tierFit}>
-                适合:已有具体项目方向或投资意向,希望深度参与的人
-              </p>
-              <p className={styles.tierIncludes}>
-                权益包括理事会员全部内容,并额外包括:
-              </p>
-              <ul className={styles.tierList}>
-                <li>专题报告与闭门分享</li>
-                <li>项目研讨与圆桌讨论</li>
-                <li>美国实地考察优先权</li>
-                <li>专业服务伙伴优先协同</li>
-                <li>与 SAREC 团队定期沟通</li>
-              </ul>
-              <Link href="/zh/contact" className={styles.tierCta}>
-                了解常务理事会员 →
-              </Link>
-            </article>
-            <article className={styles.tierCard}>
-              <h3 className={styles.tierTitle}>副会长单位</h3>
-              <p className={styles.tierEn}>Vice President Member</p>
-              <p className={styles.tierFit}>
-                适合:在房地产、金融、专业服务领域有长期合作意向的机构或个人
-              </p>
-              <p className={styles.tierBody}>权益按单独协议约定。</p>
-              <Link href="/zh/contact" className={styles.tierCta}>
-                了解副会长单位 →
-              </Link>
-            </article>
+
+          <ul className={styles.priceList}>
+            {membershipTiers
+              .filter((t) => t.isActive)
+              .map((t) => {
+                const promo =
+                  t.isPromotionActive && t.currentPriceCents < t.standardPriceCents;
+                return (
+                  <li key={t.slug} className={styles.priceItem}>
+                    <span className={styles.priceName}>{t.nameZh}</span>
+                    <span className={styles.priceValue}>
+                      {formatCents(t.currentPriceCents)} / 年
+                      {promo && (
+                        <span className={styles.priceStandard}>
+                          原价 {formatCents(t.standardPriceCents)}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
+            {sp && (
+              <li className={styles.priceItem}>
+                <span className={styles.priceName}>{sp.nameZh}</span>
+                <span className={styles.priceValue}>
+                  {formatCents(sp.currentPriceCents)} / 年,或{' '}
+                  {formatCents(sp.firstPaymentAmountCents ?? 0)} +{' '}
+                  {formatCents(sp.secondPaymentAmountCents ?? 0)} 半年两期
+                </span>
+              </li>
+            )}
+          </ul>
+
+          <BenefitMatrix />
+
+          <div className={styles.tiersCtaRow}>
+            <Link href="/zh/join" className={styles.ctaPrimary}>
+              在线选择档位并申请 →
+            </Link>
+            <Link href="/zh/strategic-partners" className={styles.ctaSecondary}>
+              战略合作伙伴入口 →
+            </Link>
           </div>
-          <p className={styles.tiersNote}>
-            具体会员费、合作方式和入会资格审核标准,在初次沟通后提供。
-          </p>
         </div>
       </section>
 
@@ -435,12 +434,34 @@ export default function MembershipPage() {
                 </span>
               </summary>
               <div className={styles.faqAnswer}>
-                <p>不同会员级别会员费不同。</p>
+                <p>会员费已公开,2026 年度推广价限时开放:</p>
+                <ul className={styles.faqPriceList}>
+                  {membershipTiers
+                    .filter((t) => t.isActive)
+                    .map((t) => {
+                      const promo =
+                        t.isPromotionActive && t.currentPriceCents < t.standardPriceCents;
+                      return (
+                        <li key={t.slug}>
+                          {t.nameZh}:{formatCents(t.currentPriceCents)} / 年
+                          {promo && `(原价 ${formatCents(t.standardPriceCents)})`}
+                        </li>
+                      );
+                    })}
+                  {sp && (
+                    <li>
+                      {sp.nameZh}:{formatCents(sp.currentPriceCents)} / 年,或{' '}
+                      {formatCents(sp.firstPaymentAmountCents ?? 0)} +{' '}
+                      {formatCents(sp.secondPaymentAmountCents ?? 0)} 半年两期
+                    </li>
+                  )}
+                </ul>
                 <p>
-                  理事会员 / 常务理事 / 副会长单位各有不同的权益和费用结构。
-                </p>
-                <p>
-                  具体会员费、合作方式和入会资格审核标准,在初次沟通后提供。
+                  可在{' '}
+                  <Link href="/zh/join" className={styles.inlineLink}>
+                    在线入会
+                  </Link>{' '}
+                  页选择档位并完成付款。
                 </p>
               </div>
             </details>
@@ -505,12 +526,17 @@ export default function MembershipPage() {
             不是单纯付费访问内容，而是进入一个长期学习、专业交流和机构关系网络。
           </p>
           <div className={styles.ctaBannerGroup}>
-            <Link href="#benefits" className={styles.ctaSoft}>
-              了解会员机制
+            <Link href="/zh/join" className={styles.ctaPrimary}>
+              在线入会 / 立即申请
             </Link>
-            <Link href="/zh/contact" className={styles.inlineLink}>
-              联系 SAREC 了解更多
-            </Link>
+            <div className={styles.ctaBannerSecondaryRow}>
+              <Link href="/zh/strategic-partners" className={styles.ctaSecondary}>
+                战略合作伙伴
+              </Link>
+              <Link href="/zh/contact" className={styles.inlineLink}>
+                联系 SAREC 了解更多
+              </Link>
+            </div>
           </div>
         </div>
       </section>

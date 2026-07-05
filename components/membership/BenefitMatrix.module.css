@@ -1,0 +1,152 @@
+/* SAREC 会员权益对比矩阵 —— 深色主题，两页共用（/zh/join、/zh/membership）。
+   移动端表格横向滚动（.scroll overflow-x:auto），页面本身绝不横向滚动。 */
+
+.wrap {
+  margin: 1.75rem 0 0 0;
+}
+
+.scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line-soft, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+}
+
+.scroll:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-family: var(--sans);
+}
+
+/* 第一列（权益项目）—— 左对齐，粘性以便横向滚动时保留标签 */
+.rowHead {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  vertical-align: middle;
+  font-family: var(--serif-zh);
+  font-weight: 500;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ivory-warm);
+  background: var(--ink-deep);
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--line-soft, rgba(255, 255, 255, 0.1));
+  min-width: 240px;
+}
+
+thead .rowHead {
+  color: var(--ivory-mute);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.colHead {
+  text-align: center;
+  vertical-align: bottom;
+  padding: 0.9rem 0.9rem 1rem;
+  border-bottom: 1px solid var(--gold-dim);
+  border-left: 1px solid var(--line-soft, rgba(255, 255, 255, 0.08));
+  background: var(--ink-deepest);
+  min-width: 120px;
+}
+
+.colName {
+  display: block;
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ivory);
+  margin-bottom: 0.3rem;
+}
+
+.colPrice {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.15rem;
+  color: var(--gold);
+  line-height: 1.2;
+}
+
+.colTerm {
+  font-size: 0.7rem;
+  color: var(--ivory-mute);
+}
+
+.colStandard {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ivory-mute);
+  text-decoration: line-through;
+  margin-top: 0.2rem;
+}
+
+.cell {
+  text-align: center;
+  vertical-align: middle;
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid var(--line-soft, rgba(255, 255, 255, 0.08));
+  border-left: 1px solid var(--line-soft, rgba(255, 255, 255, 0.06));
+}
+
+tbody tr:hover .rowHead,
+tbody tr:hover .cell {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.yes {
+  color: var(--gold);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.no {
+  color: var(--ivory-faint, rgba(255, 255, 255, 0.28));
+}
+
+.partial {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: var(--ivory-warm);
+  border: 1px solid var(--gold-dim);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+}
+
+.gate {
+  color: var(--gold);
+  font-weight: 400;
+}
+
+.note {
+  font-size: 0.82rem;
+  line-height: 1.65;
+  color: var(--ivory-mute);
+  margin: 1.1rem 0 0 0;
+}
+
+.spNote {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  border-top: 1px solid var(--line-soft, rgba(255, 255, 255, 0.1));
+  padding-top: 1rem;
+  margin: 1.1rem 0 0 0;
+}
+
+.spNote strong {
+  color: var(--ivory);
+  font-family: var(--serif-zh);
+}

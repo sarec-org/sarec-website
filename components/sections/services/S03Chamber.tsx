@@ -254,7 +254,7 @@ export function S03Chamber() {
           transition={{ duration: 0.6, ease: EASE }}
         >
           <span className={styles.noteLabel}>[note]</span>
-          具体会员费、合作方式和入会资格审核标准，在初次沟通后提供。
+          会员费与各档位权益已公开，详见会员页；具体合作方式与入会安排以单独协议为准。
         </motion.p>
 
         {/* Inline CTA */}

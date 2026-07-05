@@ -9,6 +9,7 @@ import {
   SAREC_REVIEW_NOTE
 } from '@/lib/membership/tiers';
 import { JoinForm } from '@/components/membership/JoinForm';
+import { BenefitMatrix } from '@/components/membership/BenefitMatrix';
 import styles from '@/components/membership/membership.module.css';
 
 export const metadata: Metadata = createPageMetadata({
@@ -104,6 +105,9 @@ export default function JoinPage() {
         ＊ 标注项：{SAREC_REVIEW_NOTE.zh} / {SAREC_REVIEW_NOTE.en} SAREC
         不承诺任何客户、成交、融资或投资收益，亦不承诺固定客户来源。
       </p>
+
+      <h2 className={styles.sectionH2}>权益对比一览</h2>
+      <BenefitMatrix />
 
       <h2 className={styles.sectionH2}>在线申请</h2>
       <JoinForm tiers={formTiers} />

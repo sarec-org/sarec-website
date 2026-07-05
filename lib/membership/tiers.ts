@@ -107,6 +107,46 @@ export const TIER_BENEFITS: Record<string, TierBenefitBlock> = {
   }
 };
 
+/** ────────────────────────────────────────────────────────────
+ * 权益对比矩阵 —— 4 个会员档位横向对比（战略合作伙伴单列说明）。
+ * 价格不在此处：矩阵表头价格由 formatCents(tier.currentPriceCents) 从
+ * 唯一价格源渲染，本结构只描述「哪档含哪项权益」，不写任何金额。
+ * ──────────────────────────────────────────────────────────── */
+export const MATRIX_TIER_SLUGS = ['member', 'board', 'exec_board', 'vp'] as const;
+
+/** 单元格：true = 含（✓）；false = 不含（—）；字符串 = 限定说明（如「基础」「每年 1 次」）。 */
+export type MatrixCell = boolean | string;
+export type BenefitMatrixRow = {
+  label: string;
+  /** 展示 / 发言 / 推介 / 专访类权益 —— 带 SAREC 审核限制脚注（＊）。 */
+  reviewGated?: boolean;
+  /** 对应 MATRIX_TIER_SLUGS 顺序：会员 / 理事单位 / 常务理事单位 / 副会长单位。 */
+  cells: [MatrixCell, MatrixCell, MatrixCell, MatrixCell];
+};
+
+export const BENEFIT_MATRIX: BenefitMatrixRow[] = [
+  { label: 'SAREC 会员名录', cells: [true, true, true, true] },
+  { label: '公开活动参与权', cells: [true, true, true, true] },
+  { label: '市场简报 / 研究内容优先获取', cells: [true, true, true, true] },
+  { label: '会员社群', cells: [true, true, true, true] },
+  { label: '官网会员 / 企业展示', reviewGated: true, cells: [false, true, true, true] },
+  { label: '年会 / 活动展架', reviewGated: true, cells: [false, '基础', true, true] },
+  {
+    label: '年会 / 活动上台介绍或主题分享申请',
+    reviewGated: true,
+    cells: [false, false, true, '优先']
+  },
+  { label: '授牌 / 会员证书 / 年度合作牌匾', reviewGated: true, cells: [false, false, true, true] },
+  { label: '官网项目或公司宣传展示', reviewGated: true, cells: [false, false, true, true] },
+  { label: 'YouTube / 视频专访机会', reviewGated: true, cells: [false, false, false, '每年 1 次'] },
+  { label: '项目推介机会', reviewGated: true, cells: [false, false, false, '每年 1–2 次'] },
+  { label: '私董会 / 闭门资源协同优先资格', reviewGated: true, cells: [false, false, false, true] }
+];
+
+/** 展示 / 发言 / 推介 / 专访类权益统一合规脚注（对应矩阵中带 ＊ 的行）。 */
+export const BENEFIT_MATRIX_NOTE =
+  '须经 SAREC 审核、排期及内容标准确认。SAREC 不承诺客户、成交、融资、投资收益或固定客户来源。';
+
 /** 战略合作伙伴行业分类。 */
 export const STRATEGIC_PARTNER_INDUSTRIES: string[] = [
   '保险',
