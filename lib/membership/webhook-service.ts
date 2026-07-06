@@ -9,6 +9,8 @@
 import type Stripe from 'stripe';
 import { query, withTransaction } from '@/lib/db/client';
 import { dispatchPaymentNotificationsSafe } from '@/lib/email/notifications';
+import { dispatchSecretaryAssignmentSafe } from '@/lib/email/ops-notifications';
+import { autoOperationsStatusAfterPaid } from '@/lib/membership/operations';
 
 export type WebhookOutcome = {
   outcome: 'processed' | 'skipped' | 'ignored' | 'failed';
@@ -66,6 +68,7 @@ type JoinRow = {
   app_id: string;
   application_type: string;
   payment_plan: string | null;
+  selected_tier_slug: string | null;
   app_pay_status: string;
   second_payment_due_date_source: string | null;
 };
@@ -110,7 +113,7 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
   const rows = await query<JoinRow>(
     `SELECT p.id AS pay_id, p.amount_cents, p.currency, p.payment_status AS pay_status,
             p.application_id,
-            a.id AS app_id, a.application_type, a.payment_plan,
+            a.id AS app_id, a.application_type, a.payment_plan, a.selected_tier_slug,
             a.payment_status AS app_pay_status, a.second_payment_due_date_source
        FROM payments p JOIN applications a ON a.id = p.application_id
       WHERE p.id = $1 AND a.id = $2`,
@@ -153,6 +156,8 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
 
   const isSemiAnnual =
     row.application_type === 'strategic_partner' && row.payment_plan === 'semiAnnual';
+  // 运营流转初始态：普通会员 → paid_under_review;理事及以上 / 战略合作伙伴 → needs_owner_review。
+  const opsStatus = autoOperationsStatusAfterPaid(row.application_type, row.selected_tier_slug);
   const paymentIntentId =
     typeof session.payment_intent === 'string' ? session.payment_intent : null;
   const customerId = typeof session.customer === 'string' ? session.customer : null;
@@ -188,9 +193,10 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
              second_payment_due_date_source = CASE WHEN second_payment_due_date_source='manual_override'
                                                    THEN second_payment_due_date_source
                                                    ELSE 'auto_calculated' END,
+             operations_status=COALESCE(operations_status,$2),
              updated_at=now()
            WHERE id=$1`,
-          [row.app_id]
+          [row.app_id, opsStatus]
         );
       } else {
         await client.query(
@@ -200,9 +206,10 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
              first_payment_paid_at=now(),
              membership_start_date=(now())::date,
              membership_end_date=(now()+interval '12 months')::date,
+             operations_status=COALESCE(operations_status,$2),
              updated_at=now()
            WHERE id=$1`,
-          [row.app_id]
+          [row.app_id, opsStatus]
         );
       }
 
@@ -227,6 +234,8 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
 
   // 付款回写已提交成功后再发邮件；邮件失败不抛错、不回滚、不影响 200 响应。
   await dispatchPaymentNotificationsSafe(row.app_id, row.pay_id);
+  // 秘书工作安排邮件（info@ + 东哥）——同样永不抛错。
+  await dispatchSecretaryAssignmentSafe(row.app_id, row.pay_id);
 
   return {
     outcome: 'processed',

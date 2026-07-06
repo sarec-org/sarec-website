@@ -12,12 +12,16 @@ import { getResend, getFromAddress, getAdminEmail, isEmailConfigured } from './r
 import { buildApplicantConfirmation, buildAdminNotification, type PaymentEmailData } from './templates';
 import { getTierSeed } from '@/lib/membership/tiers';
 
-type NotificationType = 'applicant_payment_confirmation' | 'admin_new_paid_application';
-type RecipientRole = 'applicant' | 'admin';
+export type NotificationType =
+  | 'applicant_payment_confirmation'
+  | 'admin_new_paid_application'
+  | 'secretary_work_assignment'
+  | 'member_welcome';
+export type RecipientRole = 'applicant' | 'admin' | 'secretary';
 
-type RowResult = 'sent' | 'failed' | 'skipped';
+export type RowResult = 'sent' | 'failed' | 'skipped';
 
-async function claim(
+export async function claim(
   applicationId: string,
   paymentId: string,
   type: NotificationType,
@@ -49,7 +53,7 @@ async function markFailed(id: string, subject: string, error: string): Promise<v
   );
 }
 
-async function sendClaimed(
+export async function sendClaimed(
   claimId: string,
   to: string,
   subject: string,
@@ -70,7 +74,7 @@ async function sendClaimed(
   }
 }
 
-async function loadEmailData(
+export async function loadEmailData(
   applicationId: string,
   paymentId: string
 ): Promise<PaymentEmailData | null> {

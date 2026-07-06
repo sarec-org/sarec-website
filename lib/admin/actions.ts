@@ -11,6 +11,12 @@ import type { PoolClient } from 'pg';
 import { query, withTransaction } from '@/lib/db/client';
 import { getTierSeed } from '@/lib/membership/tiers';
 import { dispatchPaymentNotificationsSafe } from '@/lib/email/notifications';
+import { dispatchWelcomeEmailSafe } from '@/lib/email/ops-notifications';
+import {
+  isOperationsStatus,
+  OPERATIONS_ACTION_STATUSES,
+  type OperationsStatus
+} from '@/lib/membership/operations';
 
 export class AdminError extends Error {
   status: number;
@@ -115,6 +121,7 @@ type AppRow = {
   application_status: string;
   display_status: string;
   selected_tier_slug: string | null;
+  operations_status: string | null;
   first_payment_paid_at: string | null;
   membership_start_date: string | null;
   second_payment_due_date: string | null;
@@ -124,7 +131,7 @@ type AppRow = {
 async function loadApp(client: PoolClient, applicationId: string): Promise<AppRow> {
   const r = await client.query<AppRow>(
     `SELECT id, application_type, payment_plan, payment_status, application_status, display_status,
-            selected_tier_slug,
+            selected_tier_slug, operations_status,
             to_char(first_payment_paid_at,'YYYY-MM-DD HH24:MI') AS first_payment_paid_at,
             to_char(membership_start_date,'YYYY-MM-DD') AS membership_start_date,
             to_char(second_payment_due_date,'YYYY-MM-DD') AS second_payment_due_date,
@@ -442,4 +449,140 @@ export async function updateDisplayStatus(
   });
 
   return { ok: true, displayStatus };
+}
+
+// ── 6. 运营工作台：列表（可按 operations_status 过滤）────────────────
+// 敏感信息不外泄:只回 Stripe payment intent 后 6 位,不回完整 id。
+export async function listOperations(
+  filter?: string | null
+): Promise<Record<string, unknown>[]> {
+  const status = filter && isOperationsStatus(filter) ? filter : null;
+  return query(
+    `SELECT a.id, a.application_type, a.selected_tier_slug, a.payment_plan,
+            a.company_name, a.contact_name, a.email, a.phone,
+            a.current_price_cents,
+            a.payment_status, a.application_status, a.operations_status,
+            to_char(a.membership_start_date,'YYYY-MM-DD') AS membership_start_date,
+            to_char(a.membership_end_date,'YYYY-MM-DD')   AS membership_end_date,
+            to_char(a.created_at,'YYYY-MM-DD HH24:MI') AS created_at,
+            to_char(a.first_payment_paid_at,'YYYY-MM-DD HH24:MI') AS first_payment_paid_at,
+            pay.pay_status,
+            pay.pay_amount_cents,
+            RIGHT(pay.payment_intent, 6) AS payment_intent_last6
+       FROM applications a
+       LEFT JOIN LATERAL (
+         SELECT p.payment_status AS pay_status, p.amount_cents AS pay_amount_cents,
+                p.stripe_payment_intent_id AS payment_intent
+           FROM payments p
+          WHERE p.application_id = a.id
+          ORDER BY (p.payment_status='paid') DESC, p.updated_at DESC NULLS LAST, p.created_at DESC
+          LIMIT 1
+       ) pay ON true
+      WHERE ($1::text IS NULL OR a.operations_status = $1)
+      ORDER BY a.first_payment_paid_at DESC NULLS LAST, a.created_at DESC
+      LIMIT 100`,
+    [status]
+  );
+}
+
+// ── 7. 运营工作台：单条详情（完整申请数据 + 付款 + audit）──────────
+export async function getApplicationDetail(
+  applicationId: string
+): Promise<Record<string, unknown> | null> {
+  const id = asString(applicationId);
+  if (!id) throw new AdminError('missing or invalid: applicationId');
+
+  const appRows = await query<Record<string, unknown>>(
+    `SELECT a.id, a.application_type, a.selected_tier_slug, a.payment_plan,
+            a.company_name, a.contact_name, a.contact_title, a.email, a.phone,
+            a.company_address, a.website_url, a.industry_category, a.service_area,
+            a.company_description, a.notes,
+            a.current_price_cents,
+            a.payment_status, a.application_status, a.display_status,
+            a.operations_status, a.operations_notes, a.reviewed_by,
+            to_char(a.reviewed_at,'YYYY-MM-DD HH24:MI') AS reviewed_at,
+            to_char(a.membership_start_date,'YYYY-MM-DD') AS membership_start_date,
+            to_char(a.membership_end_date,'YYYY-MM-DD')   AS membership_end_date,
+            to_char(a.second_payment_due_date,'YYYY-MM-DD') AS second_payment_due_date,
+            to_char(a.created_at,'YYYY-MM-DD HH24:MI') AS created_at,
+            to_char(a.first_payment_paid_at,'YYYY-MM-DD HH24:MI') AS first_payment_paid_at
+       FROM applications a WHERE a.id=$1`,
+    [id]
+  );
+  if (appRows.length === 0) return null;
+
+  const payments = await query<Record<string, unknown>>(
+    `SELECT id, installment_number, payment_provider, payment_plan,
+            amount_cents, currency, payment_status,
+            RIGHT(stripe_payment_intent_id, 6) AS payment_intent_last6,
+            to_char(paid_at,'YYYY-MM-DD HH24:MI') AS paid_at,
+            to_char(created_at,'YYYY-MM-DD HH24:MI') AS created_at
+       FROM payments WHERE application_id=$1 ORDER BY installment_number NULLS FIRST, created_at`,
+    [id]
+  );
+
+  const audit = await query<Record<string, unknown>>(
+    `SELECT admin_action_type, previous_status, new_status, previous_value, new_value,
+            admin_identifier, admin_note,
+            to_char(action_at,'YYYY-MM-DD HH24:MI') AS action_at
+       FROM admin_audit_log WHERE application_id=$1 ORDER BY action_at DESC LIMIT 50`,
+    [id]
+  );
+
+  return { application: appRows[0], payments, audit };
+}
+
+// ── 8. 运营工作台：设置 operations_status（秘书 6 个按钮）────────────
+// approved → 同步 application_status='approved' + 发欢迎邮件;rejected → application_status='rejected'。
+export async function setOperationsStatus(
+  p: Record<string, unknown>,
+  ctx: AdminCtx
+): Promise<{ ok: true; operationsStatus: OperationsStatus }> {
+  const applicationId = requireString(p.applicationId, 'applicationId');
+  const target = requireString(p.operationsStatus, 'operationsStatus');
+  if (!isOperationsStatus(target) || !OPERATIONS_ACTION_STATUSES.includes(target)) {
+    throw new AdminError(`operationsStatus must be one of ${OPERATIONS_ACTION_STATUSES.join('/')}`);
+  }
+  const adminNote = asString(p.adminNote);
+  const adminIdentifier = asString(p.adminIdentifier);
+
+  await withTransaction(async (client) => {
+    const app = await loadApp(client, applicationId);
+
+    // 同步 application_status（仅 approved / rejected 两个终态动作)。
+    const appStatusClause =
+      target === 'approved'
+        ? `, application_status='approved'`
+        : target === 'rejected'
+          ? `, application_status='rejected'`
+          : '';
+
+    await client.query(
+      `UPDATE applications SET
+         operations_status=$2,
+         operations_notes = COALESCE($3, operations_notes),
+         reviewed_by=$4,
+         reviewed_at=now()${appStatusClause},
+         updated_at=now()
+       WHERE id=$1`,
+      [applicationId, target, adminNote, adminIdentifier]
+    );
+
+    await insertAudit(client, {
+      applicationId,
+      actionType: `set_operations_status:${target}`,
+      previousStatus: app.operations_status,
+      newStatus: target,
+      adminIdentifier,
+      adminNote,
+      ctx
+    });
+  });
+
+  // 「已通过」→ 发入会欢迎邮件（幂等 + 永不抛错,失败不影响状态已提交）。
+  if (target === 'approved') {
+    await dispatchWelcomeEmailSafe(applicationId);
+  }
+
+  return { ok: true, operationsStatus: target };
 }

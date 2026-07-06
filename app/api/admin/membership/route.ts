@@ -8,7 +8,7 @@
  * - 只返回安全错误信息，不泄露 DB/secret；node runtime，force-dynamic。
  */
 import { NextResponse } from 'next/server';
-import { verifyAdminAuth, isAdminConfigured } from '@/lib/admin/auth';
+import { verifyAdminRequest, isAdminConfigured } from '@/lib/admin/auth';
 import {
   AdminError,
   listApplications,
@@ -17,6 +17,9 @@ import {
   markSecondPaymentPaid,
   reviewApplication,
   updateDisplayStatus,
+  listOperations,
+  getApplicationDetail,
+  setOperationsStatus,
   type AdminCtx
 } from '@/lib/admin/actions';
 
@@ -31,7 +34,7 @@ export async function POST(req: Request): Promise<Response> {
     // 未配置 ADMIN_ACTION_TOKEN → 一律拒绝，不允许无鉴权。
     return NextResponse.json({ error: 'admin not configured' }, { status: 503 });
   }
-  if (!verifyAdminAuth(req.headers.get('authorization'))) {
+  if (!verifyAdminRequest(req)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
@@ -72,6 +75,25 @@ export async function POST(req: Request): Promise<Response> {
         break;
       case 'update_display_status':
         result = await updateDisplayStatus(body, ctx);
+        break;
+      case 'list_operations':
+        result = {
+          ok: true,
+          applications: await listOperations(
+            typeof body.operationsStatus === 'string' ? body.operationsStatus : null
+          )
+        };
+        break;
+      case 'application_detail': {
+        const detail = await getApplicationDetail(
+          typeof body.applicationId === 'string' ? body.applicationId : ''
+        );
+        if (!detail) return NextResponse.json({ error: 'application not found' }, { status: 404 });
+        result = { ok: true, ...detail };
+        break;
+      }
+      case 'set_operations_status':
+        result = await setOperationsStatus(body, ctx);
         break;
       default:
         return NextResponse.json({ error: `unknown action: ${action || '(none)'}` }, { status: 400 });
