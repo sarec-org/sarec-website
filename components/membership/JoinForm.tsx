@@ -69,6 +69,10 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
       setError('请先选择申请档位。');
       return;
     }
+    if (!form.agree) {
+      setError('请先阅读并同意相关协议。');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch('/api/checkout', {
@@ -253,23 +257,25 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
         />
       </div>
 
-      <div className={styles.agreeRow}>
-        <input
-          type="checkbox"
-          id="agree"
-          checked={form.agree}
-          onChange={(e) => update('agree', e.target.checked)}
-        />
-        <div>
-          <p>
-            I have read and agree to the{' '}
-            <Link href="/legal/membership-agreement">SAREC Membership Agreement</Link> and{' '}
-            <Link href="/legal/privacy">Privacy Policy</Link>.
-          </p>
-          <p>
-            我已阅读并同意 <Link href="/legal/membership-agreement">SAREC 入会协议</Link>及
-            <Link href="/legal/privacy">隐私政策</Link>。
-          </p>
+      <div className={styles.agreeBox}>
+        <h3 className={styles.agreeBoxTitle}>入会协议确认</h3>
+        <p className={styles.agreeBoxBody}>
+          请在付款前阅读并确认
+          <Link href="/legal/membership-agreement">《SAREC 会员入会协议》</Link>和
+          <Link href="/legal/privacy">《隐私政策》</Link>。勾选后表示您已阅读、理解并同意相关条款。
+        </p>
+        <div className={styles.agreeCheck}>
+          <input
+            type="checkbox"
+            id="agree"
+            checked={form.agree}
+            onChange={(e) => update('agree', e.target.checked)}
+          />
+          <label htmlFor="agree">
+            我已阅读并同意
+            <Link href="/legal/membership-agreement">《SAREC 会员入会协议》</Link>和
+            <Link href="/legal/privacy">《隐私政策》</Link>。
+          </label>
         </div>
       </div>
 
@@ -280,7 +286,7 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
       )}
 
       <div>
-        <button type="submit" className={styles.btnPrimary} disabled={!form.agree || submitting}>
+        <button type="submit" className={styles.btnPrimary} disabled={submitting}>
           {submitting
             ? '正在跳转付款…'
             : selected

@@ -353,6 +353,51 @@
 .agreeRow a { color: var(--gold); }
 .agreeRow p { margin: 0 0 0.3rem 0; }
 
+/* ── 付款前协议确认模块（明显分组：边框 + 浅底 + 标题 + 说明 + 勾选）── */
+.agreeBox {
+  border: 1px solid var(--gold, #c9a567);
+  border-radius: 8px;
+  background: var(--gold-faint, rgba(201, 165, 103, 0.08));
+  padding: 1.15rem 1.25rem;
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 0.5rem;
+}
+.agreeBoxTitle {
+  font-family: var(--serif-zh);
+  font-size: 1.1rem;
+  color: var(--ivory);
+  margin: 0;
+}
+.agreeBoxBody {
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+.agreeCheck {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  border-top: 1px solid var(--line-soft, rgba(255, 255, 255, 0.16));
+  padding-top: 0.8rem;
+}
+.agreeCheck input[type='checkbox'] {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  accent-color: var(--gold, #c9a567);
+  cursor: pointer;
+}
+.agreeCheck label {
+  font-size: 0.92rem;
+  line-height: 1.7;
+  color: var(--ivory);
+  cursor: pointer;
+}
+.agreeCheck a { color: var(--gold); text-decoration: underline; }
+
 /* 行业分类 */
 .industryList {
   display: flex;
