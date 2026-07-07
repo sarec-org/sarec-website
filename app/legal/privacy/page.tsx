@@ -10,7 +10,7 @@ export const metadata: Metadata = createPageMetadata({
   path: '/legal/privacy'
 });
 
-// 站点唯一隐私政策。/zh/legal/privacy 已重定向至此。M2 骨架，待律师审核。
+// 站点唯一隐私政策。/zh/legal/privacy 已重定向至此。
 export default function PrivacyPage() {
   return (
     <article className={styles.doc}>
@@ -22,7 +22,6 @@ export default function PrivacyPage() {
         <p>
           In case of any discrepancy, the English version shall prevail. / 如有歧义，以英文版本为准。
         </p>
-        <p className={styles.pending}>Pending attorney review. / 待律师审核。</p>
       </div>
 
       <section className={styles.section}>
@@ -88,13 +87,13 @@ export default function PrivacyPage() {
         <h2 className={styles.h2}>付款信息</h2>
         <p className={styles.h2En}>Payment information</p>
         <p>
-          在线付款上线后，付款将由第三方支付服务商处理。SAREC 不存储完整的银行卡号等敏感支付凭证，
+          网站的在线付款由第三方支付服务商处理。SAREC 不存储完整的银行卡号等敏感支付凭证，
           相关处理适用支付服务商自身的隐私政策。
         </p>
         <p>
-          When online payment is enabled, payments will be processed by a third-party payment provider.
-          SAREC does not store full card numbers or similar sensitive payment credentials; such
-          processing is governed by the payment provider’s own privacy policy.
+          Online payments on the website are processed by a third-party payment provider. SAREC does not
+          store full card numbers or similar sensitive payment credentials; such processing is governed
+          by the payment provider’s own privacy policy.
         </p>
       </section>
 

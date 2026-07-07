@@ -6,11 +6,11 @@ import styles from '@/components/legal/legal.module.css';
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 战略合作伙伴协议｜Strategic Partnership Agreement',
   description:
-    'SAREC 战略合作伙伴协议（草案，待律师审核）。中英双语，如有歧义以英文版本为准。',
+    'SAREC 战略合作伙伴协议（网页点击确认版，版本 2026-v1）。适用于通过 SAREC 网站申请并支付战略合作伙伴费用的机构或个人。',
   path: '/legal/strategic-partnership-agreement'
 });
 
-// M2 骨架：占位条款草案，非最终法律文本。待律师审核后替换。
+// 正式网页点击确认版战略合作伙伴协议（版本 2026-v1）。申请人在申请表勾选同意并完成付款、经 SAREC 确认后生效。
 export default function StrategicPartnershipAgreementPage() {
   return (
     <article className={styles.doc}>
@@ -19,85 +19,162 @@ export default function StrategicPartnershipAgreementPage() {
       <p className={styles.titleEn}>SAREC Strategic Partnership Agreement</p>
 
       <div className={styles.notice}>
+        <p>版本 Version 2026-v1</p>
         <p>
-          In case of any discrepancy, the English version shall prevail. / 如有歧义，以英文版本为准。
+          本协议为网页点击确认版协议。中英文如有不一致，以本中文页面展示为准，英文仅供参考。 / This is a
+          click-to-accept agreement. In case of any inconsistency, the Chinese version shown on this page
+          prevails; the English text is for reference only.
         </p>
-        <p className={styles.pending}>Pending attorney review. / 待律师审核。</p>
       </div>
 
       <section className={styles.section}>
-        <h2 className={styles.h2}>1. 合作关系 · Partnership</h2>
+        <h2 className={styles.h2}>1. 协议范围与适用对象</h2>
+        <p className={styles.h2En}>Scope and applicability</p>
         <p>
-          本协议约定战略合作伙伴（“合作伙伴”）与 Sino-American Real Estate Chamber（“SAREC”）
-          之间的合作关系。合作关系自 SAREC 确认申请并收到相应费用后生效。合作伙伴为独立机构，
-          本协议不构成合伙、代理、雇佣或类似关系。
+          本协议约定战略合作伙伴（“合作伙伴”）与 Sino-American Real Estate Chamber（中美房地产商会，
+          “SAREC”）之间的合作关系。本协议适用于通过 SAREC 网站申请并支付战略合作伙伴费用的机构或个人。
         </p>
         <p>
           This agreement sets out the relationship between the strategic partner (“Partner”) and the
-          Sino-American Real Estate Chamber (“SAREC”). It takes effect once SAREC has confirmed the
-          application and received the applicable fee. The Partner is an independent organization; this
-          agreement does not create any partnership, agency, employment, or similar relationship between
-          the parties.
+          Sino-American Real Estate Chamber (“SAREC”). It applies to any organization or individual that
+          applies and pays the strategic partner fee through the SAREC website.
         </p>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.h2}>2. 合作权益 · Benefits</h2>
+        <h2 className={styles.h2}>2. 生效方式</h2>
+        <p className={styles.h2En}>How the agreement takes effect</p>
         <p>
-          合作权益以战略合作伙伴页面所列为准，包括深度资源协同、联合内容与活动、官网优先展示及项目 /
-          主题推介机会。上述权益须经 SAREC 审核、排期及内容标准确认后提供。SAREC
-          不承诺任何客户、成交、融资或投资收益，亦不承诺固定客户来源或业务结果。
+          申请人在申请表中勾选同意本协议并完成付款后，且经 SAREC 确认后，本协议生效、合作关系成立。SAREC
+          保留对申请进行审核并决定是否接受的权利。
         </p>
         <p>
-          Benefits are as listed on the Strategic Partner page, including deeper resource coordination,
-          joint content and events, priority website visibility, and project or topic referral
-          opportunities. These benefits are provided subject to SAREC review, scheduling, and editorial
-          standards. SAREC does not guarantee any client, transaction, financing, or investment return,
-          nor any fixed source of business or outcome.
-        </p>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.h2}>3. 费用与付款方式 · Fees and Payment</h2>
-        <p>
-          年度合作费用以战略合作伙伴页面显示为准，一律以美元计价。合作伙伴可选择一次性付清，或分为半年
-          两期支付；两期合计与一次性付清相同。第二期的具体到期日以 SAREC 确认为准。
-        </p>
-        <p>
-          The annual partnership fee is as displayed on the Strategic Partner page and denominated in
-          U.S. dollars. The Partner may pay in full or in two semi-annual installments; the two
-          installments together equal the pay-in-full amount. The due date of the second installment is
-          as confirmed by SAREC.
+          This agreement takes effect and the partnership is established once the applicant checks the box
+          to accept this agreement in the application form, completes payment, and SAREC confirms the
+          application. SAREC reserves the right to review each application and decide whether to accept
+          it.
         </p>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.h2}>4. 退款 · Refunds</h2>
+        <h2 className={styles.h2}>3. 费用</h2>
+        <p className={styles.h2En}>Fees</p>
         <p>
-          退款政策将在付款功能上线时以最终条款为准。本草案不构成对退款、续费或终止的最终约定。
+          费用以战略合作伙伴页面展示为准，当前为 $6,000 / 年，或 $3,000 + $3,000 半年两期（两期合计与一次性
+          付清相同）。费用一律以美元计价。半年两期中第二期的具体到期日以 SAREC 确认为准。
         </p>
         <p>
-          The refund policy will be set out in the final terms when payment is enabled. This draft does
-          not constitute the final terms on refunds, renewal, or termination.
-        </p>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.h2}>5. 品牌与展示 · Brand and Visibility</h2>
-        <p>
-          合作伙伴授权 SAREC 在合作期内于官网及相关活动中展示其名称与标识用于合作说明。任一方使用另一方
-          品牌均应符合对方合理的品牌规范，且不得作虚假或误导性陈述。
-        </p>
-        <p>
-          The Partner authorizes SAREC to display its name and logo on the website and at related events
-          for the purpose of describing the partnership during its term. Each party’s use of the other’s
-          brand shall follow the other’s reasonable brand guidelines and shall not be false or
-          misleading.
+          Fees are as displayed on the Strategic Partner page — currently $6,000 per year, or $3,000 +
+          $3,000 in two semi-annual installments (the two installments together equal the pay-in-full
+          amount). Fees are denominated in U.S. dollars. The due date of the second installment is as
+          confirmed by SAREC.
         </p>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.h2}>6. 隐私 · Privacy</h2>
+        <h2 className={styles.h2}>4. 合作期限</h2>
+        <p className={styles.h2En}>Partnership term</p>
+        <p>一般为 12 个月，具体以付款记录和 SAREC 确认记录为准。</p>
+        <p>
+          The term is generally 12 months, determined by the payment record and SAREC’s confirmation
+          record.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>5. 合作权益</h2>
+        <p className={styles.h2En}>Partnership benefits</p>
+        <p>
+          合作权益以战略合作伙伴页面展示为准，包括官网展示、活动露出、内容共建、访谈 / 推介申请、资源协同等。
+          上述权益的具体执行需经 SAREC 审核、排期及内容标准确认。
+        </p>
+        <p>
+          Benefits are as displayed on the Strategic Partner page, including website visibility, event
+          exposure, joint content, interview or referral applications, and resource coordination. The
+          delivery of these benefits is subject to SAREC review, scheduling, and editorial standards.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>6. 不承诺</h2>
+        <p className={styles.h2En}>No guarantee</p>
+        <p>
+          SAREC 不承诺客户数量、成交、融资、投资收益、固定客户来源或任何商业结果。
+        </p>
+        <p>
+          SAREC does not guarantee any number of clients, transaction, financing, investment return,
+          fixed source of business, or any commercial outcome.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>7. 品牌展示</h2>
+        <p className={styles.h2En}>Brand and visibility</p>
+        <p>
+          合作伙伴授权 SAREC 在合作期内合理展示其名称、Logo、简介及相关资料。合作伙伴需保证所提交资料真实、
+          合法、可供使用。
+        </p>
+        <p>
+          The Partner authorizes SAREC to make reasonable use of its name, logo, profile, and related
+          materials during the partnership term. The Partner warrants that the materials submitted are
+          true, lawful, and available for such use.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>8. 内容审核</h2>
+        <p className={styles.h2En}>Content review</p>
+        <p>
+          所有官网展示、活动、讲座、采访、项目推介及对外发布内容，均需经 SAREC 审核。
+        </p>
+        <p>
+          All website display, events, lectures, interviews, project referrals, and externally published
+          content are subject to SAREC review.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>9. 付款与退款</h2>
+        <p className={styles.h2En}>Payment and refunds</p>
+        <p>
+          费用支付后，原则上不因合作伙伴单方原因退款。如因重复支付、系统错误，或 SAREC 无法提供基础合作资格，
+          可由 SAREC 审核处理。
+        </p>
+        <p>
+          Once paid, fees are generally non-refundable for reasons attributable solely to the Partner.
+          Where there is duplicate payment, system error, or where SAREC is unable to provide the basic
+          eligibility for the partnership, SAREC may review and handle the matter.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>10. 终止</h2>
+        <p className={styles.h2En}>Termination</p>
+        <p>
+          如合作伙伴提供虚假信息、违法违规、损害 SAREC 声誉或进行误导性宣传，SAREC 可暂停或终止其合作权益。
+        </p>
+        <p>
+          SAREC may suspend or terminate a Partner’s benefits where the Partner provides false
+          information, violates laws or regulations, harms SAREC’s reputation, or engages in misleading
+          promotion.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>11. 法律关系</h2>
+        <p className={styles.h2En}>Legal relationship</p>
+        <p>
+          本协议不构成合伙、代理、雇佣、投资顾问、融资中介或收益承诺关系。
+        </p>
+        <p>
+          This agreement does not create any partnership, agency, employment, investment-advisory,
+          financing-intermediary, or return-guarantee relationship.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>12. 隐私</h2>
+        <p className={styles.h2En}>Privacy</p>
         <p>
           合作伙伴信息的收集与使用适用 SAREC <Link href="/legal/privacy">隐私政策</Link>。
         </p>
