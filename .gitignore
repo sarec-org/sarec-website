@@ -41,7 +41,13 @@ _handoff_to_claude/4c-2-V2*.md
 .vscode/
 .idea/
 
-# Internal handoff/transfer materials — archived outside repo 2026-07-03 (Option C).
-# Full-history purge deferred to a pre-public专项 (Option A).
+# Internal materials — purged from full history + archived outside repo 2026-07-08
+# (pre-public 批次 0). Local working copies kept but never tracked.
 _handoff_to_claude/
+/CLAUDE.md
+/GEO_TODO.md
+/SAREC_VISUAL_SPEC.md
+/_assets_registry.md
+/_recon_reports/
+/docs/
 .vercel

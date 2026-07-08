@@ -1,6 +1,6 @@
 /**
  * Hero v3-B Final · SAREC Visual Constitution
- * Source of truth: _handoff_to_claude/hero_v3b_final.html
+ * Source of truth: hero_v3b_final.html (design reference, archived outside the repo)
  *
  * REQUIRED ASSETS:
  *   - /public/videos/la-hero-main.mp4
