@@ -29,6 +29,7 @@ const routes = [
   '/zh/research/investment-pitfalls',
   // GEO 旗舰文(P1-5,仅 published 入图;草稿与占位页不收录)
   '/zh/research/chinese-capital-us-real-estate-10-traps',
+  '/zh/research/us-housing-great-reset-2026',
   '/zh/contact',
   '/zh/contact/thanks',
   '/zh/membership',
