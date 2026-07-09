@@ -44,6 +44,8 @@ export function buildArticleJsonLd(
     publisherName?: string;
     publisherLogoUrl?: string;
     sources?: Source[];
+    // 自由文本来源（无 type），作 CreativeWork 追加进 citation（M3.4 可选接入）。
+    extraCitations?: Array<{ name: string; url?: string }>;
   }
 ): Record<string, unknown> {
   const url = `${options.siteUrl}${options.pathname}`;
@@ -82,13 +84,22 @@ export function buildArticleJsonLd(
     jsonLd.publisher = publisher;
   }
 
-  const citation = (options.sources ?? [])
-    .filter((s) => Boolean(s.name))
-    .map((s) => ({
-      '@type': citationType(s.type),
-      name: s.name,
-      ...(s.url ? { url: s.url } : {})
-    }));
+  const citation = [
+    ...(options.sources ?? [])
+      .filter((s) => Boolean(s.name))
+      .map((s) => ({
+        '@type': citationType(s.type),
+        name: s.name,
+        ...(s.url ? { url: s.url } : {})
+      })),
+    ...(options.extraCitations ?? [])
+      .filter((s) => Boolean(s.name))
+      .map((s) => ({
+        '@type': 'CreativeWork',
+        name: s.name,
+        ...(s.url ? { url: s.url } : {})
+      }))
+  ];
 
   if (citation.length > 0) {
     jsonLd.citation = citation;

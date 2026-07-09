@@ -8,6 +8,12 @@ import {
   buildFAQPageJsonLd
 } from '@/lib/geo/schema';
 import { GeoArticleRenderer } from '@/components/sections/research/geo/GeoArticleRenderer';
+import {
+  RelatedReading,
+  SourcesSection,
+  type RelatedArticleCard
+} from '@/components/sections/research/geo/ArticleEndSections';
+import type { SourceItem } from '@/lib/geo/types';
 
 /**
  * GEO 旗舰文章动态路由 —— /zh/research/<slug>。
@@ -54,7 +60,11 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
     pathname,
     authorName: article.author.name,
     publisherName: SITE_NAME,
-    sources: resolveSources(article.sources)
+    sources: resolveSources(article.sources),
+    extraCitations: (article.sourceList ?? []).map((s) => ({
+      name: s.name,
+      ...(s.url ? { url: s.url } : {})
+    }))
   });
 
   // BreadcrumbList JSON-LD —— 首页 / 研究中心 / 当前文章。
@@ -79,6 +89,22 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
           });
   const faqJsonLd = buildFAQPageJsonLd(faqItems);
 
+  // 相关阅读（M3.3）—— 只收录已发布的相关文章，缺失 / 草稿静默跳过。
+  const relatedItems: RelatedArticleCard[] = (article.relatedSlugs ?? [])
+    .map((slug) => getArticle(slug))
+    .filter((a): a is NonNullable<typeof a> => a !== null && a.status === 'published')
+    .map((a) => ({ slug: a.slug, title: a.title, description: a.description }));
+
+  // 数据来源（M3.4）—— 合并「已注册 Source（含 url/date）」与「自由文本 sourceList」，按名称去重。
+  const registered: SourceItem[] = resolveSources(article.sources).map((s) => ({
+    name: s.name,
+    ...(s.url ? { url: s.url } : {}),
+    ...(s.date ? { accessedAt: s.date } : {})
+  }));
+  const sourceItems: SourceItem[] = [...registered, ...(article.sourceList ?? [])].filter(
+    (s, i, arr) => arr.findIndex((x) => x.name === s.name) === i
+  );
+
   return (
     <main>
       <script
@@ -97,6 +123,9 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
       ) : null}
 
       <GeoArticleRenderer article={article} />
+
+      <SourcesSection items={sourceItems} />
+      <RelatedReading items={relatedItems} />
 
       <section aria-label="免责声明">
         <p>{DISCLAIMER}</p>

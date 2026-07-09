@@ -12,6 +12,8 @@
  */
 import type { ReactElement, ReactNode } from 'react';
 import type { Article, Block } from '@/lib/geo/types';
+import { columnLabel } from '@/lib/geo/labels';
+import { renderInline } from './renderInline';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { PullQuote } from '@/components/sections/research/PullQuote';
@@ -36,7 +38,7 @@ function renderBlock(block: Block, index: number): ReactNode {
       return (
         <section key={key} className={styles.reading}>
           {toParagraphs(block.data.md).map((para, i) => (
-            <p key={i}>{para}</p>
+            <p key={i}>{renderInline(para, `${key}-p${i}`)}</p>
           ))}
         </section>
       );
@@ -61,7 +63,7 @@ function renderBlock(block: Block, index: number): ReactNode {
         <section key={key} className={styles.reading}>
           <ul>
             {block.data.items.map((item, i) => (
-              <li key={i}>{item}</li>
+              <li key={i}>{renderInline(item, `${key}-li${i}`)}</li>
             ))}
           </ul>
         </section>
@@ -97,11 +99,11 @@ function renderBlock(block: Block, index: number): ReactNode {
       );
 
     case 'callout':
-      // 保守渲染:tone 仅作 data 属性(上色留后),文本不丢。
+      // 保守渲染:tone 仅作 data 属性(上色留后),文本支持行内加粗/链接。
       return (
         <section key={key} className={styles.reading} data-callout-tone={block.data.tone}>
           {toParagraphs(block.data.md).map((para, i) => (
-            <p key={i}>{para}</p>
+            <p key={i}>{renderInline(para, `${key}-p${i}`)}</p>
           ))}
         </section>
       );
@@ -112,7 +114,7 @@ function renderBlock(block: Block, index: number): ReactNode {
       return (
         <section key={key} id={block.data.id} className={styles.reading} data-qa-unit>
           <h3>{block.data.question}</h3>
-          <p>{block.data.judgment}</p>
+          <p>{renderInline(block.data.judgment, `${key}-j`)}</p>
           {block.data.evidence.length > 0 ? (
             <ul data-evidence>
               {block.data.evidence.map((srcId, i) => (
@@ -120,8 +122,8 @@ function renderBlock(block: Block, index: number): ReactNode {
               ))}
             </ul>
           ) : null}
-          <p data-boundary>{block.data.boundary}</p>
-          {block.data.riskNote ? <p data-risk-note>{block.data.riskNote}</p> : null}
+          <p data-boundary>{renderInline(block.data.boundary, `${key}-bd`)}</p>
+          {block.data.riskNote ? <p data-risk-note>{renderInline(block.data.riskNote, `${key}-rn`)}</p> : null}
         </section>
       );
 
@@ -189,11 +191,14 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
       : undefined;
   const hasHeroMedia = Boolean(heroImage || heroVideo);
 
+  // 前台头部 eyebrow 显示栏目中文名（M3.1），不再暴露 cluster 机器串。
+  const eyebrow = columnLabel(article);
+
   return (
     <article className={styles.article}>
       {hasHeroMedia ? (
         <ArticleHero
-          eyebrow={article.cluster}
+          eyebrow={eyebrow}
           title={article.title}
           summary={article.summary.join(' ')}
           author={{
@@ -209,7 +214,7 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
         />
       ) : (
         <header className={styles.centeredHero}>
-          <p className={styles.centeredEyebrow}>{article.cluster}</p>
+          <p className={styles.centeredEyebrow}>{eyebrow}</p>
           <h1 className={styles.centeredTitle}>{article.title}</h1>
           <p className={styles.centeredSummary}>{article.summary.join(' ')}</p>
           <div className={styles.centeredByline}>

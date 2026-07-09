@@ -11,7 +11,21 @@
  * ⚠️ 本文件不被任何运行代码 import(Gate 3A-1 不接入前台);仅作为 Gate 3A-2 改 content.ts 的预备件。
  *    不修改 lib/geo/types.ts —— 这里只 import type。
  */
-import type { Article, Block, QaUnit, Media, FAQItem, Author } from './types';
+import type { Article, ArticleTemplate, Block, QaUnit, Media, FAQItem, Author, SourceItem } from './types';
+
+const TEMPLATES: ArticleTemplate[] = ['deep', 'brief', 'data'];
+
+function mapSourceList(raw: unknown): SourceItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((s) => s && typeof s === 'object' && isFilled((s as any).name))
+    .map((s: any) => {
+      const item: SourceItem = { name: String(s.name) };
+      if (isFilled(s.url)) item.url = String(s.url);
+      if (isFilled(s.accessedAt)) item.accessedAt = String(s.accessedAt);
+      return item;
+    });
+}
 
 type RawBlock = { discriminant?: string; type?: string; value?: any; data?: any };
 type RawConditional = { discriminant?: boolean | string; value?: any };
@@ -149,9 +163,12 @@ export function fromKeystaticArticle(raw: any): Article {
     sources: toStringArray(raw.sources),
   };
 
+  if (isFilled(raw.template) && TEMPLATES.includes(raw.template)) article.template = raw.template;
   if (isFilled(raw.audience)) article.audience = raw.audience;
   if (isFilled(raw.intent)) article.intent = raw.intent;
   if (isFilled(raw.updatedAt)) article.updatedAt = raw.updatedAt;
+  const sourceList = mapSourceList(raw.sourceList);
+  if (sourceList.length > 0) article.sourceList = sourceList;
   if (Array.isArray(raw.faq) && raw.faq.length > 0) article.faq = raw.faq.map(mapFaq);
   if (Array.isArray(raw.relatedSlugs) && raw.relatedSlugs.length > 0) {
     article.relatedSlugs = toStringArray(raw.relatedSlugs);

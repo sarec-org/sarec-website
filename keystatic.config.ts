@@ -341,9 +341,21 @@ export default config({
             '文中引用的权威来源编号（如 src-uscis-eb5-i526e）。目前先按已有 ID 填写，后续会单独优化为更友好的选择方式。',
           itemLabel: (p) => p.value,
         }),
+        sourceList: fields.array(
+          fields.object({
+            name: fields.text({ label: '来源名称', validation: { isRequired: true } }),
+            url: fields.text({ label: '链接 URL（可选）', description: '权威来源原文链接，前台可点击。' }),
+            accessedAt: fields.text({ label: '抓取日期（可选）', description: '格式 YYYY-MM-DD。' }),
+          }),
+          {
+            label: '数据来源（自由文本）',
+            description: '文末「数据来源」区逐条显示；适合无预置 ID 的一般来源。含链接与抓取日期。',
+            itemLabel: (p) => p.fields.name.value,
+          }
+        ),
         relatedSlugs: fields.array(fields.text({ label: '相关文章 slug' }), {
           label: '相关文章（可选）',
-          description: '填写相关文章的 slug。',
+          description: '填写相关文章的 slug；文末自动渲染「相关阅读」（标题+摘要+链接）。',
           itemLabel: (p) => p.value,
         }),
         // 文章级 CTA / heroMedia 为可选对象：用 checkbox 判别「是否启用」，未启用 → empty。
