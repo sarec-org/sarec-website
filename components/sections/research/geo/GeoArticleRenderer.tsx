@@ -19,6 +19,7 @@ import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { PullQuote } from '@/components/sections/research/PullQuote';
 import { AssetBreak } from '@/components/sections/research/AssetBreak';
 import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import { TemplateHeader, TemplateFooter } from './TemplateSections';
 import { MetricCards } from './charts/MetricCards';
 import { ChartTable } from './charts/ChartTable';
 import { BarLineChart } from './charts/BarLineChart';
@@ -262,7 +263,9 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
           </div>
         </header>
       )}
+      <TemplateHeader article={article} />
       {article.blocks.map((block, index) => renderBlock(block, index))}
+      <TemplateFooter article={article} />
     </article>
   );
 }

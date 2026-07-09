@@ -27,6 +27,43 @@ import type {
 
 const TEMPLATES: ArticleTemplate[] = ['deep', 'brief', 'data'];
 
+// 还原栏目/模板 + 扁平元字段。
+// 支持两种形状:①Keystatic conditional { discriminant, value };②扁平 { template, tldr, ... }(解析器/兼容)。
+function mapTemplate(raw: any, article: Article): void {
+  let tpl: string | undefined;
+  let v: any = raw; // 元字段默认从顶层读(扁平形状)
+
+  const t = raw.template;
+  if (t && typeof t === 'object' && isFilled(t.discriminant)) {
+    tpl = t.discriminant;
+    v = t.value ?? {};
+  } else if (isFilled(t)) {
+    tpl = t;
+  }
+  if (!tpl || !TEMPLATES.includes(tpl as ArticleTemplate)) return;
+  article.template = tpl as ArticleTemplate;
+
+  const tldr = toStringArray(v.tldr);
+  if (tldr.length) article.tldr = tldr;
+  if (isFilled(v.dataCutoff)) article.dataCutoff = String(v.dataCutoff);
+  if (isFilled(v.dataPeriod)) article.dataPeriod = String(v.dataPeriod);
+  if (isFilled(v.changeNote)) article.changeNote = String(v.changeNote);
+  const checklist = toStringArray(v.judgmentChecklist);
+  if (checklist.length) article.judgmentChecklist = checklist;
+  if (isFilled(v.oneLine)) {
+    article.brief = { oneLine: String(v.oneLine) };
+    if (isFilled(v.background)) article.brief.background = String(v.background);
+    if (isFilled(v.impact)) article.brief.impact = String(v.impact);
+    if (isFilled(v.judgment)) article.brief.judgment = String(v.judgment);
+  } else if (v.brief && typeof v.brief === 'object' && isFilled(v.brief.oneLine)) {
+    // 扁平形状里 brief 作为对象存在
+    article.brief = { oneLine: String(v.brief.oneLine) };
+    if (isFilled(v.brief.background)) article.brief.background = String(v.brief.background);
+    if (isFilled(v.brief.impact)) article.brief.impact = String(v.brief.impact);
+    if (isFilled(v.brief.judgment)) article.brief.judgment = String(v.brief.judgment);
+  }
+}
+
 function mapSourceList(raw: unknown): SourceItem[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -223,7 +260,7 @@ export function fromKeystaticArticle(raw: any): Article {
     sources: toStringArray(raw.sources),
   };
 
-  if (isFilled(raw.template) && TEMPLATES.includes(raw.template)) article.template = raw.template;
+  mapTemplate(raw, article);
   if (isFilled(raw.audience)) article.audience = raw.audience;
   if (isFilled(raw.intent)) article.intent = raw.intent;
   if (isFilled(raw.updatedAt)) article.updatedAt = raw.updatedAt;

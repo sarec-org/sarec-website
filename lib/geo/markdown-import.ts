@@ -30,6 +30,7 @@ export type ParsedArticle = {
   author: { name: string; title?: string };
   publishedAt: string;
   dataCutoff?: string;
+  oneLine?: string; // 快评:一句话结论
   blocks: ImportBlock[];
   faq: { question: string; answer: string }[];
   sourceList: { name: string; url?: string }[];
@@ -94,12 +95,18 @@ export function parseArticleMarkdown(md: string): ParsedArticle {
   let author: { name: string; title?: string } | undefined;
   let publishedAt = '';
   let dataCutoff: string | undefined;
+  let oneLine = '';
 
   while (i < lines.length) {
     const raw = lines[i];
     if (isBlank(raw)) { i++; continue; }
     if (isHr(raw)) { i++; break; }
-    const inner = stripBold(raw);
+    // 头部行只用 ** 强调 key(如 **摘要判断:** 值),去掉全部 ** 再按前缀识别。
+    const inner = raw.replace(/\*\*/g, '').trim();
+    if (/^(一句话结论|结论)\s*[:：]/.test(inner)) {
+      oneLine = inner.replace(/^(一句话结论|结论)\s*[:：]/, '').trim();
+      i++; continue;
+    }
     if (/^(摘要判断|摘要|核心判断)\s*[:：]/.test(inner)) {
       const body = inner.replace(/^(摘要判断|摘要|核心判断)\s*[:：]/, '').trim();
       summary = body.split(/\s*·\s*/).map((s) => s.trim()).filter(Boolean);
@@ -120,7 +127,9 @@ export function parseArticleMarkdown(md: string): ParsedArticle {
       if (cut) dataCutoff = parseCnDate(cut[2]);
       i++; continue;
     }
-    // 非元信息 → 头部结束,当前行归入正文。
+    // 头部区仍是加粗行但非已知 key(如某些强调句)→ 跳过,继续找 作者/日期,不误当正文结束。
+    if (/^\*\*/.test(raw.trim())) { i++; continue; }
+    // 非加粗的普通段落 / 标题 → 头部结束,当前行归入正文。
     break;
   }
 
@@ -268,6 +277,7 @@ export function parseArticleMarkdown(md: string): ParsedArticle {
     author,
     publishedAt,
     ...(dataCutoff ? { dataCutoff } : {}),
+    ...(oneLine ? { oneLine } : {}),
     blocks,
     faq,
     sourceList,
@@ -287,12 +297,36 @@ export type EntryMeta = {
 
 // 产出与 content/geo/articles/*.yaml 完全同形的对象(可 yaml.stringify)。
 export function toKeystaticEntry(parsed: ParsedArticle, meta: EntryMeta): Record<string, unknown> {
+  // 栏目/模板 → Keystatic conditional 形状 { discriminant, value }。
+  const templateField = (() => {
+    if (meta.template === 'brief') {
+      return {
+        discriminant: 'brief',
+        value: {
+          oneLine: parsed.oneLine ?? parsed.summary[0] ?? parsed.description,
+          background: '',
+          impact: '',
+          judgment: '',
+        },
+      };
+    }
+    if (meta.template === 'data') {
+      const value: Record<string, unknown> = { dataPeriod: parsed.dataCutoff ?? '', changeNote: '' };
+      if (parsed.dataCutoff) value.dataCutoff = parsed.dataCutoff;
+      return { discriminant: 'data', value };
+    }
+    // deep(默认)
+    const value: Record<string, unknown> = { tldr: parsed.tldr, judgmentChecklist: [] };
+    if (parsed.dataCutoff) value.dataCutoff = parsed.dataCutoff;
+    return { discriminant: 'deep', value };
+  })();
+
   const entry: Record<string, unknown> = {
     slug: meta.slug,
     locale: meta.locale ?? 'zh',
     cluster: meta.cluster,
     tier: meta.tier ?? 'pillar',
-    template: meta.template,
+    template: templateField,
     status: meta.status ?? 'draft',
     title: parsed.title,
     description: parsed.description,
@@ -309,11 +343,5 @@ export function toKeystaticEntry(parsed: ParsedArticle, meta: EntryMeta): Record
     cta: { discriminant: false },
     heroMedia: { discriminant: false },
   };
-  // 模板专属元字段(可选)
-  if (meta.template === 'deep') {
-    if (parsed.tldr.length) entry.tldr = parsed.tldr;
-    if (parsed.dataCutoff) entry.dataCutoff = parsed.dataCutoff;
-  }
-  if (meta.template === 'data' && parsed.dataCutoff) entry.dataCutoff = parsed.dataCutoff;
   return entry;
 }

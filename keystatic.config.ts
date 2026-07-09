@@ -142,7 +142,11 @@ const blocksField = fields.array(
         }),
         src: fields.text({ label: '媒体链接 URL', description: '粘贴 CDN / R2 图片或视频链接（本 PoC 不支持上传）。' }),
         poster: fields.text({ label: 'Poster 封面 URL（可选）' }),
-        alt: fields.text({ label: '替代文本 alt', description: '图片的文字描述，利于无障碍与 SEO。' }),
+        alt: fields.text({
+          label: '替代文本 alt',
+          description: '图片的文字描述，利于无障碍与 SEO。必填。',
+          validation: { isRequired: true },
+        }),
         eyebrow: fields.text({ label: 'Eyebrow 小字（可选）' }),
         title: fields.text({ label: '标题（可选）' }),
         body: fields.text({ label: '说明文字（可选）', multiline: true }),
@@ -371,6 +375,50 @@ export default config({
           ],
           defaultValue: 'pillar',
         }),
+        // ── 栏目 / 模板（M2）—— 三选一，选后展开该栏目专属字段（字段结构定死，员工填空）。──
+        // 序列化为 { discriminant, value }；adapter 还原为 Article.template + 扁平元字段。
+        template: fields.conditional(
+          fields.select({
+            label: '栏目 / 模板',
+            description: '深度=长研究（数据+判断+FAQ）；快评=单一事件快速判断；数据追踪=数据周期+指标。',
+            options: [
+              { label: 'SAREC 深度', value: 'deep' },
+              { label: 'SAREC 快评', value: 'brief' },
+              { label: 'SAREC 数据追踪', value: 'data' },
+            ],
+            defaultValue: 'deep',
+          }),
+          {
+            deep: fields.object({
+              tldr: fields.array(fields.text({ label: 'TL;DR / 核心判断要点' }), {
+                label: 'TL;DR / 核心判断',
+                description: '开篇最重要的几条判断，每行一条。',
+                itemLabel: (p) => p.value,
+              }),
+              dataCutoff: fields.text({ label: '数据截止日', description: '格式 YYYY-MM-DD。' }),
+              judgmentChecklist: fields.array(fields.text({ label: '清单项' }), {
+                label: 'SAREC 判断清单',
+                description: '文末给读者的自检清单，每行一条（可留空）。',
+                itemLabel: (p) => p.value,
+              }),
+            }),
+            brief: fields.object({
+              oneLine: fields.text({ label: '一句话结论', validation: { isRequired: true } }),
+              background: fields.text({ label: '背景', multiline: true }),
+              impact: fields.text({ label: '影响', multiline: true }),
+              judgment: fields.text({ label: 'SAREC 判断', multiline: true }),
+            }),
+            data: fields.object({
+              dataPeriod: fields.text({
+                label: '数据周期',
+                description: '如 2026 年 6 月 / 2026Q2。',
+                validation: { isRequired: true },
+              }),
+              dataCutoff: fields.text({ label: '数据截止日', description: '格式 YYYY-MM-DD。' }),
+              changeNote: fields.text({ label: '变化说明', multiline: true }),
+            }),
+          }
+        ),
         status: fields.select({
           label: '状态',
           description: '草稿=不公开、不进网站地图（sitemap）；发布=公开显示、进入网站地图。不确认前请保持草稿。',
@@ -473,7 +521,7 @@ export default config({
               }),
               src: fields.text({ label: '媒体链接 URL' }),
               poster: fields.text({ label: 'Poster 封面 URL（可选）' }),
-              alt: fields.text({ label: '替代文本 alt' }),
+              alt: fields.text({ label: '替代文本 alt', validation: { isRequired: true } }),
             }),
           }
         ),
