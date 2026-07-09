@@ -83,6 +83,20 @@ export type CTAConfig = {
   sourceSlug: string;
 };
 
+// ── M4 图表组件(数据即图,零版权风险,AI 可读)──────────────────────────
+// 指标卡:大数字 + 标签 + 同/环比。
+export type MetricCard = {
+  label: string;
+  value: string; // 大数字,含单位/符号,例如 "+0.8%"、"37.0 万"
+  change?: string; // 同比/环比,例如 "同比 +0.7%"
+  trend?: 'up' | 'down' | 'flat'; // 决定颜色/箭头
+  note?: string;
+};
+// 对比/数据表:表头 + 可选高亮行,支持多列(超越旧 dataTable 的两列)。
+export type ChartTableRow = { cells: string[]; highlight?: boolean };
+// 柱状/折线图数据点。
+export type ChartPoint = { label: string; value: number };
+
 export type Block =
   | { type: 'prose'; data: { md: string } }
   | { type: 'sectionHeading'; data: { text: string; id?: string } }
@@ -93,7 +107,13 @@ export type Block =
   | { type: 'qaUnit'; data: QaUnit }
   | { type: 'caseRef'; data: { caseSlug: string } }
   | { type: 'assetBreak'; data: Media & { eyebrow?: string; title?: string; body?: string } }
-  | { type: 'cta'; data: CTAConfig };
+  | { type: 'cta'; data: CTAConfig }
+  | { type: 'metricCards'; data: { title?: string; items: MetricCard[] } }
+  | { type: 'chartTable'; data: { caption?: string; headers: string[]; rows: ChartTableRow[] } }
+  | {
+      type: 'barLineChart';
+      data: { caption?: string; variant: 'bar' | 'line'; unit?: string; series: ChartPoint[]; source?: string };
+    };
 
 export type Article = {
   slug: string;

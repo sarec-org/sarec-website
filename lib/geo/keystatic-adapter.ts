@@ -11,7 +11,19 @@
  * ⚠️ 本文件不被任何运行代码 import(Gate 3A-1 不接入前台);仅作为 Gate 3A-2 改 content.ts 的预备件。
  *    不修改 lib/geo/types.ts —— 这里只 import type。
  */
-import type { Article, ArticleTemplate, Block, QaUnit, Media, FAQItem, Author, SourceItem } from './types';
+import type {
+  Article,
+  ArticleTemplate,
+  Block,
+  QaUnit,
+  Media,
+  FAQItem,
+  Author,
+  SourceItem,
+  MetricCard,
+  ChartTableRow,
+  ChartPoint,
+} from './types';
 
 const TEMPLATES: ArticleTemplate[] = ['deep', 'brief', 'data'];
 
@@ -132,6 +144,54 @@ function mapBlock(raw: RawBlock, index: number): Block {
         type: 'cta',
         data: { intent: 'risk-review', label: String(v.label ?? ''), sourceSlug: String(v.sourceSlug ?? '') },
       };
+    case 'metricCards': {
+      const items = Array.isArray(v.items)
+        ? v.items.map((it: any) => {
+            const card: MetricCard = {
+              label: String(it?.label ?? ''),
+              value: String(it?.value ?? ''),
+            };
+            if (isFilled(it?.change)) card.change = String(it.change);
+            if (it?.trend === 'up' || it?.trend === 'down' || it?.trend === 'flat') card.trend = it.trend;
+            if (isFilled(it?.note)) card.note = String(it.note);
+            return card;
+          })
+        : [];
+      const data: { title?: string; items: MetricCard[] } = { items };
+      if (isFilled(v.title)) data.title = v.title;
+      return { type: 'metricCards', data };
+    }
+    case 'chartTable': {
+      const headers = toStringArray(v.headers);
+      const rows = Array.isArray(v.rows)
+        ? v.rows.map((r: any) => ({
+            cells: toStringArray(r?.cells),
+            ...(r?.highlight === true || r?.highlight === 'true' ? { highlight: true } : {}),
+          }))
+        : [];
+      const data: { caption?: string; headers: string[]; rows: ChartTableRow[] } = { headers, rows };
+      if (isFilled(v.caption)) data.caption = v.caption;
+      return { type: 'chartTable', data };
+    }
+    case 'barLineChart': {
+      const variant = v.variant === 'line' ? 'line' : 'bar';
+      const series = Array.isArray(v.series)
+        ? v.series
+            .map((p: any) => ({ label: String(p?.label ?? ''), value: Number(p?.value) }))
+            .filter((p: any) => p.label.length > 0 && Number.isFinite(p.value))
+        : [];
+      const data: {
+        caption?: string;
+        variant: 'bar' | 'line';
+        unit?: string;
+        series: ChartPoint[];
+        source?: string;
+      } = { variant, series };
+      if (isFilled(v.caption)) data.caption = v.caption;
+      if (isFilled(v.unit)) data.unit = v.unit;
+      if (isFilled(v.source)) data.source = v.source;
+      return { type: 'barLineChart', data };
+    }
     default:
       throw new Error(`keystatic-adapter: 第 ${index} 个 block 的未知类型「${String(type)}」`);
   }

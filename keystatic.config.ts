@@ -42,6 +42,9 @@ const blocksField = fields.array(
         { label: '案例引用', value: 'caseRef' },
         { label: '图片 / 媒体块', value: 'assetBreak' },
         { label: '行动按钮', value: 'cta' },
+        { label: '指标卡（大数字）', value: 'metricCards' },
+        { label: '对比 / 数据表（多列）', value: 'chartTable' },
+        { label: '柱状 / 折线图', value: 'barLineChart' },
       ],
       defaultValue: 'prose',
     }),
@@ -153,6 +156,76 @@ const blocksField = fields.array(
         label: fields.text({ label: '按钮文字', validation: { isRequired: true } }),
         sourceSlug: fields.text({ label: '来源标记', description: '用于统计该按钮来自哪篇文章。', validation: { isRequired: true } }),
       }),
+      // ── M4 图表块 ────────────────────────────────────────────────
+      metricCards: fields.object(
+        {
+          title: fields.text({ label: '小标题（可选）' }),
+          items: fields.array(
+            fields.object({
+              label: fields.text({ label: '指标名', validation: { isRequired: true } }),
+              value: fields.text({ label: '大数字（含单位/符号，如 +0.8%）', validation: { isRequired: true } }),
+              change: fields.text({ label: '同比 / 环比（可选，如 同比 +0.7%）' }),
+              trend: fields.select({
+                label: '涨跌方向',
+                options: [
+                  { label: '— 中性', value: 'flat' },
+                  { label: '▲ 上升', value: 'up' },
+                  { label: '▼ 下降', value: 'down' },
+                ],
+                defaultValue: 'flat',
+              }),
+              note: fields.text({ label: '注释（可选）' }),
+            }),
+            { label: '指标卡', description: '一行若干个大数字指标。', itemLabel: (p) => p.fields.label.value }
+          ),
+        },
+        { description: '一组大数字指标卡（数据追踪栏目的核心指标）。' }
+      ),
+      chartTable: fields.object(
+        {
+          caption: fields.text({ label: '表标题（可选）' }),
+          headers: fields.array(fields.text({ label: '列头' }), {
+            label: '表头',
+            description: '每列一个列头；支持任意列数（超越两列旧数据表）。',
+            itemLabel: (p) => p.value,
+          }),
+          rows: fields.array(
+            fields.object({
+              cells: fields.array(fields.text({ label: '单元格' }), {
+                label: '本行各列',
+                description: '按表头顺序逐列填写。',
+                itemLabel: (p) => p.value,
+              }),
+              highlight: fields.checkbox({ label: '高亮此行', defaultValue: false }),
+            }),
+            { label: '数据行' }
+          ),
+        },
+        { description: '带表头的多列对比表，可高亮重点行。' }
+      ),
+      barLineChart: fields.object(
+        {
+          caption: fields.text({ label: '图标题（可选）' }),
+          variant: fields.select({
+            label: '图形态',
+            options: [
+              { label: '柱状图', value: 'bar' },
+              { label: '折线图', value: 'line' },
+            ],
+            defaultValue: 'bar',
+          }),
+          unit: fields.text({ label: '数值单位（可选，如 %）' }),
+          series: fields.array(
+            fields.object({
+              label: fields.text({ label: '横轴标签', validation: { isRequired: true } }),
+              value: fields.text({ label: '数值（可含负号/小数）', validation: { isRequired: true } }),
+            }),
+            { label: '数据点', itemLabel: (p) => p.fields.label.value }
+          ),
+          source: fields.text({ label: '来源（可选）' }),
+        },
+        { description: '同一组数据两种形态：柱状或折线。' }
+      ),
     }
   ),
   {
@@ -172,6 +245,9 @@ const blocksField = fields.array(
         caseRef: '案例引用',
         assetBreak: '图片 / 媒体块',
         cta: '行动按钮',
+        metricCards: '指标卡',
+        chartTable: '对比 / 数据表',
+        barLineChart: '柱状 / 折线图',
       };
       // 安全截断：仅处理 string，trim，最多约 24 个字，超长加 …，空值返回 ''。
       const cut = (s: unknown): string => {
@@ -224,6 +300,14 @@ const blocksField = fields.array(
             break;
           case 'assetBreak':
             summary = read('title') || read('alt') || read('src');
+            break;
+          case 'chartTable':
+          case 'barLineChart':
+            // 仅取已验证的标量 caption;无 caption 则只显示类型。
+            summary = read('caption');
+            break;
+          case 'metricCards':
+            summary = read('title');
             break;
           default:
             summary = '';

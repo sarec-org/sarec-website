@@ -19,6 +19,9 @@ import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { PullQuote } from '@/components/sections/research/PullQuote';
 import { AssetBreak } from '@/components/sections/research/AssetBreak';
 import { MidArticleCTA } from '@/components/sections/research/MidArticleCTA';
+import { MetricCards } from './charts/MetricCards';
+import { ChartTable } from './charts/ChartTable';
+import { BarLineChart } from './charts/BarLineChart';
 import styles from './GeoArticleRenderer.module.css';
 
 // 把 prose 的 md 文本按空行拆成段落(纯文本,不引 markdown 库)。
@@ -168,6 +171,31 @@ function renderBlock(block: Block, index: number): ReactNode {
           body={block.data.label}
           ctaLabel={block.data.label}
           ctaHref={ctaHref(block.data.sourceSlug)}
+        />
+      );
+
+    case 'metricCards':
+      return <MetricCards key={key} title={block.data.title} items={block.data.items} />;
+
+    case 'chartTable':
+      return (
+        <ChartTable
+          key={key}
+          caption={block.data.caption}
+          headers={block.data.headers}
+          rows={block.data.rows}
+        />
+      );
+
+    case 'barLineChart':
+      return (
+        <BarLineChart
+          key={key}
+          caption={block.data.caption}
+          variant={block.data.variant}
+          unit={block.data.unit}
+          series={block.data.series}
+          source={block.data.source}
         />
       );
 
