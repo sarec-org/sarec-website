@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
+import { listArticles } from '@/lib/geo/content';
 
 const routes = [
   '/',
@@ -44,7 +45,15 @@ const routes = [
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
 
-  return routes.map((route) => ({
+  // 草稿防泄漏第二道闸:仅 status='published' 的 GEO 文章进 sitemap;草稿天然排除。
+  // 与硬编码列表去重(旗舰文已在上方硬编码),避免重复条目。
+  const publishedGeoRoutes = listArticles({ status: 'published' })
+    .map((a) => `/zh/research/${a.slug}`)
+    .filter((r) => !routes.includes(r));
+
+  const allRoutes = [...routes, ...publishedGeoRoutes];
+
+  return allRoutes.map((route) => ({
     url: `${SITE_URL}${route}`,
     lastModified,
     changeFrequency: route === '/zh/contact/thanks' ? 'yearly' : 'weekly',

@@ -237,7 +237,13 @@ const blocksField = fields.array(
 );
 
 export default config({
-  storage: { kind: 'local' },
+  // GitHub 模式(批次 1)：内容读写走 GitHub App + OAuth，编辑在 cms/ 前缀分支上进行并经 PR 合并。
+  // repo 指向 public 主仓;登录与写权限由 Keystatic GitHub App + 仓库协作者权限强制(无写权限不能提交)。
+  storage: {
+    kind: 'github',
+    repo: { owner: 'sarec-org', name: 'sarec-website' },
+    branchPrefix: 'cms/',
+  },
   ui: {
     brand: { name: 'SAREC GEO CMS' },
   },
