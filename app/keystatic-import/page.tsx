@@ -7,7 +7,7 @@
  * 「创建分支并开 PR」→ 去 Keystatic/PR 检查 → 合并上线。
  * 解析失败会指出第几行;缺 token 时明确提示需老板配置。
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import styles from './import.module.css';
 
 type PreviewResp = {
@@ -54,6 +54,41 @@ export default function ImportPage() {
   const [accessCode, setAccessCode] = useState('');
   const [resp, setResp] = useState<PreviewResp | null>(null);
   const [loading, setLoading] = useState<false | 'preview' | 'create'>(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [fileName, setFileName] = useState('');
+  const [fileError, setFileError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // 读入 .md 文件 → 填入 markdown 框(与粘贴等同)。
+  function loadFile(file: File) {
+    setFileError('');
+    const okName = /\.(md|markdown|txt)$/i.test(file.name);
+    const okType = /text\/(markdown|plain|x-markdown)/.test(file.type);
+    if (!okName && !okType) {
+      setFileError(`只支持 .md / .markdown / .txt 文件(你选的是「${file.name}」)`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setMarkdown(String(reader.result ?? ''));
+      setFileName(file.name);
+      setResp(null);
+      // slug 未填时,用文件名去扩展名做一个建议(仅英文数字连字符)。
+      if (!slug) {
+        const base = file.name.replace(/\.(md|markdown|txt)$/i, '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+        if (base) setSlug(base);
+      }
+    };
+    reader.onerror = () => setFileError('文件读取失败,请重试或改用粘贴。');
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) loadFile(file);
+  }
 
   async function submit(mode: 'preview' | 'create') {
     setLoading(mode);
@@ -83,6 +118,42 @@ export default function ImportPage() {
       </p>
 
       <label className={styles.label}>文章正文(Markdown)</label>
+
+      <div
+        className={`${styles.dropzone} ${dragOver ? styles.dropzoneActive : ''}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        onClick={() => fileRef.current?.click()}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') fileRef.current?.click();
+        }}
+      >
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".md,.markdown,.txt,text/markdown,text/plain"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) loadFile(file);
+            e.target.value = '';
+          }}
+        />
+        <span className={styles.dropIcon}>⬆︎</span>
+        <span>
+          把 <strong>.md 文件</strong>拖到这里,或<strong>点击选择文件</strong>
+          {fileName ? <span className={styles.fileName}>已载入:{fileName}</span> : null}
+        </span>
+        <span className={styles.dropHint}>与粘贴等同 · 支持 .md / .markdown / .txt</span>
+      </div>
+      {fileError ? <div className={styles.error} style={{ marginBottom: '1rem' }}>{fileError}</div> : null}
+
       <textarea
         className={styles.textarea}
         value={markdown}

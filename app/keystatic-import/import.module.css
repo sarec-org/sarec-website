@@ -45,6 +45,57 @@
   line-height: 1.6;
 }
 
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+  padding: 1.25rem 1rem;
+  margin-bottom: 0.9rem;
+  border: 1.5px dashed var(--gold-dim, rgba(198, 168, 101, 0.4));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--ivory-mute, #b7ad97);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dropzone:hover,
+.dropzone:focus-visible {
+  border-color: var(--gold, #c6a865);
+  outline: none;
+}
+
+.dropzoneActive {
+  border-color: var(--gold, #c6a865);
+  background: rgba(198, 168, 101, 0.08);
+}
+
+.dropzone strong {
+  color: var(--gold, #c6a865);
+  font-weight: 600;
+}
+
+.dropIcon {
+  font-size: 1.4rem;
+  color: var(--gold, #c6a865);
+  line-height: 1;
+}
+
+.fileName {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--ivory, #ece6d8);
+  font-size: 0.88rem;
+}
+
+.dropHint {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
 .textarea:focus,
 .input:focus {
   outline: none;
