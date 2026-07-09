@@ -1,0 +1,127 @@
+/* 模板专属区块样式（M2）——对齐 GEO 阅读列宽与 SAREC 令牌 */
+.header {
+  max-width: 1120px;
+  margin: clamp(1.5rem, 4vh, 2.5rem) auto 0;
+  padding: 0 clamp(1.5rem, 5vw, 3rem);
+  display: grid;
+  gap: clamp(1rem, 2.5vh, 1.5rem);
+}
+
+/* 深度:核心判断卡 */
+.tldrCard {
+  border-left: 3px solid var(--gold);
+  background: rgba(198, 168, 101, 0.05);
+  padding: clamp(1rem, 2.5vw, 1.5rem) clamp(1.1rem, 2.5vw, 1.6rem);
+  border-radius: 0 6px 6px 0;
+}
+
+.tldrLabel {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.75em;
+}
+
+.tldrList {
+  margin: 0;
+  padding-left: 1.3em;
+  display: grid;
+  gap: 0.5em;
+}
+
+.tldrList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.02rem, 1.2vw, 1.15rem);
+  line-height: 1.65;
+  color: var(--ivory-warm);
+}
+
+/* 数据追踪:数据周期 + 变化说明 */
+.dataCard {
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
+  padding: clamp(1rem, 2.5vw, 1.4rem);
+}
+
+.dataPeriod {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--gold);
+  margin-bottom: 0.5em;
+}
+
+.changeNote {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.15vw, 1.12rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+/* 快评:一句话结论 + 三段 */
+.briefWrap {
+  display: grid;
+  gap: clamp(1rem, 2.5vh, 1.5rem);
+}
+
+.briefOneLine {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.3rem, 1.1rem + 1vw, 1.7rem);
+  line-height: 1.5;
+  color: var(--ivory);
+  margin: 0;
+  padding-bottom: clamp(0.75rem, 2vh, 1.25rem);
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.briefSection {
+  display: grid;
+  gap: 0.4em;
+}
+
+.briefTag {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.briefSection p {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.02rem, 1.2vw, 1.15rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+/* 深度:判断清单(尾部) */
+.checklist {
+  max-width: 1120px;
+  margin: clamp(2.5rem, 6vh, 4rem) auto 0;
+  padding: clamp(1.5rem, 4vh, 2.25rem) clamp(1.5rem, 5vw, 3rem) 0;
+  border-top: 1px solid var(--gold-dim);
+}
+
+.checklistTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.75rem);
+  color: var(--ivory);
+  margin: 0 0 clamp(1rem, 2.5vh, 1.5rem);
+}
+
+.checklistList {
+  margin: 0;
+  padding-left: 1.4em;
+  display: grid;
+  gap: 0.6em;
+}
+
+.checklistList li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.02rem, 1.2vw, 1.15rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+}

@@ -1,0 +1,225 @@
+.page {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  color: var(--ivory, #ece6d8);
+  font-family: var(--sans, system-ui, sans-serif);
+}
+
+.h1 {
+  font-family: var(--serif-zh, serif);
+  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
+  color: var(--ivory, #ece6d8);
+  margin: 0 0 0.5rem;
+}
+
+.lead {
+  color: var(--ivory-mute, #b7ad97);
+  line-height: 1.7;
+  margin: 0 0 1.75rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--gold, #c6a865);
+  letter-spacing: 0.02em;
+  margin: 0 0 0.4rem;
+}
+
+.textarea,
+.input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--gold-dim, rgba(198, 168, 101, 0.3));
+  border-radius: 6px;
+  color: var(--ivory, #ece6d8);
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.95rem;
+  padding: 0.7rem 0.85rem;
+  box-sizing: border-box;
+}
+
+.textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  text-align: center;
+  padding: 1.25rem 1rem;
+  margin-bottom: 0.9rem;
+  border: 1.5px dashed var(--gold-dim, rgba(198, 168, 101, 0.4));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--ivory-mute, #b7ad97);
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dropzone:hover,
+.dropzone:focus-visible {
+  border-color: var(--gold, #c6a865);
+  outline: none;
+}
+
+.dropzoneActive {
+  border-color: var(--gold, #c6a865);
+  background: rgba(198, 168, 101, 0.08);
+}
+
+.dropzone strong {
+  color: var(--gold, #c6a865);
+  font-weight: 600;
+}
+
+.dropIcon {
+  font-size: 1.4rem;
+  color: var(--gold, #c6a865);
+  line-height: 1;
+}
+
+.fileName {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--ivory, #ece6d8);
+  font-size: 0.88rem;
+}
+
+.dropHint {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
+.textarea:focus,
+.input:focus {
+  outline: none;
+  border-color: var(--gold, #c6a865);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0;
+}
+
+.field {
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 0 2rem;
+}
+
+.btn,
+.btnGhost {
+  padding: 0.7rem 1.4rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: 1px solid var(--gold, #c6a865);
+}
+
+.btn {
+  background: var(--gold, #c6a865);
+  color: #1a1410;
+  font-weight: 600;
+}
+
+.btnGhost {
+  background: transparent;
+  color: var(--gold, #c6a865);
+}
+
+.btn:disabled,
+.btnGhost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  border: 1px solid #d8756b;
+  background: rgba(216, 117, 107, 0.08);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  line-height: 1.7;
+}
+
+.hint {
+  color: var(--ivory-mute, #b7ad97);
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+}
+
+.result {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.success,
+.previewOk {
+  border: 1px solid var(--gold, #c6a865);
+  background: rgba(198, 168, 101, 0.08);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  line-height: 1.6;
+}
+
+.success a {
+  color: var(--gold, #c6a865);
+  margin-left: 0.4rem;
+}
+
+.summary {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.summary > div {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--gold-dim, rgba(198, 168, 101, 0.2));
+}
+
+.summary > div span {
+  color: var(--gold, #c6a865);
+  font-size: 0.85rem;
+}
+
+.warn {
+  border-left: 3px solid var(--gold, #c6a865);
+  padding: 0.5rem 1rem;
+  color: var(--ivory-mute, #b7ad97);
+  font-size: 0.9rem;
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--gold, #c6a865);
+}
+
+.yaml {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--gold-dim, rgba(198, 168, 101, 0.2));
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  max-height: 420px;
+  color: var(--ivory-warm, #d8cfba);
+}

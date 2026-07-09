@@ -28,8 +28,8 @@ const routes = [
   '/zh/research/eb5',
   '/zh/research/framework',
   '/zh/research/investment-pitfalls',
-  // GEO 旗舰文(P1-5,仅 published 入图;草稿与占位页不收录)
-  '/zh/research/chinese-capital-us-real-estate-10-traps',
+  // 注:所有 GEO YAML 文章(含旗舰文)不再硬编码,统一由下方 listArticles 动态收录,
+  // 新发文自动进 sitemap,无需再手改本文件(M6.1)。
   '/zh/contact',
   '/zh/contact/thanks',
   '/zh/membership',

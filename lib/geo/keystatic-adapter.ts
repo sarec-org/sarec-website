@@ -11,7 +11,70 @@
  * ⚠️ 本文件不被任何运行代码 import(Gate 3A-1 不接入前台);仅作为 Gate 3A-2 改 content.ts 的预备件。
  *    不修改 lib/geo/types.ts —— 这里只 import type。
  */
-import type { Article, Block, QaUnit, Media, FAQItem, Author } from './types';
+import type {
+  Article,
+  ArticleTemplate,
+  Block,
+  QaUnit,
+  Media,
+  FAQItem,
+  Author,
+  SourceItem,
+  MetricCard,
+  ChartTableRow,
+  ChartPoint,
+} from './types';
+
+const TEMPLATES: ArticleTemplate[] = ['deep', 'brief', 'data'];
+
+// 还原栏目/模板 + 扁平元字段。
+// 支持两种形状:①Keystatic conditional { discriminant, value };②扁平 { template, tldr, ... }(解析器/兼容)。
+function mapTemplate(raw: any, article: Article): void {
+  let tpl: string | undefined;
+  let v: any = raw; // 元字段默认从顶层读(扁平形状)
+
+  const t = raw.template;
+  if (t && typeof t === 'object' && isFilled(t.discriminant)) {
+    tpl = t.discriminant;
+    v = t.value ?? {};
+  } else if (isFilled(t)) {
+    tpl = t;
+  }
+  if (!tpl || !TEMPLATES.includes(tpl as ArticleTemplate)) return;
+  article.template = tpl as ArticleTemplate;
+
+  const tldr = toStringArray(v.tldr);
+  if (tldr.length) article.tldr = tldr;
+  if (isFilled(v.dataCutoff)) article.dataCutoff = String(v.dataCutoff);
+  if (isFilled(v.dataPeriod)) article.dataPeriod = String(v.dataPeriod);
+  if (isFilled(v.changeNote)) article.changeNote = String(v.changeNote);
+  const checklist = toStringArray(v.judgmentChecklist);
+  if (checklist.length) article.judgmentChecklist = checklist;
+  if (isFilled(v.oneLine)) {
+    article.brief = { oneLine: String(v.oneLine) };
+    if (isFilled(v.background)) article.brief.background = String(v.background);
+    if (isFilled(v.impact)) article.brief.impact = String(v.impact);
+    if (isFilled(v.judgment)) article.brief.judgment = String(v.judgment);
+  } else if (v.brief && typeof v.brief === 'object' && isFilled(v.brief.oneLine)) {
+    // 扁平形状里 brief 作为对象存在
+    article.brief = { oneLine: String(v.brief.oneLine) };
+    if (isFilled(v.brief.background)) article.brief.background = String(v.brief.background);
+    if (isFilled(v.brief.impact)) article.brief.impact = String(v.brief.impact);
+    if (isFilled(v.brief.judgment)) article.brief.judgment = String(v.brief.judgment);
+  }
+}
+
+function mapSourceList(raw: unknown): SourceItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((s) => s && typeof s === 'object' && isFilled((s as any).name))
+    .map((s: any) => {
+      const item: SourceItem = { name: String(s.name) };
+      if (isFilled(s.url)) item.url = String(s.url);
+      if (isFilled(s.accessedAt)) item.accessedAt = String(s.accessedAt);
+      return item;
+    });
+}
 
 type RawBlock = { discriminant?: string; type?: string; value?: any; data?: any };
 type RawConditional = { discriminant?: boolean | string; value?: any };
@@ -118,6 +181,54 @@ function mapBlock(raw: RawBlock, index: number): Block {
         type: 'cta',
         data: { intent: 'risk-review', label: String(v.label ?? ''), sourceSlug: String(v.sourceSlug ?? '') },
       };
+    case 'metricCards': {
+      const items = Array.isArray(v.items)
+        ? v.items.map((it: any) => {
+            const card: MetricCard = {
+              label: String(it?.label ?? ''),
+              value: String(it?.value ?? ''),
+            };
+            if (isFilled(it?.change)) card.change = String(it.change);
+            if (it?.trend === 'up' || it?.trend === 'down' || it?.trend === 'flat') card.trend = it.trend;
+            if (isFilled(it?.note)) card.note = String(it.note);
+            return card;
+          })
+        : [];
+      const data: { title?: string; items: MetricCard[] } = { items };
+      if (isFilled(v.title)) data.title = v.title;
+      return { type: 'metricCards', data };
+    }
+    case 'chartTable': {
+      const headers = toStringArray(v.headers);
+      const rows = Array.isArray(v.rows)
+        ? v.rows.map((r: any) => ({
+            cells: toStringArray(r?.cells),
+            ...(r?.highlight === true || r?.highlight === 'true' ? { highlight: true } : {}),
+          }))
+        : [];
+      const data: { caption?: string; headers: string[]; rows: ChartTableRow[] } = { headers, rows };
+      if (isFilled(v.caption)) data.caption = v.caption;
+      return { type: 'chartTable', data };
+    }
+    case 'barLineChart': {
+      const variant = v.variant === 'line' ? 'line' : 'bar';
+      const series = Array.isArray(v.series)
+        ? v.series
+            .map((p: any) => ({ label: String(p?.label ?? ''), value: Number(p?.value) }))
+            .filter((p: any) => p.label.length > 0 && Number.isFinite(p.value))
+        : [];
+      const data: {
+        caption?: string;
+        variant: 'bar' | 'line';
+        unit?: string;
+        series: ChartPoint[];
+        source?: string;
+      } = { variant, series };
+      if (isFilled(v.caption)) data.caption = v.caption;
+      if (isFilled(v.unit)) data.unit = v.unit;
+      if (isFilled(v.source)) data.source = v.source;
+      return { type: 'barLineChart', data };
+    }
     default:
       throw new Error(`keystatic-adapter: 第 ${index} 个 block 的未知类型「${String(type)}」`);
   }
@@ -149,9 +260,12 @@ export function fromKeystaticArticle(raw: any): Article {
     sources: toStringArray(raw.sources),
   };
 
+  mapTemplate(raw, article);
   if (isFilled(raw.audience)) article.audience = raw.audience;
   if (isFilled(raw.intent)) article.intent = raw.intent;
   if (isFilled(raw.updatedAt)) article.updatedAt = raw.updatedAt;
+  const sourceList = mapSourceList(raw.sourceList);
+  if (sourceList.length > 0) article.sourceList = sourceList;
   if (Array.isArray(raw.faq) && raw.faq.length > 0) article.faq = raw.faq.map(mapFaq);
   if (Array.isArray(raw.relatedSlugs) && raw.relatedSlugs.length > 0) {
     article.relatedSlugs = toStringArray(raw.relatedSlugs);

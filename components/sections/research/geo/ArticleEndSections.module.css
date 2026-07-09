@@ -1,0 +1,114 @@
+/**
+ * 文章尾部区块样式（相关阅读 / 数据来源）——对齐 GEO 阅读列基线。
+ * 宽度 / padding 与 GeoArticleRenderer.module.css 的 .reading 一致，左右缘对齐。
+ */
+.block {
+  max-width: 1120px;
+  margin: clamp(2.5rem, 6vh, 4rem) auto 0 auto;
+  padding: clamp(1.5rem, 4vh, 2.25rem) clamp(1.5rem, 5vw, 3rem) 0;
+  border-top: 1px solid var(--gold-dim);
+  text-align: left;
+}
+
+.blockTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.75rem);
+  line-height: 1.3;
+  color: var(--ivory);
+  margin: 0 0 clamp(1rem, 2.5vh, 1.5rem) 0;
+}
+
+/* ── 相关阅读 ── */
+.relatedList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: clamp(0.75rem, 2vh, 1.25rem);
+}
+
+.relatedItem {
+  margin: 0;
+}
+
+.relatedLink {
+  display: block;
+  padding: clamp(0.9rem, 2vh, 1.25rem) clamp(1rem, 2vw, 1.4rem);
+  border: 1px solid var(--line-soft, rgba(198, 168, 101, 0.22));
+  border-radius: 6px;
+  text-decoration: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.relatedLink:hover {
+  border-color: var(--gold);
+  background-color: rgba(198, 168, 101, 0.05);
+}
+
+.relatedTitle {
+  display: block;
+  font-family: var(--serif-zh);
+  font-size: clamp(1.05rem, 1.3vw, 1.2rem);
+  line-height: 1.4;
+  color: var(--ivory);
+  margin-bottom: 0.4em;
+}
+
+.relatedDesc {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+}
+
+/* ── 数据来源 ── */
+.sourceList {
+  margin: 0;
+  padding-left: 1.5em;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sourceItem {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+}
+
+.sourceName {
+  color: var(--ivory-warm);
+}
+
+a.sourceName {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+a.sourceName:hover {
+  text-decoration: underline;
+}
+
+.sourceMeta {
+  margin-left: 0.6em;
+  font-size: 0.85rem;
+  color: var(--ivory-mute);
+}
+
+/* ── 免责声明 —— 与正文栏同宽同边距，不贴浏览器边缘 ── */
+.disclaimer {
+  max-width: 1120px;
+  margin: clamp(2.5rem, 6vh, 4rem) auto 0 auto;
+  padding: clamp(1.5rem, 4vh, 2.25rem) clamp(1.5rem, 5vw, 3rem) 0;
+  border-top: 1px solid var(--gold-dim);
+  text-align: left;
+}
+
+.disclaimer p {
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0;
+}

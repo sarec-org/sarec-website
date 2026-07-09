@@ -42,6 +42,9 @@ const blocksField = fields.array(
         { label: '案例引用', value: 'caseRef' },
         { label: '图片 / 媒体块', value: 'assetBreak' },
         { label: '行动按钮', value: 'cta' },
+        { label: '指标卡（大数字）', value: 'metricCards' },
+        { label: '对比 / 数据表（多列）', value: 'chartTable' },
+        { label: '柱状 / 折线图', value: 'barLineChart' },
       ],
       defaultValue: 'prose',
     }),
@@ -139,7 +142,11 @@ const blocksField = fields.array(
         }),
         src: fields.text({ label: '媒体链接 URL', description: '粘贴 CDN / R2 图片或视频链接（本 PoC 不支持上传）。' }),
         poster: fields.text({ label: 'Poster 封面 URL（可选）' }),
-        alt: fields.text({ label: '替代文本 alt', description: '图片的文字描述，利于无障碍与 SEO。' }),
+        alt: fields.text({
+          label: '替代文本 alt',
+          description: '图片的文字描述，利于无障碍与 SEO。必填。',
+          validation: { isRequired: true },
+        }),
         eyebrow: fields.text({ label: 'Eyebrow 小字（可选）' }),
         title: fields.text({ label: '标题（可选）' }),
         body: fields.text({ label: '说明文字（可选）', multiline: true }),
@@ -153,6 +160,76 @@ const blocksField = fields.array(
         label: fields.text({ label: '按钮文字', validation: { isRequired: true } }),
         sourceSlug: fields.text({ label: '来源标记', description: '用于统计该按钮来自哪篇文章。', validation: { isRequired: true } }),
       }),
+      // ── M4 图表块 ────────────────────────────────────────────────
+      metricCards: fields.object(
+        {
+          title: fields.text({ label: '小标题（可选）' }),
+          items: fields.array(
+            fields.object({
+              label: fields.text({ label: '指标名', validation: { isRequired: true } }),
+              value: fields.text({ label: '大数字（含单位/符号，如 +0.8%）', validation: { isRequired: true } }),
+              change: fields.text({ label: '同比 / 环比（可选，如 同比 +0.7%）' }),
+              trend: fields.select({
+                label: '涨跌方向',
+                options: [
+                  { label: '— 中性', value: 'flat' },
+                  { label: '▲ 上升', value: 'up' },
+                  { label: '▼ 下降', value: 'down' },
+                ],
+                defaultValue: 'flat',
+              }),
+              note: fields.text({ label: '注释（可选）' }),
+            }),
+            { label: '指标卡', description: '一行若干个大数字指标。', itemLabel: (p) => p.fields.label.value }
+          ),
+        },
+        { description: '一组大数字指标卡（数据追踪栏目的核心指标）。' }
+      ),
+      chartTable: fields.object(
+        {
+          caption: fields.text({ label: '表标题（可选）' }),
+          headers: fields.array(fields.text({ label: '列头' }), {
+            label: '表头',
+            description: '每列一个列头；支持任意列数（超越两列旧数据表）。',
+            itemLabel: (p) => p.value,
+          }),
+          rows: fields.array(
+            fields.object({
+              cells: fields.array(fields.text({ label: '单元格' }), {
+                label: '本行各列',
+                description: '按表头顺序逐列填写。',
+                itemLabel: (p) => p.value,
+              }),
+              highlight: fields.checkbox({ label: '高亮此行', defaultValue: false }),
+            }),
+            { label: '数据行' }
+          ),
+        },
+        { description: '带表头的多列对比表，可高亮重点行。' }
+      ),
+      barLineChart: fields.object(
+        {
+          caption: fields.text({ label: '图标题（可选）' }),
+          variant: fields.select({
+            label: '图形态',
+            options: [
+              { label: '柱状图', value: 'bar' },
+              { label: '折线图', value: 'line' },
+            ],
+            defaultValue: 'bar',
+          }),
+          unit: fields.text({ label: '数值单位（可选，如 %）' }),
+          series: fields.array(
+            fields.object({
+              label: fields.text({ label: '横轴标签', validation: { isRequired: true } }),
+              value: fields.text({ label: '数值（可含负号/小数）', validation: { isRequired: true } }),
+            }),
+            { label: '数据点', itemLabel: (p) => p.fields.label.value }
+          ),
+          source: fields.text({ label: '来源（可选）' }),
+        },
+        { description: '同一组数据两种形态：柱状或折线。' }
+      ),
     }
   ),
   {
@@ -172,6 +249,9 @@ const blocksField = fields.array(
         caseRef: '案例引用',
         assetBreak: '图片 / 媒体块',
         cta: '行动按钮',
+        metricCards: '指标卡',
+        chartTable: '对比 / 数据表',
+        barLineChart: '柱状 / 折线图',
       };
       // 安全截断：仅处理 string，trim，最多约 24 个字，超长加 …，空值返回 ''。
       const cut = (s: unknown): string => {
@@ -224,6 +304,14 @@ const blocksField = fields.array(
             break;
           case 'assetBreak':
             summary = read('title') || read('alt') || read('src');
+            break;
+          case 'chartTable':
+          case 'barLineChart':
+            // 仅取已验证的标量 caption;无 caption 则只显示类型。
+            summary = read('caption');
+            break;
+          case 'metricCards':
+            summary = read('title');
             break;
           default:
             summary = '';
@@ -287,6 +375,50 @@ export default config({
           ],
           defaultValue: 'pillar',
         }),
+        // ── 栏目 / 模板（M2）—— 三选一，选后展开该栏目专属字段（字段结构定死，员工填空）。──
+        // 序列化为 { discriminant, value }；adapter 还原为 Article.template + 扁平元字段。
+        template: fields.conditional(
+          fields.select({
+            label: '栏目 / 模板',
+            description: '深度=长研究（数据+判断+FAQ）；快评=单一事件快速判断；数据追踪=数据周期+指标。',
+            options: [
+              { label: 'SAREC 深度', value: 'deep' },
+              { label: 'SAREC 快评', value: 'brief' },
+              { label: 'SAREC 数据追踪', value: 'data' },
+            ],
+            defaultValue: 'deep',
+          }),
+          {
+            deep: fields.object({
+              tldr: fields.array(fields.text({ label: 'TL;DR / 核心判断要点' }), {
+                label: 'TL;DR / 核心判断',
+                description: '开篇最重要的几条判断，每行一条。',
+                itemLabel: (p) => p.value,
+              }),
+              dataCutoff: fields.text({ label: '数据截止日', description: '格式 YYYY-MM-DD。' }),
+              judgmentChecklist: fields.array(fields.text({ label: '清单项' }), {
+                label: 'SAREC 判断清单',
+                description: '文末给读者的自检清单，每行一条（可留空）。',
+                itemLabel: (p) => p.value,
+              }),
+            }),
+            brief: fields.object({
+              oneLine: fields.text({ label: '一句话结论', validation: { isRequired: true } }),
+              background: fields.text({ label: '背景', multiline: true }),
+              impact: fields.text({ label: '影响', multiline: true }),
+              judgment: fields.text({ label: 'SAREC 判断', multiline: true }),
+            }),
+            data: fields.object({
+              dataPeriod: fields.text({
+                label: '数据周期',
+                description: '如 2026 年 6 月 / 2026Q2。',
+                validation: { isRequired: true },
+              }),
+              dataCutoff: fields.text({ label: '数据截止日', description: '格式 YYYY-MM-DD。' }),
+              changeNote: fields.text({ label: '变化说明', multiline: true }),
+            }),
+          }
+        ),
         status: fields.select({
           label: '状态',
           description: '草稿=不公开、不进网站地图（sitemap）；发布=公开显示、进入网站地图。不确认前请保持草稿。',
@@ -341,9 +473,21 @@ export default config({
             '文中引用的权威来源编号（如 src-uscis-eb5-i526e）。目前先按已有 ID 填写，后续会单独优化为更友好的选择方式。',
           itemLabel: (p) => p.value,
         }),
+        sourceList: fields.array(
+          fields.object({
+            name: fields.text({ label: '来源名称', validation: { isRequired: true } }),
+            url: fields.text({ label: '链接 URL（可选）', description: '权威来源原文链接，前台可点击。' }),
+            accessedAt: fields.text({ label: '抓取日期（可选）', description: '格式 YYYY-MM-DD。' }),
+          }),
+          {
+            label: '数据来源（自由文本）',
+            description: '文末「数据来源」区逐条显示；适合无预置 ID 的一般来源。含链接与抓取日期。',
+            itemLabel: (p) => p.fields.name.value,
+          }
+        ),
         relatedSlugs: fields.array(fields.text({ label: '相关文章 slug' }), {
           label: '相关文章（可选）',
-          description: '填写相关文章的 slug。',
+          description: '填写相关文章的 slug；文末自动渲染「相关阅读」（标题+摘要+链接）。',
           itemLabel: (p) => p.value,
         }),
         // 文章级 CTA / heroMedia 为可选对象：用 checkbox 判别「是否启用」，未启用 → empty。
@@ -377,7 +521,7 @@ export default config({
               }),
               src: fields.text({ label: '媒体链接 URL' }),
               poster: fields.text({ label: 'Poster 封面 URL（可选）' }),
-              alt: fields.text({ label: '替代文本 alt' }),
+              alt: fields.text({ label: '替代文本 alt', validation: { isRequired: true } }),
             }),
           }
         ),
