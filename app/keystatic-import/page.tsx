@@ -200,13 +200,13 @@ export default function ImportPage() {
           </select>
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>访问码(如已配置)</label>
+          <label className={styles.label}>访问码(必填)</label>
           <input
             className={styles.input}
             value={accessCode}
             onChange={(e) => setAccessCode(e.target.value)}
             type="password"
-            placeholder="可留空"
+            placeholder="必填"
           />
         </div>
       </div>

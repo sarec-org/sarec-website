@@ -36,6 +36,14 @@ export function RelatedReading(props: { items: RelatedArticleCard[] }): ReactEle
   );
 }
 
+export function Disclaimer(props: { text: string }): ReactElement {
+  return (
+    <section className={styles.disclaimer} aria-label="免责声明">
+      <p>{props.text}</p>
+    </section>
+  );
+}
+
 export function SourcesSection(props: { items: SourceItem[] }): ReactElement | null {
   if (!props.items.length) return null;
   return (

@@ -11,6 +11,7 @@ import { GeoArticleRenderer } from '@/components/sections/research/geo/GeoArticl
 import {
   RelatedReading,
   SourcesSection,
+  Disclaimer,
   type RelatedArticleCard
 } from '@/components/sections/research/geo/ArticleEndSections';
 import type { SourceItem } from '@/lib/geo/types';
@@ -132,9 +133,7 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
       <SourcesSection items={sourceItems} />
       <RelatedReading items={relatedItems} />
 
-      <section aria-label="免责声明">
-        <p>{DISCLAIMER}</p>
-      </section>
+      <Disclaimer text={DISCLAIMER} />
     </main>
   );
 }
