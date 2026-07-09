@@ -35,12 +35,17 @@ export function generateMetadata({ params }: { params: Params }): Metadata {
   if (!article || article.status !== 'published') {
     return {};
   }
-  return createPageMetadata({
+  const meta = createPageMetadata({
     title: article.title,
     description: article.description,
     path: `/zh/research/${article.slug}`,
     type: 'article'
   });
+  // 移除默认 OG 图,交由同目录 opengraph-image.tsx 自动生成品牌封面(M5);
+  // twitter 同理走生成图。避免默认图与生成图冲突。
+  if (meta.openGraph) delete (meta.openGraph as { images?: unknown }).images;
+  if (meta.twitter) delete (meta.twitter as { images?: unknown }).images;
+  return meta;
 }
 
 const DISCLAIMER =
