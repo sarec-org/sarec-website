@@ -51,3 +51,4 @@ _handoff_to_claude/
 /_recon_reports/
 /docs/
 .vercel
+# batch-0 deploy probe 2026-07-08 (real-diff to verify Vercel auto-deploy on push)
