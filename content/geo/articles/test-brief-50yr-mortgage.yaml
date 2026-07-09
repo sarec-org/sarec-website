@@ -1,0 +1,49 @@
+slug: test-brief-50yr-mortgage
+locale: zh
+cluster: chinese-capital-us-re-risk
+tier: pillar
+template:
+  discriminant: brief
+  value:
+    oneLine: 50 年期房贷即便落地,也降月供不降总价,难改这轮"以时间换空间"的重置节奏。
+    background: ""
+    impact: ""
+    judgment: ""
+status: published
+title: 特朗普政府放风 50 年期房贷:能救楼市吗?
+description: 特朗普政府放风 50 年期房贷:能救楼市吗?
+author:
+  name: 东哥
+  title: SAREC 中美房地产商会创始人
+publishedAt: 2026-07-08
+summary: []
+blocks:
+  - discriminant: prose
+    value:
+      md: 现任政府近期放风"史上最激进住房改革",其中 50 年期房贷最受关注。市场普遍把它读作"救市信号"。
+  - discriminant: sectionHeading
+    value:
+      text: 背景
+  - discriminant: prose
+    value:
+      md: 美国主流房贷为 30 年期固定。拉长到 50 年,理论上摊薄月供、提升名义购买力,但利息总额大增、净值累积极慢。
+  - discriminant: sectionHeading
+    value:
+      text: 影响
+  - discriminant: prose
+    value:
+      md: TD Cowen 等机构分析师直言,2026 年内落地空间有限;即便推出,也主要作用于月供端,对**总价**与**库存**几乎无直接影响。
+  - discriminant: sectionHeading
+    value:
+      text: SAREC 判断
+  - discriminant: prose
+    value:
+      md: 盯长端利率,不盯口号。50 年期房贷是需求端的边际工具,改变不了供给洪峰、持有成本、融资成本三重压力主导的重置逻辑。
+faq: []
+sourceList: []
+sources: []
+relatedSlugs: []
+cta:
+  discriminant: false
+heroMedia:
+  discriminant: false
