@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="抽象市场波动面积图">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1a2b"/>
+      <stop offset="1" stop-color="#0a1320"/>
+    </linearGradient>
+    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c6a865" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#c6a865" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <path d="M100 620 C 300 480 420 700 620 560 C 820 420 940 640 1140 500 C 1300 390 1400 470 1500 420 L1500 780 L100 780 Z" fill="url(#fill)"/>
+  <path d="M100 620 C 300 480 420 700 620 560 C 820 420 940 640 1140 500 C 1300 390 1400 470 1500 420" fill="none" stroke="#c6a865" stroke-width="3" opacity="0.9"/>
+  <line x1="100" y1="780" x2="1500" y2="780" stroke="#c6a865" stroke-width="1.5" opacity="0.55"/>
+  <g stroke="#c6a865" stroke-width="1" opacity="0.15">
+    <line x1="100" y1="620" x2="1500" y2="620"/>
+    <line x1="100" y1="460" x2="1500" y2="460"/>
+    <line x1="100" y1="300" x2="1500" y2="300"/>
+  </g>
+</svg>

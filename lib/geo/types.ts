@@ -21,6 +21,12 @@ export type Tier = 'pillar' | 'satellite' | 'note';
 // 老文章无 template 字段时，accessor / 渲染层按 'deep' 兜底（一次性映射，见 lib/geo/labels.ts）。
 export type ArticleTemplate = 'deep' | 'brief' | 'data';
 
+// 版式（M3；批次 3）—— 只影响渲染层，内容字段结构不变。
+// classic = 经典版（现状样式）；report = 报告版（侧边目录/章节导航，长文）；
+// compact = 简报版（TL;DR 置顶卡片 + 数据前置 + 紧凑排版）。
+// 老文章无 layout 字段时按 'classic' 兜底。
+export type ArticleLayout = 'classic' | 'report' | 'compact';
+
 // 前台「数据来源」区的一条来源（M3.4）。
 // 与 sources:string[]（引用已注册 Source ID）并存：sourceList 用于 markdown 导入的自由文本来源，
 // 含 URL 与抓取日期，可选接入 Schema citation。
@@ -106,7 +112,11 @@ export type Block =
   | { type: 'callout'; data: { tone: 'risk' | 'note' | 'legal'; md: string } }
   | { type: 'qaUnit'; data: QaUnit }
   | { type: 'caseRef'; data: { caseSlug: string } }
-  | { type: 'assetBreak'; data: Media & { eyebrow?: string; title?: string; body?: string } }
+  // generated：内部标记（前台不展示，后台可查）——'illustration'=SAREC 品牌插画库；'ai'=AI 生成插画（M2）。
+  | {
+      type: 'assetBreak';
+      data: Media & { eyebrow?: string; title?: string; body?: string; generated?: 'illustration' | 'ai' };
+    }
   | { type: 'cta'; data: CTAConfig }
   | { type: 'metricCards'; data: { title?: string; items: MetricCard[] } }
   | { type: 'chartTable'; data: { caption?: string; headers: string[]; rows: ChartTableRow[] } }
@@ -121,6 +131,7 @@ export type Article = {
   cluster: ClusterId;
   tier: Tier;
   template?: ArticleTemplate; // 栏目 / 模板；缺省按 'deep' 兜底
+  layout?: ArticleLayout; // 版式（M3）；缺省按 'classic' 兜底，只影响渲染层
   status: 'draft' | 'published';
   title: string;
   description: string;

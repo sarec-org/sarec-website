@@ -13,6 +13,7 @@
  *   **发布日期:… | 数据截至:…**      → publishedAt / dataCutoff
  *   ## 小节 / ### 子标题             → sectionHeading
  *   | 多列表 |（含 |---| 分隔）      → chartTable
+ *   ![alt](图片链接)                 → assetBreak(image)；alt 必填(GEO)；远程 URL 保留引用不代扒
  *   整行 **加粗**                    → pullQuote
  *   ## 常见问题 + ### 问             → faq[]
  *   ## 数据来源                      → sourceList[]
@@ -53,6 +54,17 @@ const isHr = (s: string) => /^-{3,}$/.test(s.trim());
 const isFullyBold = (s: string) => /^\*\*[^*]+\*\*$/.test(s.trim());
 const isTableRow = (s: string) => /^\s*\|.*\|\s*$/.test(s);
 const isTableSep = (s: string) => /^\s*\|[\s:|-]+\|\s*$/.test(s) && s.includes('-');
+// 整行图片：![alt](src)。alt 可为空串(此处只判形状，alt 必填在解析时校验并报行号)。
+const IMAGE_LINE_RE = /^!\[([^\]]*)\]\(\s*([^)\s]+)\s*\)\s*$/;
+const isImageLine = (s: string) => IMAGE_LINE_RE.test(s.trim());
+
+// 按图片路径自动打「配图来源」内部标记(前台不展示,后台可查)：
+//   /illustrations/ → SAREC 品牌插画；/images/research/ai/ → AI 生成插画；其余不标记。
+function imageMarker(src: string): 'illustration' | 'ai' | undefined {
+  if (src.startsWith('/illustrations/')) return 'illustration';
+  if (src.startsWith('/images/research/ai/')) return 'ai';
+  return undefined;
+}
 
 function splitRow(line: string): string[] {
   const t = line.trim().replace(/^\|/, '').replace(/\|$/, '');
@@ -251,6 +263,21 @@ export function parseArticleMarkdown(md: string): ParsedArticle {
       blocks.push({ discriminant: 'sectionHeading', value: { text: raw.replace(/^##\s+/, '').trim() } });
       i++; continue;
     }
+    if (isImageLine(raw)) {
+      endPara(); flushProse();
+      const m = raw.trim().match(IMAGE_LINE_RE)!;
+      const alt = m[1].trim();
+      const src = m[2].trim();
+      if (!alt) {
+        throw new ImportError('图片缺少 alt 描述文字(GEO 要求必填)：写成 ![一句话描述](图片链接)', lineNo());
+      }
+      const marker = imageMarker(src);
+      blocks.push({
+        discriminant: 'assetBreak',
+        value: { kind: 'image', src, alt, ...(marker ? { generated: marker } : {}) },
+      });
+      i++; continue;
+    }
     if (isTableRow(raw) && i + 1 < lines.length && isTableSep(lines[i + 1])) {
       endPara(); flushProse();
       blocks.push(parseTable());
@@ -290,6 +317,7 @@ export type EntryMeta = {
   slug: string;
   cluster: string;
   template: 'deep' | 'brief' | 'data';
+  layout?: 'classic' | 'report' | 'compact';
   tier?: 'pillar' | 'satellite' | 'note';
   locale?: 'zh' | 'en';
   status?: 'draft' | 'published';
@@ -327,6 +355,7 @@ export function toKeystaticEntry(parsed: ParsedArticle, meta: EntryMeta): Record
     cluster: meta.cluster,
     tier: meta.tier ?? 'pillar',
     template: templateField,
+    layout: meta.layout ?? 'classic',
     status: meta.status ?? 'draft',
     title: parsed.title,
     description: parsed.description,

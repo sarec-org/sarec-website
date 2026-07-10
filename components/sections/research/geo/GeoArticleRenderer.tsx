@@ -34,7 +34,7 @@ function ctaHref(sourceSlug: string): string {
   return `/zh/contact?intent=risk-review&from=${encodeURIComponent(sourceSlug)}`;
 }
 
-function renderBlock(block: Block, index: number): ReactNode {
+function renderBlock(block: Block, index: number, headingIds?: Record<number, string>): ReactNode {
   const key = `block-${index}`;
 
   switch (block.type) {
@@ -49,7 +49,7 @@ function renderBlock(block: Block, index: number): ReactNode {
 
     case 'sectionHeading':
       return (
-        <h2 key={key} id={block.data.id} className={styles.heading}>
+        <h2 key={key} id={block.data.id ?? headingIds?.[index]} className={styles.heading}>
           {block.data.text}
         </h2>
       );
@@ -209,8 +209,38 @@ function renderBlock(block: Block, index: number): ReactNode {
   }
 }
 
+// 章节目录项(报告版侧边导航用)。
+type TocEntry = { id: string; text: string };
+
+// 报告版侧边目录 —— 桌面 sticky 侧栏 + 移动端可折叠 <details>(纯 CSS 响应,无 JS)。
+function TableOfContents({ entries }: { entries: TocEntry[] }): ReactElement | null {
+  if (entries.length === 0) return null;
+  const list = (
+    <ol className={styles.tocList}>
+      {entries.map((e) => (
+        <li key={e.id}>
+          <a href={`#${e.id}`}>{e.text}</a>
+        </li>
+      ))}
+    </ol>
+  );
+  return (
+    <>
+      <aside className={styles.tocDesktop} aria-label="本文目录">
+        <div className={styles.tocLabel}>目录</div>
+        {list}
+      </aside>
+      <details className={styles.tocMobile}>
+        <summary>本文目录（{entries.length} 节）</summary>
+        {list}
+      </details>
+    </>
+  );
+}
+
 export function GeoArticleRenderer(props: { article: Article }): ReactElement {
   const { article } = props;
+  const layout = article.layout ?? 'classic';
 
   // 有实际 hero media 才用 ArticleHero 的左右分栏;否则用居中 hero,避免右侧空黑块。
   const heroImage = article.heroMedia?.kind === 'image' ? article.heroMedia.src : undefined;
@@ -223,48 +253,116 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
   // 前台头部 eyebrow 显示栏目中文名（M3.1），不再暴露 cluster 机器串。
   const eyebrow = columnLabel(article);
 
+  // 为每个小标题分配稳定锚点 id(报告版目录与正文一一对应;不改内容,仅渲染层)。
+  const headingIds: Record<number, string> = {};
+  const tocEntries: TocEntry[] = [];
+  article.blocks.forEach((b, i) => {
+    if (b.type === 'sectionHeading') {
+      const id = b.data.id || `sec-${i}`;
+      headingIds[i] = id;
+      tocEntries.push({ id, text: b.data.text });
+    }
+  });
+
+  // 简报版「数据前置」:把第一个数据块(指标卡 / 多列数据表 / 数据表)提到速览之后,正文其余照旧。
+  const hoistIndex =
+    layout === 'compact'
+      ? article.blocks.findIndex(
+          (b) => b.type === 'metricCards' || b.type === 'chartTable' || b.type === 'dataTable'
+        )
+      : -1;
+
+  const hero = hasHeroMedia ? (
+    <ArticleHero
+      eyebrow={eyebrow}
+      title={article.title}
+      summary={article.summary.join(' ')}
+      author={{
+        name: article.author.name,
+        ...(article.author.title ? { title: article.author.title } : {})
+      }}
+      dates={{
+        published: article.publishedAt,
+        ...(article.updatedAt ? { modified: article.updatedAt } : {})
+      }}
+      {...(heroImage ? { heroImage } : {})}
+      {...(heroVideo ? { heroVideo } : {})}
+    />
+  ) : (
+    <header className={styles.centeredHero}>
+      <p className={styles.centeredEyebrow}>{eyebrow}</p>
+      <h1 className={styles.centeredTitle}>{article.title}</h1>
+      <p className={styles.centeredSummary}>{article.summary.join(' ')}</p>
+      <div className={styles.centeredByline}>
+        <span>
+          作者
+          <span className={styles.bylineName}>{article.author.name}</span>
+          {article.author.title ? (
+            <span className={styles.bylineTitle}>{article.author.title}</span>
+          ) : null}
+        </span>
+        <span>
+          <time dateTime={article.publishedAt}>发布 {article.publishedAt}</time>
+          {article.updatedAt ? (
+            <time dateTime={article.updatedAt}> · 更新 {article.updatedAt}</time>
+          ) : null}
+        </span>
+      </div>
+    </header>
+  );
+
+  const body = article.blocks.map((block, index) =>
+    index === hoistIndex ? null : renderBlock(block, index, headingIds)
+  );
+
+  // ── 报告版:hero 全宽 + 侧边目录 / 正文两栏 ──────────────────────────
+  if (layout === 'report') {
+    return (
+      <article className={`${styles.article} ${styles.report}`}>
+        {hero}
+        <div className={styles.reportGrid}>
+          <TableOfContents entries={tocEntries} />
+          <div className={styles.reportMain}>
+            <TemplateHeader article={article} />
+            {body}
+            <TemplateFooter article={article} />
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  // ── 简报版:TL;DR 置顶卡 + 数据前置 + 紧凑排版 ─────────────────────
+  if (layout === 'compact') {
+    const digest = article.tldr && article.tldr.length > 0 ? article.tldr : article.summary;
+    return (
+      <article className={`${styles.article} ${styles.compact}`}>
+        {hero}
+        {digest.length > 0 ? (
+          <section className={styles.compactDigest} aria-label="速览">
+            <div className={styles.compactDigestLabel}>速览</div>
+            <ul>
+              {digest.map((d, i) => (
+                <li key={i}>{renderInline(d, `dg-${i}`)}</li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        {hoistIndex >= 0 ? renderBlock(article.blocks[hoistIndex], hoistIndex, headingIds) : null}
+        {/* 简报版不重复顶部 TL;DR(已由速览卡承担),仅保留快评/数据追踪的模板卡 */}
+        <TemplateHeader article={article} suppressTldr />
+        {body}
+        <TemplateFooter article={article} />
+      </article>
+    );
+  }
+
+  // ── 经典版(默认,老文章走此路,行为不变)─────────────────────────
   return (
     <article className={styles.article}>
-      {hasHeroMedia ? (
-        <ArticleHero
-          eyebrow={eyebrow}
-          title={article.title}
-          summary={article.summary.join(' ')}
-          author={{
-            name: article.author.name,
-            ...(article.author.title ? { title: article.author.title } : {})
-          }}
-          dates={{
-            published: article.publishedAt,
-            ...(article.updatedAt ? { modified: article.updatedAt } : {})
-          }}
-          {...(heroImage ? { heroImage } : {})}
-          {...(heroVideo ? { heroVideo } : {})}
-        />
-      ) : (
-        <header className={styles.centeredHero}>
-          <p className={styles.centeredEyebrow}>{eyebrow}</p>
-          <h1 className={styles.centeredTitle}>{article.title}</h1>
-          <p className={styles.centeredSummary}>{article.summary.join(' ')}</p>
-          <div className={styles.centeredByline}>
-            <span>
-              作者
-              <span className={styles.bylineName}>{article.author.name}</span>
-              {article.author.title ? (
-                <span className={styles.bylineTitle}>{article.author.title}</span>
-              ) : null}
-            </span>
-            <span>
-              <time dateTime={article.publishedAt}>发布 {article.publishedAt}</time>
-              {article.updatedAt ? (
-                <time dateTime={article.updatedAt}> · 更新 {article.updatedAt}</time>
-              ) : null}
-            </span>
-          </div>
-        </header>
-      )}
+      {hero}
       <TemplateHeader article={article} />
-      {article.blocks.map((block, index) => renderBlock(block, index))}
+      {article.blocks.map((block, index) => renderBlock(block, index, headingIds))}
       <TemplateFooter article={article} />
     </article>
   );
