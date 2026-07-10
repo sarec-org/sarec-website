@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="抽象文件与条款">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1a2b"/>
+      <stop offset="1" stop-color="#0a1320"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g fill="none" stroke="#c6a865" stroke-width="2" opacity="0.8">
+    <path d="M560 170 h360 l120 120 v440 h-480 z"/>
+    <path d="M920 170 v120 h120"/>
+  </g>
+  <g stroke="#c6a865" stroke-width="2" opacity="0.35" stroke-linecap="round">
+    <line x1="620" y1="360" x2="980" y2="360"/>
+    <line x1="620" y1="420" x2="980" y2="420"/>
+    <line x1="620" y1="480" x2="900" y2="480"/>
+    <line x1="620" y1="540" x2="980" y2="540"/>
+    <line x1="620" y1="600" x2="820" y2="600"/>
+  </g>
+  <circle cx="1090" cy="640" r="70" fill="none" stroke="#c6a865" stroke-width="2" opacity="0.6"/>
+  <path d="M1055 640 l25 25 l45 -55" fill="none" stroke="#c6a865" stroke-width="3" opacity="0.85"/>
+</svg>

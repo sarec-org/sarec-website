@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-label="抽象数据网格与折线">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1a2b"/>
+      <stop offset="1" stop-color="#0a1320"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <g stroke="#c6a865" stroke-width="1" opacity="0.18">
+    <line x1="200" y1="150" x2="200" y2="750"/><line x1="400" y1="150" x2="400" y2="750"/>
+    <line x1="600" y1="150" x2="600" y2="750"/><line x1="800" y1="150" x2="800" y2="750"/>
+    <line x1="1000" y1="150" x2="1000" y2="750"/><line x1="1200" y1="150" x2="1200" y2="750"/>
+    <line x1="1400" y1="150" x2="1400" y2="750"/>
+    <line x1="150" y1="250" x2="1450" y2="250"/><line x1="150" y1="400" x2="1450" y2="400"/>
+    <line x1="150" y1="550" x2="1450" y2="550"/><line x1="150" y1="700" x2="1450" y2="700"/>
+  </g>
+  <polyline points="200,620 400,540 600,570 800,420 1000,460 1200,300 1400,340" fill="none" stroke="#c6a865" stroke-width="3" opacity="0.9"/>
+  <g fill="#c6a865">
+    <circle cx="200" cy="620" r="6"/><circle cx="400" cy="540" r="6"/><circle cx="600" cy="570" r="6"/>
+    <circle cx="800" cy="420" r="6"/><circle cx="1000" cy="460" r="6"/><circle cx="1200" cy="300" r="6"/>
+    <circle cx="1400" cy="340" r="6"/>
+  </g>
+</svg>

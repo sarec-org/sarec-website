@@ -140,7 +140,15 @@ const blocksField = fields.array(
           ],
           defaultValue: 'image',
         }),
-        src: fields.text({ label: '媒体链接 URL', description: '粘贴 CDN / R2 图片或视频链接（本 PoC 不支持上传）。' }),
+        // M1（批次 3）：本地图片直传。拖拽 / 选择文件后由 Keystatic 提交进仓库。
+        // 二选一：优先「上传图片」；未上传时才用「媒体链接 URL」（贴 CDN / R2 / 远程图 / 视频链接）。
+        upload: fields.image({
+          label: '上传本地图片（拖拽 / 选择文件）',
+          description: '直接从电脑拖图或选文件上传；上传后无需再填「媒体链接 URL」。视频仍用下方 URL。',
+          directory: 'public/images/research/uploads',
+          publicPath: '/images/research/uploads',
+        }),
+        src: fields.text({ label: '媒体链接 URL（未上传时用）', description: '未上传本地图片时，粘贴 CDN / R2 图片或视频链接。' }),
         poster: fields.text({ label: 'Poster 封面 URL（可选）' }),
         alt: fields.text({
           label: '替代文本 alt',
@@ -150,6 +158,17 @@ const blocksField = fields.array(
         eyebrow: fields.text({ label: 'Eyebrow 小字（可选）' }),
         title: fields.text({ label: '标题（可选）' }),
         body: fields.text({ label: '说明文字（可选）', multiline: true }),
+        // 内部标记（前台不展示，后台可查）：标注配图来源，便于合规审计（M2）。
+        generated: fields.select({
+          label: '配图来源标记（内部，前台不展示）',
+          description: '普通=真实/自摄/授权图；品牌插画=SAREC 内置插画库；AI 插画=AI 生成的抽象插画。',
+          options: [
+            { label: '普通（默认）', value: 'none' },
+            { label: 'SAREC 品牌插画', value: 'illustration' },
+            { label: 'AI 生成插画', value: 'ai' },
+          ],
+          defaultValue: 'none',
+        }),
       }),
       cta: fields.object({
         intent: fields.select({
@@ -419,6 +438,18 @@ export default config({
             }),
           }
         ),
+        // ── 版式（M3，批次 3）—— 只影响渲染呈现，不改内容字段结构。老文章默认经典版。──
+        layout: fields.select({
+          label: '版式',
+          description:
+            '经典=现状样式；报告=侧边目录/章节导航（适合 8000 字+ 长文）；简报=紧凑排版、TL;DR 置顶卡、数据前置。',
+          options: [
+            { label: '经典版', value: 'classic' },
+            { label: '报告版（侧边目录）', value: 'report' },
+            { label: '简报版（TL;DR 置顶）', value: 'compact' },
+          ],
+          defaultValue: 'classic',
+        }),
         status: fields.select({
           label: '状态',
           description: '草稿=不公开、不进网站地图（sitemap）；发布=公开显示、进入网站地图。不确认前请保持草稿。',

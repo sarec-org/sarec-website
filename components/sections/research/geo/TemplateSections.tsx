@@ -15,11 +15,23 @@ function sameList(a: string[] = [], b: string[] = []): boolean {
   return a.length === b.length && a.every((x, i) => x === b[i]);
 }
 
-export function TemplateHeader({ article }: { article: Article }): ReactElement | null {
+export function TemplateHeader({
+  article,
+  suppressTldr = false,
+}: {
+  article: Article;
+  suppressTldr?: boolean;
+}): ReactElement | null {
   const nodes: ReactElement[] = [];
 
-  // 深度:核心判断卡(仅当与 summary 不同,避免与 hero 速览重复)
-  if (article.template === 'deep' && article.tldr && article.tldr.length > 0 && !sameList(article.tldr, article.summary)) {
+  // 深度:核心判断卡(仅当与 summary 不同,避免与 hero 速览重复;简报版由速览卡承担,suppressTldr 跳过)
+  if (
+    !suppressTldr &&
+    article.template === 'deep' &&
+    article.tldr &&
+    article.tldr.length > 0 &&
+    !sameList(article.tldr, article.summary)
+  ) {
     nodes.push(
       <div key="tldr" className={styles.tldrCard}>
         <div className={styles.tldrLabel}>核心判断</div>

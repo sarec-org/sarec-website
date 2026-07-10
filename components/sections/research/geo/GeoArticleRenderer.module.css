@@ -137,3 +137,165 @@
 .bylineTitle {
   margin-left: 0.4em;
 }
+
+/* ══ M3 版式：报告版（侧边目录 / 正文两栏）══════════════════════════════
+ * hero 全宽在上；下方两栏 = sticky 侧边目录 + 正文。移动端目录折叠置顶。 */
+.reportGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 240px) minmax(0, 1fr);
+  gap: clamp(1.5rem, 3.5vw, 3rem);
+  max-width: 1240px;
+  margin: clamp(1.5rem, 4vh, 2.75rem) auto 0;
+  padding: 0 clamp(1rem, 3vw, 2rem);
+  align-items: start;
+}
+
+/* 报告版正文列：块自身的 vw 内边距在窄列里过大，这里收敛为列内合理留白 */
+.reportMain .reading,
+.reportMain .heading {
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: clamp(0.25rem, 1.5vw, 1rem);
+  padding-right: clamp(0.25rem, 1.5vw, 1rem);
+}
+
+.tocDesktop {
+  position: sticky;
+  top: 84px;
+  align-self: start;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+  padding-right: 0.75rem;
+  border-right: 1px solid var(--gold-dim, rgba(198, 168, 101, 0.2));
+}
+
+.tocLabel {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.85rem;
+}
+
+.tocList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: toc;
+}
+
+.tocList li {
+  counter-increment: toc;
+  margin: 0 0 0.6rem;
+  line-height: 1.5;
+}
+
+.tocList a {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ivory-mute, #b7ad97);
+  text-decoration: none;
+  padding-left: 1.7em;
+  text-indent: -1.7em;
+  transition: color 0.15s ease;
+}
+
+.tocList a::before {
+  content: counter(toc) '. ';
+  color: var(--gold);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+
+.tocList a:hover {
+  color: var(--ivory);
+}
+
+/* 移动端折叠目录（桌面隐藏） */
+.tocMobile {
+  display: none;
+  margin: 0 clamp(1rem, 5vw, 2rem) 0.5rem;
+  border: 1px solid var(--gold-dim, rgba(198, 168, 101, 0.28));
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tocMobile > summary {
+  cursor: pointer;
+  color: var(--gold);
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  padding: 0.25rem 0;
+}
+
+.tocMobile .tocList {
+  margin-top: 0.6rem;
+}
+
+@media (max-width: 900px) {
+  .reportGrid {
+    grid-template-columns: 1fr;
+  }
+  .tocDesktop {
+    display: none;
+  }
+  .tocMobile {
+    display: block;
+  }
+}
+
+/* ══ M3 版式：简报版（TL;DR 置顶卡 + 数据前置 + 紧凑排版）══════════════ */
+.compactDigest {
+  max-width: var(--geo-content-width);
+  margin: clamp(1.25rem, 3vh, 2rem) auto 0;
+  padding: clamp(1.1rem, 2.5vw, 1.6rem) clamp(1.25rem, 3vw, 2rem);
+  border-left: 3px solid var(--gold, #c6a865);
+  background: rgba(198, 168, 101, 0.06);
+  border-radius: 0 8px 8px 0;
+}
+
+.compactDigestLabel {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.6rem;
+}
+
+.compactDigest ul {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+.compactDigest li {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.02rem, 1.25vw, 1.14rem);
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  margin: 0 0 0.45em;
+}
+
+.compactDigest li:last-child {
+  margin-bottom: 0;
+}
+
+/* 简报版整体收紧节奏：段间距、章节标题上边距更小，密而不挤 */
+.compact .reading {
+  margin-top: clamp(0.9rem, 2vh, 1.4rem);
+}
+
+.compact .reading p {
+  font-size: clamp(1.06rem, 1.3vw, 1.16rem);
+  line-height: 1.68;
+  margin-bottom: clamp(12px, 2vh, 18px);
+}
+
+.compact .heading {
+  margin-top: clamp(1.75rem, 3.5vh, 2.5rem);
+  font-size: clamp(1.45rem, 1.1rem + 1.1vw, 1.85rem);
+}

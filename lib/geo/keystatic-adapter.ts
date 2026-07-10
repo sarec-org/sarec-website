@@ -111,9 +111,24 @@ function mapAuthor(raw: any): Author {
   return author;
 }
 
+// M1（批次 3）：本地直传图片的 public 前缀，与 keystatic.config.ts 中 assetBreak.upload.publicPath 一致。
+const UPLOAD_PUBLIC_PATH = '/images/research/uploads';
+
+// 解析媒体源：优先 Keystatic 直传字段 upload（原始 YAML 存 basename），回退到 src（URL 文本）。
+// 防御性：upload 若已是绝对路径 / http(s) 则原样用，避免重复前缀；否则按 publicPath 还原。
+function resolveMediaSrc(raw: any): string {
+  const up = raw?.upload;
+  if (isFilled(up)) {
+    const s = String(up).trim();
+    if (/^(https?:)?\/\//.test(s) || s.startsWith('/')) return s;
+    return `${UPLOAD_PUBLIC_PATH}/${s.replace(/^\/+/, '')}`;
+  }
+  return String(raw?.src ?? '');
+}
+
 function mapMedia(raw: any): Media {
   const kind = raw?.kind === 'video' ? 'video' : 'image';
-  const media: Media = { kind, src: String(raw?.src ?? ''), alt: String(raw?.alt ?? '') };
+  const media: Media = { kind, src: resolveMediaSrc(raw), alt: String(raw?.alt ?? '') };
   if (isFilled(raw?.poster)) media.poster = raw.poster;
   return media;
 }
@@ -170,10 +185,16 @@ function mapBlock(raw: RawBlock, index: number): Block {
       return { type: 'caseRef', data: { caseSlug: String(v.caseSlug ?? '') } };
     case 'assetBreak': {
       const media = mapMedia(v);
-      const data: Media & { eyebrow?: string; title?: string; body?: string } = { ...media };
+      const data: Media & {
+        eyebrow?: string;
+        title?: string;
+        body?: string;
+        generated?: 'illustration' | 'ai';
+      } = { ...media };
       if (isFilled(v.eyebrow)) data.eyebrow = v.eyebrow;
       if (isFilled(v.title)) data.title = v.title;
       if (isFilled(v.body)) data.body = v.body;
+      if (v.generated === 'illustration' || v.generated === 'ai') data.generated = v.generated;
       return { type: 'assetBreak', data };
     }
     case 'cta':
@@ -261,6 +282,8 @@ export function fromKeystaticArticle(raw: any): Article {
   };
 
   mapTemplate(raw, article);
+  // 版式（M3）：仅 report / compact 显式设置，其余（含老文章缺字段）由渲染层按 classic 兜底。
+  if (raw.layout === 'report' || raw.layout === 'compact') article.layout = raw.layout;
   if (isFilled(raw.audience)) article.audience = raw.audience;
   if (isFilled(raw.intent)) article.intent = raw.intent;
   if (isFilled(raw.updatedAt)) article.updatedAt = raw.updatedAt;

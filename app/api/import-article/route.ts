@@ -24,18 +24,28 @@ const REPO = 'sarec-website';
 const BASE = 'main';
 const GH = 'https://api.github.com';
 
+// 随导入一起提交的本地图片（M1，批次 3）。path 必须落在受控上传目录内，防目录穿越。
+type UploadImage = { path?: string; contentBase64?: string };
+
 type Body = {
   markdown?: string;
   slug?: string;
   cluster?: string;
   template?: EntryMeta['template'];
+  layout?: EntryMeta['layout'];
   tier?: EntryMeta['tier'];
   status?: EntryMeta['status'];
   mode?: 'preview' | 'create';
   accessCode?: string;
+  images?: UploadImage[];
 };
 
 const VALID_TEMPLATES = ['deep', 'brief', 'data'];
+const VALID_LAYOUTS = ['classic', 'report', 'compact'];
+// 图片只允许写入此受控目录（与前台 publicPath 一致）；拒绝任何越界路径。
+const UPLOAD_DIR = 'public/images/research/uploads/';
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024; // 单图上限 3MB（已客户端压缩，正常远小于此）
+const MAX_IMAGES = 12;
 const VALID_CLUSTERS = [
   'chinese-capital-us-re-risk',
   'eb5-real-estate',
@@ -71,7 +81,7 @@ export async function POST(request: Request) {
     return bad('请求体不是合法 JSON');
   }
 
-  const { markdown, slug, cluster, template, tier, status, mode = 'preview' } = body;
+  const { markdown, slug, cluster, template, layout, tier, status, mode = 'preview' } = body;
 
   if (!markdown || markdown.trim().length < 10) return bad('markdown 内容为空');
   if (!slug || !/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
@@ -79,6 +89,23 @@ export async function POST(request: Request) {
   }
   if (!cluster || !VALID_CLUSTERS.includes(cluster)) return bad('内容集群(cluster)无效');
   if (!template || !VALID_TEMPLATES.includes(template)) return bad('栏目/模板(template)无效');
+  if (layout && !VALID_LAYOUTS.includes(layout)) return bad('版式(layout)无效');
+
+  // 校验随导入提交的图片：路径受控、大小受限、base64 合法。
+  const images = Array.isArray(body.images) ? body.images : [];
+  if (images.length > MAX_IMAGES) return bad(`一次最多导入 ${MAX_IMAGES} 张图片`);
+  for (const img of images) {
+    if (!img || typeof img.path !== 'string' || typeof img.contentBase64 !== 'string') {
+      return bad('图片数据格式不正确');
+    }
+    const p = img.path.replace(/^\/+/, '');
+    if (!p.startsWith(UPLOAD_DIR) || p.includes('..') || !/^[\w./-]+\.(webp|jpg|jpeg|png)$/i.test(p)) {
+      return bad(`图片路径不合法:${img.path}(必须位于 ${UPLOAD_DIR} 下)`);
+    }
+    const bytes = Buffer.byteLength(img.contentBase64, 'base64');
+    if (bytes === 0) return bad(`图片内容为空:${img.path}`);
+    if (bytes > MAX_IMAGE_BYTES) return bad(`图片过大(${Math.round(bytes / 1024)}KB):${img.path},请压缩后再传`);
+  }
 
   // 1) 解析(失败带行号)
   let parsed;
@@ -89,7 +116,14 @@ export async function POST(request: Request) {
     return bad(`解析失败:${(err as Error).message}`);
   }
 
-  const meta: EntryMeta = { slug, cluster, template, tier: tier ?? 'pillar', status: status ?? 'draft' };
+  const meta: EntryMeta = {
+    slug,
+    cluster,
+    template,
+    layout: layout ?? 'classic',
+    tier: tier ?? 'pillar',
+    status: status ?? 'draft',
+  };
   const entry = toKeystaticEntry(parsed, meta);
   const yamlText = stringify(entry);
 
@@ -107,6 +141,7 @@ export async function POST(request: Request) {
       }, {}),
       faqCount: parsed.faq.length,
       sourceCount: parsed.sourceList.length,
+      imageCount: images.length,
       publishedAt: parsed.publishedAt,
       author: parsed.author,
     },
@@ -149,6 +184,27 @@ export async function POST(request: Request) {
     });
     if (!mk.res.ok && mk.res.status !== 422) {
       return bad(`建分支失败:${mk.json?.message ?? mk.res.status}`, {}, 502);
+    }
+
+    // 先提交图片(如有):逐张写入受控上传目录。已存在同名则复用(不覆盖),保证幂等重试安全。
+    for (const img of images) {
+      const imgPath = img.path!.replace(/^\/+/, '');
+      const already = await gh(
+        `/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(imgPath)}?ref=${branch}`,
+        token
+      );
+      if (already.res.ok) continue; // 该图已在分支上,跳过
+      const putImg = await gh(`/repos/${OWNER}/${REPO}/contents/${encodeURIComponent(imgPath)}`, token, {
+        method: 'PUT',
+        body: JSON.stringify({
+          message: `feat(content): 导入 ${slug} 配图 ${imgPath.split('/').pop()}`,
+          content: img.contentBase64,
+          branch,
+        }),
+      });
+      if (!putImg.res.ok) {
+        return bad(`写入图片失败(${imgPath}):${putImg.json?.message ?? putImg.res.status}`, {}, 502);
+      }
     }
 
     // 写文件
