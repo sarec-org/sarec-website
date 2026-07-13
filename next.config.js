@@ -2,6 +2,9 @@
 const nextConfig = {
   async redirects() {
     return [
+      // 首页语言跳转:裸首页 / → /zh 用永久 308(带 Location),取代 app/page.tsx 的 RSC redirect()
+      // ——后者被 Vercel 缓存成无 Location 的 307,Googlebot 跟不过去,致首页/权重无法传给 /zh。
+      { source: '/', destination: '/zh', permanent: true },
       // /zh/join 现为在线入会真实页面（Gate 2 M2），旧的 join→contact 重定向已移除。
       // 隐私政策统一到站点级 /legal/privacy，旧 /zh/legal/privacy 301 归并（不维护两份）。
       { source: '/zh/legal/privacy', destination: '/legal/privacy', permanent: true },

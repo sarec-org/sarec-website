@@ -3,7 +3,7 @@ import { SITE_URL } from '@/lib/seo';
 import { listArticles } from '@/lib/geo/content';
 
 const routes = [
-  '/',
+  // 注:裸首页 '/' 现为 308 永久跳转到 '/zh',不再放进 sitemap(sitemap 只收真实 200 URL)。
   '/zh',
   '/zh/about',
   '/zh/about/founder',
