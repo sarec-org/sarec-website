@@ -112,3 +112,76 @@ a.sourceName:hover {
   color: var(--ivory-mute);
   margin: 0;
 }
+
+/* ── 常见问题（FAQ）── */
+.faqList {
+  display: grid;
+  gap: clamp(0.6rem, 1.5vh, 0.9rem);
+}
+
+.faqItem {
+  border: 1px solid var(--line-soft, rgba(198, 168, 101, 0.22));
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.faqItem[open],
+.faqItem:hover {
+  border-color: var(--gold);
+}
+
+.faqQuestion {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  padding: clamp(0.85rem, 2vh, 1.1rem) clamp(1rem, 2vw, 1.4rem);
+}
+
+.faqQuestion::-webkit-details-marker {
+  display: none;
+}
+
+.faqQNum {
+  flex: none;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+}
+
+.faqQText {
+  flex: 1;
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  line-height: 1.5;
+  color: var(--ivory);
+}
+
+.faqChevron {
+  flex: none;
+  color: var(--gold-dim);
+  transition: transform 0.2s ease;
+}
+
+.faqItem[open] .faqChevron {
+  transform: rotate(180deg);
+}
+
+.faqAnswer {
+  padding: 0 clamp(1rem, 2vw, 1.4rem) clamp(0.9rem, 2vh, 1.2rem) calc(clamp(1rem, 2vw, 1.4rem) + 1.9rem);
+}
+
+.faqAnswer p {
+  margin: 0 0 0.6em 0;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: var(--mist, rgba(230, 228, 220, 0.78));
+}
+
+.faqAnswer p:last-child {
+  margin-bottom: 0;
+}
