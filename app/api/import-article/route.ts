@@ -38,6 +38,8 @@ type Body = {
   mode?: 'preview' | 'create';
   accessCode?: string;
   images?: UploadImage[];
+  /** 表单填写的 SEO 描述；非空时覆盖解析出的 description(需求三)。 */
+  descriptionOverride?: string;
 };
 
 const VALID_TEMPLATES = ['deep', 'brief', 'data'];
@@ -116,6 +118,13 @@ export async function POST(request: Request) {
     return bad(`解析失败:${(err as Error).message}`);
   }
 
+  // 需求三:表单 SEO 描述覆盖解析结果(截到 158 字,与解析器口径一致)。
+  const descOverride = (body.descriptionOverride ?? '').trim();
+  const descriptionFellBack = !descOverride && parsed.description === parsed.title;
+  if (descOverride) {
+    parsed.description = descOverride.length > 158 ? descOverride.slice(0, 157) + '…' : descOverride;
+  }
+
   const meta: EntryMeta = {
     slug,
     cluster,
@@ -127,9 +136,37 @@ export async function POST(request: Request) {
   const entry = toKeystaticEntry(parsed, meta);
   const yamlText = stringify(entry);
 
+  // 需求二:关键 GEO 字段为 0 时显式警告(附期望格式),绝不静默归零。
+  const qualityWarnings: string[] = [];
+  if (parsed.summary.length === 0) {
+    qualityWarnings.push(
+      '摘要要点为 0——未识别到「**摘要判断:** 要点一 · 要点二 · 要点三」行(标题下方,间隔号「·」分隔)。该行同时生成 TL;DR 与 SEO 描述。'
+    );
+  }
+  if (parsed.faq.length === 0) {
+    qualityWarnings.push(
+      'FAQ 为 0——未识别到 FAQ 标记。期望:「## 常见问题」小节内,每个问题写成「### 问题?」,答案跟在下方段落。FAQ 是 FAQPage 结构化标记(GEO 核心装备)的数据源。'
+    );
+  }
+  if (parsed.sourceList.length === 0) {
+    qualityWarnings.push(
+      '数据来源为 0——未识别到「## 数据来源」小节,或条目分隔不符。条目之间用「·」「；」或行尾分号分隔。'
+    );
+  }
+  if (descriptionFellBack) {
+    qualityWarnings.push(
+      'SEO 描述已回退为标题——建议在「**摘要判断:**」行写出可独立成句的摘要,或在表单「SEO 描述」框中填写覆盖。描述与标题重复会浪费一条被引用通道。'
+    );
+  }
+
+  // 需求四:配图口径拆分——随导入提交的新图 vs 正文引用的图片行。
+  const bodyImageCount = parsed.blocks.filter(
+    (b) => b.discriminant === 'assetBreak' && (b.value as { kind?: string }).kind === 'image'
+  ).length;
+
   const preview = {
     ok: true as const,
-    warnings: parsed.warnings,
+    warnings: [...parsed.warnings, ...qualityWarnings],
     fields: {
       title: parsed.title,
       description: parsed.description,
@@ -142,6 +179,8 @@ export async function POST(request: Request) {
       faqCount: parsed.faq.length,
       sourceCount: parsed.sourceList.length,
       imageCount: images.length,
+      uploadImageCount: images.length,
+      bodyImageCount,
       publishedAt: parsed.publishedAt,
       author: parsed.author,
     },
