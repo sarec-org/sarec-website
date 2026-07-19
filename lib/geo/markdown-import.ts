@@ -9,6 +9,7 @@
  * 支持的语法（详见《SAREC 写作格式规范》）:
  *   # 标题                          → title
  *   **摘要判断:** a · b · c          → summary[] / tldr[] / description
+ *   **判断清单:** a · b · c          → judgmentChecklist[](可选,仅 deep 模板使用)
  *   **作者:名 · 头衔**               → author.name / author.title
  *   **发布日期:… | 数据截至:…**      → publishedAt / dataCutoff
  *   ## 小节 / ### 子标题             → sectionHeading
@@ -28,6 +29,7 @@ export type ParsedArticle = {
   description: string;
   summary: string[];
   tldr: string[];
+  judgmentChecklist: string[];
   author: { name: string; title?: string };
   publishedAt: string;
   dataCutoff?: string;
@@ -103,6 +105,7 @@ export function parseArticleMarkdown(md: string): ParsedArticle {
 
   // 2) 头部元信息(标题后的加粗行,直到正文/分隔线)
   let summary: string[] = [];
+  let judgmentChecklist: string[] = [];
   let description = '';
   let author: { name: string; title?: string } | undefined;
   let publishedAt = '';
@@ -123,6 +126,11 @@ export function parseArticleMarkdown(md: string): ParsedArticle {
       const body = inner.replace(/^(摘要判断|摘要|核心判断)\s*[:：]/, '').trim();
       summary = body.split(/\s*·\s*/).map((s) => s.trim()).filter(Boolean);
       description = body.length > 158 ? body.slice(0, 157) + '…' : body;
+      i++; continue;
+    }
+    if (/^判断清单\s*[:：]/.test(inner)) {
+      const body = inner.replace(/^判断清单\s*[:：]/, '').trim();
+      judgmentChecklist = body.split(/\s*·\s*/).map((s) => s.trim()).filter(Boolean);
       i++; continue;
     }
     if (/^作者\s*[:：]/.test(inner)) {
@@ -301,6 +309,7 @@ export function parseArticleMarkdown(md: string): ParsedArticle {
     description,
     summary,
     tldr,
+    judgmentChecklist,
     author,
     publishedAt,
     ...(dataCutoff ? { dataCutoff } : {}),
@@ -344,7 +353,10 @@ export function toKeystaticEntry(parsed: ParsedArticle, meta: EntryMeta): Record
       return { discriminant: 'data', value };
     }
     // deep(默认)
-    const value: Record<string, unknown> = { tldr: parsed.tldr, judgmentChecklist: [] };
+    const value: Record<string, unknown> = {
+      tldr: parsed.tldr,
+      judgmentChecklist: parsed.judgmentChecklist ?? [],
+    };
     if (parsed.dataCutoff) value.dataCutoff = parsed.dataCutoff;
     return { discriminant: 'deep', value };
   })();

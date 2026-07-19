@@ -25,6 +25,8 @@ type PreviewResp = {
     faqCount: number;
     sourceCount: number;
     imageCount: number;
+    uploadImageCount?: number;
+    bodyImageCount?: number;
     publishedAt: string;
     author: { name: string; title?: string };
   };
@@ -66,6 +68,53 @@ const ILLUSTRATIONS = [
   { file: 'compass-nodes.svg', label: '罗盘坐标', alt: '抽象罗盘与坐标插画' },
   { file: 'bridge-span.svg', label: '桥梁连接', alt: '抽象桥梁连接插画' },
 ];
+
+// 需求五:一键载入的示例模板——覆盖全部解析器认识的标记,按样稿替换内容即可。
+const SAMPLE_TEMPLATE = `# 文章标题:实体 + 明确判断
+
+**副题:** 一句话副题(可选,不参与解析)
+
+**摘要判断:** 核心判断一 · 核心判断二 · 核心判断三
+
+**判断清单:** 待核实事项一 · 待核实事项二(可选)
+
+**作者:东哥 · SAREC 中美房地产商会创始人**
+
+**发布日期:2026 年 7 月 23 日 | 数据截至:2026 年 7 月 18 日**
+
+---
+
+开篇第一段正文……
+
+## 一、小节标题
+
+正文段落。行内**加粗**与[链接](https://example.com)会保留。
+
+**单独一行的整句加粗,会成为重点引用(pullQuote)**
+
+| 指标 | 读数 | 来源 |
+|---|---|---|
+| 示例指标 | 123 | 某机构,2026-07 |
+
+![用一句话描述图片内容(alt 必填)](/images/research/uploads/img-示例.webp)
+
+## 常见问题
+
+### 用户会真实搜索的问题一?
+
+答案段落,可多段。
+
+### 问题二?
+
+答案段落。
+
+## 数据来源
+
+机构A,《报告名》, 2026年7月;
+机构B, 数据说明, 2026年6月;
+
+> 引用块会被丢弃(免责声明由前台自动挂载,不要手写)。
+`;
 
 const UPLOAD_PUBLIC = '/images/research/uploads';
 const MAX_DIM = 1600; // 压缩后长边上限（web 用途足够清晰）
@@ -123,6 +172,7 @@ export default function ImportPage() {
   const [layout, setLayout] = useState(LAYOUTS[0].value);
   const [status, setStatus] = useState('draft');
   const [accessCode, setAccessCode] = useState('');
+  const [seoDescription, setSeoDescription] = useState('');
   const [resp, setResp] = useState<PreviewResp | null>(null);
   const [loading, setLoading] = useState<false | 'preview' | 'create'>(false);
   const [dragOver, setDragOver] = useState(false);
@@ -234,6 +284,7 @@ export default function ImportPage() {
           accessCode,
           mode,
           images: mode === 'create' ? insertedImages : [],
+          descriptionOverride: seoDescription,
         }),
       });
       setResp((await r.json()) as PreviewResp);
@@ -255,7 +306,38 @@ export default function ImportPage() {
         先「预览解析」核对,再「创建分支并开 PR」。
       </p>
 
-      <label className={styles.label}>文章正文(Markdown)</label>
+      {/* 需求一:格式规范就地可见——解析器认什么标记,就地写清,不再让作者盲猜。 */}
+      <details className={styles.details} style={{ marginBottom: '1rem' }}>
+        <summary>《SAREC 写作格式规范》速查——解析器认的全部标记(点开)</summary>
+        <div style={{ padding: '0.75rem 0.25rem', lineHeight: 1.9 }}>
+          <p><code># 标题</code> → 文章标题(必填,第一行)</p>
+          <p><code>**摘要判断:** 要点一 · 要点二 · 要点三</code> → 摘要要点/TL;DR/SEO 描述(用间隔号「·」分隔;整行 ≤158 字则整行成为 SEO 描述)</p>
+          <p><code>**判断清单:** 事项一 · 事项二</code> → 判断清单(可选,深度模板)</p>
+          <p><code>**作者:姓名 · 头衔**</code> → 作者(必填)</p>
+          <p><code>**发布日期:2026 年 7 月 23 日 | 数据截至:2026-07-18**</code> → 发布日期(必填)与数据截止</p>
+          <p><code>## 小节</code> / <code>### 子标题</code> → 章节;<code>| 表格 |</code>(含 <code>|---|</code> 分隔行)→ 数据表</p>
+          <p><code>**整行加粗**</code> → 重点引用;<code>![一句话alt](图片路径)</code> → 配图(alt 必填)</p>
+          <p><code>## 常见问题</code>(或含 FAQ/问答)小节内:每个问题写 <code>### 问题?</code>,答案跟在下方段落 → FAQ 结构化标记</p>
+          <p><code>## 数据来源</code>(或资料来源/参考来源)小节:条目之间用「·」「;」或行尾分号分隔 → 来源列表</p>
+          <p><code>&gt; 引用块</code> → 丢弃(免责声明由前台自动挂载,不要手写);<code>*整行斜体*</code> → 丢弃(系列阅读类)</p>
+        </div>
+      </details>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.25rem' }}>
+        <label className={styles.label} style={{ marginBottom: 0 }}>文章正文(Markdown)</label>
+        {/* 需求五:一键载入示例模板 */}
+        <button
+          className={styles.btnGhost}
+          type="button"
+          onClick={() => {
+            if (markdown.trim() && !window.confirm('正文框已有内容,载入示例模板将覆盖,确定?')) return;
+            setMarkdown(SAMPLE_TEMPLATE);
+            setResp(null);
+          }}
+        >
+          载入示例模板
+        </button>
+      </div>
 
       <div
         className={`${styles.dropzone} ${dragOver ? styles.dropzoneActive : ''}`}
@@ -458,6 +540,16 @@ export default function ImportPage() {
           </select>
         </div>
         <div className={styles.field}>
+          <label className={styles.label}>SEO 描述(可选,覆盖自动解析)</label>
+          <input
+            className={styles.input}
+            value={seoDescription}
+            onChange={(e) => setSeoDescription(e.target.value)}
+            placeholder="不填则取「摘要判断」行;两者皆无时回退为标题(会提示)"
+            maxLength={158}
+          />
+        </div>
+        <div className={styles.field}>
           <label className={styles.label}>状态</label>
           <select className={styles.input} value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="draft">草稿(推荐)</option>
@@ -542,7 +634,11 @@ export default function ImportPage() {
             </div>
             <div>
               <span>配图</span>
-              {f.imageCount} 张随导入提交
+              正文引用 {f.bodyImageCount ?? '—'} 张 · 本次新上传随 PR 提交 {f.uploadImageCount ?? f.imageCount} 张
+              {typeof f.bodyImageCount === 'number' &&
+              f.bodyImageCount > (f.uploadImageCount ?? f.imageCount)
+                ? '(引用了已上传过的图片路径,以 PR 预览显示为准)'
+                : ''}
             </div>
             <div>
               <span>FAQ</span>
