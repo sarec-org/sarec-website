@@ -36,6 +36,36 @@ export function RelatedReading(props: { items: RelatedArticleCard[] }): ReactEle
   );
 }
 
+export type FaqItem = { question: string; answer: string };
+
+/** 常见问题（FAQ）可见区块 —— 与 FAQPage JSON-LD 同源数据;列表为空则整块不渲染。 */
+export function FaqSection(props: { items: FaqItem[] }): ReactElement | null {
+  if (!props.items.length) return null;
+  return (
+    <section className={styles.block} aria-label="常见问题">
+      <h2 className={styles.blockTitle}>常见问题</h2>
+      <div className={styles.faqList}>
+        {props.items.map((f, i) => (
+          <details key={i} className={styles.faqItem} open={i === 0}>
+            <summary className={styles.faqQuestion}>
+              <span className={styles.faqQNum}>Q{i + 1}</span>
+              <span className={styles.faqQText}>{f.question}</span>
+              <span className={styles.faqChevron} aria-hidden="true">
+                ▾
+              </span>
+            </summary>
+            <div className={styles.faqAnswer}>
+              {f.answer.split('\n').map((p, j) => (
+                <p key={j}>{p}</p>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Disclaimer(props: { text: string }): ReactElement {
   return (
     <section className={styles.disclaimer} aria-label="免责声明">

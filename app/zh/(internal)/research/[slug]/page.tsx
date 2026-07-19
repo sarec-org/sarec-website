@@ -11,6 +11,7 @@ import { GeoArticleRenderer } from '@/components/sections/research/geo/GeoArticl
 import {
   RelatedReading,
   SourcesSection,
+  FaqSection,
   Disclaimer,
   type RelatedArticleCard
 } from '@/components/sections/research/geo/ArticleEndSections';
@@ -130,6 +131,7 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
 
       <GeoArticleRenderer article={article} />
 
+      <FaqSection items={faqItems} />
       <SourcesSection items={sourceItems} />
       <RelatedReading items={relatedItems} />
 
