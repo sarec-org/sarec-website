@@ -2,8 +2,14 @@ import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import { listArticles } from '@/lib/geo/content';
 
-const routes = [
-  // 注:裸首页 '/' 现为 308 永久跳转到 '/zh',不再放进 sitemap(sitemap 只收真实 200 URL)。
+// 静态路由(无可靠内容更新时间来源 → 不输出 lastModified;
+// 禁止用 new Date()/构建时间/部署时间/请求时间冒充内容更新时间)。
+// 注:
+//  - 裸首页 '/' 现为 308 永久跳转到 '/zh',不进 sitemap(sitemap 只收真实 200 URL)。
+//  - '/zh/contact/thanks' 为 noindex 页,不进 sitemap。
+//  - '/zh/legal/privacy' 已 308 归并到站点级 '/legal/privacy',只收后者。
+//  - services 子页收录范围本轮维持现状(不因路由存在而增删)。
+const staticRoutes = [
   '/zh',
   '/zh/about',
   '/zh/about/founder',
@@ -28,10 +34,9 @@ const routes = [
   '/zh/research/eb5',
   '/zh/research/framework',
   '/zh/research/investment-pitfalls',
-  // 注:所有 GEO YAML 文章(含旗舰文)不再硬编码,统一由下方 listArticles 动态收录,
-  // 新发文自动进 sitemap,无需再手改本文件(M6.1)。
+  // GEO YAML/TS 文章(含旗舰文)不再硬编码,统一由下方 listArticles 动态收录,
+  // 新发文自动进 sitemap,无需再手改本文件。
   '/zh/contact',
-  '/zh/contact/thanks',
   '/zh/membership',
   '/zh/join',
   '/zh/strategic-partners',
@@ -42,26 +47,33 @@ const routes = [
   '/zh/legal/disclaimer'
 ];
 
+function priorityFor(route: string): number {
+  if (route === '/zh') return 1;
+  if (route === '/zh/services' || route === '/zh/projects' || route === '/zh/contact') return 0.9;
+  return 0.7;
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const lastModified = new Date();
+  const staticEntries: MetadataRoute.Sitemap = staticRoutes.map((route) => ({
+    url: `${SITE_URL}${route}`,
+    changeFrequency: 'weekly',
+    priority: priorityFor(route)
+  }));
 
   // 草稿防泄漏第二道闸:仅 status='published' 的 GEO 文章进 sitemap;草稿天然排除。
-  // 与硬编码列表去重(旗舰文已在上方硬编码),避免重复条目。
-  const publishedGeoRoutes = listArticles({ status: 'published' })
-    .map((a) => `/zh/research/${a.slug}`)
-    .filter((r) => !routes.includes(r));
+  // 与硬编码列表去重(标准 research 页已在上方硬编码),避免重复条目。
+  // lastModified 仅当内容源存在可靠 updatedAt/publishedAt 时才输出(禁止用构建/部署时间冒充)。
+  const geoEntries: MetadataRoute.Sitemap = listArticles({ status: 'published' })
+    .filter((a) => !staticRoutes.includes(`/zh/research/${a.slug}`))
+    .map((a) => {
+      const lastmod = a.updatedAt ?? a.publishedAt;
+      return {
+        url: `${SITE_URL}/zh/research/${a.slug}`,
+        ...(lastmod ? { lastModified: new Date(lastmod) } : {}),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7
+      };
+    });
 
-  const allRoutes = [...routes, ...publishedGeoRoutes];
-
-  return allRoutes.map((route) => ({
-    url: `${SITE_URL}${route}`,
-    lastModified,
-    changeFrequency: route === '/zh/contact/thanks' ? 'yearly' : 'weekly',
-    priority:
-      route === '/' || route === '/zh'
-        ? 1
-        : route === '/zh/services' || route === '/zh/projects' || route === '/zh/contact'
-          ? 0.9
-          : 0.7
-  }));
+  return [...staticEntries, ...geoEntries];
 }

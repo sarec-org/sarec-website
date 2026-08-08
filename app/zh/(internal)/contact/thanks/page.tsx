@@ -10,7 +10,7 @@ export const metadata: Metadata = {
       'SAREC 团队会在 1 个工作日内回复（美国西部时间）。回复将通过你提交的邮箱发送，或通过你提供的微信 / WhatsApp 联系。',
     path: '/zh/contact/thanks'
   }),
-  robots: { index: false, follow: false }
+  robots: { index: false, follow: true }
 };
 
 const timeline = [

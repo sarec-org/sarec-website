@@ -1,10 +1,12 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { createPageMetadata } from '@/lib/seo';
 
-export const metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: '法律声明 | SAREC',
   description: 'SAREC 法律声明、隐私政策与风险披露。',
-  robots: { index: true, follow: true }
-};
+  path: '/zh/legal'
+});
 
 export default function LegalIndexPage() {
   return (
@@ -17,7 +19,7 @@ export default function LegalIndexPage() {
       </p>
       <ul className="mt-12 space-y-6">
         <li><Link href="/zh/legal/disclaimer/" className="text-lg underline hover:no-underline">一般免责声明</Link></li>
-        <li><Link href="/zh/legal/privacy/" className="text-lg underline hover:no-underline">隐私政策</Link></li>
+        <li><Link href="/legal/privacy" className="text-lg underline hover:no-underline">隐私政策</Link></li>
         <li><Link href="/zh/legal/risk-disclosure/" className="text-lg underline hover:no-underline">风险披露</Link></li>
       </ul>
     </main>

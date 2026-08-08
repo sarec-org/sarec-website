@@ -6,10 +6,12 @@ import { H04ThreeLayers } from '@/components/sections/H04ThreeLayers';
 import { H05TrustAnchors } from '@/components/sections/H05TrustAnchors';
 import { H06ProjectsFeatured } from '@/components/sections/H06ProjectsFeatured';
 import { H07FounderIntro } from '@/components/sections/H07FounderIntro';
-import { H08ResearchPreview } from '@/components/sections/H08ResearchPreview';
+import { H08ResearchPreview, type ResearchCard } from '@/components/sections/H08ResearchPreview';
 import { H09FAQ } from '@/components/sections/H09FAQ';
 import { H10CTABanner } from '@/components/sections/H10CTABanner';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { listArticles } from '@/lib/geo/content';
+import { columnLabel } from '@/lib/geo/labels';
 
 export const metadata: Metadata = {
   title: 'SAREC · 中美房地产商会 — 跨境地产资本与项目协作平台',
@@ -21,6 +23,19 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
+  // 首页「近期研究」读取内容层已发布文章(draft 天然排除),按 publishedAt 倒序取最新 3 篇。
+  // 卡片标题/摘要/链接全部来自文章数据;不足 3 篇时组件安全降级,不渲染空卡或空链接。
+  const researchCards: ResearchCard[] = listArticles({ status: 'published' })
+    .slice()
+    .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
+    .slice(0, 3)
+    .map((a) => ({
+      tag: columnLabel(a),
+      title: a.title,
+      description: a.description,
+      href: `/zh/research/${a.slug}`
+    }));
+
   return (
     <main>
       {/* H01 — Hero v3-B Final (with embedded nav) */}
@@ -41,7 +56,7 @@ export default function HomePage() {
 
       <H07FounderIntro />
 
-      <H08ResearchPreview />
+      <H08ResearchPreview articles={researchCards} />
 
       <H09FAQ />
 

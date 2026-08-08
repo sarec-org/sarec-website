@@ -158,6 +158,27 @@
   color: var(--gold-warm);
 }
 
+/* ===== View all ===== */
+.viewAllRow {
+  margin-top: clamp(40px, 5vh, 64px);
+}
+
+.viewAll {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: var(--text-link);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.viewAll:hover {
+  color: var(--gold-warm);
+}
+
 /* ===== Tablet ===== */
 @media (max-width: 1023px) {
   .grid {
