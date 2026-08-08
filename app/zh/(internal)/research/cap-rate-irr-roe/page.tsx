@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -340,6 +341,8 @@ export default function CapRateIrrRoePage() {
           eyebrow: 'SAREC RESEARCH'
         }))}
       />
+
+      <ShareButton title="Cap Rate / IRR / ROE 如何理解" url={`${SITE_URL}/zh/research/cap-rate-irr-roe`} />
 
       <ConversionBlock
         question="如果你正在看一个美国房地产项目，先不要只看收益数字。"

@@ -63,8 +63,8 @@ export default function DisclaimerPage() {
         <div className="container-shell grid gap-12">
           {sections.map((section) => (
             <section className="border-t border-line pt-10 md:pt-12" key={section.title}>
-              <h2 className="font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">{section.title}</h2>
-              <p className="mt-6 text-base leading-8 text-muted md:text-lg md:leading-9">{section.body}</p>
+              <h2 className="font-sans text-2xl font-bold leading-tight text-[var(--ivory-warm)] md:text-3xl">{section.title}</h2>
+              <p className="mt-6 text-base leading-8 text-[var(--ivory-mute)] md:text-lg md:leading-9">{section.body}</p>
             </section>
           ))}
         </div>
@@ -72,7 +72,7 @@ export default function DisclaimerPage() {
 
       <section className="border-t border-line bg-zinc-50 py-12 md:py-20">
         <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
-          <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">
+          <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">
             如果你正在判断一个项目，建议先了解服务边界和风险，再进入具体沟通。
           </h2>
           <div className="flex flex-col gap-3 sm:flex-row">

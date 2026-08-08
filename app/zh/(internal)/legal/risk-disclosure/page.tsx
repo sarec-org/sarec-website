@@ -31,7 +31,7 @@ const crossBorderRisks = [
 function DisclosureSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="border-t border-line pt-10 md:pt-12">
-      <h2 className="font-sans text-2xl font-bold leading-tight text-ink md:text-3xl">{title}</h2>
+      <h2 className="font-sans text-2xl font-bold leading-tight text-[var(--ivory-warm)] md:text-3xl">{title}</h2>
       <div className="mt-6 text-base leading-8 text-muted md:text-lg md:leading-9">{children}</div>
     </section>
   );
@@ -41,11 +41,11 @@ function OrderedRiskList({ items }: { items: string[] }) {
   return (
     <ol className="grid gap-4">
       {items.map((item, index) => (
-        <li className="grid gap-3 rounded-md border border-line bg-white p-4 md:grid-cols-[2.5rem_1fr] md:p-5" key={item}>
-          <span className="flex h-9 w-9 items-center justify-center rounded-[2px] bg-deep font-sans text-sm font-semibold text-gold">
+        <li className="grid gap-3 rounded-md border border-[var(--line-2)] bg-[var(--ink-2)] p-4 md:grid-cols-[2.5rem_1fr] md:p-5" key={item}>
+          <span className="flex h-9 w-9 items-center justify-center rounded-[2px] bg-[var(--ink-deepest)] font-sans text-sm font-semibold text-gold">
             {index + 1}
           </span>
-          <p className="text-sm leading-7 text-muted md:text-base">{item}</p>
+          <p className="text-sm leading-7 text-[var(--ivory-mute)] md:text-base">{item}</p>
         </li>
       ))}
     </ol>
@@ -68,9 +68,9 @@ export default function RiskDisclosurePage() {
 
       <section className="py-12 md:py-24">
         <div className="container-shell grid gap-12">
-          <Card className="border-gold/40 md:p-10">
+          <Card className="border-gold/40 md:p-10" style={{ background: 'var(--ink-2)' }}>
             <p className="font-sans text-sm font-semibold text-gold">重要提示</p>
-            <p className="mt-4 text-base leading-8 text-muted md:text-lg md:leading-9">
+            <p className="mt-4 text-base leading-8 text-[var(--ivory-mute)] md:text-lg md:leading-9">
               本页面内容仅用于一般风险提示，不构成投资建议、证券发行、法律意见、税务意见、移民建议或任何收益承诺。具体交易应结合项目资料、市场条件、合同文件和相关专业人士意见进行独立判断。
             </p>
           </Card>
@@ -107,7 +107,7 @@ export default function RiskDisclosurePage() {
       <section className="border-t border-line bg-zinc-50 py-12 md:py-20">
         <div className="container-shell grid gap-6 md:grid-cols-[1fr_auto] md:items-center">
           <div>
-            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight md:text-4xl">在推进项目之前，先把风险看清楚。</h2>
+            <h2 className="max-w-3xl font-sans text-2xl font-bold leading-tight text-ink md:text-4xl">在推进项目之前，先把风险看清楚。</h2>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-muted md:text-base">
               如果你正在判断一个美国房地产项目，可以先提交资料或需求。SAREC 会根据项目阶段、资料完整度和合作可能性，判断下一步是否适合继续沟通。
             </p>

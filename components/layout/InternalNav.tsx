@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './InternalNav.module.css';
+import { MobileNav } from './MobileNav';
 
 const MENU = [
   { label: '关于', href: '/zh/about' },
@@ -31,6 +32,9 @@ export function InternalNav() {
 
   return (
     <>
+      {/* 移动端统一导航(桌面端 display:none;下方 header 在移动端隐藏) */}
+      <MobileNav variant="header" />
+
       <header className={styles.header}>
         {/* Util bar */}
         <div className={styles.utilBar}>

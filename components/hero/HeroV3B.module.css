@@ -737,40 +737,12 @@
     min-height: 100svh; /* iOS 地址栏伸缩不重算高度→滚动不抖 */
     padding-bottom: 200px;
   }
+  /* 移动端隐藏 Hero 自带顶栏与导航,交由 <MobileNav> 统一接管(桌面端保持原样) */
   .util-bar {
-    padding: 16px 20px 12px;
-    flex-wrap: wrap;
-    gap: 8px;
-    font-size: 9px;
-    letter-spacing: 0.18em;
-  }
-  .util-bar .left {
-    gap: 14px;
-  }
-  .util-bar .left span:nth-child(2) {
-    display: none;
-  }
-  .util-bar .right {
     display: none;
   }
   .nav {
-    padding: 16px 20px;
-    top: 48px;
-  }
-  .brand .mark {
-    font-size: 22px;
-    letter-spacing: 0.18em;
-  }
-  .brand .sub {
-    font-size: 10px;
-    letter-spacing: 0.26em;
-  }
-  .nav-menu {
     display: none;
-  }
-  .nav-cta {
-    padding: 9px 16px;
-    font-size: 12px;
   }
 
   .hero-content {

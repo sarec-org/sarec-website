@@ -21,6 +21,7 @@
 
 import Link from 'next/link';
 import styles from './HeroV3B.module.css';
+import { MobileNav } from '@/components/layout/MobileNav';
 
 const cx = (...keys: Array<string | false | null | undefined>) =>
   keys
@@ -45,6 +46,9 @@ function resolveMediaUrl(path: string): string {
 export function HeroV3B() {
   return (
     <section className={styles.hero}>
+      {/* 移动端统一导航(桌面端 display:none,不影响 Hero 桌面导航) */}
+      <MobileNav variant="overlay" />
+
       {/* Layer 0: VIDEO */}
       <div className={styles['video-bg']}>
         <video

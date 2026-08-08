@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -343,6 +344,8 @@ export default function LosAngelesEd1AffordableHousingPage() {
           eyebrow: 'SAREC RESEARCH'
         }))}
       />
+
+      <ShareButton title="洛杉矶 ED1 与经济适用房开发观察" url={`${SITE_URL}/zh/research/los-angeles-ed1-affordable-housing`} />
 
       <ConversionBlock
         question="你现在最需要做什么决定?"

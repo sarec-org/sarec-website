@@ -8,6 +8,7 @@ import {
   buildFAQPageJsonLd
 } from '@/lib/geo/schema';
 import { GeoArticleRenderer } from '@/components/sections/research/geo/GeoArticleRenderer';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import {
   RelatedReading,
   SourcesSection,
@@ -134,6 +135,8 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
       <FaqSection items={faqItems} />
       <SourcesSection items={sourceItems} />
       <RelatedReading items={relatedItems} />
+
+      <ShareButton title={article.title} url={`${SITE_URL}${pathname}`} />
 
       <Disclaimer text={DISCLAIMER} />
     </main>

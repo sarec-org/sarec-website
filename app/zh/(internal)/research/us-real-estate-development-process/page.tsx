@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -384,6 +385,8 @@ export default function UsRealEstateDevelopmentProcessPage() {
           eyebrow: 'SAREC RESEARCH'
         }))}
       />
+
+      <ShareButton title="美国房地产开发完整流程" url={`${SITE_URL}/zh/research/us-real-estate-development-process`} />
 
       <ConversionBlock
         question="如果你正在判断一个美国房地产开发项目，可以先从流程和阶段开始梳理。"

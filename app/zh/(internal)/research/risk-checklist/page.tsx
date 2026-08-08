@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -244,6 +245,8 @@ export default function RiskChecklistPage() {
           eyebrow: 'SAREC RESEARCH'
         }))}
       />
+
+      <ShareButton title="美国房地产项目投资风险清单" url={`${SITE_URL}/zh/research/risk-checklist`} />
 
       <ConversionBlock
         question="如果你正在看一个美国房地产项目，可以先做一次风险清单初筛。"

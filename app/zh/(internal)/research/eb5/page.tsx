@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -209,6 +210,8 @@ export default function Eb5Page() {
           eyebrow: 'SAREC RESEARCH'
         }))}
       />
+
+      <ShareButton title="EB-5投资移民：2026年还值不值得投？" url={`${SITE_URL}/zh/research/eb5`} />
 
       <ConversionBlock
         question="正在评估EB-5项目？SAREC提供独立的项目背景核查服务。"

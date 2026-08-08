@@ -1,0 +1,371 @@
+/* ============================================================
+   MobileNav — 移动端统一顶部导航(桌面端整体隐藏)
+   两行:①Logo / 菜单 / 联系我们  ②一级横排(可滑动) + 抽屉二级
+   ============================================================ */
+
+/* 桌面端不渲染任何东西,确保桌面导航零变化 */
+.bar,
+.spacer,
+.backdrop,
+.drawer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bar {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: rgba(2, 6, 16, 0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line-2);
+  }
+
+  /* ── 第一行:Logo / 菜单 / 联系我们 ── */
+  .topRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    text-decoration: none;
+    min-width: 0;
+  }
+  .brandMark {
+    font-family: var(--serif-en);
+    font-size: 20px;
+    letter-spacing: 0.16em;
+    font-weight: 500;
+    color: var(--ivory);
+  }
+  .brandSub {
+    font-family: var(--serif-zh);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--ivory-mute);
+    white-space: nowrap;
+  }
+
+  .topRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* 菜单按钮:图标 + 文字,明确可读 */
+  .menuBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 13px;
+    background: rgba(201, 165, 103, 0.12);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold-warm);
+    font-family: var(--serif-zh);
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .menuBtn:hover {
+    background: rgba(201, 165, 103, 0.2);
+    border-color: var(--gold);
+  }
+  .menuIcon {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 15px;
+    height: 11px;
+  }
+  .menuIcon span {
+    display: block;
+    height: 1.5px;
+    width: 100%;
+    background: var(--gold-warm);
+  }
+
+  .contact {
+    display: inline-flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 14px;
+    border: 1px solid var(--ivory-faint);
+    color: var(--ivory);
+    background: rgba(4, 11, 22, 0.3);
+    font-family: var(--serif-zh);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.25s, color 0.25s;
+  }
+  .contact:hover {
+    border-color: var(--ivory);
+  }
+
+  /* ── 第二行:一级横排(可横向滑动) ── */
+  .scrollRow {
+    position: relative;
+    border-top: 1px solid var(--line);
+  }
+  .scrollList {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    white-space: nowrap;
+  }
+  .scrollList::-webkit-scrollbar {
+    display: none; /* WebKit */
+  }
+  .scrollLink {
+    display: inline-flex;
+    align-items: center;
+    height: 48px; /* 触摸目标 ≥44px */
+    padding: 0 14px;
+    font-family: var(--serif-zh);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--ivory-dim);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    transition: color 0.25s, border-color 0.25s;
+  }
+  .scrollLink:hover {
+    color: var(--gold-warm);
+  }
+  .scrollLinkActive {
+    color: var(--gold-warm);
+    border-bottom-color: var(--gold);
+  }
+  /* 右侧渐隐:提示还可继续滑动 */
+  .scrollFade {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 40px;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(2, 6, 16, 0) 0%, rgba(2, 6, 16, 0.92) 100%);
+  }
+
+  /* 内页占位条:与 .bar 同高(52 + 48 + 顶部边框≈101),撑开正文 */
+  .spacer {
+    display: block;
+    height: 101px;
+  }
+
+  /* ── 抽屉 ── */
+  .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    background: rgba(2, 6, 16, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .backdropOpen {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .drawer {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 260;
+    width: 86vw;
+    max-width: 380px;
+    height: 100vh;
+    height: 100svh;
+    background: var(--ink-deepest);
+    border-left: 1px solid var(--line-2);
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .drawerOpen {
+    transform: translateX(0);
+  }
+
+  .drawerHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--line-2);
+    flex-shrink: 0;
+  }
+  .drawerTitle {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .closeBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: 1px solid var(--ivory-faint);
+    color: var(--ivory);
+    cursor: pointer;
+    transition: border-color 0.25s;
+  }
+  .closeBtn:hover {
+    border-color: var(--ivory);
+  }
+
+  .drawerNav {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 20px 32px;
+  }
+  .drawerList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .drawerItem {
+    border-bottom: 1px solid var(--line-2);
+  }
+
+  /* 一级行:文字(跳转)与箭头(展开)是两个独立触摸目标 */
+  .drawerRow {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+  }
+  .drawerLink {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    min-height: 52px;
+    padding: 4px 0;
+    font-family: var(--serif-zh);
+    font-size: 18px;
+    letter-spacing: -0.01em;
+    color: var(--ivory-dim);
+    text-decoration: none;
+    transition: color 0.25s;
+  }
+  .drawerLink:hover,
+  .drawerLinkActive {
+    color: var(--gold-warm);
+  }
+  .expandBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    border-left: 1px solid var(--line-2);
+    color: var(--ivory-mute);
+    cursor: pointer;
+    transition: color 0.25s, transform 0.3s ease;
+  }
+  .expandBtn:hover {
+    color: var(--gold-warm);
+  }
+  .expandBtnOpen {
+    color: var(--gold-warm);
+    transform: rotate(180deg);
+  }
+
+  /* 二级:手风琴,默认收起 */
+  .subList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+  }
+  .subListOpen {
+    max-height: 520px;
+    padding-bottom: 8px;
+  }
+  .subLink {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 2px 0 2px 18px;
+    font-family: var(--serif-zh);
+    font-size: 15px;
+    color: var(--ivory-mute);
+    text-decoration: none;
+    border-left: 1px solid var(--line-2);
+    margin-left: 2px;
+    transition: color 0.25s;
+  }
+  .subLink:hover,
+  .subLinkActive {
+    color: var(--gold-warm);
+  }
+
+  /* 辅助:联系(不参与一级 / 不高亮) */
+  .auxBlock {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line-2);
+  }
+  .auxLabel {
+    display: block;
+    margin-bottom: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .auxList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .auxLink {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    font-family: var(--serif-zh);
+    font-size: 14px;
+    color: var(--ivory-mute);
+    text-decoration: none;
+    transition: color 0.25s;
+  }
+  .auxLink:hover {
+    color: var(--gold);
+  }
+}

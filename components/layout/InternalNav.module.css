@@ -316,48 +316,17 @@
   pointer-events: auto;
 }
 
-/* ===== Mobile breakpoint ===== */
+/* ===== Mobile breakpoint =====
+   移动端整套顶栏与旧抽屉隐藏,交由 <MobileNav> 统一接管(桌面端保持原样)。 */
 @media (max-width: 768px) {
-  .utilBar {
-    padding: 12px 20px 10px;
-    font-size: 9px;
-    letter-spacing: 0.18em;
-  }
-  .utilBarLeft {
-    gap: 14px;
-  }
-  .utilBarLeft span:nth-child(2) {
+  .header {
     display: none;
-  }
-  .utilBarRight {
-    display: none;
-  }
-  .nav {
-    padding: 14px 20px;
-  }
-  .brandMark {
-    font-size: 22px;
-    letter-spacing: 0.18em;
-  }
-  .brandSub {
-    font-size: 10px;
-    letter-spacing: 0.26em;
-  }
-  .navMenu {
-    display: none;
-  }
-  .cta {
-    padding: 9px 16px;
-    font-size: 12px;
-  }
-  .hamburger {
-    display: block;
-  }
-  .mobilePanel {
-    display: block;
   }
   .mobileOverlay {
-    display: block;
+    display: none;
+  }
+  .mobilePanel {
+    display: none;
   }
 }
 

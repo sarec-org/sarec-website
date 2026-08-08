@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -359,6 +360,8 @@ export default function LpGpStructurePage() {
           eyebrow: 'SAREC RESEARCH'
         }))}
       />
+
+      <ShareButton title="LP / GP 合作结构详解" url={`${SITE_URL}/zh/research/lp-gp-structure`} />
 
       <ConversionBlock
         question="如果你正在看一个美国房地产项目，先把合作结构看清楚。"

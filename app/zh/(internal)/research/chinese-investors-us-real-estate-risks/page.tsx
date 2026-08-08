@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -226,6 +227,8 @@ export default function ChineseInvestorsUsRealEstateRisksPage() {
           eyebrow: 'SAREC RESEARCH'
         }))}
       />
+
+      <ShareButton title="中国投资人美国房地产常见风险" url={`${SITE_URL}/zh/research/chinese-investors-us-real-estate-risks`} />
 
       <ConversionBlock
         question="你现在最需要做什么决定?"
