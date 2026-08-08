@@ -7,12 +7,20 @@
  * - 不读 window.location,不调用任何动态请求 API;url 再做一次防御性清洗(去 query/hash)。
  * - 三级降级:navigator.share → Clipboard API → 可选中链接 + 长按复制提示。
  * - 用户主动取消系统分享(AbortError)不视为失败:不复制、不报错。
+ * - 微信内置浏览器:navigator.share「假可用」(能调起系统面板但选微信后闪退),
+ *   故微信环境下不调 share、不调 Clipboard,直接切引导模式(点右上角 ··· 转发)。
+ *   UA 检测只在点击事件里做(纯客户端),渲染保持纯净,不影响 SSG。
  */
 
 import { useState } from 'react';
 import styles from './ShareButton.module.css';
 
-type Phase = 'idle' | 'copied' | 'manual';
+type Phase = 'idle' | 'copied' | 'manual' | 'wechat';
+
+// 微信内置浏览器 UA 含 MicroMessenger(大小写不敏感)。仅客户端调用。
+function isWeChat(): boolean {
+  return typeof navigator !== 'undefined' && /micromessenger/i.test(navigator.userAgent);
+}
 
 export function ShareButton({ title, url }: { title: string; url: string }) {
   const [phase, setPhase] = useState<Phase>('idle');
@@ -21,6 +29,12 @@ export function ShareButton({ title, url }: { title: string; url: string }) {
   const shareUrl = url.split('#')[0].split('?')[0];
 
   async function handleShare() {
+    // 0) 微信内置浏览器:share「假可用」会闪退。直接切引导模式,不调 share/Clipboard。
+    if (isWeChat()) {
+      setPhase('wechat');
+      return;
+    }
+
     // 1) 系统分享面板(移动端 / 微信内多可用)
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
@@ -70,6 +84,26 @@ export function ShareButton({ title, url }: { title: string; url: string }) {
       {phase === 'manual' ? (
         <div className={styles.manual}>
           <p className={styles.manualHint}>请长按复制链接：</p>
+          <span className={styles.manualUrl}>{shareUrl}</span>
+        </div>
+      ) : null}
+
+      {phase === 'wechat' ? (
+        <div className={styles.wechat} role="status">
+          <p className={styles.wechatHint}>
+            <svg
+              className={styles.wechatArrow}
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path d="M6 18L18 6M18 6H9M18 6v9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            请点击右上角 <span className={styles.wechatDots}>···</span> 按钮，选择“转发给朋友”或“分享到朋友圈”
+          </p>
+          <p className={styles.wechatAlt}>或长按复制链接：</p>
           <span className={styles.manualUrl}>{shareUrl}</span>
         </div>
       ) : null}

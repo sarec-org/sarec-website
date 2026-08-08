@@ -57,3 +57,45 @@
   user-select: all;
   -webkit-user-select: all;
 }
+
+/* 微信引导模式:提示点右上角 ··· 转发(克制,金/米白系) */
+.wechat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 460px;
+  padding: 14px 18px;
+  border: 1px solid var(--gold-dim);
+  background: rgba(201, 165, 103, 0.06);
+}
+
+.wechatHint {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  text-align: center;
+}
+
+.wechatArrow {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: 6px;
+  color: var(--gold);
+}
+
+.wechatDots {
+  font-family: var(--mono);
+  font-weight: 600;
+  color: var(--gold-warm);
+  letter-spacing: 0.05em;
+}
+
+.wechatAlt {
+  margin: 4px 0 0;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ivory-mute);
+}

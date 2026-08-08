@@ -68,7 +68,11 @@
 @media (max-width: 1023px) {
   .section {
     grid-template-columns: 1fr;
+    /* iOS/微信 WKWebView 地址栏伸缩会重算 vh → 视频行高变化 → 下方正文(含分享按钮)
+       上下跳动。改用 svh(最小视口高)后地址栏伸缩不重算此行高,滚动不抖。
+       vh 行保留作旧浏览器兜底;desktop(>1023px)不受本媒体查询影响,视觉不变。 */
     grid-template-rows: auto 50vh;
+    grid-template-rows: auto 50svh;
     height: auto;
     min-height: 0;
   }
