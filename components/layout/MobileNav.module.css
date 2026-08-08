@@ -19,9 +19,11 @@
     left: 0;
     right: 0;
     z-index: 200;
+    /* 不用 backdrop-filter:固定定位元素上的 backdrop-filter 在移动端 GPU 合成路径下
+       会错采样页面合成层(含页底 footer),在抽屉 transform 过渡的重绘瞬间把 footer
+       残句透到顶栏半透明区。保留 0.92 纯 alpha 半透明即可(只与正后方内容混合,不会
+       采样远处 footer),视觉几乎无差,彻底消除透出。 */
     background: rgba(2, 6, 16, 0.92);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--line-2);
   }
 
