@@ -34,6 +34,7 @@
   align-items: flex-start;
   text-align: left;
   padding: clamp(4rem, 8vh, 6rem) clamp(2rem, 3.5vw, 3rem);
+  padding: clamp(4rem, 8svh, 6rem) clamp(2rem, 3.5vw, 3rem);
   box-sizing: border-box;
 }
 
@@ -239,8 +240,10 @@
   max-width: 1440px;
   margin: 0 auto;
   padding: 0 clamp(1.5rem, 5vw, 3rem) clamp(3vh, 4vh, 5vh);
+  padding: 0 clamp(1.5rem, 5vw, 3rem) clamp(3svh, 4svh, 5svh);
   border-top: 1px solid rgba(212, 180, 131, 0.2);
   padding-top: clamp(1.5rem, 2.5vh, 2rem);
+  padding-top: clamp(1.5rem, 2.5svh, 2rem);
 }
 
 .anchorList {
@@ -304,6 +307,7 @@
     align-items: flex-start;
     text-align: left;
     padding: clamp(5vh, 7vh, 8vh) clamp(1.25rem, 5vw, 2rem) clamp(3vh, 5vh, 6vh);
+    padding: clamp(5svh, 7svh, 8svh) clamp(1.25rem, 5vw, 2rem) clamp(3svh, 5svh, 6svh);
     min-width: 0; /* 让 1fr 轨道可缩回视口(否则标题 keep-all 的 min-content 撑爆列宽) */
   }
   .mediaSide {
@@ -347,7 +351,9 @@
 
 .compactWide .titleSide {
   padding-top: clamp(3.5rem, 6vh, 5rem);
+  padding-top: clamp(3.5rem, 6svh, 5rem);
   padding-bottom: clamp(3.5rem, 6vh, 5rem);
+  padding-bottom: clamp(3.5rem, 6svh, 5rem);
 }
 
 .compactWide .mediaSide {

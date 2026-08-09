@@ -4,6 +4,7 @@
   margin-right: calc(50% - 50vw);
   background: var(--ink-deepest);
   padding: clamp(5vh, 8vh, 10vh) clamp(1.5rem, 5vw, 3rem);
+  padding: clamp(5svh, 8svh, 10svh) clamp(1.5rem, 5vw, 3rem);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,6 +25,7 @@
   letter-spacing: -0.01em;
   color: var(--ivory);
   margin: 0 0 clamp(1.5rem, 2.5vh, 2rem) 0;
+  margin: 0 0 clamp(1.5rem, 2.5svh, 2rem) 0;
   word-break: keep-all;
   overflow-wrap: break-word;
 }

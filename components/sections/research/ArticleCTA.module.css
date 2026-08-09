@@ -9,6 +9,7 @@
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   padding: clamp(4rem, 10vh, 8rem) clamp(1.5rem, 5vw, 3rem);
+  padding: clamp(4rem, 10svh, 8rem) clamp(1.5rem, 5vw, 3rem);
   background: var(--ink-deepest);
   border-top: 1px solid rgba(212, 180, 131, 0.4);
   border-bottom: 1px solid rgba(212, 180, 131, 0.4);
@@ -28,6 +29,7 @@
   letter-spacing: -0.01em;
   color: var(--ivory);
   margin: 0 0 clamp(1.5rem, 3vh, 2rem) 0;
+  margin: 0 0 clamp(1.5rem, 3svh, 2rem) 0;
   word-break: keep-all;
   overflow-wrap: break-word;
 }
@@ -47,6 +49,7 @@
   line-height: 1.7;
   color: var(--ivory-warm);
   margin: 0 0 clamp(2rem, 4vh, 3rem) 0;
+  margin: 0 0 clamp(2rem, 4svh, 3rem) 0;
   max-width: 56ch;
   margin-left: auto;
   margin-right: auto;

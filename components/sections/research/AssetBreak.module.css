@@ -18,6 +18,7 @@
   flex-direction: column;
   justify-content: center;
   padding: clamp(2rem, 5vh, 4rem) clamp(2rem, 3vw, 2.5rem);
+  padding: clamp(2rem, 5svh, 4rem) clamp(2rem, 3vw, 2.5rem);
   background: var(--ink-deepest);
   box-sizing: border-box;
 }

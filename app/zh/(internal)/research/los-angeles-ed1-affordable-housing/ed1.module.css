@@ -6,7 +6,9 @@
 /* body 不分栏 / 不限宽,各 ArticleSection 自己用 width variant 控制 */
 .body {
   padding-top: clamp(2rem, 5vh, 4rem);
+  padding-top: clamp(2rem, 5svh, 4rem);
   padding-bottom: clamp(2rem, 5vh, 4rem);
+  padding-bottom: clamp(2rem, 5svh, 4rem);
 }
 
 /* ============================================================
@@ -27,6 +29,7 @@
   margin-left: auto;
   margin-right: auto;
   padding: clamp(4rem, 7vh, 6rem) clamp(1.5rem, 5vw, 3rem);
+  padding: clamp(4rem, 7svh, 6rem) clamp(1.5rem, 5vw, 3rem);
   box-sizing: border-box;
 }
 
@@ -36,6 +39,7 @@
   line-height: 1.15;
   color: var(--ivory);
   margin: 0 0 clamp(1.5rem, 3vh, 2rem) 0;
+  margin: 0 0 clamp(1.5rem, 3svh, 2rem) 0;
   max-width: 100%;
 }
 

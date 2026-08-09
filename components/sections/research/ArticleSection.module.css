@@ -12,7 +12,9 @@
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
   margin-top: clamp(3rem, 6vh, 5rem);
+  margin-top: clamp(3rem, 6svh, 5rem);
   padding-top: clamp(2rem, 4vh, 3rem);
+  padding-top: clamp(2rem, 4svh, 3rem);
   border-top: 1px solid rgba(212, 180, 131, 0.25);
 }
 
@@ -53,6 +55,7 @@
   align-items: baseline;
   gap: clamp(16px, 2vw, 28px);
   margin-bottom: clamp(20px, 3vh, 32px);
+  margin-bottom: clamp(20px, 3svh, 32px);
   flex-wrap: wrap;
 }
 
@@ -93,7 +96,9 @@
   display: flex;
   flex-direction: column;
   gap: clamp(16px, 2.5vh, 24px);
+  gap: clamp(16px, 2.5svh, 24px);
   margin-top: clamp(16px, 2.5vh, 24px);
+  margin-top: clamp(16px, 2.5svh, 24px);
 }
 
 .body {
@@ -102,6 +107,7 @@
   line-height: 1.78;
   color: var(--ivory-warm);
   margin: clamp(16px, 2.5vh, 24px) 0 0 0;
+  margin: clamp(16px, 2.5svh, 24px) 0 0 0;
   max-width: 100%;
   width: 100%;
   text-align: left;
@@ -122,6 +128,7 @@
   color: var(--ivory-mute);
   font-style: italic;
   margin: clamp(20px, 3vh, 28px) 0 0 0;
+  margin: clamp(20px, 3svh, 28px) 0 0 0;
   padding-left: 1.5rem;
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
@@ -134,7 +141,9 @@
 /* ===== Data Panel ===== */
 .dataPanel {
   margin: clamp(24px, 3.5vh, 32px) 0 0 0;
+  margin: clamp(24px, 3.5svh, 32px) 0 0 0;
   padding: clamp(20px, 3vh, 28px) clamp(20px, 3vw, 32px);
+  padding: clamp(20px, 3svh, 28px) clamp(20px, 3vw, 32px);
   background: rgba(212, 180, 131, 0.045);
   border: 1px solid rgba(212, 180, 131, 0.55);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
@@ -160,6 +169,7 @@
   color: var(--gold);
   text-transform: uppercase;
   margin: 0 0 clamp(14px, 2vh, 20px) 0;
+  margin: 0 0 clamp(14px, 2svh, 20px) 0;
 }
 
 .list {
@@ -168,6 +178,7 @@
   padding: 0;
   display: grid;
   gap: clamp(10px, 1.5vh, 14px);
+  gap: clamp(10px, 1.5svh, 14px);
 }
 
 .listItem {
@@ -183,6 +194,7 @@
 /* ===== summary 黄金句 ===== */
 .summary {
   margin: clamp(28px, 4vh, 40px) 0 0 0;
+  margin: clamp(28px, 4svh, 40px) 0 0 0;
   padding-left: 1.5rem;
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
@@ -199,6 +211,7 @@
 /* ===== Data Table ===== */
 .dataTable {
   margin: clamp(24px, 3.5vh, 32px) 0 0 0;
+  margin: clamp(24px, 3.5svh, 32px) 0 0 0;
   padding: 0;
   background: rgba(20, 24, 30, 0.5);
   border: 1px solid rgba(212, 180, 131, 0.2);
@@ -211,6 +224,7 @@
   grid-template-columns: minmax(0, 0.4fr) minmax(0, 1fr);
   gap: clamp(16px, 2vw, 24px);
   padding: clamp(14px, 2vh, 18px) clamp(20px, 3vw, 28px);
+  padding: clamp(14px, 2svh, 18px) clamp(20px, 3vw, 28px);
   border-bottom: 1px solid var(--line-3);
 }
 
@@ -246,9 +260,11 @@
 .orderedList {
   list-style: none;
   margin: clamp(24px, 3.5vh, 32px) 0 0 0;
+  margin: clamp(24px, 3.5svh, 32px) 0 0 0;
   padding: 0;
   display: grid;
   gap: clamp(14px, 2vh, 20px);
+  gap: clamp(14px, 2svh, 20px);
 }
 
 .orderedItem {
@@ -256,6 +272,7 @@
   grid-template-columns: clamp(2.5rem, 4vw, 3.25rem) minmax(0, 1fr);
   gap: clamp(14px, 2vw, 20px);
   padding: clamp(18px, 2.5vh, 24px) clamp(20px, 3vw, 28px);
+  padding: clamp(18px, 2.5svh, 24px) clamp(20px, 3vw, 28px);
   background: rgba(20, 24, 30, 0.5);
   border: 1px solid rgba(212, 180, 131, 0.2);
   align-items: baseline;
@@ -281,11 +298,14 @@
 .detailList {
   display: grid;
   gap: clamp(20px, 3vh, 28px);
+  gap: clamp(20px, 3svh, 28px);
   margin: clamp(24px, 3.5vh, 32px) 0 0 0;
+  margin: clamp(24px, 3.5svh, 32px) 0 0 0;
 }
 
 .detailCard {
   padding: clamp(24px, 3vh, 36px) clamp(24px, 3.5vw, 40px);
+  padding: clamp(24px, 3svh, 36px) clamp(24px, 3.5vw, 40px);
   background: rgba(20, 24, 30, 0.5);
   border: 1px solid rgba(212, 180, 131, 0.2);
 }
@@ -297,6 +317,7 @@
   line-height: 1.4;
   color: var(--ivory);
   margin: 0 0 clamp(14px, 2vh, 18px) 0;
+  margin: 0 0 clamp(14px, 2svh, 18px) 0;
 }
 
 .detailBody {
@@ -305,6 +326,7 @@
   line-height: 1.7;
   color: var(--ivory-warm);
   margin: 0 0 clamp(10px, 1.5vh, 14px) 0;
+  margin: 0 0 clamp(10px, 1.5svh, 14px) 0;
 }
 
 .detailBody:last-child {
@@ -318,6 +340,7 @@
   color: var(--ivory);
   font-weight: 500;
   margin: clamp(14px, 2vh, 18px) 0 0 0;
+  margin: clamp(14px, 2svh, 18px) 0 0 0;
   padding-left: 1.25rem;
   border-left: 3px solid var(--gold);
 }
@@ -325,7 +348,9 @@
 /* ===== Negative Bullets(不适合)===== */
 .negativePanel {
   margin: clamp(24px, 3.5vh, 32px) 0 0 0;
+  margin: clamp(24px, 3.5svh, 32px) 0 0 0;
   padding: clamp(20px, 3vh, 28px) clamp(20px, 3vw, 32px);
+  padding: clamp(20px, 3svh, 28px) clamp(20px, 3vw, 32px);
   background: rgba(20, 24, 30, 0.35);
   border: 1px solid var(--line-3);
 }
@@ -337,6 +362,7 @@
   color: var(--ivory-mute);
   text-transform: uppercase;
   margin: 0 0 clamp(12px, 1.8vh, 16px) 0;
+  margin: 0 0 clamp(12px, 1.8svh, 16px) 0;
 }
 
 .negativeList {
@@ -345,6 +371,7 @@
   padding: 0;
   display: grid;
   gap: clamp(8px, 1.2vh, 12px);
+  gap: clamp(8px, 1.2svh, 12px);
 }
 
 .negativeItem {
@@ -360,7 +387,9 @@
 .quoteCard {
   position: relative;
   margin: clamp(32px, 5vh, 48px) 0 0 0;
+  margin: clamp(32px, 5svh, 48px) 0 0 0;
   padding: clamp(32px, 4.5vh, 48px) clamp(28px, 4vw, 56px);
+  padding: clamp(32px, 4.5svh, 48px) clamp(28px, 4vw, 56px);
   background: rgba(20, 24, 30, 0.4);
   border: 1px solid rgba(212, 180, 131, 0.18);
 }
@@ -371,6 +400,7 @@
   color: var(--gold);
   opacity: 0.4;
   margin-bottom: clamp(16px, 2.5vh, 24px);
+  margin-bottom: clamp(16px, 2.5svh, 24px);
   display: block;
 }
 
@@ -381,6 +411,7 @@
   line-height: 1.5;
   color: var(--ivory);
   margin: 0 0 clamp(18px, 2.5vh, 24px) 0;
+  margin: 0 0 clamp(18px, 2.5svh, 24px) 0;
 }
 
 .quoteAttribution {
@@ -394,7 +425,9 @@
 /* ===== Data Card(单个 KPI)===== */
 .dataCard {
   margin: clamp(24px, 3.5vh, 32px) 0 0 0;
+  margin: clamp(24px, 3.5svh, 32px) 0 0 0;
   padding: clamp(22px, 3vh, 30px) clamp(24px, 3.5vw, 36px);
+  padding: clamp(22px, 3svh, 30px) clamp(24px, 3.5vw, 36px);
   background: rgba(20, 24, 30, 0.5);
   border-left: 3px solid var(--gold);
   display: flex;
