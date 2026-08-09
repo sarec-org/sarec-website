@@ -9,6 +9,7 @@ import {
 } from '@/lib/geo/schema';
 import { GeoArticleRenderer } from '@/components/sections/research/geo/GeoArticleRenderer';
 import { ShareButton } from '@/components/sections/research/ShareButton';
+import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import {
   RelatedReading,
   SourcesSection,
@@ -115,6 +116,8 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
 
   return (
     <main>
+      <ViewportLockScript />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}

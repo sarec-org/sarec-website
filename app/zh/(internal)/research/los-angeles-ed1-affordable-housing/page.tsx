@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
 import { ShareButton } from '@/components/sections/research/ShareButton';
+import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -201,6 +202,7 @@ const conversionIntents = [
 export default function LosAngelesEd1AffordableHousingPage() {
   return (
     <main className={styles.page}>
+      <ViewportLockScript />
       <ArticleHero
         eyebrow="ED1 · 政策深度 · LA"
         title="洛杉矶 ED1 与经济适用房开发观察"

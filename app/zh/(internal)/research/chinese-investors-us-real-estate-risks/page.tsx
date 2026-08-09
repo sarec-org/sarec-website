@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
 import { ShareButton } from '@/components/sections/research/ShareButton';
+import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
 import { RelatedResearch } from '@/components/sections/research/RelatedResearch';
@@ -160,6 +161,7 @@ const conversionIntents = [
 export default function ChineseInvestorsUsRealEstateRisksPage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
+      <ViewportLockScript />
       <ArticleHero
         eyebrow="SAREC INSIGHTS · 跨境投资风险"
         title="中国投资人美国房地产常见风险"

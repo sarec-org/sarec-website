@@ -296,6 +296,7 @@
     grid-template-columns: 1fr;
     grid-template-rows: 50vh auto auto;
     grid-template-rows: 50svh auto auto; /* iOS 地址栏不抖 */
+    grid-template-rows: calc(var(--locked-vh, 1svh) * 50) auto auto; /* 微信:锁定视口高,svh 在微信等同 vh 无效 */
   }
   .mediaSide {
     grid-column: 1;

@@ -74,6 +74,7 @@
        vh 行保留作旧浏览器兜底;desktop(>1023px)不受本媒体查询影响,视觉不变。 */
     grid-template-rows: auto 50vh;
     grid-template-rows: auto 50svh;
+    grid-template-rows: auto calc(var(--locked-vh, 1svh) * 50); /* 微信:锁定视口高,svh 在微信等同 vh 无效 */
     height: auto;
     min-height: 0;
   }
