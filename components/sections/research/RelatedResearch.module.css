@@ -9,6 +9,7 @@
   background: var(--ink-deepest);
   padding: clamp(4rem, 10vh, 7rem) clamp(1.5rem, 5vw, 3rem);
   padding: clamp(4rem, 10svh, 7rem) clamp(1.5rem, 5vw, 3rem);
+  padding: clamp(4rem, calc(var(--locked-vh, 1svh) * 10), 7rem) clamp(1.5rem, 5vw, 3rem);
   border-top: 1px solid rgba(212, 180, 131, 0.25);
 }
 

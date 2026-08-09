@@ -93,6 +93,7 @@
   margin: 0 auto;
   padding: clamp(3rem, 8vh, 6rem) clamp(1.5rem, 5vw, 3rem) clamp(1.75rem, 4vh, 2.75rem);
   padding: clamp(3rem, 8svh, 6rem) clamp(1.5rem, 5vw, 3rem) clamp(1.75rem, 4svh, 2.75rem);
+  padding: clamp(3rem, calc(var(--locked-vh, 1svh) * 8), 6rem) clamp(1.5rem, 5vw, 3rem) clamp(1.75rem, calc(var(--locked-vh, 1svh) * 4), 2.75rem);
   text-align: center;
   border-bottom: 1px solid var(--gold-dim);
 }

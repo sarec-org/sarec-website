@@ -35,6 +35,7 @@
   text-align: left;
   padding: clamp(4rem, 8vh, 6rem) clamp(2rem, 3.5vw, 3rem);
   padding: clamp(4rem, 8svh, 6rem) clamp(2rem, 3.5vw, 3rem);
+  padding: clamp(4rem, calc(var(--locked-vh, 1svh) * 8), 6rem) clamp(2rem, 3.5vw, 3rem);
   box-sizing: border-box;
 }
 
@@ -309,6 +310,7 @@
     text-align: left;
     padding: clamp(5vh, 7vh, 8vh) clamp(1.25rem, 5vw, 2rem) clamp(3vh, 5vh, 6vh);
     padding: clamp(5svh, 7svh, 8svh) clamp(1.25rem, 5vw, 2rem) clamp(3svh, 5svh, 6svh);
+    padding: clamp(calc(var(--locked-vh, 1svh) * 5), calc(var(--locked-vh, 1svh) * 7), calc(var(--locked-vh, 1svh) * 8)) clamp(1.25rem, 5vw, 2rem) clamp(calc(var(--locked-vh, 1svh) * 3), calc(var(--locked-vh, 1svh) * 5), calc(var(--locked-vh, 1svh) * 6));
     min-width: 0; /* 让 1fr 轨道可缩回视口(否则标题 keep-all 的 min-content 撑爆列宽) */
   }
   .mediaSide {

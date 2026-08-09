@@ -5,6 +5,7 @@
   background: var(--ink-deepest);
   padding: clamp(5vh, 8vh, 10vh) clamp(1.5rem, 5vw, 3rem);
   padding: clamp(5svh, 8svh, 10svh) clamp(1.5rem, 5vw, 3rem);
+  padding: clamp(calc(var(--locked-vh, 1svh) * 5), calc(var(--locked-vh, 1svh) * 8), calc(var(--locked-vh, 1svh) * 10)) clamp(1.5rem, 5vw, 3rem);
   display: flex;
   align-items: center;
   justify-content: center;
