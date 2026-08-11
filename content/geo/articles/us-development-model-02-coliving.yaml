@@ -35,7 +35,7 @@ blocks:
   - discriminant: assetBreak
     value:
       kind: image
-      src: /images/research/uploads/模式02头图-替换文件名.webp
+      src: /images/research/uploads/img-1786413403246-0.webp
       alt: 洛杉矶 West Adams 一栋由独立屋地块新建而成的 30 房间 co-living 共居物业
   - discriminant: prose
     value:
@@ -98,7 +98,7 @@ blocks:
   - discriminant: assetBreak
     value:
       kind: image
-      src: /images/research/uploads/img-model02-double-density.webp
+      src: /images/research/uploads/img-1786413486558-1.webp
       alt: SAREC 双密度模型示意:建筑面积增加 3.5 倍,收租单元增加 6 倍,颗粒度贡献 1.7 倍
   - discriminant: prose
     value:
@@ -556,10 +556,6 @@ sourceList:
     url: https://sinoamericanrec.org/zh/research/us-development-model-01-adu
   - name: SAREC,《美国房地产大重置(2026 年中期)》,2026 年 7 月
     url: https://sinoamericanrec.org/zh/research/us-housing-great-reset-2026
-  - name: "![洛杉矶 West Adams 一栋由独立屋地块新建而成的 30 房间 co-living
-      共居物业](/images/research/uploads/img-1786413403246-0.webp) ![SAREC
-      双密度模型示意:建筑面积增加 3.5 倍,收租单元增加 6 倍,颗粒度贡献 1.7
-      倍](/images/research/uploads/img-1786413486558-1.webp)"
 sources: []
 relatedSlugs: []
 cta:
