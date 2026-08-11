@@ -14,15 +14,15 @@ template:
       - 常规项目 City 审批通常约 9–12 个月、6 层及以上更长(SAREC 经验);组合台账显示,小型 ground-up
         从买地到出租的完整周期约 2.5–4.3 年,另有在建项目台账计划约 4.4 年
     judgmentChecklist: []
-    dataCutoff: 2025-06-13
+    dataCutoff: “2025-06-13”
 layout: classic
-status: draft
+status: published
 title: 美国房地产开发模式②|Co-living 共居开发:30 个房间,为什么不是 30 套房
 description: SAREC 以真实洛杉矶项目拆解 Co-living 共居开发:双密度框架、四层成本口径、压力测试与产权结构,解释按房间出租为什么赚钱、为什么只能整体持有。
 author:
   name: 东哥
   title: SAREC 中美房地产商会创始人
-publishedAt: 2026-08-13
+publishedAt: “2026-08-11”
 summary:
   - Co-living 的本质是把出租颗粒度从"户"降到"房间",A 项目面积增加 3.5 倍、收租单元增加 6 倍
   - 厨房配置是 guest room 与 dwelling unit 分类的主要分界之一;本文研究的是以 guest room
