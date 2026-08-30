@@ -310,20 +310,20 @@ export function HeroV3B() {
             <Link href="/zh/services">服务</Link>
           </li>
           <li>
-            <Link href="/zh/projects">项目</Link>
+            <Link href="/zh/projects">会员项目</Link>
           </li>
           <li>
             <Link href="/zh/research">研究</Link>
           </li>
           <li>
-            <Link href="/zh/join">会员入会</Link>
+            <Link href="/zh/events">新闻与活动</Link>
           </li>
           <li>
-            <Link href="/zh/events">活动</Link>
+            <Link href="/zh/members">会员风采</Link>
           </li>
         </ul>
-        <Link href="/zh/contact" className={styles['nav-cta']}>
-          联系我们
+        <Link href="/zh/join" className={styles['nav-cta']}>
+          加入商会
         </Link>
       </nav>
 

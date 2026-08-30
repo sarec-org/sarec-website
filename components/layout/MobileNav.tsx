@@ -19,8 +19,9 @@ type SubLink = { label: string; href: string };
 type NavItem = { label: string; href: string; children?: SubLink[] };
 
 // 六项一级导航(与 HeroV3B / InternalNav 完全一致,顺序不变)。
-// 二级仅取 SiteFooter 现有、且能明确归属该一级的链接;项目/研究/会员入会/活动
-// 在 footer 无独立且无争议的子链接 → 保持纯一级,不显示展开箭头。
+// CMS V2 PR-2 最终导航:项目→会员项目、活动→新闻与活动、会员入会→会员风采;
+// 「加入商会」从一级项改为右上角固定行动按钮(与桌面端一致)。
+// 二级仅取能明确归属该一级的既有链接;无争议子链接的一级项保持纯一级,不显示展开箭头。
 const NAV: NavItem[] = [
   {
     label: '关于',
@@ -38,21 +39,34 @@ const NAV: NavItem[] = [
       { label: '服务入口', href: '/zh/services' },
       { label: '项目案例', href: '/zh/case-studies' },
       { label: '会员服务', href: '/zh/membership' },
-      { label: '在线入会', href: '/zh/join' },
-      { label: '战略合作伙伴', href: '/zh/strategic-partners' },
-      { label: '活动与考察', href: '/zh/events' }
+      { label: '战略合作伙伴', href: '/zh/strategic-partners' }
     ]
   },
-  { label: '项目', href: '/zh/projects' },
+  { label: '会员项目', href: '/zh/projects' },
   { label: '研究', href: '/zh/research' },
-  { label: '会员入会', href: '/zh/join' },
-  { label: '活动', href: '/zh/events' }
+  {
+    label: '新闻与活动',
+    href: '/zh/events',
+    children: [
+      { label: '新闻与活动', href: '/zh/events' },
+      { label: '新闻', href: '/zh/news' }
+    ]
+  },
+  {
+    label: '会员风采',
+    href: '/zh/members',
+    children: [
+      { label: '会员风采', href: '/zh/members' },
+      { label: '会员权益', href: '/zh/membership' }
+    ]
+  }
 ];
 
 // footer「联系」组 —— 抽屉底部辅助链接区,不参与一级结构、不参与高亮。
 const AUX: SubLink[] = [
   { label: '预约沟通', href: '/zh/contact' },
-  { label: '项目评估', href: '/zh/contact#project-evaluation' }
+  { label: '项目评估', href: '/zh/contact#project-evaluation' },
+  { label: '联系方式', href: '/zh/contact' }
 ];
 
 export function MobileNav({ variant = 'overlay' }: { variant?: 'overlay' | 'header' }) {
@@ -113,8 +127,8 @@ export function MobileNav({ variant = 'overlay' }: { variant?: 'overlay' | 'head
               </span>
               菜单
             </button>
-            <Link href="/zh/contact" className={styles.contact} onClick={close}>
-              联系我们
+            <Link href="/zh/join" className={styles.contact} onClick={close}>
+              加入商会
             </Link>
           </div>
         </div>
