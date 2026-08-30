@@ -105,3 +105,43 @@ export type ProjectItem = {
   gallery: GalleryImage[];
   body: string;
 };
+
+// ── 会员单位 / 会员人物 ──────────────────────────────────────────────
+export type MembershipTier = 'vice-chair' | 'executive-director' | 'director' | 'member';
+export type RelationshipTag = 'strategic-partner';
+export type Expertise =
+  | 'development-investment'
+  | 'construction-materials'
+  | 'lending-finance'
+  | 'legal-tax'
+  | 'brokerage'
+  | 'tech-professional-services';
+
+export type MemberUnit = {
+  slug: string;
+  name: string;
+  logo: string | null;
+  membershipTier: MembershipTier;
+  relationshipTags: RelationshipTag[];
+  representative: string | null;
+  coreBusiness: string | null;
+  expertise: Expertise[];
+  /** 'YYYY-MM-DD' */
+  joinedAt: string | null;
+  lastVerified: string | null;
+  sortWeight: number;
+  published: boolean;
+  publicationApproved: boolean;
+};
+
+export type MemberProfile = {
+  slug: string;
+  name: string;
+  /** memberUnits 的 slug;未关联为 null */
+  unit: string | null;
+  title: string | null;
+  coverImage: string | null;
+  body: string;
+  published: boolean;
+  publicationApproved: boolean;
+};

@@ -12,7 +12,7 @@
  *    置 availability=SoldOut;closed / notOpen 不输出 offers。
  *  - 会员项目详情页默认 WebPage;不为 GEO 把普通展示页一律标成 Article。
  */
-import type { EventItem, NewsItem, ProjectItem } from './types';
+import type { EventItem, MemberProfile, MemberUnit, NewsItem, ProjectItem } from './types';
 
 type JsonLd = Record<string, unknown>;
 
@@ -211,5 +211,53 @@ export function buildProjectJsonLd(
   }
   if (image) jsonLd.image = [image];
 
+  return jsonLd;
+}
+
+// ── 会员单位详情:Organization(memberOf = SAREC)────────────────────
+export function buildMemberUnitJsonLd(
+  unit: MemberUnit,
+  options: { siteUrl: string; pathname: string }
+): JsonLd {
+  const url = `${options.siteUrl}${options.pathname}`;
+  const logo = absolute(options.siteUrl, unit.logo);
+
+  const jsonLd: JsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    '@id': url,
+    url,
+    name: unit.name,
+    memberOf: organization(options.siteUrl),
+  };
+  if (unit.coreBusiness) jsonLd.description = unit.coreBusiness;
+  if (logo) jsonLd.logo = { '@type': 'ImageObject', url: logo };
+  if (unit.representative) {
+    jsonLd.employee = { '@type': 'Person', name: unit.representative };
+  }
+  return jsonLd;
+}
+
+// ── 会员人物详情:Person ─────────────────────────────────────────────
+export function buildMemberProfileJsonLd(
+  profile: MemberProfile,
+  options: { siteUrl: string; pathname: string; unitName?: string | null }
+): JsonLd {
+  const url = `${options.siteUrl}${options.pathname}`;
+  const image = absolute(options.siteUrl, profile.coverImage);
+
+  const jsonLd: JsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': url,
+    url,
+    name: profile.name,
+  };
+  if (profile.title) jsonLd.jobTitle = profile.title;
+  if (options.unitName) {
+    jsonLd.worksFor = { '@type': 'Organization', name: options.unitName };
+  }
+  jsonLd.memberOf = organization(options.siteUrl);
+  if (image) jsonLd.image = [image];
   return jsonLd;
 }

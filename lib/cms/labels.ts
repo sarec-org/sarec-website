@@ -6,6 +6,9 @@
  * 角色 / 类型 / 级别等文案由枚举锁死,编辑不可自定义)。
  */
 import type {
+  Expertise,
+  MembershipTier,
+  RelationshipTag,
   EventStatus,
   MemberRole,
   NewsCategory,
@@ -95,4 +98,33 @@ export const TIMEZONE_LABEL: Record<string, string> = {
   'America/Los_Angeles': '美西时间',
   'America/New_York': '美东时间',
   'Asia/Shanghai': '北京时间',
+};
+
+// ── 会员单位 / 会员人物 ──────────────────────────────────────────────
+export const MEMBERSHIP_TIER_LABEL: Record<MembershipTier, string> = {
+  'vice-chair': '副会长单位',
+  'executive-director': '常务理事',
+  director: '理事',
+  member: '会员',
+};
+
+/** 荣誉墙与名录的排序序位:数字小的排前面。不按日期倒序。 */
+export const MEMBERSHIP_TIER_ORDER: Record<MembershipTier, number> = {
+  'vice-chair': 0,
+  'executive-director': 1,
+  director: 2,
+  member: 3,
+};
+
+export const RELATIONSHIP_TAG_LABEL: Record<RelationshipTag, string> = {
+  'strategic-partner': '战略合作伙伴',
+};
+
+export const EXPERTISE_LABEL: Record<Expertise, string> = {
+  'development-investment': '开发与投资',
+  'construction-materials': '建筑与建材',
+  'lending-finance': '贷款与金融',
+  'legal-tax': '法律与税务',
+  brokerage: '房地产经纪',
+  'tech-professional-services': '科技与专业服务',
 };

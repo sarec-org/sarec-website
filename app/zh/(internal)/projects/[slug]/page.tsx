@@ -8,11 +8,13 @@ import { CmsDetailHero } from '@/components/cms/CmsDetailHero';
 import { CmsMarkdown } from '@/components/cms/CmsMarkdown';
 import { MemberDisclaimer } from '@/components/cms/Disclaimers';
 import { GALLERY_IMAGE, PROSE_CLASSES } from '@/components/cms/detailPresets';
-import { getProjectBySlug, listProjects } from '@/lib/cms/content';
+import { getProjectBySlug, listProjects, resolveLinkedUnits } from '@/lib/cms/content';
 import { buildProjectJsonLd } from '@/lib/cms/schema';
 import { buildBreadcrumbJsonLd } from '@/lib/geo/schema';
 import {
   MEMBER_ROLE_LABEL,
+  MEMBERSHIP_TIER_LABEL,
+  RELATIONSHIP_TAG_LABEL,
   PROJECT_REGION_LABEL,
   PROJECT_STAGE_LABEL,
   PROJECT_TAG_LABEL,
@@ -58,9 +60,24 @@ export default function ProjectDetailPage({ params }: { params: Params }) {
   if (!project) notFound();
 
   const pathname = `/zh/projects/${project.slug}`;
-  // PR-1 阶段 memberUnits 尚无内容条目,故不注入关联单位名称;
-  // PR-2 回填后由 memberUnits 解析出名称传入 memberOrganizations。
-  const projectJsonLd = buildProjectJsonLd(project, { siteUrl: SITE_URL, pathname });
+  // PR-2:关联单位由 slug 解析(只认过发布双闸的单位),
+  // 「副会长单位项目」「战略伙伴项目」等徽章无手工字段,一律由单位的级别 / 关系数据
+  // 在渲染时自动生成 —— 单位级别变化后徽章跟着变,不会过期。
+  const linkedUnits = resolveLinkedUnits(project.linkedMembers.map((m) => m.unit));
+  const unitBySlug = new Map(linkedUnits.map((u) => [u.slug, u]));
+  const autoBadges = Array.from(
+    new Set([
+      ...linkedUnits.map((u) => MEMBERSHIP_TIER_LABEL[u.membershipTier] + '项目'),
+      ...linkedUnits.flatMap((u) =>
+        u.relationshipTags.map((t) => RELATIONSHIP_TAG_LABEL[t] + '项目')
+      )
+    ])
+  );
+  const projectJsonLd = buildProjectJsonLd(project, {
+    siteUrl: SITE_URL,
+    pathname,
+    memberOrganizations: linkedUnits.map((u) => u.name)
+  });
   const breadcrumbJsonLd = buildBreadcrumbJsonLd([
     { name: '首页', url: `${SITE_URL}/zh` },
     { name: '会员项目', url: `${SITE_URL}/zh/projects` },
@@ -131,6 +148,14 @@ export default function ProjectDetailPage({ params }: { params: Params }) {
                 <dd className={d.overviewValue}>
                   {project.tags.map((t) => PROJECT_TAG_LABEL[t]).join(' / ')}
                 </dd>
+              </div>
+            ) : null}
+            {/* 自动徽章 —— 无手工字段,由关联会员单位的级别 / 关系数据渲染时生成,
+                单位级别变化后自动跟着变,不会过期。 */}
+            {autoBadges.length > 0 ? (
+              <div className={d.overviewRow}>
+                <dt className={d.overviewLabel}>会员关联</dt>
+                <dd className={d.overviewValue}>{autoBadges.join(' / ')}</dd>
               </div>
             ) : null}
             <div className={d.overviewRow}>
