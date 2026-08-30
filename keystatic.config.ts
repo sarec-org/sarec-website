@@ -343,6 +343,40 @@ const blocksField = fields.array(
   }
 );
 
+// ══════════════════════════════════════════════════════════════════
+// CMS V2(PR-1)共享字段工厂 —— 新闻 / 活动 / 会员项目 / 会员单位
+// ------------------------------------------------------------------
+// 与 articles 同构:GitHub storage、一条内容一个 .yaml、format.data='yaml'。
+// 约定:
+//  - 所有日期字段一律 fields.date()(日期选择器 + 写出裸 ISO,如 2026-08-15)。
+//  - body / recapBody 一律 multiline text 存 Markdown(不引 markdoc / document),
+//    前台由 components/cms/CmsMarkdown.tsx 以与 GEO 同构的零依赖方式渲染。
+//  - select / multiselect 的 value 一律英文标识,label 一律中文(同 articles)。
+// ══════════════════════════════════════════════════════════════════
+
+/** 图集:多图,每张 alt 必填(无障碍 + SEO 硬要求)。 */
+const galleryField = (directory: string, publicPath: string) =>
+  fields.array(
+    fields.object({
+      image: fields.image({
+        label: '图片',
+        directory,
+        publicPath,
+        validation: { isRequired: true },
+      }),
+      alt: fields.text({
+        label: '替代文本 alt',
+        description: '这张图在讲什么。必填 —— 无障碍与 SEO 都依赖它。',
+        validation: { isRequired: true },
+      }),
+    }),
+    {
+      label: '图集',
+      description: '可放多张图片;每张都必须填写 alt,否则无法保存。',
+      itemLabel: (p) => p.fields.alt.value || '图片',
+    }
+  );
+
 export default config({
   // GitHub 模式(批次 1)：内容读写走 GitHub App + OAuth，编辑在 cms/ 前缀分支上进行并经 PR 合并。
   // 运行需 env：KEYSTATIC_GITHUB_CLIENT_ID/SECRET、KEYSTATIC_SECRET、NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG。
@@ -556,6 +590,400 @@ export default config({
             }),
           }
         ),
+      },
+    }),
+
+    // ══════════════════════════════════════════════════════════════
+    // CMS V2 · 1A —— 新闻(news)
+    // 前台:/zh/news(列表)、/zh/news/<slug>(详情)、/zh/events(聚合页左栏)
+    // ⚠️ 分类里没有「活动回顾」:回顾写在对应活动条目的「活动回顾正文」字段,
+    //    聚合页会自动把已结束的活动作为回顾卡片混入新闻流,不在这里另建文章。
+    // ══════════════════════════════════════════════════════════════
+    news: collection({
+      label: '新闻(News)',
+      slugField: 'title',
+      path: 'content/news/*',
+      format: { data: 'yaml' },
+      columns: ['publishedAt', 'category'],
+      schema: {
+        title: fields.slug({
+          name: { label: '标题', validation: { isRequired: true } },
+          slug: {
+            label: 'URL 标识(slug)',
+            description: '新闻网址 /zh/news/<此处>。发布后请勿更改,否则旧链接会失效。',
+          },
+        }),
+        category: fields.select({
+          label: '分类',
+          description: '活动回顾不在此列 —— 回顾请写在对应「活动」条目里。',
+          options: [
+            { label: '商会新闻', value: 'chamber-news' },
+            { label: '会员动态', value: 'member-update' },
+            { label: '合作进展', value: 'partnership-progress' },
+          ],
+          defaultValue: 'chamber-news',
+        }),
+        publishedAt: fields.date({
+          label: '发布日期',
+          description: '用于时间流排序与结构化数据。',
+          validation: { isRequired: true },
+        }),
+        summary: fields.text({
+          label: '摘要',
+          description:
+            '用于列表卡片与搜索引擎描述(meta description)。建议 60–80 个汉字,原则上不超过 100 个汉字。',
+          multiline: true,
+          validation: { isRequired: true },
+        }),
+        coverImage: fields.image({
+          label: '封面图',
+          description: '列表卡片与详情页头部使用。',
+          directory: 'public/images/news/uploads',
+          publicPath: '/images/news/uploads',
+        }),
+        gallery: galleryField('public/images/news/uploads', '/images/news/uploads'),
+        body: fields.text({
+          label: '正文(Markdown)',
+          description:
+            '空行分段。支持 ## / ### 小标题、- 列表、**加粗**、[文字](链接)。',
+          multiline: true,
+          validation: { isRequired: true },
+        }),
+      },
+    }),
+
+    // ══════════════════════════════════════════════════════════════
+    // CMS V2 · 1B —— 活动(events)
+    // 一场活动始终一个 URL /zh/events/<slug>:
+    // 举办前展示主题/时间/地点/报名;结束后同一页面更新为回顾,不生成第二个页面。
+    // 「活动状态」与「报名状态」是两个独立维度,不合并成一个枚举。
+    // ══════════════════════════════════════════════════════════════
+    events: collection({
+      label: '活动(Events)',
+      slugField: 'title',
+      path: 'content/events/*',
+      format: { data: 'yaml' },
+      columns: ['startAt', 'eventStatus'],
+      schema: {
+        title: fields.slug({
+          name: { label: '活动名称', validation: { isRequired: true } },
+          slug: {
+            label: 'URL 标识(slug)',
+            description: '活动网址 /zh/events/<此处>。发布后请勿更改,否则旧链接会失效。',
+          },
+        }),
+        summary: fields.text({
+          label: '摘要',
+          description:
+            '用于列表卡片与搜索引擎描述。建议 60–80 个汉字,原则上不超过 100 个汉字。',
+          multiline: true,
+          validation: { isRequired: true },
+        }),
+        startAt: fields.datetime({
+          label: '开始时间',
+          description: '当地时间。时区在下方单独选择。',
+          validation: { isRequired: true },
+        }),
+        endAt: fields.datetime({
+          label: '结束时间(可选)',
+          description: '当地时间。单场短活动可留空。',
+        }),
+        timezone: fields.select({
+          label: '时区',
+          description: '上面的开始/结束时间不带时区,必须在这里指明是哪个时区的当地时间。',
+          options: [
+            { label: '美西 洛杉矶(America/Los_Angeles)', value: 'America/Los_Angeles' },
+            { label: '美东 纽约(America/New_York)', value: 'America/New_York' },
+            { label: '中国 上海(Asia/Shanghai)', value: 'Asia/Shanghai' },
+          ],
+          defaultValue: 'America/Los_Angeles',
+        }),
+        locationName: fields.text({ label: '地点名称', description: '如:SAREC 洛杉矶办公室。线上活动可填「线上」。' }),
+        address: fields.text({ label: '详细地址(可选)', multiline: true }),
+        organizer: fields.text({ label: '主办方', description: '默认填 中美房地产商会(SAREC)。' }),
+        registrationUrl: fields.text({
+          label: '报名链接(可选)',
+          description: '公开报名页或表单链接。留空表示不公开报名(如闭门/邀请制)。',
+        }),
+        eventStatus: fields.select({
+          label: '活动状态',
+          description: '与下方「报名状态」相互独立。已结束后请改为「已结束」并填写下方活动回顾。',
+          options: [
+            { label: '已排期(预告)', value: 'scheduled' },
+            { label: '已结束', value: 'completed' },
+            { label: '已延期', value: 'postponed' },
+            { label: '已取消', value: 'cancelled' },
+          ],
+          defaultValue: 'scheduled',
+        }),
+        registrationStatus: fields.select({
+          label: '报名状态',
+          description: '与上方「活动状态」相互独立。',
+          options: [
+            { label: '尚未开放', value: 'notOpen' },
+            { label: '报名中', value: 'open' },
+            { label: '已截止', value: 'closed' },
+            { label: '已满', value: 'full' },
+          ],
+          defaultValue: 'notOpen',
+        }),
+        coverImage: fields.image({
+          label: '封面图',
+          directory: 'public/images/events/uploads',
+          publicPath: '/images/events/uploads',
+        }),
+        body: fields.text({
+          label: '活动介绍(Markdown)',
+          description: '举办前展示的主题说明、议程等。空行分段,支持 ## 小标题、- 列表、**加粗**。',
+          multiline: true,
+        }),
+        recapBody: fields.text({
+          label: '活动回顾正文(Markdown,活动结束后填)',
+          description:
+            '填写后,本活动页会在同一 URL 下追加回顾区,并自动加上「本文为活动纪要」免责声明。不要为回顾另建新闻。',
+          multiline: true,
+        }),
+        speakers: fields.array(
+          fields.object({
+            name: fields.text({ label: '姓名', validation: { isRequired: true } }),
+            title: fields.text({ label: '头衔 / 单位(可选)' }),
+          }),
+          {
+            label: '主讲人',
+            description: '活动回顾区展示。',
+            itemLabel: (p) => p.fields.name.value || '主讲人',
+          }
+        ),
+        gallery: galleryField('public/images/events/uploads', '/images/events/uploads'),
+      },
+    }),
+
+    // ══════════════════════════════════════════════════════════════
+    // CMS V2 · 1E —— 会员项目(projects)
+    // 前台:/zh/projects(列表)、/zh/projects/<slug>(详情)
+    // 合规硬约束:
+    //  - 详情页强制渲染 MemberDisclaimer,编辑不可关闭。
+    //  - 不设任何「预期回报 / 收益率 / 质量评级」字段。
+    //  - 角色枚举锁死,渲染层不留自由文本入口;统一用「参与方」口径展示。
+    //  - stage(项目阶段)仅作详情页展示字段,不进筛选器(阶段筛选是挂牌板特征)。
+    //  - 「副会长单位项目」等徽章无手工字段,由关联会员单位的级别/关系数据渲染时生成。
+    // ══════════════════════════════════════════════════════════════
+    projects: collection({
+      label: '会员项目(Projects)',
+      slugField: 'title',
+      path: 'content/projects/*',
+      format: { data: 'yaml' },
+      columns: ['projectType', 'stage'],
+      schema: {
+        title: fields.slug({
+          name: { label: '项目名称', validation: { isRequired: true } },
+          slug: {
+            label: 'URL 标识(slug)',
+            description: '项目网址 /zh/projects/<此处>。发布后请勿更改,否则旧链接会失效。',
+          },
+        }),
+        summary: fields.text({
+          label: '摘要',
+          description:
+            '用于列表卡片与搜索引擎描述。建议 60–80 个汉字,原则上不超过 100 个汉字。只写事实,不写回报预期。',
+          multiline: true,
+          validation: { isRequired: true },
+        }),
+        projectType: fields.select({
+          label: '项目类型',
+          description: '列表页筛选维度之一。',
+          options: [
+            { label: '经济适用房开发(ED1)', value: 'ed1-affordable' },
+            { label: '精品公寓项目', value: 'boutique-apartment' },
+            { label: '跨境股权合作项目', value: 'cross-border-equity' },
+            { label: '其他', value: 'other' },
+          ],
+          defaultValue: 'ed1-affordable',
+        }),
+        region: fields.select({
+          label: '地区',
+          description: '列表页筛选维度之一。',
+          options: [
+            { label: '洛杉矶', value: 'los-angeles' },
+            { label: '南加州其他地区', value: 'socal-other' },
+            { label: '加州其他地区', value: 'california-other' },
+            { label: '美国其他地区', value: 'us-other' },
+          ],
+          defaultValue: 'los-angeles',
+        }),
+        stage: fields.select({
+          label: '项目阶段',
+          description: '仅在详情页展示,不作为列表筛选条件。',
+          options: [
+            { label: '前期评估', value: 'pre-development' },
+            { label: '审批中', value: 'entitlement' },
+            { label: '建设中', value: 'construction' },
+            { label: '在管', value: 'operating' },
+            { label: '已完成', value: 'completed' },
+          ],
+          defaultValue: 'pre-development',
+        }),
+        sarecRole: fields.multiselect({
+          label: 'SAREC 角色',
+          description: '枚举锁死,不可自定义文案。可多选。',
+          options: [
+            { label: '政策结构判断', value: 'policy-structure' },
+            { label: '项目筛选', value: 'project-screening' },
+            { label: '项目合作', value: 'project-partnership' },
+            { label: '结构设计', value: 'structure-design' },
+            { label: '法律结构设计', value: 'legal-structure-design' },
+            { label: '资本结构咨询', value: 'capital-structure-advisory' },
+            { label: '合规咨询', value: 'compliance-advisory' },
+            { label: '风险评估', value: 'risk-assessment' },
+            { label: '投资人沟通', value: 'investor-communication' },
+          ],
+          defaultValue: [],
+        }),
+        linkedMembers: fields.array(
+          fields.object({
+            unit: fields.relationship({
+              label: '会员单位',
+              description: '从会员单位库中选择。本项必填。',
+              collection: 'memberUnits',
+              validation: { isRequired: true },
+            }),
+            roles: fields.multiselect({
+              label: '参与角色',
+              description: '枚举锁死,不可自定义文案。本项至少选一项。',
+              options: [
+                { label: '开发', value: 'development' },
+                { label: '贷款', value: 'lending' },
+                { label: '建筑', value: 'construction' },
+                { label: '法律', value: 'legal' },
+                { label: '会计', value: 'accounting' },
+                { label: '经纪', value: 'brokerage' },
+                { label: '其他', value: 'other' },
+              ],
+              defaultValue: [],
+            }),
+            roleDescription: fields.text({
+              label: '角色补充说明(可选)',
+              description: '50 个汉字以内。前台会放在免责声明约束语境内展示。',
+              validation: { length: { max: 50 } },
+            }),
+          }),
+          {
+            label: '参与的会员单位',
+            description: '可留空。填写时每一项都必须选中会员单位并至少选一个参与角色。',
+            itemLabel: (p) => p.fields.unit.value || '会员单位',
+          }
+        ),
+        tags: fields.multiselect({
+          label: '标签',
+          description:
+            '仅这三个手工标签。「副会长单位项目」「战略伙伴项目」等徽章由上方关联的会员单位自动生成,不在此处手填。',
+          options: [
+            { label: 'SAREC参与', value: 'sarec-involved' },
+            { label: '会员提交', value: 'member-submitted' },
+            { label: '案例研究', value: 'case-study' },
+          ],
+          defaultValue: [],
+        }),
+        lastVerified: fields.date({
+          label: '资料最后核实日',
+          description: '最近一次与项目方/会员单位核实本页信息的日期。',
+          validation: { isRequired: true },
+        }),
+        coverImage: fields.image({
+          label: '封面图',
+          directory: 'public/images/projects/uploads',
+          publicPath: '/images/projects/uploads',
+        }),
+        gallery: galleryField('public/images/projects/uploads', '/images/projects/uploads'),
+        body: fields.text({
+          label: '项目正文(Markdown)',
+          description:
+            '只写事实与结构,不写收益承诺、回报预期,也不写任何面向投资人的招揽措辞。空行分段,支持 ## 小标题、- 列表、**加粗**。',
+          multiline: true,
+        }),
+      },
+    }),
+
+    // ══════════════════════════════════════════════════════════════
+    // CMS V2 · 1D —— 会员单位(memberUnits)
+    // ⚠️ 本 PR 只落 schema:不发布内容条目、不建前台页面、不进导航、不进 sitemap。
+    //    PR-2「会员风采」直接在此 schema 上回填内容,不再改字段。
+    //    projects.linkedMembers 的 relationship 依赖本 collection 已定义。
+    // ⚠️ slug(单位名)上线后冻结:项目关联依赖 slug,改名需迁移脚本。
+    // ⚠️ 前台一律只读取 published 与 publicationApproved 均为 true 的条目。
+    // ══════════════════════════════════════════════════════════════
+    memberUnits: collection({
+      label: '会员单位(Member Units)',
+      slugField: 'name',
+      path: 'content/member-units/*',
+      format: { data: 'yaml' },
+      columns: ['membershipTier', 'published'],
+      schema: {
+        name: fields.slug({
+          name: { label: '单位名称', validation: { isRequired: true } },
+          slug: {
+            label: 'URL 标识(slug)',
+            description:
+              '会员单位网址 /zh/members/units/<此处>。⚠️ 一经上线不可更改 —— 项目关联依赖它。',
+          },
+        }),
+        logo: fields.image({
+          label: 'Logo',
+          directory: 'public/images/members/uploads',
+          publicPath: '/images/members/uploads',
+        }),
+        membershipTier: fields.select({
+          label: '会员级别',
+          options: [
+            { label: '副会长单位', value: 'vice-chair' },
+            { label: '常务理事', value: 'executive-director' },
+            { label: '理事', value: 'director' },
+            { label: '会员', value: 'member' },
+          ],
+          defaultValue: 'member',
+        }),
+        relationshipTags: fields.multiselect({
+          label: '关系标签',
+          description: '可与任意会员级别叠加。新增关系类型须改 schema,不允许自由填写。',
+          options: [{ label: '战略合作伙伴', value: 'strategic-partner' }],
+          defaultValue: [],
+        }),
+        representative: fields.text({ label: '代表人' }),
+        coreBusiness: fields.text({ label: '核心业务', multiline: true }),
+        expertise: fields.multiselect({
+          label: '专业领域',
+          description: '会员单位名录按此分组。可多选。',
+          options: [
+            { label: '开发与投资', value: 'development-investment' },
+            { label: '建筑与建材', value: 'construction-materials' },
+            { label: '贷款与金融', value: 'lending-finance' },
+            { label: '法律与税务', value: 'legal-tax' },
+            { label: '房地产经纪', value: 'brokerage' },
+            { label: '科技与专业服务', value: 'tech-professional-services' },
+          ],
+          defaultValue: [],
+        }),
+        joinedAt: fields.date({ label: '加入时间' }),
+        lastVerified: fields.date({
+          label: '资料最后核实日',
+          description: '最近一次与该单位核实本页信息的日期。',
+        }),
+        sortWeight: fields.integer({
+          label: '排序权重',
+          description: '同一级别内的排序,数字大的排前面。',
+          defaultValue: 0,
+        }),
+        published: fields.checkbox({
+          label: '已发布',
+          description: '未勾选的条目前台完全不显示。',
+          defaultValue: false,
+        }),
+        publicationApproved: fields.checkbox({
+          label: '已确认可公开',
+          description:
+            '确认会员身份、资料真实性,并取得书面发布同意后方可勾选。未勾选的条目前台完全不显示。',
+          defaultValue: false,
+        }),
       },
     }),
   },

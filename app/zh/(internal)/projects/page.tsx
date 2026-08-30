@@ -3,15 +3,28 @@ import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { RevealOnView } from '@/components/shared/RevealOnView';
 import { createPageMetadata } from '@/lib/seo';
+import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
+import { FilterableProjectGrid, type FilterOption } from '@/components/cms/Filters';
+import { listProjects } from '@/lib/cms/content';
+import {
+  PROJECT_REGION_LABEL,
+  PROJECT_STAGE_LABEL,
+  PROJECT_TYPE_LABEL,
+  SAREC_ROLE_LABEL
+} from '@/lib/cms/labels';
+import type { ProjectItem, ProjectRegion, ProjectType } from '@/lib/cms/types';
 import styles from './projects.module.css';
 import { ProjectsHero } from './ProjectsHero';
 
 export const metadata: Metadata = createPageMetadata({
-  title: 'SAREC 项目｜中美房地产商会',
+  title: 'SAREC 会员项目｜中美房地产商会',
   description:
-    'SAREC 参与的项目覆盖经济适用房开发、精品公寓、跨境股权合作等多种类型。所有项目采用清晰的法律结构、账户结构和风险边界。',
+    '汇集会员单位发起、参与及提供专业服务的房地产项目。覆盖经济适用房开发(ED1)、精品公寓、跨境股权合作等类型,采用清晰的法律结构、账户结构和风险边界。',
   path: '/zh/projects'
 });
+
+/* ── 以下两组固定内容为原 /zh/projects 页面正文(P02 项目类型、P04 合作机制),
+      逐字未改,仅调整了在页面中的位置。合规注(complianceNote)随原文一并保留。 ── */
 
 const projectTypes = [
   {
@@ -91,13 +104,50 @@ const mechanisms = [
 ];
 
 export default function ProjectsPage() {
+  const projects = listProjects();
+
+  const usedRegions = new Set(projects.map((p: ProjectItem) => p.region));
+  const usedTypes = new Set(projects.map((p: ProjectItem) => p.projectType));
+  const regionOptions: FilterOption[] = (Object.keys(PROJECT_REGION_LABEL) as ProjectRegion[])
+    .filter((r) => usedRegions.has(r))
+    .map((r) => ({ value: r as string, label: PROJECT_REGION_LABEL[r] }));
+  const typeOptions: FilterOption[] = (Object.keys(PROJECT_TYPE_LABEL) as ProjectType[])
+    .filter((t) => usedTypes.has(t))
+    .map((t) => ({ value: t as string, label: PROJECT_TYPE_LABEL[t] }));
+
+  // 筛选器是可选工具,只在某个维度确实有多个取值、点了会起作用时才出现。
+  const showFilters = regionOptions.length > 1 || typeOptions.length > 1;
+
+  // 锚点顺序 = 页面实际段落顺序。
+  const anchors = [
+    { href: '#project-types', label: '项目类型' },
+    ...(projects.length > 0 ? [{ href: '#member-projects', label: '会员项目' }] : []),
+    { href: '#how-we-work', label: '合作机制' }
+  ];
+
   return (
     <main>
+      <ViewportLockScript />
+
       {/* P01 — Cinematic Hero(client component:LA 项目实景 + Ken Burns + reveal H1) */}
       <ProjectsHero />
 
+      {/* 页内锚点条(无强制 Tab) */}
+      <nav className={styles.anchorBar} aria-label="页内导航">
+        <div className={styles.anchorBarInner}>
+          {anchors.map((a) => (
+            <a key={a.href} href={a.href} className={styles.anchorLink}>
+              {a.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
       {/* P02 — 项目类型 3 类(图 + 编号 + 标题 + body + 角色 + 适合特点) */}
-      <section className={styles.typesSection}>
+      <section
+        className={`${styles.typesSection} ${styles.anchorTarget}`}
+        id="project-types"
+      >
         <div className={styles.typesInner}>
           <span className={styles.eyebrow}>PROJECT TYPES · 项目类型</span>
           <RevealOnView as="h2" className={styles.sectionH2}>
@@ -140,74 +190,63 @@ export default function ProjectsPage() {
         </div>
       </section>
 
-      {/* P03 — Featured Rosewood(50/50 split:信息卡 + 渲染图) */}
-      <section className={styles.featuredSection}>
-        <div className={styles.featuredInner}>
-          <span className={styles.eyebrow}>FEATURED · 代表性项目</span>
-          <RevealOnView as="h2" className={styles.sectionH2}>
-            已公开的代表性项目
-          </RevealOnView>
-          <p className={styles.sectionLead}>以下是一个已公开的代表性项目。</p>
-          <div className={styles.featuredGrid}>
-            <div className={styles.featuredCard}>
-              <p className={styles.featuredAddress}>4136 Rosewood Ave</p>
-              <p className={styles.featuredLocation}>
-                洛杉矶 East Hollywood · ED1 经济适用房
+      {/* 会员项目卡片区 —— 接管被删除的 P03「代表性项目」段的位置与外壳,
+          页面 deep / deepest 交替节奏与 main 逐段一致。
+          措辞中性,不用「重点 / 精选 / 推荐」等可被读作商会评级的字样。 */}
+      {projects.length > 0 ? (
+        <section
+          className={`${styles.featuredSection} ${styles.anchorTarget}`}
+          id="member-projects"
+        >
+          <div className={styles.featuredInner}>
+            <span className={styles.eyebrow}>MEMBER PROJECTS · 会员项目</span>
+            <RevealOnView as="h2" className={styles.sectionH2}>
+              会员项目
+            </RevealOnView>
+            {projects.length > 1 && showFilters ? (
+              <p className={styles.sectionLead}>
+                筛选是可选工具 —— 不选也可直接浏览全部项目。
               </p>
-              <div className={styles.featuredStats}>
-                <div className={styles.featuredStat}>
-                  <span className={styles.featuredStatNum}>69</span>
-                  <span className={styles.featuredStatLabel}>单元</span>
-                </div>
-                <span className={styles.featuredStatSep} aria-hidden="true">
-                  ·
-                </span>
-                <div className={styles.featuredStat}>
-                  <span className={styles.featuredStatNum}>6</span>
-                  <span className={styles.featuredStatLabel}>层</span>
-                </div>
-                <span className={styles.featuredStatSep} aria-hidden="true">
-                  ·
-                </span>
-                <div className={styles.featuredStat}>
-                  <span className={styles.featuredStatStatus}>在管</span>
-                </div>
+            ) : null}
+            {projects.length === 1 ? (
+              <FeaturedProject item={projects[0]} />
+            ) : showFilters ? (
+              <FilterableProjectGrid
+                regionOptions={regionOptions}
+                typeOptions={typeOptions}
+                items={projects.map((p: ProjectItem) => ({
+                  key: p.slug,
+                  region: p.region as string,
+                  projectType: p.projectType as string,
+                  node: <ProjectCard item={p} />
+                }))}
+                classes={{
+                  row: styles.filterRow,
+                  btn: styles.filterBtn,
+                  btnActive: styles.filterBtnActive,
+                  stack: styles.typesGrid,
+                  empty: styles.emptyNote
+                }}
+              />
+            ) : (
+              <div className={styles.typesGrid}>
+                {projects.map((p: ProjectItem) => (
+                  <ProjectCard key={p.slug} item={p} />
+                ))}
               </div>
-              <div className={styles.featuredMeta}>
-                <p className={styles.featuredMetaRow}>
-                  <span className={styles.featuredMetaLabel}>项目类型:</span>{' '}
-                  经济适用房开发(ED1)
-                </p>
-                <p className={styles.featuredMetaRow}>
-                  <span className={styles.featuredMetaLabel}>SAREC 角色:</span>{' '}
-                  项目合作 / 投资人沟通
-                </p>
-              </div>
-              <Link
-                href="/zh/case-studies/4136-rosewood"
-                className={styles.featuredCta}
-              >
-                查看项目详情 →
-              </Link>
-            </div>
-            <div className={styles.featuredMedia}>
-              <div className={styles.featuredImageBox}>
-                <SaImage
-                  src="/images/projects/4136-rosewood-rendering.png"
-                  alt="4136 Rosewood Ave — ED1 经济适用房项目"
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  filterIntensity="none"
-                  className={styles.featuredImage}
-                />
-              </div>
-            </div>
+            )}
+            <p className={styles.complianceNote}>
+              具体项目名称、地址、规模与投资材料 —— 仅在合格沟通后提供。
+            </p>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* P04 — 4 个核心机制(2x2 卡片) */}
-      <section className={styles.mechanismSection}>
+      <section
+        className={`${styles.mechanismSection} ${styles.anchorTarget}`}
+        id="how-we-work"
+      >
         <div className={styles.mechanismInner}>
           <span className={styles.eyebrow}>HOW WE WORK · 项目合作机制</span>
           <RevealOnView as="h2" className={styles.sectionH2}>
@@ -336,5 +375,96 @@ export default function ProjectsPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+/* ── 卡片 —— 全部复用本页 P02 项目类型卡的既有规格(.typeCard / .typeImageBox /
+      .typeImage / .typeText / .typeNum / .typeH3 / .typeBody / .typeRole),不新造卡片样式。
+      角色统一走枚举 label,渲染层不留自由文本入口。 ── */
+
+function ProjectCard({ item }: { item: ProjectItem }) {
+  return (
+    <article className={styles.typeCard}>
+      {item.coverImage ? (
+        <div className={styles.typeImageBox}>
+          <SaImage
+            src={item.coverImage}
+            alt={item.title}
+            fill
+            sizes="(max-width: 1024px) 100vw, 33vw"
+            filterIntensity="none"
+            className={styles.typeImage}
+          />
+        </div>
+      ) : null}
+      <div className={styles.typeText}>
+        <span className={styles.typeNum}>
+          {PROJECT_REGION_LABEL[item.region]} · {PROJECT_STAGE_LABEL[item.stage]}
+        </span>
+        <h3 className={styles.typeH3}>{item.title}</h3>
+        <p className={styles.typeBody}>{item.summary}</p>
+        {item.sarecRole.length > 0 ? (
+          <p className={styles.typeRole}>
+            SAREC 角色:{item.sarecRole.map((r) => SAREC_ROLE_LABEL[r] ?? r).join(' · ')}
+          </p>
+        ) : null}
+        <Link href={`/zh/projects/${item.slug}`} className={styles.featuredCta}>
+          查看项目详情 →
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+/* ── 单条项目时的 50/50 布局 —— DOM 结构与 className 逐段照抄 main 的 P03
+      「代表性项目」信息卡 + 大图,只把写死的内容换成 collection 字段。
+      规格一字未改;≥2 条时改用上方 P02 同款 .typesGrid 3 列栅格。 ── */
+
+function FeaturedProject({ item }: { item: ProjectItem }) {
+  return (
+    <div className={styles.featuredGrid}>
+      <div className={styles.featuredCard}>
+        <p className={styles.featuredAddress}>{item.title}</p>
+        <p className={styles.featuredLocation}>
+          {PROJECT_REGION_LABEL[item.region]} · {PROJECT_TYPE_LABEL[item.projectType]}
+        </p>
+        <div className={styles.featuredStats}>
+          <div className={styles.featuredStat}>
+            <span className={styles.featuredStatStatus}>
+              {PROJECT_STAGE_LABEL[item.stage]}
+            </span>
+          </div>
+        </div>
+        <div className={styles.featuredMeta}>
+          <p className={styles.featuredMetaRow}>
+            <span className={styles.featuredMetaLabel}>项目类型:</span>{' '}
+            {PROJECT_TYPE_LABEL[item.projectType]}
+          </p>
+          {item.sarecRole.length > 0 ? (
+            <p className={styles.featuredMetaRow}>
+              <span className={styles.featuredMetaLabel}>SAREC 角色:</span>{' '}
+              {item.sarecRole.map((r) => SAREC_ROLE_LABEL[r] ?? r).join(' / ')}
+            </p>
+          ) : null}
+        </div>
+        <Link href={`/zh/projects/${item.slug}`} className={styles.featuredCta}>
+          查看项目详情 →
+        </Link>
+      </div>
+      {item.coverImage ? (
+        <div className={styles.featuredMedia}>
+          <div className={styles.featuredImageBox}>
+            <SaImage
+              src={item.coverImage}
+              alt={item.title}
+              fill
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              filterIntensity="none"
+              className={styles.featuredImage}
+            />
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

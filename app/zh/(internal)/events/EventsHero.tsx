@@ -8,6 +8,10 @@ import styles from './events.module.css';
 /**
  * E01 Events Hero — Cinematic 全屏 LA skyline + 文字 overlay
  *
+ * ⚠️ CMS V2:除 eyebrow / H1 / 新增的第一句 lead 外,本组件与 main 逐字一致
+ *    (92svh 满屏、Ken Burns、radial vignette、IO-gated clip-path reveal 全部原样)。
+ *    原两句 lead 逐字保留在下方,文案零丢失。
+ *
  * IO-gated clip-path reveal 给 H1。
  * 与 Founder F01 同款抽 client 模式(page.tsx 保 Server + metadata)。
  */
@@ -47,7 +51,7 @@ export function EventsHero() {
       <div className={styles.heroImageWrap}>
         <SaImage
           src="/images/la/la-skyline-marquee.jpg"
-          alt="Los Angeles skyline — SAREC 活动与考察"
+          alt="Los Angeles skyline — SAREC 新闻与活动"
           fill
           priority
           sizes="100vw"
@@ -57,10 +61,13 @@ export function EventsHero() {
         <div className={styles.heroOverlay} aria-hidden="true" />
       </div>
       <div className={styles.heroContent}>
-        <span className={styles.heroEyebrow}>EVENTS · 活动</span>
+        <span className={styles.heroEyebrow}>NEWS &amp; EVENTS · 新闻与活动</span>
         <h1 className={styles.heroH1}>
-          <span className={revealClass}>SAREC 活动与考察</span>
+          <span className={revealClass}>SAREC 新闻与活动</span>
         </h1>
+        <p className={styles.heroLead}>
+          商会新闻、会员动态与合作进展,以及活动安排与回顾。
+        </p>
         <p className={styles.heroLead}>
           SAREC 围绕真实项目、市场判断、风险识别和资源协同,组织培训、研讨、闭门分享、行业展会和美国实地考察。
         </p>

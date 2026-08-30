@@ -3,15 +3,30 @@ import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { RevealOnView } from '@/components/shared/RevealOnView';
 import { createPageMetadata } from '@/lib/seo';
+import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
+import { FilterableStream, type FilterOption } from '@/components/cms/Filters';
+import { listEventRecaps, listEvents, listNews } from '@/lib/cms/content';
+import {
+  EVENT_STATUS_LABEL,
+  NEWS_CATEGORY_LABEL,
+  RECAP_FILTER_LABEL,
+  RECAP_FILTER_VALUE,
+  REGISTRATION_STATUS_LABEL
+} from '@/lib/cms/labels';
+import { formatEventTime } from '@/components/cms/EventMeta';
+import type { EventItem, NewsCategory, NewsItem } from '@/lib/cms/types';
 import styles from './events.module.css';
 import { EventsHero } from './EventsHero';
 
 export const metadata: Metadata = createPageMetadata({
-  title: 'SAREC 活动与考察｜中美房地产商会',
+  title: 'SAREC 新闻与活动｜中美房地产商会',
   description:
-    'SAREC 围绕真实项目、市场判断、风险识别和资源协同,组织培训、研讨、闭门分享、行业展会和美国实地考察。活动不只是内容传播 —— 是会员深度参与跨境地产合作的关键场景。',
+    'SAREC 中美房地产商会的商会新闻、会员动态与合作进展,以及主题培训、项目研讨、闭门分享、行业展会和美国实地考察的活动安排与回顾。',
   path: '/zh/events'
 });
+
+/* ── 以下三组固定内容为原 /zh/events 页面正文,逐字未改,仅调整了在页面中的位置。
+      活动类型介绍、实地考察、报名方式属长期价值内容,改造后保留于聚合页下部。 ── */
 
 const eventTypes = [
   {
@@ -101,13 +116,181 @@ const tourCards = [
 ];
 
 export default function EventsPage() {
+  const news = listNews();
+  const recaps = listEventRecaps();
+  // 任务书 1C:右栏「近期活动」取 eventStatus=scheduled。
+  // 延期 / 取消的活动只出现在自己的详情页与下方历史归档,不混进「近期」。
+  const upcoming = listEvents({ status: 'scheduled' });
+  const pastEvents = listEvents({ status: 'completed' });
+  const allEvents = listEvents();
+
+  // 新闻流 = news + 已结束活动的回顾卡片,按日期倒序。
+  // 回顾卡片直接读 events 数据并链接原活动页面,不在 news 中另建回顾文章。
+  const streamRows = [
+    ...news.map((n: NewsItem) => ({
+      key: `news-${n.slug}`,
+      filter: n.category as string,
+      date: n.publishedAt,
+      node: <NewsCard item={n} />
+    })),
+    ...recaps.map((e: EventItem) => ({
+      key: `recap-${e.slug}`,
+      filter: RECAP_FILTER_VALUE,
+      date: e.startAt.slice(0, 10),
+      node: <RecapCard item={e} />
+    }))
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  const usedCategories = new Set(news.map((n: NewsItem) => n.category));
+  const streamFilters: FilterOption[] = [
+    ...(Object.keys(NEWS_CATEGORY_LABEL) as NewsCategory[])
+      .filter((c) => usedCategories.has(c))
+      .map((c) => ({ value: c as string, label: NEWS_CATEGORY_LABEL[c] })),
+    ...(recaps.length > 0 ? [{ value: RECAP_FILTER_VALUE, label: RECAP_FILTER_LABEL }] : [])
+  ];
+
+  const hasStream = streamRows.length > 0;
+  const hasUpcoming = upcoming.length > 0;
+  const hasPast = pastEvents.length > 0;
+  const hasArchive = news.length > 0 || allEvents.length > 0;
+
+  // 只列出本页确实存在的锚点:板块被整块隐藏时,锚点也不出现。
+  const anchors = [
+    ...(hasUpcoming ? [{ href: '#upcoming-events', label: '近期活动' }] : []),
+    ...(hasStream ? [{ href: '#latest-news', label: '最新新闻' }] : []),
+    ...(hasPast ? [{ href: '#past-events', label: '往期活动与回顾' }] : []),
+    { href: '#event-types', label: '活动类型与报名方式' },
+    ...(hasArchive ? [{ href: '#archive', label: '历史归档' }] : [])
+  ];
+
+  // 历史归档:新闻 + 活动统一按年份分组。
+  const archiveRows = [
+    ...news.map((n: NewsItem) => ({
+      key: `a-news-${n.slug}`,
+      date: n.publishedAt,
+      href: `/zh/news/${n.slug}`,
+      kind: NEWS_CATEGORY_LABEL[n.category],
+      title: n.title
+    })),
+    ...allEvents.map((e: EventItem) => ({
+      key: `a-event-${e.slug}`,
+      date: e.startAt.slice(0, 10),
+      href: `/zh/events/${e.slug}`,
+      kind: '活动',
+      title: e.title
+    }))
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  const archiveYears = Array.from(new Set(archiveRows.map((r) => r.date.slice(0, 4))));
+
   return (
     <main>
+      <ViewportLockScript />
+
       {/* E01 — Cinematic Hero(LA skyline 全屏 + 文字 overlay)*/}
       <EventsHero />
 
+      {/* 页内锚点条(无强制 Tab) */}
+      {anchors.length > 0 ? (
+        <nav className={styles.anchorBar} aria-label="页内导航">
+          <div className={styles.anchorBarInner}>
+            {anchors.map((a) => (
+              <a key={a.href} href={a.href} className={styles.anchorLink}>
+                {a.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+      ) : null}
+
+      {/* 分栏:桌面 左新闻 / 右活动;移动端顺序 近期活动 → 最新新闻 */}
+      {hasStream || hasUpcoming ? (
+        <section className={styles.streamSection}>
+          <div className={styles.streamInner}>
+            <span className={styles.eyebrow}>NEWS &amp; EVENTS · 最新动态</span>
+            <RevealOnView as="h2" className={styles.sectionH2}>
+              最新新闻与近期活动
+            </RevealOnView>
+            <div className={styles.splitGrid}>
+              {hasUpcoming ? (
+                <div
+                  className={`${styles.splitEventsCol} ${styles.anchorTarget}`}
+                  id="upcoming-events"
+                >
+                  <div className={styles.groupHeader}>
+                    <span className={styles.groupEyebrow}>UPCOMING · 近期活动</span>
+                    <h3 className={styles.groupTitle}>近期活动</h3>
+                  </div>
+                  <div className={styles.cardStack} style={{ marginTop: '24px' }}>
+                    {upcoming.map((e: EventItem) => (
+                      <UpcomingCard key={e.slug} item={e} />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {hasStream ? (
+                <div
+                  className={`${styles.splitNewsCol} ${styles.anchorTarget}`}
+                  id="latest-news"
+                >
+                  <div className={styles.groupHeader}>
+                    <span className={styles.groupEyebrow}>LATEST · 最新新闻</span>
+                    <h3 className={styles.groupTitle}>最新新闻</h3>
+                  </div>
+                  <div style={{ marginTop: '24px' }}>
+                    <FilterableStream
+                      options={streamFilters}
+                      items={streamRows}
+                      classes={{
+                        row: styles.filterRow,
+                        btn: styles.filterBtn,
+                        btnActive: styles.filterBtnActive,
+                        stack: styles.cardStack,
+                        empty: styles.emptyNote
+                      }}
+                    />
+                    <p className={styles.typeFoot}>
+                      <Link href="/zh/news" className={styles.inlineLink}>
+                        查看全部新闻 →
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* 往期活动与回顾 */}
+      {hasPast ? (
+        <section
+          className={`${styles.recapSection} ${styles.anchorTarget}`}
+          id="past-events"
+        >
+          <div className={styles.streamInner}>
+            <span className={styles.eyebrow}>PAST EVENTS · 往期活动与回顾</span>
+            <RevealOnView as="h2" className={styles.sectionH2}>
+              往期活动与回顾
+            </RevealOnView>
+            <p className={styles.sectionLead}>
+              已举办活动的现场纪要、主讲人与照片,都记录在各自的活动页面里。
+            </p>
+            <div className={styles.typesGrid}>
+              {pastEvents.map((e: EventItem) => (
+                <RecapCard key={e.slug} item={e} />
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {/* E02 — 活动类型 5 类(numbered card 2x2 + 第 5 张指向 E03) */}
-      <section className={styles.typesSection}>
+      <section
+        className={`${styles.typesSection} ${styles.anchorTarget}`}
+        id="event-types"
+      >
         <div className={styles.typesInner}>
           <span className={styles.eyebrow}>EVENT TYPES · 活动类型</span>
           <RevealOnView as="h2" className={styles.sectionH2}>
@@ -341,6 +524,46 @@ export default function EventsPage() {
         </div>
       </section>
 
+
+      {/* 历史归档 */}
+      {hasArchive ? (
+        <section
+          className={`${styles.archiveSection} ${styles.anchorTarget}`}
+          id="archive"
+        >
+          <div className={styles.streamInner}>
+            <span className={styles.eyebrow}>ARCHIVE · 历史归档</span>
+            <RevealOnView as="h2" className={styles.sectionH2}>
+              历史归档
+            </RevealOnView>
+            {archiveYears.map((year) => (
+              <div key={year} className={styles.cardStack} style={{ marginTop: '48px' }}>
+                <div className={styles.groupHeader}>
+                  <span className={styles.groupEyebrow}>{year}</span>
+                  <h3 className={styles.groupTitle}>{year} 年</h3>
+                </div>
+                <div className={styles.typesGrid}>
+                  {archiveRows
+                    .filter((r) => r.date.startsWith(year))
+                    .map((r) => (
+                      <article key={r.key} className={styles.typeCard}>
+                        <span className={styles.typeNum}>{r.date.replace(/-/g, '.')}</span>
+                        <h3 className={styles.typeH3}>{r.title}</h3>
+                        <p className={styles.typeFoot}>
+                          {r.kind} ·{' '}
+                          <Link href={r.href} className={styles.inlineLink}>
+                            查看详情 →
+                          </Link>
+                        </p>
+                      </article>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {/* E06 — CTA Banner(上下金线 + 3 CTA,与 Founder F07 同款) */}
       <section className={styles.ctaSection}>
         <div className={styles.ctaInner}>
@@ -362,5 +585,74 @@ export default function EventsPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+/* ── 卡片 —— 全部复用本页 E02 活动类型卡的既有规格(.typeCard / .typeNum /
+      .typeH3 / .typeBody / .typeFoot / .inlineLink),不新造卡片样式。 ── */
+
+function NewsCard({ item }: { item: NewsItem }) {
+  return (
+    <article className={styles.typeCard}>
+      <span className={styles.typeNum}>{item.publishedAt.replace(/-/g, '.')}</span>
+      <h3 className={styles.typeH3}>{item.title}</h3>
+      <p className={styles.typeBody}>{item.summary}</p>
+      <p className={styles.typeFoot}>
+        {NEWS_CATEGORY_LABEL[item.category]} ·{' '}
+        <Link href={`/zh/news/${item.slug}`} className={styles.inlineLink}>
+          阅读全文 →
+        </Link>
+      </p>
+    </article>
+  );
+}
+
+/** 活动回顾卡片 —— 直接读 events 数据、链接原活动页面,不在 news 中另建回顾文章。 */
+function RecapCard({ item }: { item: EventItem }) {
+  return (
+    <article className={styles.typeCard}>
+      <span className={styles.typeNum}>{item.startAt.slice(0, 10).replace(/-/g, '.')}</span>
+      <h3 className={styles.typeH3}>{item.title}</h3>
+      <p className={styles.typeBody}>{item.summary}</p>
+      <p className={styles.typeFoot}>
+        {RECAP_FILTER_LABEL} ·{' '}
+        <Link href={`/zh/events/${item.slug}`} className={styles.inlineLink}>
+          查看回顾 →
+        </Link>
+      </p>
+    </article>
+  );
+}
+
+function UpcomingCard({ item }: { item: EventItem }) {
+  const canRegister = item.registrationStatus === 'open' && Boolean(item.registrationUrl);
+  return (
+    <article className={styles.typeCard}>
+      <span className={styles.typeNum}>
+        {EVENT_STATUS_LABEL[item.eventStatus]} · {REGISTRATION_STATUS_LABEL[item.registrationStatus]}
+      </span>
+      <h3 className={styles.typeH3}>{item.title}</h3>
+      <p className={styles.typeSubLabel}>{formatEventTime(item)}</p>
+      {item.locationName ? (
+        <p className={styles.typeSubLabel}>{item.locationName}</p>
+      ) : null}
+      <p className={styles.typeBody}>{item.summary}</p>
+      <p className={styles.typeFoot}>
+        {canRegister ? (
+          <a
+            href={item.registrationUrl as string}
+            className={styles.inlineLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            前往报名 →
+          </a>
+        ) : (
+          <Link href={`/zh/events/${item.slug}`} className={styles.inlineLink}>
+            查看活动详情 →
+          </Link>
+        )}
+      </p>
+    </article>
   );
 }
