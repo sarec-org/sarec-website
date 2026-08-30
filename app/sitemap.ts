@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
 import { listArticles } from '@/lib/geo/content';
+import { listEvents, listNews, listProjects } from '@/lib/cms/content';
 
 // 静态路由(无可靠内容更新时间来源 → 不输出 lastModified;
 // 禁止用 new Date()/构建时间/部署时间/请求时间冒充内容更新时间)。
@@ -37,6 +38,7 @@ const staticRoutes = [
   // GEO YAML/TS 文章(含旗舰文)不再硬编码,统一由下方 listArticles 动态收录,
   // 新发文自动进 sitemap,无需再手改本文件。
   '/zh/contact',
+  '/zh/news',
   '/zh/membership',
   '/zh/join',
   '/zh/strategic-partners',
@@ -75,5 +77,36 @@ export default function sitemap(): MetadataRoute.Sitemap {
       };
     });
 
-  return [...staticEntries, ...geoEntries];
+  // CMS V2 动态条目 —— 新闻 / 活动 / 会员项目详情页。
+  // lastModified 只用内容自带的可靠日期(发布日 / 开始日 / 资料核实日),
+  // 与上方 geoEntries 同一原则:禁止用构建 / 部署 / 请求时间冒充内容更新时间。
+  // ⚠️ memberUnits 本轮只落 schema、无前台页面,不进 sitemap。
+  const newsEntries: MetadataRoute.Sitemap = listNews().map((n) => ({
+    url: `${SITE_URL}/zh/news/${n.slug}`,
+    lastModified: new Date(n.publishedAt),
+    changeFrequency: 'monthly' as const,
+    priority: 0.6
+  }));
+
+  const eventEntries: MetadataRoute.Sitemap = listEvents().map((e) => ({
+    url: `${SITE_URL}/zh/events/${e.slug}`,
+    lastModified: new Date(e.startAt.slice(0, 10)),
+    changeFrequency: 'monthly' as const,
+    priority: 0.6
+  }));
+
+  const projectEntries: MetadataRoute.Sitemap = listProjects().map((p) => ({
+    url: `${SITE_URL}/zh/projects/${p.slug}`,
+    lastModified: new Date(p.lastVerified),
+    changeFrequency: 'monthly' as const,
+    priority: 0.7
+  }));
+
+  return [
+    ...staticEntries,
+    ...geoEntries,
+    ...newsEntries,
+    ...eventEntries,
+    ...projectEntries
+  ];
 }

@@ -819,3 +819,170 @@
   border-color: var(--gold);
   color: var(--gold);
 }
+
+/* ============================================================
+   CMS V2 新增板块(最新新闻 / 近期活动 / 往期回顾 / 历史归档)
+   ------------------------------------------------------------
+   ⚠️ 不新造视觉:卡片一律复用本文件既有的 .typeCard / .typeNum / .typeH3 /
+      .typeBody / .typeFoot / .inlineLink(E02 活动类型卡的同一套规格);
+      section 外壳、栅格与间距的数值逐字复制自本文件既有的 .typesSection /
+      .faqSection / .typesInner / .typesGrid,只换类名以便语义清晰。
+      分组小标题逐字复制自 research.module.css 的 .indexCategoryHeader 家族。
+   ============================================================ */
+
+/* section 外壳 —— 声明 = .typesSection(ink-deep)/.faqSection(ink-deepest) */
+.streamSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.recapSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.archiveSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+/* 内层 —— 声明 = .typesInner */
+.streamInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* 左右分栏 —— 声明 = .typesGrid;移动端按任务书顺序:近期活动 → 最新新闻 */
+.splitGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+.splitNewsCol {
+  order: 1;
+}
+
+.splitEventsCol {
+  order: 2;
+}
+
+@media (max-width: 1024px) {
+  .splitGrid {
+    grid-template-columns: 1fr;
+  }
+  .splitEventsCol {
+    order: 1;
+  }
+  .splitNewsCol {
+    order: 2;
+  }
+}
+
+/* 单列卡片堆叠 —— gap = .typesGrid 的 gap */
+.cardStack {
+  display: grid;
+  gap: clamp(24px, 3vw, 48px);
+}
+
+/* 分组小标题 —— 逐字复制自 research.module.css 的 .indexCategoryHeader 家族 */
+.groupHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: clamp(20px, 2.5vh, 28px);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.groupEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.groupTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 500;
+  color: var(--ivory);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* 页内锚点条 / 分类筛选 —— 字体规格 = 本文件既有的 .eyebrow */
+.anchorBar {
+  background: var(--ink-deepest);
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.anchorBarInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px clamp(24px, 6vw, 96px);
+  display: flex;
+  gap: clamp(20px, 3vw, 44px);
+  flex-wrap: wrap;
+}
+
+.anchorLink {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--ivory-mute);
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.anchorLink:hover {
+  color: var(--gold);
+}
+
+.filterRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 28px);
+  flex-wrap: wrap;
+  margin-bottom: clamp(24px, 3vh, 32px);
+}
+
+.filterBtn {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ivory-mute);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.filterBtn:hover {
+  color: var(--gold);
+}
+
+.filterBtnActive {
+  color: var(--gold);
+}
+
+/* sticky 站点导航安全距离 —— 数值 = 本文件既有 .toursSection 的 scroll-margin-top */
+.anchorTarget {
+  scroll-margin-top: 80px;
+}
+
+.emptyNote {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: clamp(24px, 3vh, 36px) 0 0 0;
+}

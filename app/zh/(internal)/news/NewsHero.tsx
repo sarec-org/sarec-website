@@ -3,17 +3,17 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
-import styles from './projects.module.css';
+import styles from './news.module.css';
 
 /**
- * P01 Projects Hero — Cinematic 全屏项目实景图 + radial vignette + Ken Burns
+ * News Hero — Cinematic 全屏 LA skyline + 文字 overlay
  *
- * ⚠️ CMS V2:除 eyebrow / H1 / 新增的副题 lead 外,本组件与 main 逐字一致
- *    (92svh 满屏、Ken Burns、radial vignette、IO-gated clip-path reveal 全部原样)。
- *    原两句 lead 与合规 heroNote 逐字保留在下方,文案零丢失。
- * IO-gated clip-path reveal H1。与 EventsHero / FounderHero 同款模式。
+ * ⚠️ 不是新设计:DOM 结构、动效与交互【逐字照抄】站内既有的
+ *    app/zh/(internal)/events/EventsHero.tsx(92svh 满屏 / Ken Burns /
+ *    radial vignette / IO-gated clip-path reveal H1),只换文案、图片与 CTA。
+ *    站内每个内页都以同款 hero 开场,本页照此对齐。
  */
-export function ProjectsHero() {
+export function NewsHero() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const [visible, setVisible] = useState(false);
 
@@ -48,8 +48,8 @@ export function ProjectsHero() {
     <section ref={sectionRef} className={styles.heroSection}>
       <div className={styles.heroImageWrap}>
         <SaImage
-          src="/images/artgrid/la-city-02.jpg"
-          alt="洛杉矶城市天际线 — SAREC 会员项目"
+          src="/images/artgrid/services-hero-la-city.jpg"
+          alt="Los Angeles — SAREC 新闻"
           fill
           priority
           sizes="100vw"
@@ -59,28 +59,22 @@ export function ProjectsHero() {
         <div className={styles.heroOverlay} aria-hidden="true" />
       </div>
       <div className={styles.heroContent}>
-        <span className={styles.heroEyebrow}>MEMBER PROJECTS · 会员项目</span>
+        <span className={styles.heroEyebrow}>NEWS · 新闻</span>
         <h1 className={styles.heroH1}>
-          <span className={revealClass}>SAREC 会员项目</span>
+          <span className={revealClass}>SAREC 新闻</span>
         </h1>
         <p className={styles.heroLead}>
-          汇集会员单位发起、参与及提供专业服务的房地产项目。
+          商会新闻、会员动态与合作进展。
         </p>
         <p className={styles.heroLead}>
-          SAREC 参与的项目覆盖经济适用房开发、精品公寓、跨境股权合作等多种类型。
-        </p>
-        <p className={styles.heroLead}>
-          所有项目采用清晰的法律结构、账户结构和风险边界。
-        </p>
-        <p className={styles.heroNote}>
-          具体项目名称、地址、规模与投资材料 —— 仅在合格沟通后提供。
+          活动预告与活动回顾,请见「新闻与活动」页面。
         </p>
         <div className={styles.heroCtaRow}>
-          <Link href="/zh/contact" className={styles.heroCtaPrimary}>
-            项目评估 · 30 分钟
+          <Link href="/zh/events" className={styles.heroCtaPrimary}>
+            新闻与活动
           </Link>
-          <Link href="/zh/case-studies" className={styles.heroCtaSecondary}>
-            查看案例研究
+          <Link href="/zh/research" className={styles.heroCtaSecondary}>
+            查看研究中心
           </Link>
         </div>
       </div>

@@ -812,3 +812,270 @@
   border-color: var(--gold);
   color: var(--gold);
 }
+
+/* ============================================================
+   CMS V2 新增板块(会员项目卡片 / 全部项目)
+   ------------------------------------------------------------
+   ⚠️ 不新造视觉:卡片一律复用本文件既有的 .typeCard / .typeImageBox /
+      .typeImage / .typeText / .typeNum / .typeH3 / .typeBody / .typeRole
+      (P02 项目类型卡的同一套规格);section 外壳与内层的数值逐字复制自本文件
+      既有的 .typesSection / .featuredSection / .typesInner。
+      分组小标题与锚点条 / 筛选行的字体规格 = 本文件既有的 .eyebrow。
+   ============================================================ */
+
+/* section 外壳 —— 声明逐字 = 本文件 .featuredSection(即被删除的 P03 段外壳)。
+   会员项目卡片区接管 P03 原来的位置与背景色,页面的 deep / deepest 交替节奏
+   与 main 逐段一致(deepest → deep → deepest → deep → deepest → deepest)。 */
+.listSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+/* 内层 —— 声明 = .typesInner */
+.listInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* 页内锚点条 / 筛选行 —— 字体规格 = 本文件既有的 .eyebrow */
+.anchorBar {
+  background: var(--ink-deepest);
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.anchorBarInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px clamp(24px, 6vw, 96px);
+  display: flex;
+  gap: clamp(20px, 3vw, 44px);
+  flex-wrap: wrap;
+}
+
+.anchorLink {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--ivory-mute);
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.anchorLink:hover {
+  color: var(--gold);
+}
+
+.filterRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 28px);
+  flex-wrap: wrap;
+  margin-bottom: clamp(16px, 2vh, 20px);
+}
+
+.filterBtn {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ivory-mute);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.filterBtn:hover {
+  color: var(--gold);
+}
+
+.filterBtnActive {
+  color: var(--gold);
+}
+
+/* sticky 站点导航安全距离 —— 数值 = events.module.css 既有 .toursSection 的 scroll-margin-top */
+.anchorTarget {
+  scroll-margin-top: 80px;
+}
+
+.emptyNote {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: clamp(24px, 3vh, 36px) 0 0 0;
+}
+
+/* ============================================================
+   P03 Featured 布局 —— 整段【逐字取回】自 main 的 P03「代表性项目」段,
+   规格一字未改。会员项目仅 1 条时用这套 50/50(信息卡 + 大图)满宽布局,
+   ≥2 条时用上方 P02 同款 3 列栅格 .typesGrid。
+   ============================================================ */
+/* ============================================================
+   P03 — Featured Rosewood(50/50 split:信息卡 + 渲染图)
+   ============================================================ */
+.featuredSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.featuredInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  margin-top: clamp(48px, 6vh, 72px);
+  border: 1px solid var(--line-3);
+}
+
+@media (max-width: 1024px) {
+  .featuredGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featuredCard {
+  padding: clamp(40px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--ink-deep);
+}
+
+.featuredAddress {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+}
+
+.featuredLocation {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  text-transform: uppercase;
+}
+
+.featuredStats {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(16px, 2vw, 28px);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  padding: clamp(20px, 2.5vh, 28px) 0;
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+  flex-wrap: wrap;
+}
+
+.featuredStat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.featuredStatNum {
+  font-family: var(--serif-en);
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.featuredStatLabel {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  color: var(--ivory-warm);
+}
+
+.featuredStatStatus {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 6px 14px;
+  text-transform: uppercase;
+}
+
+.featuredStatSep {
+  color: var(--gold-dim);
+  font-size: 1.5rem;
+}
+
+.featuredMeta {
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  display: grid;
+  gap: 12px;
+}
+
+.featuredMetaRow {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+.featuredMetaLabel {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.featuredCta {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-decoration: none;
+  align-self: flex-start;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.featuredCta:hover {
+  color: var(--ivory);
+  border-color: var(--ivory);
+}
+
+.featuredMedia {
+  position: relative;
+  min-height: 480px;
+  background: var(--ink-deepest);
+}
+
+@media (max-width: 1024px) {
+  .featuredMedia {
+    min-height: 50vh;
+    order: -1;
+  }
+}
+
+.featuredImageBox {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.featuredImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}

@@ -1,0 +1,726 @@
+/* ============================================================
+   CMS V2 详情页共享样式 —— /zh/news/[slug]、/zh/events/[slug]、/zh/projects/[slug]
+   ------------------------------------------------------------
+   ⚠️ 本文件不是新设计:全部规则【逐字复制】自站内既有详情页
+      app/zh/(internal)/case-studies/4136-rosewood/rosewood.module.css
+      (R01 Hero / 共享 token / R02 Overview / R03 Editorial 正文 /
+       R05 卡片入口 / R06 CTA),只删掉本轮用不到的 R04。
+      正文段落沿用 .ed1Body、小标题沿用 .ed1BlockH3、列表沿用 .roleBulletList,
+      与案例页视觉规格逐像素一致。新增 0 条自创样式。
+   ============================================================ */
+
+/* ===== 共享 token ===== */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+}
+
+.sectionH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: clamp(20px, 3vh, 32px) 0 clamp(24px, 4vh, 40px) 0;
+}
+
+.sectionLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(40px, 6vh, 64px) 0;
+  max-width: 880px;
+}
+
+.complianceNote {
+  font-family: var(--serif-zh);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: 12px 0 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+}
+
+/* ============================================================
+   R01 — Cinematic Hero(4136 渲染图 + Ken Burns + radial vignette)
+   ============================================================ */
+.heroSection {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  /* 视口高铁律(CMS V2 唯一改动):微信 iOS 里 svh 等同 vh,必须走 --locked-vh。
+     写法与 components/sections/research/ArticleHero.module.css 既有形态一致,
+     视觉高度与案例页逐像素相同,未就绪 / 旧浏览器回落 1svh 不劣化。 */
+  min-height: clamp(
+    calc(var(--locked-vh, 1svh) * 85),
+    calc(var(--locked-vh, 1svh) * 92),
+    calc(var(--locked-vh, 1svh) * 100)
+  );
+  background: var(--ink-deepest);
+  overflow: hidden;
+}
+
+.heroImageWrap {
+  position: absolute;
+  inset: 0;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  animation: heroKenBurns 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1) translate(0%, 0%);
+  }
+  100% {
+    transform: scale(1.06) translate(-1%, 1%);
+  }
+}
+
+/* Hero 窄屏:降高一档 + object-position 带回主体(电脑端不变) */
+@media (max-width: 768px) {
+  .heroSection {
+    min-height: calc(var(--locked-vh, 1svh) * 60);
+  }
+  .heroImage {
+    object-position: center 40%;
+  }
+}
+
+/* ============================================================
+   Phase 2B — 移动端 hero 安全修复(仅 ≤768px, 桌面端不变)
+   ① content 顶部流式 + sticky nav 安全距离 → 标题不被 nav 遮挡/上沿裁切
+   ② 短视口禁用 clip-path reveal → 标题始终完整显示
+   ③ 顶→底暗色 gradient → 白楼白字区压暗(对比度)
+   ============================================================ */
+@media (max-width: 768px) {
+  .heroSection .heroContent {
+    position: relative;
+    bottom: auto;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 120px);
+    padding-bottom: clamp(40px, 6vh, 64px);
+  }
+  .heroSection .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroSection .heroOverlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(2, 7, 14, 0.82) 0%,
+      rgba(2, 7, 14, 0.58) 42%,
+      rgba(2, 7, 14, 0.3) 72%,
+      rgba(2, 7, 14, 0.45) 100%
+    );
+  }
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 70% at 25% 80%,
+    rgba(2, 7, 14, 0.72) 0%,
+    rgba(2, 7, 14, 0.4) 35%,
+    rgba(2, 7, 14, 0) 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.heroContent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: clamp(48px, calc(var(--locked-vh, 1svh) * 8), 96px) clamp(40px, 6vw, 96px);
+  max-width: 1280px;
+}
+
+.heroEyebrow {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: clamp(20px, 2.5vh, 32px);
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  color: var(--ivory);
+  margin: 0 0 clamp(20px, 2.5vh, 32px) 0;
+  display: block;
+}
+
+.heroRevealLine {
+  display: block;
+  padding-bottom: 0.12em;
+  will-change: clip-path;
+}
+
+.heroRevealVisible {
+  animation: rosewoodHeroReveal 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes rosewoodHeroReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroImage {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+.heroSubline {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.5;
+  color: var(--ivory-warm);
+  margin: 0 0 8px 0;
+}
+
+.heroSubline:last-of-type {
+  margin-bottom: clamp(28px, 3vh, 36px);
+}
+
+.heroStats {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(16px, 2vw, 28px);
+  margin: 0 0 clamp(40px, 5vh, 56px) 0;
+  flex-wrap: wrap;
+}
+
+.heroStat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.heroStatNum {
+  font-family: var(--serif-en);
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.heroStatLabel {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  color: var(--ivory-warm);
+}
+
+.heroStatStatus {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 6px 14px;
+  text-transform: uppercase;
+}
+
+.heroStatSep {
+  color: var(--gold-dim);
+  font-size: 1.5rem;
+}
+
+.heroCtaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  flex-wrap: wrap;
+}
+
+.heroCtaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 16px 32px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.heroCtaPrimary:hover {
+  opacity: 0.88;
+}
+
+.heroCtaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 16px 32px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.heroCtaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ============================================================
+   R02 — 项目概览(数据表:label 左 mono / value 右 serif)
+   ============================================================ */
+.overviewSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.overviewInner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.overviewTable {
+  list-style: none;
+  margin: clamp(48px, 6vh, 72px) 0 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line-3);
+}
+
+.overviewRow {
+  display: grid;
+  grid-template-columns: clamp(140px, 22%, 220px) 1fr;
+  gap: clamp(24px, 4vw, 64px);
+  align-items: baseline;
+  padding: clamp(20px, 2.5vh, 28px) 0;
+  border-bottom: 1px solid var(--line-3);
+}
+
+@media (max-width: 768px) {
+  .overviewRow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+.overviewLabel {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.overviewValue {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ivory);
+  margin: 0;
+}
+
+/* R02 内的 complianceNote 居中,留更多上间距 */
+.overviewSection .complianceNote {
+  margin-top: clamp(32px, 4vh, 48px);
+}
+
+/* ============================================================
+   R03 — ED1 政策深度(Editorial 长文 4 块)
+   ============================================================ */
+.ed1Section {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.ed1Inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ed1Block {
+  margin-top: clamp(40px, 5vh, 64px);
+}
+
+.ed1Block:first-of-type {
+  margin-top: 0;
+}
+
+.ed1BlockH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(20px, 2.5vh, 32px) 0;
+  line-height: 1.3;
+}
+
+.ed1Body {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
+  line-height: 1.85;
+  color: var(--ivory-warm);
+  margin: 0 0 16px 0;
+}
+
+.ed1Body:last-child {
+  margin-bottom: 0;
+}
+
+.ed1Inline {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.ed1Sub {
+  margin-top: clamp(24px, 3vh, 36px);
+}
+
+.ed1Sub:first-of-type {
+  margin-top: clamp(16px, 2vh, 24px);
+}
+
+.ed1SubLabel {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin: 0 0 12px 0;
+}
+
+.insightNote {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ivory);
+  font-style: italic;
+  margin: 16px 0 0 0;
+  padding: 12px 16px;
+  background: rgba(212, 176, 104, 0.08);
+  border-left: 2px solid var(--gold);
+}
+
+.ed1Sep {
+  width: 100%;
+  height: 1px;
+  margin: clamp(48px, 6vh, 72px) 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--gold-dim) 30%,
+    var(--gold-dim) 70%,
+    transparent 100%
+  );
+}
+
+.ed1Sources {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.ed1Sources li {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.ed1Sources li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+/* ============================================================
+   R05 — 了解更多(3 入口卡 + 每卡独立 CTA)
+   ============================================================ */
+.learnMoreSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.learnMoreInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.learnMoreGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .learnMoreGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.learnMoreCard {
+  background: var(--ink-deep);
+  border: 1px solid var(--line-3);
+  padding: clamp(32px, 3.5vw, 56px);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.learnMoreCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.learnMoreNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(16px, 2vh, 24px);
+}
+
+.learnMoreH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(16px, 2vh, 20px) 0;
+  line-height: 1.3;
+}
+
+.learnMoreBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 clamp(24px, 3vh, 36px) 0;
+  flex: 1;
+}
+
+.learnMoreCta {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-decoration: none;
+  align-self: flex-start;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.learnMoreCta:hover {
+  color: var(--ivory);
+  border-color: var(--ivory);
+}
+
+/* ============================================================
+   CTA Banner —— 逐字复制自 app/zh/(internal)/projects/projects.module.css
+   的 P06(而非 rosewood 的 R06):projects 版含 2026 手机修复合集里
+   已上线的「窄屏 CTA 大标题降字号 + 允许中文换行」@media 修正,
+   rosewood 版缺该修正,长标题在 ≤390px 会出屏。取已修好的那一版。
+   ============================================================ */
+
+.ctaSection {
+  background: var(--ink-deepest);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(120px, 18vw, 200px) clamp(24px, 6vw, 96px);
+  text-align: center;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.ctaInner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ctaH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ivory);
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+/* 手机端:CTA 大标题降字号 + 允许中文换行(keep-all 在窄屏锁一行会出屏);仅 @media,文案不动 */
+@media (max-width: 768px) {
+  .ctaH2 {
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
+.ctaSubtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(48px, 6vh, 72px) 0;
+}
+
+.ctaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 18px 36px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.ctaPrimary:hover {
+  opacity: 0.88;
+}
+
+.ctaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 18px 36px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* 列表规格 —— 逐字复制自 rosewood.module.css 的 .roleBulletList(R04)。
+   唯一调整:下边距 0 → 16px,对齐同文件 .ed1Body 的段落下边距。
+   模板里该列表是 .roleCard 的末元素故无下边距;进入 markdown 正文流后
+   后面会跟段落,不补下边距会与下一段贴死(截图实测)。 */
+.roleBulletList {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 16px 0;
+  display: grid;
+  gap: 6px;
+}
+.roleBulletList li {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+.roleBulletList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+/* ============================================================
+   图集图片规格 —— 逐字复制自 app/zh/(internal)/projects/projects.module.css
+   的 .typeImageBox / .typeImage(P02 项目类型卡的图片框),不新造。
+   ============================================================ */
+.typeImageBox {
+  position: relative;
+  aspect-ratio: 9 / 10;
+  overflow: hidden;
+  background: var(--ink-deep);
+}
+
+.typeImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+/* 正文内联链接 —— 声明逐字取自同文件 .ed1Inline(模板 R03 里内联强调的既有规格)。
+   renderInline 产出的 <a>/<Link> 不带 className,不加这条选择器则链接渲染成纯文本。 */
+.ed1Body a,
+.roleBulletList a {
+  color: var(--gold);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold-dim);
+  transition: border-color 0.2s ease;
+}
+
+.ed1Body a:hover,
+.roleBulletList a:hover {
+  border-color: var(--gold);
+}
+
+/* ============================================================
+   交替背景修饰类 —— background 值逐字取自同文件 .overviewSection。
+   模板 /zh/case-studies/4136-rosewood 的 R01–R06 是 deepest / deep 严格交替;
+   CMS 详情页的内容段数量随内容浮动(正文 / 回顾 / 参与方 / 图集 可有可无),
+   固定写死背景会出现 deepest 连排。用这一条修饰类把 .ed1Section /
+   .learnMoreSection 切到 deep,保持与模板同样的交替节奏。
+   只改背景色,padding 与内容宽度一概不变。
+   ============================================================ */
+.altBg {
+  background: var(--ink-deep);
+}
