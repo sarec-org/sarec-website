@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import styles from './MobileNav.module.css';
 
 type SubLink = { label: string; href: string };
@@ -102,6 +103,11 @@ export function MobileNav({ variant = 'overlay' }: { variant?: 'overlay' | 'head
 
   return (
     <>
+      {/* 抽屉高度依赖 --locked-vh。该变量此前只在部分内容页的 <main> 里挂载,
+          /zh/about 等页面未定义 → 抽屉回落 1svh(微信 iOS 内即失效状态)。
+          挂在本组件上,抽屉出现在哪一页都保证变量已就绪;重复挂载是幂等的。 */}
+      <ViewportLockScript />
+
       <div className={`${styles.bar} ${variant === 'header' ? styles.barHeader : ''}`}>
         {/* 第一行:Logo / 菜单 / 联系我们 */}
         <div className={styles.topRow}>
@@ -203,7 +209,7 @@ export function MobileNav({ variant = 'overlay' }: { variant?: 'overlay' | 'head
                         aria-label={isOpen ? `收起${item.label}子菜单` : `展开${item.label}子菜单`}
                       >
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" />
+                          <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" />
                         </svg>
                       </button>
                     ) : null}
