@@ -1,0 +1,1174 @@
+/* ============================================================
+   Members /zh/members(会员风采)
+   ------------------------------------------------------------
+   ⚠️ 本文件不是新设计。除文末【唯一一处经批准的偏离】外,全部规则
+      【逐字复制】自站内既有模块:
+        · 共享 token + E01 Cinematic Hero 全段 + 锚点条 / 分组头 / 空态
+            ← app/zh/(internal)/events/events.module.css
+        · 卡片栅格 .typesGrid / .typeCard / .typeImageBox / .typeImage /
+          .typeText / .typeNum / .typeH3 / .typeBody / .typeRole,
+          以及单条 50/50 的 .featured* 家族与 .featuredCta、.complianceNote
+            ← app/zh/(internal)/projects/projects.module.css
+        · 名录索引卡 .indexCategory* / .indexCard*
+            ← app/zh/(internal)/research/research.module.css
+      新增 0 条自创样式。
+   ============================================================ */
+
+/* ===== 共享 token ===== */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+}
+
+.sectionH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: clamp(20px, 3vh, 32px) 0 clamp(24px, 4vh, 40px) 0;
+}
+
+.sectionLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(40px, 6vh, 64px) 0;
+  max-width: 880px;
+}
+
+.inlineLink {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 1px;
+  transition: border-color 0.2s ease;
+}
+
+.inlineLink:hover {
+  border-color: var(--gold);
+}
+
+.complianceNote {
+  font-family: var(--serif-zh);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: 12px 0 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+}
+
+/* ============================================================
+   E01 — Cinematic Hero(全屏 LA skyline + 文字 overlay)
+   ============================================================ */
+.heroSection {
+  position: relative;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  min-height: clamp(85vh, 92vh, 100vh);
+  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏伸缩不重算高度→不抖;desktop 等同 vh */
+  background: var(--ink-deepest);
+  overflow: hidden;
+}
+
+.heroImageWrap {
+  position: absolute;
+  inset: 0;
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+  animation: heroKenBurns 24s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes heroKenBurns {
+  0% {
+    transform: scale(1) translate(0%, 0%);
+  }
+  100% {
+    transform: scale(1.06) translate(-1%, 1%);
+  }
+}
+
+/* Hero 窄屏:降高一档 + object-position 带回主体(电脑端不变) */
+@media (max-width: 768px) {
+  .heroSection {
+    min-height: 62vh;
+  }
+  .heroImage {
+    object-position: center 45%;
+  }
+}
+
+/* ============================================================
+   Phase 2B — 移动端 hero 安全修复(仅 ≤768px, 桌面端不变)
+   ① content 顶部流式 + sticky nav 安全距离 → 标题不被 nav 遮挡/上沿裁切
+   ② 短视口禁用 clip-path reveal → 标题始终完整显示
+   ③ 顶→底暗色 gradient → 标题区压在足够暗背景上(对比度)
+   ============================================================ */
+@media (max-width: 768px) {
+  .heroSection .heroContent {
+    position: relative;
+    bottom: auto;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 120px);
+    padding-bottom: clamp(40px, 6vh, 64px);
+  }
+  .heroSection .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroSection .heroOverlay {
+    background: linear-gradient(
+      to bottom,
+      rgba(2, 7, 14, 0.82) 0%,
+      rgba(2, 7, 14, 0.58) 42%,
+      rgba(2, 7, 14, 0.3) 72%,
+      rgba(2, 7, 14, 0.45) 100%
+    );
+  }
+}
+
+/* 左下径向 vignette:只压暗文字所在区(25% / 80% 位置),天空 + 右侧建筑保留原色 */
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 60% 70% at 25% 80%,
+    rgba(2, 7, 14, 0.72) 0%,
+    rgba(2, 7, 14, 0.4) 35%,
+    rgba(2, 7, 14, 0) 70%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.heroContent {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: clamp(48px, 8vh, 96px) clamp(40px, 6vw, 96px);
+  max-width: 1280px;
+}
+
+.heroEyebrow {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: clamp(20px, 2.5vh, 32px);
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  color: var(--ivory);
+  margin: 0 0 clamp(28px, 3.5vh, 40px) 0;
+  display: block;
+}
+
+.heroRevealLine {
+  display: block;
+  padding-bottom: 0.12em;
+  will-change: clip-path;
+}
+
+.heroRevealVisible {
+  animation: eventsHeroReveal 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+@keyframes eventsHeroReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine {
+    animation: none !important;
+    clip-path: none !important;
+  }
+  .heroImage {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+.heroLead {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.2vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(16px, 2vh, 24px) 0;
+  max-width: 720px;
+}
+
+.heroLead:last-of-type {
+  margin-bottom: clamp(40px, 5vh, 56px);
+}
+
+.heroCtaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  flex-wrap: wrap;
+}
+
+.heroCtaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 16px 32px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.heroCtaPrimary:hover {
+  opacity: 0.88;
+}
+
+.heroCtaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 16px 32px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.heroCtaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ============================================================
+   CMS V2 新增板块(最新新闻 / 近期活动 / 往期回顾 / 历史归档)
+   ------------------------------------------------------------
+   ⚠️ 不新造视觉:卡片一律复用本文件既有的 .typeCard / .typeNum / .typeH3 /
+      .typeBody / .typeFoot / .inlineLink(E02 活动类型卡的同一套规格);
+      section 外壳、栅格与间距的数值逐字复制自本文件既有的 .typesSection /
+      .faqSection / .typesInner / .typesGrid,只换类名以便语义清晰。
+      分组小标题逐字复制自 research.module.css 的 .indexCategoryHeader 家族。
+   ============================================================ */
+
+/* section 外壳 —— 声明 = .typesSection(ink-deep)/.faqSection(ink-deepest) */
+.streamSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.recapSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.archiveSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+/* 内层 —— 声明 = .typesInner */
+.streamInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* 左右分栏 —— 声明 = .typesGrid;移动端按任务书顺序:近期活动 → 最新新闻 */
+.splitGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+.splitNewsCol {
+  order: 1;
+}
+
+.splitEventsCol {
+  order: 2;
+}
+
+@media (max-width: 1024px) {
+  .splitGrid {
+    grid-template-columns: 1fr;
+  }
+  .splitEventsCol {
+    order: 1;
+  }
+  .splitNewsCol {
+    order: 2;
+  }
+}
+
+/* 单列卡片堆叠 —— gap = .typesGrid 的 gap */
+.cardStack {
+  display: grid;
+  gap: clamp(24px, 3vw, 48px);
+}
+
+/* 分组小标题 —— 逐字复制自 research.module.css 的 .indexCategoryHeader 家族 */
+.groupHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: clamp(20px, 2.5vh, 28px);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.groupEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.groupTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 500;
+  color: var(--ivory);
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* 页内锚点条 / 分类筛选 —— 字体规格 = 本文件既有的 .eyebrow */
+.anchorBar {
+  background: var(--ink-deepest);
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.anchorBarInner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px clamp(24px, 6vw, 96px);
+  display: flex;
+  gap: clamp(20px, 3vw, 44px);
+  flex-wrap: wrap;
+}
+
+.anchorLink {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--ivory-mute);
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.anchorLink:hover {
+  color: var(--gold);
+}
+
+.filterRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 28px);
+  flex-wrap: wrap;
+  margin-bottom: clamp(24px, 3vh, 32px);
+}
+
+.filterBtn {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ivory-mute);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.filterBtn:hover {
+  color: var(--gold);
+}
+
+.filterBtnActive {
+  color: var(--gold);
+}
+
+/* sticky 站点导航安全距离 —— 数值 = 本文件既有 .toursSection 的 scroll-margin-top */
+.anchorTarget {
+  scroll-margin-top: 80px;
+}
+
+.emptyNote {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: clamp(24px, 3vh, 36px) 0 0 0;
+}
+
+/* ============================================================
+   卡片 / 50-50 布局 —— 逐字复制自 projects.module.css
+   ============================================================ */
+.complianceNote {
+  font-family: var(--serif-zh);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  font-style: italic;
+  margin: 12px 0 0 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--gold-dim);
+}
+
+.typesSection {
+  background: var(--ink-deep);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.typesInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.typesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(24px, 3vw, 40px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 1024px) {
+  .typesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.typeCard {
+  background: var(--ink-deepest);
+  border: 1px solid var(--line-3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.typeCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.typeImageBox {
+  position: relative;
+  aspect-ratio: 9 / 10;
+  overflow: hidden;
+  background: var(--ink-deep);
+}
+
+.typeImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.typeText {
+  padding: clamp(28px, 3vw, 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.typeNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(12px, 1.5vh, 20px);
+}
+
+.typeH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(12px, 1.5vh, 18px) 0;
+  line-height: 1.3;
+}
+
+.typeBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 16px 0;
+}
+
+.typeRole {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-warm);
+  margin: 0 0 16px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-3);
+}
+
+.typeFitLabel {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold-dim);
+  margin: 8px 0;
+  text-transform: uppercase;
+}
+
+.typeFitList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.typeFitList li {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--ivory-mute);
+  padding-left: 16px;
+  position: relative;
+}
+
+.typeFitList li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
+}
+
+.featuredSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.featuredInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  margin-top: clamp(48px, 6vh, 72px);
+  border: 1px solid var(--line-3);
+}
+
+@media (max-width: 1024px) {
+  .featuredGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featuredCard {
+  padding: clamp(40px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--ink-deep);
+}
+
+.featuredAddress {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+}
+
+.featuredLocation {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  text-transform: uppercase;
+}
+
+.featuredStats {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(16px, 2vw, 28px);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  padding: clamp(20px, 2.5vh, 28px) 0;
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+  flex-wrap: wrap;
+}
+
+.featuredStat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.featuredStatNum {
+  font-family: var(--serif-en);
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.featuredStatLabel {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  color: var(--ivory-warm);
+}
+
+.featuredStatStatus {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 6px 14px;
+  text-transform: uppercase;
+}
+
+.featuredStatSep {
+  color: var(--gold-dim);
+  font-size: 1.5rem;
+}
+
+.featuredMeta {
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  display: grid;
+  gap: 12px;
+}
+
+.featuredMetaRow {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+.featuredMetaLabel {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.featuredCta {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-decoration: none;
+  align-self: flex-start;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.featuredCta:hover {
+  color: var(--ivory);
+  border-color: var(--ivory);
+}
+
+.featuredMedia {
+  position: relative;
+  min-height: 480px;
+  background: var(--ink-deepest);
+}
+
+@media (max-width: 1024px) {
+  .featuredMedia {
+    min-height: 50vh;
+    order: -1;
+  }
+}
+
+.featuredImageBox {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.featuredImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.listSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.listInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.featuredSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.featuredInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  margin-top: clamp(48px, 6vh, 72px);
+  border: 1px solid var(--line-3);
+}
+
+@media (max-width: 1024px) {
+  .featuredGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featuredCard {
+  padding: clamp(40px, 5vw, 72px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--ink-deep);
+}
+
+.featuredAddress {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.75rem, 2.5vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ivory);
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+}
+
+.featuredLocation {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  text-transform: uppercase;
+}
+
+.featuredStats {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(16px, 2vw, 28px);
+  margin: 0 0 clamp(28px, 3vh, 40px) 0;
+  padding: clamp(20px, 2.5vh, 28px) 0;
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+  flex-wrap: wrap;
+}
+
+.featuredStat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.featuredStatNum {
+  font-family: var(--serif-en);
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+}
+
+.featuredStatLabel {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  color: var(--ivory-warm);
+}
+
+.featuredStatStatus {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 6px 14px;
+  text-transform: uppercase;
+}
+
+.featuredStatSep {
+  color: var(--gold-dim);
+  font-size: 1.5rem;
+}
+
+.featuredMeta {
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  display: grid;
+  gap: 12px;
+}
+
+.featuredMetaRow {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0;
+}
+
+.featuredMetaLabel {
+  color: var(--gold);
+  font-weight: 500;
+}
+
+.featuredCta {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-decoration: none;
+  align-self: flex-start;
+  border-bottom: 1px solid var(--gold-dim);
+  padding-bottom: 2px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.featuredCta:hover {
+  color: var(--ivory);
+  border-color: var(--ivory);
+}
+
+.featuredMedia {
+  position: relative;
+  min-height: 480px;
+  background: var(--ink-deepest);
+}
+
+@media (max-width: 1024px) {
+  .featuredMedia {
+    min-height: 50vh;
+    order: -1;
+  }
+}
+
+.featuredImageBox {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.featuredImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+/* ============================================================
+   名录索引卡 —— 逐字复制自 research.module.css(RC02.5 全部研究索引)
+   ============================================================ */
+@media (max-width: 768px) {
+  .publishedH3 {
+    font-size: clamp(1.1875rem, 5vw, 1.375rem);
+    line-height: 1.4;
+  }
+  .indexCardTitle {
+    font-size: clamp(1.0625rem, 4.4vw, 1.1875rem);
+    line-height: 1.45;
+  }
+}
+
+.indexSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+}
+
+.indexInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.indexCategories {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(56px, 7vh, 88px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+.indexCategory {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vh, 32px);
+}
+
+.indexCategoryHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: clamp(20px, 2.5vh, 28px);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.indexCategoryEyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.indexCategoryTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+  font-weight: 500;
+  color: var(--ivory);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.indexCardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(20px, 2.5vw, 32px);
+}
+
+@media (max-width: 1024px) {
+  .indexCardGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .indexCardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.indexCard {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1.5vh, 16px);
+  padding: clamp(24px, 2.5vw, 32px);
+  background: var(--ink-deep);
+  border: 1px solid var(--line-3);
+  text-decoration: none;
+  transition: border-color 0.3s ease, transform 0.3s ease, background 0.3s ease;
+}
+
+.indexCard:hover {
+  border-color: var(--gold-dim);
+  background: rgba(20, 24, 30, 0.7);
+  transform: translateY(-3px);
+}
+
+.indexCardNum {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+
+.indexCardTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.indexCardDesc {
+  font-family: var(--serif-zh);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0;
+  flex: 1;
+}
+
+.indexCardCta {
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+  margin-top: clamp(8px, 1vh, 12px);
+}
+
+/* ============================================================
+   【唯一一处经批准的偏离】会员单位 Logo 图位
+   ------------------------------------------------------------
+   既有 .typeImage / .featuredImage 是 object-fit: cover(照片规格),
+   套在 Logo 上会把方形 / 横版 Logo 裁掉。Andy 已批准:
+   Logo 一律 contain + 内边距,任何情况下不允许被裁切。
+   本偏离【仅限 Logo 图位】,其余图片仍走既有 cover 规格。
+   ============================================================ */
+.logoImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: clamp(20px, 3vw, 40px);
+}
+
+.logoImageWide {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: clamp(32px, 5vw, 72px);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+
+/* ============================================================
+   CTA Banner —— 逐字复制自 projects.module.css 的 P06(含已上线的
+   窄屏 CTA 大标题降字号 @media 修正)。
+   ============================================================ */
+.ctaSection {
+  background: var(--ink-deepest);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(120px, 18vw, 200px) clamp(24px, 6vw, 96px);
+  text-align: center;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.ctaInner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ctaH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ivory);
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+/* 手机端:CTA 大标题降字号 + 允许中文换行(keep-all 在窄屏锁一行会出屏);仅 @media,文案不动 */
+@media (max-width: 768px) {
+  .ctaH2 {
+    font-size: clamp(1.75rem, 7vw, 2.5rem);
+    word-break: normal;
+    overflow-wrap: normal;
+  }
+}
+
+.ctaSubtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(48px, 6vh, 72px) 0;
+}
+
+.ctaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 18px 36px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.ctaPrimary:hover {
+  opacity: 0.88;
+}
+
+.ctaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 18px 36px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ============================================================
+   背景交替修饰类 —— background 值分别逐字取自本文件既有的
+   .typesSection(--ink-deep)与 .featuredSection(--ink-deepest)。
+   /zh/members 的板块数量随内容浮动(任一板块无数据即整块隐藏),
+   固定写死背景会出现同色连排。用这两条修饰类按【实际渲染顺序】
+   排出 deep / deepest 严格交替,与站内其余页面的背景节奏一致。
+   只改背景色,padding 与内容宽度一概不变。
+   ============================================================ */
+.bgDeep {
+  background: var(--ink-deep);
+}
+
+.bgDeepest {
+  background: var(--ink-deepest);
+}

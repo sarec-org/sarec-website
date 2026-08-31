@@ -1,0 +1,409 @@
+/* ============================================================
+   Member profile 专访页 /zh/members/profiles/[slug]
+   ------------------------------------------------------------
+   ⚠️ 本文件不是新设计:全部规则【逐字复制】自站内既有的人物页
+      app/zh/(internal)/about/founder/founder.module.css
+      (F01 Editorial Split Hero / F02 引用段 / F04 卡片网格 / F07 CTA)。
+      访谈正文段落规格另走 components/cms/detail.module.css 的
+      .ed1Body / .ed1BlockH3 / .roleBulletList(与其余 CMS 详情页同规)。
+      新增 0 条自创样式。
+   ============================================================ */
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+}
+
+.sectionH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ivory);
+  margin: clamp(20px, 3vh, 32px) 0 clamp(40px, 5vh, 64px) 0;
+}
+
+.heroSection {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  background: var(--ink-deepest);
+  min-height: clamp(85vh, 92vh, 100vh);
+  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏不抖;desktop 等同 vh */
+  padding-top: clamp(64px, 10vh, 120px);
+  overflow: hidden;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: 70fr 30fr;
+  align-items: stretch;
+  gap: 0;
+  min-height: inherit;
+}
+
+@media (max-width: 1024px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* 第七轮:图左字右(70fr 30fr)— 顺序:上 / 右 / 下 / 左 — 右 padding 加大,左 padding 收小 → 文字靠左、贴左图 */
+  padding: clamp(48px, 8vh, 96px) clamp(56px, 7vw, 112px) clamp(48px, 8vh, 96px) clamp(24px, 3vw, 48px);
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 1024px) {
+  .heroText {
+    padding: clamp(48px, 8vh, 80px) clamp(24px, 6vw, 48px);
+    order: 2;
+  }
+}
+
+.heroImageWrap {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink-deepest);
+  /* 第六轮:换用 speaking.jpg(1086×724 landscape),构图天然适合 cover,无需 margin / object-position 试验 */
+  margin-top: 0;
+}
+
+@media (max-width: 1024px) {
+  .heroImageWrap {
+    order: 1;
+    min-height: 50vh;
+    margin-top: 0;
+  }
+}
+
+.heroImage {
+  width: 100%;
+  height: 100%;
+  /* 第六轮:回退 cover 默认居中 — speaking.jpg 构图天然适合,无需调焦点 */
+  object-fit: cover;
+  object-position: center center;
+}
+
+.heroEyebrow {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: clamp(20px, 2.5vh, 32px);
+}
+
+.heroH1 {
+  font-family: var(--serif-zh);
+  font-size: clamp(3.5rem, 7vw, 6.5rem);
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.03em;
+  color: var(--ivory);
+  margin: 0 0 clamp(24px, 3vh, 40px) 0;
+  display: block;
+}
+
+.heroRevealLine {
+  display: block;
+  clip-path: inset(0 100% 0 0);
+  padding-bottom: 0.2em;
+  will-change: clip-path;
+}
+
+.heroRevealVisible {
+  animation: founderHeroReveal 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards;
+}
+
+.heroRevealVisible:nth-child(2) {
+  animation-delay: 0.35s;
+}
+
+@keyframes founderHeroReveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroRevealLine {
+    clip-path: none !important;
+    animation: none !important;
+  }
+}
+
+.heroTitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.125rem, 1.5vw, 1.5rem);
+  color: var(--gold);
+  margin: 0 0 clamp(28px, 3.5vh, 40px) 0;
+  line-height: 1.4;
+}
+
+.heroTagline {
+  font-family: var(--serif-zh);
+  font-size: clamp(1rem, 1.15vw, 1.1875rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(40px, 5vh, 56px) 0;
+  max-width: 540px;
+}
+
+.heroCtaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 24px);
+  flex-wrap: wrap;
+}
+
+.heroCtaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 16px 32px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.heroCtaPrimary:hover {
+  opacity: 0.88;
+}
+
+.heroCtaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 16px 32px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.heroCtaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.quoteSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  text-align: center;
+  border-top: 1px solid var(--line-3);
+  border-bottom: 1px solid var(--line-3);
+}
+
+.quoteInner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.quoteText {
+  font-family: var(--serif-zh);
+  font-style: italic;
+  font-size: clamp(1.75rem, 3.5vw, 3rem);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ivory);
+  margin: 0 0 clamp(32px, 4vh, 48px) 0;
+  padding: 0;
+}
+
+.quoteCite {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.quoteCite::before {
+  content: '';
+  display: inline-block;
+  width: 32px;
+  height: 1px;
+  background: var(--gold);
+  vertical-align: middle;
+  margin-right: 16px;
+}
+
+.methodSection {
+  background: var(--ink-deepest);
+  padding: clamp(96px, 14vw, 180px) clamp(24px, 6vw, 96px);
+  border-top: 1px solid var(--line-3);
+  scroll-margin-top: clamp(72px, 10vh, 110px); /* #methodology 锚点落位留白 */
+}
+
+.methodInner {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.methodGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(24px, 3vw, 48px);
+  margin-top: clamp(48px, 6vh, 72px);
+}
+
+@media (max-width: 768px) {
+  .methodGrid {
+    grid-template-columns: 1fr;
+  }
+  /* Hero 图窄屏带回人物主体(电脑端不变) */
+  .heroImage {
+    object-position: center 28%;
+  }
+  /* 标题 / 引用 / CTA 窄屏:防手动换行处孤字、长句不溢出 */
+  .heroTitle,
+  .heroTagline,
+  .quoteText,
+  .ctaH2,
+  .ctaSubtitle {
+    word-break: keep-all;
+    overflow-wrap: normal;
+  }
+}
+
+.methodCard {
+  background: var(--ink-deep);
+  padding: clamp(32px, 3.5vw, 56px);
+  border: 1px solid var(--line-3);
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.methodCard:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-4px);
+}
+
+.methodNum {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+  display: block;
+  margin-bottom: clamp(16px, 2vh, 24px);
+}
+
+.methodH3 {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.25rem, 1.6vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ivory);
+  margin: 0 0 clamp(16px, 2vh, 20px) 0;
+  line-height: 1.3;
+}
+
+.methodBody {
+  font-family: var(--serif-zh);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ivory-mute);
+  margin: 0 0 12px 0;
+}
+
+.methodBody:last-child {
+  margin-bottom: 0;
+}
+
+.ctaSection {
+  background: var(--ink-deepest);
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: clamp(120px, 18vw, 200px) clamp(24px, 6vw, 96px);
+  text-align: center;
+  border-top: 1px solid var(--gold-dim);
+  border-bottom: 1px solid var(--gold-dim);
+}
+
+.ctaInner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.ctaH2 {
+  font-family: var(--serif-zh);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ivory);
+  margin: clamp(24px, 3vh, 40px) 0 clamp(32px, 4vh, 48px) 0;
+}
+
+.ctaSubtitle {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.0625rem, 1.3vw, 1.25rem);
+  line-height: 1.7;
+  color: var(--ivory-warm);
+  margin: 0 0 clamp(48px, 6vh, 72px) 0;
+}
+
+.ctaRow {
+  display: flex;
+  gap: clamp(16px, 2vw, 32px);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.ctaPrimary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  background: var(--gold);
+  color: var(--ink-deepest);
+  padding: 18px 36px;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.ctaPrimary:hover {
+  opacity: 0.88;
+}
+
+.ctaSecondary {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--ivory);
+  padding: 18px 36px;
+  border: 1px solid var(--ivory);
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.ctaSecondary:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ============================================================
+   背景交替修饰类 —— background 值逐字取自 founder.module.css 的
+   .timelineSection / .viewsSection(--ink-deep),即模板自身的交替色。
+   专访页的内容段数量随内容浮动(正文 / 所属单位 可有可无),
+   固定写死背景会出现 deepest 连排。
+   ============================================================ */
+.bgDeep {
+  background: var(--ink-deep);
+}

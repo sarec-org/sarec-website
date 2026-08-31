@@ -14,7 +14,13 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { parse as parseYaml } from 'yaml';
+import { MEMBERSHIP_TIER_ORDER } from './labels';
 import type {
+  Expertise,
+  MemberProfile,
+  MemberUnit,
+  MembershipTier,
+  RelationshipTag,
   EventItem,
   EventSpeaker,
   EventStatus,
@@ -324,4 +330,133 @@ export function listProjects(
 
 export function getProjectBySlug(slug: string): ProjectItem | null {
   return allProjects().find((p) => p.slug === slug) ?? null;
+}
+
+// ── 会员单位 / 会员人物 ────────────────────────────────────────────
+const MEMBERSHIP_TIERS: MembershipTier[] = [
+  'vice-chair',
+  'executive-director',
+  'director',
+  'member',
+];
+const RELATIONSHIP_TAGS: RelationshipTag[] = ['strategic-partner'];
+const EXPERTISES: Expertise[] = [
+  'development-investment',
+  'construction-materials',
+  'lending-finance',
+  'legal-tax',
+  'brokerage',
+  'tech-professional-services',
+];
+
+function bool(v: unknown): boolean {
+  return v === true;
+}
+
+function int(v: unknown): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+}
+
+function toMemberUnit(raw: Record<string, unknown>, slug: string, file: string): MemberUnit {
+  const membershipTier = str(raw.membershipTier) as MembershipTier;
+  if (!MEMBERSHIP_TIERS.includes(membershipTier)) {
+    throw new Error(`[cms] ${file} 的会员级别「${str(raw.membershipTier)}」不在允许范围内。`);
+  }
+  const relationshipTags = strArray(raw.relationshipTags) as RelationshipTag[];
+  const badTag = relationshipTags.find((t) => !RELATIONSHIP_TAGS.includes(t));
+  if (badTag) throw new Error(`[cms] ${file} 的关系标签「${badTag}」不在允许范围内。`);
+  const expertise = strArray(raw.expertise) as Expertise[];
+  const badExp = expertise.find((e) => !EXPERTISES.includes(e));
+  if (badExp) throw new Error(`[cms] ${file} 的专业领域「${badExp}」不在允许范围内。`);
+
+  return {
+    slug,
+    name: str(raw.name).trim(),
+    logo: strOrNull(raw.logo),
+    membershipTier,
+    relationshipTags,
+    representative: strOrNull(raw.representative),
+    coreBusiness: strOrNull(raw.coreBusiness),
+    expertise,
+    joinedAt: strOrNull(dateStr(raw.joinedAt)),
+    lastVerified: strOrNull(dateStr(raw.lastVerified)),
+    sortWeight: int(raw.sortWeight),
+    published: bool(raw.published),
+    publicationApproved: bool(raw.publicationApproved),
+  };
+}
+
+function toMemberProfile(raw: Record<string, unknown>, slug: string): MemberProfile {
+  return {
+    slug,
+    name: str(raw.name).trim(),
+    unit: strOrNull(raw.unit),
+    title: strOrNull(raw.title),
+    coverImage: strOrNull(raw.coverImage),
+    body: str(raw.body),
+    published: bool(raw.published),
+    publicationApproved: bool(raw.publicationApproved),
+  };
+}
+
+/**
+ * 【发布双闸】前台一律只读取 published 与 publicationApproved 均为 true 的条目。
+ * 闸门放在访问层而不是页面层:未过审条目对列表、详情页、sitemap、
+ * generateStaticParams 一并不可见,详情页直接 notFound(),不存在漏网路径。
+ */
+const gate = <T extends { published: boolean; publicationApproved: boolean }>(rows: T[]): T[] =>
+  rows.filter((r) => r.published && r.publicationApproved);
+
+const allMemberUnits = (): MemberUnit[] => loadDir('member-units', toMemberUnit);
+const allMemberProfiles = (): MemberProfile[] =>
+  loadDir('member-profiles', (raw, slug) => toMemberProfile(raw, slug));
+
+/** 排序:先按会员级别序位,同级别内按 sortWeight 降序;不按日期倒序。 */
+function sortUnits(rows: MemberUnit[]): MemberUnit[] {
+  return rows.sort((a, b) => {
+    const t = MEMBERSHIP_TIER_ORDER[a.membershipTier] - MEMBERSHIP_TIER_ORDER[b.membershipTier];
+    if (t !== 0) return t;
+    if (b.sortWeight !== a.sortWeight) return b.sortWeight - a.sortWeight;
+    return a.name.localeCompare(b.name, 'zh-Hans-CN');
+  });
+}
+
+export function listMemberUnits(
+  options: { tier?: MembershipTier | MembershipTier[]; relationshipTag?: RelationshipTag } = {}
+): MemberUnit[] {
+  const wanted = options.tier
+    ? Array.isArray(options.tier)
+      ? options.tier
+      : [options.tier]
+    : null;
+  return sortUnits(
+    gate(allMemberUnits())
+      .filter((u) => (wanted ? wanted.includes(u.membershipTier) : true))
+      .filter((u) =>
+        options.relationshipTag ? u.relationshipTags.includes(options.relationshipTag) : true
+      )
+  );
+}
+
+export function getMemberUnitBySlug(slug: string): MemberUnit | null {
+  return gate(allMemberUnits()).find((u) => u.slug === slug) ?? null;
+}
+
+export function listMemberProfiles(): MemberProfile[] {
+  return gate(allMemberProfiles()).sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN'));
+}
+
+export function getMemberProfileBySlug(slug: string): MemberProfile | null {
+  return gate(allMemberProfiles()).find((p) => p.slug === slug) ?? null;
+}
+
+/**
+ * 会员项目关联的单位徽章数据源。
+ * 「副会长单位项目」「战略伙伴项目」等徽章无手工字段,一律由此处按
+ * 关联单位的级别 / 关系数据在渲染时生成 —— 单位级别变化后徽章自动跟着变,不会过期。
+ * 只认过双闸的单位;未过审的单位不产生徽章。
+ */
+export function resolveLinkedUnits(slugs: string[]): MemberUnit[] {
+  const bySlug = new Map(gate(allMemberUnits()).map((u) => [u.slug, u]));
+  return slugs.map((s) => bySlug.get(s)).filter((u): u is MemberUnit => Boolean(u));
 }

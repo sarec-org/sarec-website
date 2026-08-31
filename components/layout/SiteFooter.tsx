@@ -82,6 +82,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/zh/members" className="hover:text-[var(--gold)] transition-colors">
+                会员风采
+              </Link>
+            </li>
+            <li>
               <Link href="/zh/join" className="hover:text-[var(--gold)] transition-colors">
                 在线入会
               </Link>

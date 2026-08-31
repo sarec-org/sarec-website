@@ -35,6 +35,7 @@ const PAGES = [
   { slug: 'news', url: '/zh/news', must: ['SAREC 新闻'] },
   { slug: 'projects', url: '/zh/projects', must: ['SAREC 会员项目'] },
   { slug: 'project-rosewood', url: '/zh/projects/4136-rosewood', must: ['Rosewood', '本页面为商会会员业务信息展示'] },
+  { slug: 'members', url: '/zh/members', must: ['SAREC 会员风采'] },
   { slug: 'case-studies', url: '/zh/case-studies', must: ['项目案例', '查看判断方法论'] },
   { slug: 'rosewood', url: '/zh/case-studies/4136-rosewood', must: ['Rosewood'] },
   { slug: 'contact', url: '/zh/contact', must: ['联系'] },

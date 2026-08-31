@@ -6,13 +6,15 @@ import { usePathname } from 'next/navigation';
 import styles from './InternalNav.module.css';
 import { MobileNav } from './MobileNav';
 
+// CMS V2 PR-2 最终导航:一级项直接表达用户意图,右侧独立行动按钮 [加入商会]。
+// 与 HeroV3B / MobileNav 三处保持完全一致,顺序不变。
 const MENU = [
   { label: '关于', href: '/zh/about' },
   { label: '服务', href: '/zh/services' },
-  { label: '项目', href: '/zh/projects' },
+  { label: '会员项目', href: '/zh/projects' },
   { label: '研究', href: '/zh/research' },
-  { label: '会员入会', href: '/zh/join' },
-  { label: '活动', href: '/zh/events' }
+  { label: '新闻与活动', href: '/zh/events' },
+  { label: '会员风采', href: '/zh/members' }
 ] as const;
 
 export function InternalNav() {
@@ -83,8 +85,8 @@ export function InternalNav() {
               <span />
               <span />
             </button>
-            <Link href="/zh/contact" className={styles.cta} onClick={close}>
-              联系我们
+            <Link href="/zh/join" className={styles.cta} onClick={close}>
+              加入商会
             </Link>
           </div>
         </nav>

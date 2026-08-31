@@ -986,5 +986,57 @@ export default config({
         }),
       },
     }),
+
+    // ══════════════════════════════════════════════════════════════
+    // CMS V2 · 2A —— 会员人物(memberProfiles)
+    // 前台:/zh/members(人物风采摘要卡)、/zh/members/profiles/<slug>(专访全文)
+    // ⚠️ 姓名 slug 上线后冻结:详情路由依赖它。
+    // ⚠️ 前台一律只读取 published 与 publicationApproved 均为 true 的条目。
+    // ══════════════════════════════════════════════════════════════
+    memberProfiles: collection({
+      label: '会员人物(Member Profiles)',
+      slugField: 'name',
+      path: 'content/member-profiles/*',
+      format: { data: 'yaml' },
+      columns: ['title', 'published'],
+      schema: {
+        name: fields.slug({
+          name: { label: '姓名', validation: { isRequired: true } },
+          slug: {
+            label: 'URL 标识(slug)',
+            description:
+              '专访网址 /zh/members/profiles/<此处>。⚠️ 一经上线不可更改,否则旧链接会失效。',
+          },
+        }),
+        unit: fields.relationship({
+          label: '所属会员单位',
+          description: '从会员单位库中选择。',
+          collection: 'memberUnits',
+        }),
+        title: fields.text({ label: '头衔', description: '如:董事长 / 合伙人。' }),
+        coverImage: fields.image({
+          label: '人物照片',
+          directory: 'public/images/members/uploads',
+          publicPath: '/images/members/uploads',
+        }),
+        body: fields.text({
+          label: '访谈正文(Markdown)',
+          description:
+            '空行分段。支持 ## / ### 小标题、- 列表、**加粗**、[文字](链接)。',
+          multiline: true,
+        }),
+        published: fields.checkbox({
+          label: '已发布',
+          description: '未勾选的条目前台完全不显示。',
+          defaultValue: false,
+        }),
+        publicationApproved: fields.checkbox({
+          label: '已确认可公开',
+          description:
+            '确认本人身份、资料真实性,并取得书面发布同意后方可勾选。未勾选的条目前台完全不显示。',
+          defaultValue: false,
+        }),
+      },
+    }),
   },
 });
