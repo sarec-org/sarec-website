@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { ListScrollRestoration } from '@/components/shared/ListScrollRestoration';
+import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import Link from 'next/link';
 import { RevealOnView } from '@/components/shared/RevealOnView';
 import { createPageMetadata } from '@/lib/seo';
@@ -165,6 +167,9 @@ export default function ResearchPage() {
 
   return (
     <main>
+      <ViewportLockScript />
+      <ListScrollRestoration />
+
       {/* RC01 — Cinematic 全屏视频 Hero */}
       <ResearchHero />
 
