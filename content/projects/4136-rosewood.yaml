@@ -6,10 +6,14 @@ stage: operating
 sarecRole:
   - project-partnership
   - investor-communication
-linkedMembers: []
+linkedMembers:
+  - unit: terra-capital
+    roles:
+      - development
 tags:
   - case-study
 lastVerified: 2026-08-29
+sortWeight: 100
 coverImage: /images/projects/4136-rosewood-rendering.png
 gallery: []
 body: >-

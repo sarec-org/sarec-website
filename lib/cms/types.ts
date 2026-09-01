@@ -101,6 +101,7 @@ export type ProjectItem = {
   tags: ProjectTag[];
   /** 'YYYY-MM-DD' */
   lastVerified: string;
+  sortWeight: number;
   coverImage: string | null;
   gallery: GalleryImage[];
   body: string;
