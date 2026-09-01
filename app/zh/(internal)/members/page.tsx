@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ListScrollRestoration } from '@/components/shared/ListScrollRestoration';
 import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { RevealOnView } from '@/components/shared/RevealOnView';
@@ -221,6 +222,7 @@ export default function MembersPage() {
   return (
     <main>
       <ViewportLockScript />
+      <ListScrollRestoration />
 
       <MembersHero />
 

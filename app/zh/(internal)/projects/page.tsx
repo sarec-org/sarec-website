@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ListScrollRestoration } from '@/components/shared/ListScrollRestoration';
 import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { RevealOnView } from '@/components/shared/RevealOnView';
@@ -128,6 +129,7 @@ export default function ProjectsPage() {
   return (
     <main>
       <ViewportLockScript />
+      <ListScrollRestoration />
 
       {/* P01 — Cinematic Hero(client component:LA 项目实景 + Ken Burns + reveal H1) */}
       <ProjectsHero />

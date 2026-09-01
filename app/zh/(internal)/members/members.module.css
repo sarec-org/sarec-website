@@ -74,8 +74,11 @@
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
-  min-height: clamp(85vh, 92vh, 100vh);
-  min-height: clamp(85svh, 92svh, 100svh); /* iOS 地址栏伸缩不重算高度→不抖;desktop 等同 vh */
+  /* 视口高铁律(教训 30):微信 iOS 里 svh 等同 vh,随地址栏实时伸缩 → 页高跟着变,
+     返回时滚动位置恢复落偏。改用 ViewportLockScript 在解析阶段一次性锁定的
+     --locked-vh,页高不再随地址栏变化。桌面端 --locked-vh = innerHeight/100 = 1vh,
+     与原 92vh 逐像素相同;未就绪 / 旧浏览器回落 1svh,不劣化。 */
+  min-height: calc(var(--locked-vh, 1svh) * 92);
   background: var(--ink-deepest);
   overflow: hidden;
 }
@@ -106,7 +109,8 @@
 /* Hero 窄屏:降高一档 + object-position 带回主体(电脑端不变) */
 @media (max-width: 768px) {
   .heroSection {
-    min-height: 62vh;
+    /* 同上:窄屏这一档才是微信内实际生效的值,一并锁定 */
+    min-height: calc(var(--locked-vh, 1svh) * 62);
   }
   .heroImage {
     object-position: center 45%;

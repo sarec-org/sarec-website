@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ListScrollRestoration } from '@/components/shared/ListScrollRestoration';
 import Link from 'next/link';
 import { SaImage } from '@/components/shared/SaImage';
 import { RevealOnView } from '@/components/shared/RevealOnView';
@@ -186,6 +187,7 @@ export default function EventsPage() {
   return (
     <main>
       <ViewportLockScript />
+      <ListScrollRestoration />
 
       {/* E01 — Cinematic Hero(LA skyline 全屏 + 文字 overlay)*/}
       <EventsHero />
