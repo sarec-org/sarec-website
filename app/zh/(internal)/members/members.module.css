@@ -1055,18 +1055,25 @@
    套在 Logo 上会把方形 / 横版 Logo 裁掉。Andy 已批准:
    Logo 一律 contain + 内边距,任何情况下不允许被裁切。
    本偏离【仅限 Logo 图位】,其余图片仍走既有 cover 规格。
+
+   ⚠️ 必须用 !important:components/shared/SaImage.tsx 在 fill 模式下把
+      object-fit: cover 写成【内联样式】(SaImage.tsx:55),内联优先级高于 class,
+      不加 !important 这里的 contain 不会生效,Logo 仍会被裁切(实测原图 AR 0.918
+      vs 渲染框 AR 0.837,左右各裁约 9%)。
+      选择在此处加 !important 而不是改 SaImage —— SaImage 为全站共用,
+      加 prop 会波及所有 fill 图片,风险不成比例。
    ============================================================ */
 .logoImage {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: contain !important;
   padding: clamp(20px, 3vw, 40px);
 }
 
 .logoImageWide {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: contain !important;
   padding: clamp(32px, 5vw, 72px);
   max-width: 520px;
   margin: 0 auto;
