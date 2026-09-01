@@ -205,8 +205,11 @@
     z-index: 260;
     width: 86vw;
     max-width: 380px;
-    height: 100vh;
-    height: 100svh;
+    /* 视口高铁律(教训 30 同源):微信 iOS 里 svh 等同 vh,随地址栏伸缩,
+       抽屉高度会变。改用 ViewportLockScript 在解析阶段一次性锁定的 --locked-vh,
+       写法与 components/sections/research/*.module.css 既有形态一致;
+       未就绪 / 旧浏览器回落 1svh,不劣化。 */
+    height: calc(var(--locked-vh, 1svh) * 100);
     background: var(--ink-deepest);
     border-left: 1px solid var(--line-2);
     transform: translateX(100%);
@@ -293,8 +296,12 @@
     flex-shrink: 0;
     background: transparent;
     border: none;
-    border-left: 1px solid var(--line-2);
-    color: var(--ivory-mute);
+    /* 可供性修复:收起态箭头此前是 1.5px 发丝 + --ivory-mute(74%),
+       在微信 iOS 内被用户判为「看不到箭头」。提到 --ivory,
+       并把 52px 触摸区的左边框从 --line-2(0.10)提到 --line-3(0.20),
+       让这个独立触摸目标有可见边界。只改这两个既有属性值。 */
+    border-left: 1px solid var(--line-3);
+    color: var(--ivory);
     cursor: pointer;
     transition: color 0.25s, transform 0.3s ease;
   }
