@@ -306,6 +306,7 @@ function toProject(raw: Record<string, unknown>, slug: string, file: string): Pr
     linkedMembers: linkedMembers(raw.linkedMembers, file),
     tags,
     lastVerified,
+    sortWeight: int(raw.sortWeight),
     coverImage: strOrNull(raw.coverImage),
     gallery: gallery(raw.gallery, file),
     body: str(raw.body),
@@ -325,7 +326,11 @@ export function listProjects(
   return allProjects()
     .filter((p) => (options.region ? p.region === options.region : true))
     .filter((p) => (options.projectType ? p.projectType === options.projectType : true))
-    .sort((a, b) => b.lastVerified.localeCompare(a.lastVerified));
+    // 排序:先按排序权重降序(与 memberUnits 同一约定),权重相同再按资料核实日倒序。
+    .sort(
+      (a, b) =>
+        b.sortWeight - a.sortWeight || b.lastVerified.localeCompare(a.lastVerified)
+    );
 }
 
 export function getProjectBySlug(slug: string): ProjectItem | null {

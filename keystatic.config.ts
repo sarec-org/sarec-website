@@ -889,6 +889,11 @@ export default config({
           description: '最近一次与项目方/会员单位核实本页信息的日期。',
           validation: { isRequired: true },
         }),
+        sortWeight: fields.integer({
+          label: '排序权重',
+          description: '列表排序,数字大的排前面;相同权重再按资料核实日倒序。',
+          defaultValue: 0,
+        }),
         coverImage: fields.image({
           label: '封面图',
           directory: 'public/images/projects/uploads',

@@ -65,6 +65,9 @@ export default function ProjectDetailPage({ params }: { params: Params }) {
   // 在渲染时自动生成 —— 单位级别变化后徽章跟着变,不会过期。
   const linkedUnits = resolveLinkedUnits(project.linkedMembers.map((m) => m.unit));
   const unitBySlug = new Map(linkedUnits.map((u) => [u.slug, u]));
+  // 【发布双闸补漏】只展示关联到「已过双闸」单位的参与方条目。
+  // 否则未过审单位会以 slug 形式泄漏为单位名,并链到一个 404 页面。
+  const shownMembers = project.linkedMembers.filter((m) => unitBySlug.has(m.unit));
   const autoBadges = Array.from(
     new Set([
       ...linkedUnits.map((u) => MEMBERSHIP_TIER_LABEL[u.membershipTier] + '项目'),
@@ -189,7 +192,7 @@ export default function ProjectDetailPage({ params }: { params: Params }) {
 
       {/* R05 同款 — 参与方(无关联单位时整块隐藏,不显示空占位)。
           背景按模板的 deepest / deep 交替节奏排布。 */}
-      {project.linkedMembers.length > 0 ? (
+      {shownMembers.length > 0 ? (
         <section className={`${d.learnMoreSection} ${d.altBg}`}>
           <div className={d.learnMoreInner}>
             <span className={d.eyebrow}>PARTIES · 参与方</span>
