@@ -1,0 +1,549 @@
+slug: us-development-model-03-ed1
+locale: zh
+cluster: chinese-capital-us-re-risk
+tier: pillar
+template:
+  discriminant: deep
+  value:
+    tldr:
+      - ED1 的本质是交换：开发商接受通常长达 99 年的可负担契约，交出租金定价权和拆分产权的空间，换回规划审批环节的时间、更高的密度和一部分税费减免
+      - ED1 设定的 60 天只管规划局那一个环节，开发商真正经历的是从买地到施工许可的整条链，一个被报道为进展较快的公开案例，前期也用了 12 个月
+      - 截至 2026 年 5 月，ED1 规划获批约 3.4 万套，拿到施工许可的 8,058 套，占 23%，快批解决的是"批不批"，不是"建不建"
+      - ED1 项目的合同租金受住房局年度收入与租金表约束，实际可收租金取法定上限与市场租金中的较低者；市场租金上涨不会自动变成项目租金增长
+      - 同一份测算，地税是否豁免让债前收益率差一百多个基点，而豁免不是 ED1 自带的，取决于项目用途、所有权、融资、监管契约和主管机关核定
+    judgmentChecklist:
+      - 资格路径与排除项
+      - 租金表档位与年度调整机制
+      - 所有权结构与地税豁免
+      - 从批文到施工许可的真实时长
+      - 退出买家池与受限租金估值
+    dataCutoff: 2026-10-15
+layout: classic
+status: draft
+title: 美国房地产开发模式③｜ED1 可负担住房开发：3.4 万套批文，为什么四分之三还没拿到施工许可
+description: 洛杉矶 ED1 可负担住房快批解决了规划审批，却没有解决融资与开工。SAREC 拆解 3.4 万套获批项目中仅 23%
+  取得施工许可的原因，并以 60 套情景模型分析成本、租金、地税豁免、偿债覆盖率和退出机制。
+author:
+  name: 东哥
+  title: SAREC 中美房地产商会创始人
+publishedAt: 2026-10-22
+summary:
+  - ED1 的本质是交换：开发商接受通常长达 99 年的可负担契约，交出租金定价权和拆分产权的空间，换回规划审批环节的时间、更高的密度和一部分税费减免
+  - ED1 设定的 60 天只管规划局那一个环节，开发商真正经历的是从买地到施工许可的整条链，一个被报道为进展较快的公开案例，前期也用了 12 个月
+  - 截至 2026 年 5 月，ED1 规划获批约 3.4 万套，拿到施工许可的 8,058 套，占 23%，快批解决的是"批不批"，不是"建不建"
+  - ED1 项目的合同租金受住房局年度收入与租金表约束，实际可收租金取法定上限与市场租金中的较低者；市场租金上涨不会自动变成项目租金增长
+  - 同一份测算，地税是否豁免让债前收益率差一百多个基点，而豁免不是 ED1 自带的，取决于项目用途、所有权、融资、监管契约和主管机关核定
+blocks:
+  - discriminant: assetBreak
+    value:
+      kind: image
+      src: /images/research/uploads/img-1792465702931-0.webp
+      alt: ED1 三个时钟：规划局的 60 天审批目标、开发商从批准函到施工许可的 12 个月起、市场层面获批单元取得许可的 23%，SAREC 自制图
+  - discriminant: prose
+    value:
+      md: 作者及其关联方参与洛杉矶 ED1 项目的开发与投资。本文为开发模式研究，案例经匿名化处理，财务数字为 SAREC
+        情景模型测算，不构成投资建议，也不构成任何形式的出资邀约。
+  - discriminant: sectionHeading
+    value:
+      text: 从"没有厨房"到"100% 可负担"
+  - discriminant: prose
+    value:
+      md: |-
+        先给结论。ED1 是一场交换：开发商接受通常长达 99 年的可负担契约，交出租金定价权，也交出拆分产权的空间，换回规划审批环节的时间、更高的密度和一部分税费减免。这项交换足够吸引人，洛杉矶三年多申报了四万多套就是证明。但 2026 年的数据讲的是另一件事：拿到批文的三万多套里，拿到施工许可的不到四分之一。快批解决的是"批不批"，解决不了"建不建"，而后者才是开发商的生死线。
+
+        [《美国房地产开发模式②》](https://sinoamericanrec.org/zh/research/us-development-model-02-coliving)讲到最后，留了一句话：co-living 靠 guest room 规则在土地配额上打开的缝隙，不是洛杉矶唯一的缝隙；同一批做市场化 co-living 的开发商，开始评估或转向另一条路，包括我们。这一篇把那条路拆开。
+
+        为什么转？说白了是时间。一个需要裁量审批的市场化多户项目，在洛杉矶走完规划审批，按我们这几年的经验，九到十二个月是常态，六层以上还要更久；往往要过环评，要开听证，要去社区会议上被人指着鼻子问停车。
+
+        2022 年底 ED1 出来，把这一段变成了没有环评、没有听证的非裁量审批。
+
+        那时候我们以为买到的是速度。三年之后回头看，买到的东西是真的，只是账要重算。
+  - discriminant: sectionHeading
+    value:
+      text: ED1 是什么
+  - discriminant: prose
+    value:
+      md: |-
+        2022 年 12 月 16 日，Bass 上任第一周签了第 1 号行政令（Executive Directive 1，下称 ED1），要求各部门对 100% 可负担住房项目在完整申请后 60 天内完成审批，并加快建筑许可、公用设施接入和入住许可的清关，相关清关限 5 个工作日。两个数字各管一段：60 天说的是规划与行政审批，5 天说的是特定清关环节，不是整套图审五天办完。它一开始只是市长的行政命令；2025 年 12 月 9 日市议会全票通过《可负担住房快批条例》（Affordable Housing Streamlining Ordinance，业内简称 AHSO，第 188788 号条例），12 月 19 日公告生效，把主要机制写进市法典，也顺手改了几条规则。本文沿用市场上通行的"ED1"叫法，但 2026 年起新申报项目的资格、契约期限、激励数量和审批程序，以现行条例和过渡规则为准。这也是本文现在写的原因：一项临时政策刚变成法律，2026 年是它作为法律的第一年。
+
+        资格条件，按条例和市规划局的说明：五套以上；100% 可负担，也就是全部单元不高于 80% AMI（区域中位收入），或者最多 20% 的单元面向不高于 120% AMI 的中等收入家庭、其余面向不高于 80% AMI 的低收入家庭，租金按《加州健康与安全法》第 50052.5 或 50053 条的标准计算；不需要修改总体规划、分区或高度区，密度奖励和 TOC 之外也不需要其他豁免；分割申请本身不享受快批；不在海岸区，不在危废场地。2024 年 7 月的第三次修订又加了两条：历史保护叠加区内不能用，过去五年内住过 12 户以上租客的地块不能用。单户住宅区则在 2023 年年中的首次修订中就被排除，永久条例沿用了这一条。契约期限是永久条例改动最大的一处：按市法典第 16.61 条，出租型受限单元的可负担契约通常至少 99 年，从入住许可签发起算；特定公共补贴协议、服务人群或其他法定例外的项目可能适用不同期限（条例草案曾以税收抵免项目的 55 年为例），最终以录入的契约及适用的更长期限为准。行政令时期的实施指南按 55 年设定，市面上"55 年"的说法多来自那个阶段。永久条例生效前已提交并取得既得权的项目，可能继续适用当时的实施指南或过渡规则；2026 年以后新申报的项目以现行条例为准。
+
+        换回来的东西，同样按公开文件：规划局环节 60 天审批目标（原始 ED1 及其实施体系设定，不含预申请审查、图审、部门清关、契约备案和施工许可）；免 CEQA 环评；免听证、免社区会议；住宅区项目可申请不超过 100% 的总容积率增幅，或提高至 3.5:1，两者取较高者，最终面积仍受基础分区、客观标准和批准结果约束；符合 AB 2097 或其他适用条件时，停车要求可以减少或免除。
+
+        有一个词要先说清楚。ministerial approval，本文译作"非裁量审批"：只要项目符合客观标准，主管部门原则上必须批，不能根据听证意见或主观判断说不。它的对面是裁量审批，规划委员会和市议会可以根据听证和环评结果决定批或不批。非裁量审批的项目通常也不需要做项目层面的 CEQA（加州环境质量法）审查，这就是"免环评"的来历。ED1 的全部价值，说到底就是把项目从裁量审批搬到了非裁量审批。
+  - discriminant: sectionHeading
+    value:
+      text: 交换清单
+  - discriminant: prose
+    value:
+      md: 把 ED1 当成一张清单来看，会比当成"政策优惠"来看更接近它的真相。
+  - discriminant: chartTable
+    value:
+      headers:
+        - 开发商交出去的
+        - 换回来的
+      rows:
+        - cells:
+            - 租金定价权：契约通常至少 99 年（永久条例；特定补贴协议或法定例外可能不同，以录入契约为准），租金锁在住房局每年重发的收入与租金表上
+            - 条例直接给：非裁量审批、免听证、免项目层面环评，规划局环节 60 天目标
+        - cells:
+            - 拆分产权的空间：分割申请不享受快批，契约又跟地走，出租型项目按整体持有设计
+            - 条例直接给：可申请的容积率上调（不超过 100% 增幅或 3.5:1，取较高者）和密度奖励；符合 AB 2097 等条件时另有停车减免
+        - cells:
+            - 市场化的租客选择权：收入审核、年度认证、向主管机关报告
+            - 需另行取得：福利性地税豁免、联动费豁免、政府融资或税收抵免，都不是 ED1 自带的
+  - discriminant: prose
+    value:
+      md: 三样换三样，看上去对等，其实不对等。密度和税费在别的路径也能拿到：密度奖励、TOC、2025 年生效的
+        CHIP（全市住房激励计划），都给密度；福利性地税豁免不是 ED1
+        自带的，要项目用途、所有权与融资结构、监管契约、非营利方实质管理和主管机关核定一起成立；联动费的豁免跟着可负担比例走，也不是 ED1
+        独有。ED1 真正值钱的那一样，是用客观标准替代听证和裁量、免掉项目层面的环评程序。州法里的 SB 35
+        等工具也给非裁量审批，但在洛杉矶，100% 可负担项目走得最多的是这条。
+  - discriminant: pullQuote
+    value:
+      text: ED1 给开发商的最大补贴不是面积，是时间。
+  - discriminant: prose
+    value:
+      md: 但这句话只对了一半。补贴的是规划局那一段的时间。后面还有一段，ED1 管不着。
+  - discriminant: sectionHeading
+    value:
+      text: ED1 的三个时钟
+  - discriminant: prose
+    value:
+      md: |-
+        我把 ED1 项目的时间拆成三个时钟，叫它「ED1 三个时钟」，因为过去一年里，我看到的绝大多数争论，都是拿一个时钟的读数去评价另一个时钟。
+
+        规划局的时钟。ED1 实施体系下的 60 天目标，起点是申请被认定为"完整"，终点是规划局发出批准函。它不包括之前的预申请审查（PAR，用来确认项目有没有资格进 ED1），也不包括之后的任何环节。市政府对外说的"审批从九个月压到几周"，说的就是这一段。这个数字是真的，但它是规划局的绩效指标，不是开发商的工期表。
+
+        开发商的时钟。拿到规划局批准函，只是整条链的第一环。后面是建筑安全局的图审，通常一到三轮修改；水电局的接入审查；消防、工程局、卫生局的清关；住房局的可负担契约备案，契约备案完成之前建筑许可不会签发；然后才是施工许可。每一环都有自己的队列，互相之间不共用 ED1 的时钟。Bisnow 今年 6 月报道的一个 44 套 ED1 项目，从前期启动到开工用了 12 个月，报道说这在洛杉矶已经算快的。
+
+        这个时钟还有一个反向的读数。按市建筑法规，图审文件提交后 18 个月内不领取施工许可就作废，延期要另行申请。也就是说，一个项目拿到规划局批准函之后如果在融资上停了下来，它不只是在等，它手里的图审在过期。这是后面讲到的那批"卖批文"的项目，为什么宁可打折出售也不再等的原因之一。
+
+        我们参与的一个 ED1 项目，已经走完了施工许可和建设贷款，各段的实际时长等账目整理完再更新进来。
+
+        市场的时钟。这是第三个，也是 2026 年最值得看的一个。
+  - discriminant: chartTable
+    value:
+      headers:
+        - 指标
+        - 读数
+        - 时点与来源
+      rows:
+        - cells:
+            - ED1 申报单元
+            - 约 43,300 套
+            - 截至 2026-04-01，市长办公室数据，Bisnow 报道
+        - cells:
+            - 规划获批单元
+            - 约 34,000 套
+            - 同上
+        - cells:
+            - 取得建筑许可单元
+            - 8,058 套，占获批的 23%
+            - 截至 2026-05，市长办公室数据，Bisnow 报道
+        - cells:
+            - 在建单元
+            - 约 6,000 套
+            - 市长办公室 2026 年多次公开表述，未公布计算口径
+        - cells:
+            - 2023 年（ED1 首年）获批单元的许可率
+            - 26%
+            - Crosstown 对规划局案件数据的分析，2026-02
+        - cells:
+            - 全市多户住宅许可量（2025 年）
+            - 7,892 套，较 2019 年下降 34%
+            - 建筑安全局数据，Crosstown 引用
+        - cells:
+            - 管道中 studio 与一居占比
+            - 92%
+            - ATC Research 对约 1.5 万套项目图纸的统计，2024-04
+  - discriminant: assetBreak
+    value:
+      kind: image
+      src: /images/research/uploads/img-1792466175557-1.webp
+      alt: ED1 批文缺口：申报 43,300、规划获批 34,000、取得建筑许可 8,058、在建约 6,000，截至 2026 年 4 至 5
+        月，SAREC 自制图
+  - discriminant: prose
+    value:
+      md: |-
+        四万多套申报、三万多套批文，最后拿到施工许可的八千套。准确地说：截至 2026 年 5 月，洛杉矶 ED1 规划获批约 3.4 万套，取得建筑许可的 8,058 套，占 23%，这是市长办公室的数据，Bisnow 2026 年 6 月 14 日报道。23% 是用不同截止日的数据算出的横截面比例，不是 ED1 项目最终的许可转化率，近期获批的项目有一部分还在图审、契约备案和融资阶段。那么，中间那两万六千套去了哪里？
+
+        它们没有全部消失：一部分仍在图审、清关和契约备案，一部分卡在融资和成本，一部分被挂牌转让或暂时搁置。卡住的原因，业内说得最多的是利率、建安成本和选址。给 ED1 项目放建设贷的 Century Housing 说，能开工的是有可负担住房经验、资金路径清楚的团队；停下来的，是遇到融资缺口、成本上涨，或者团队跟不上快批节奏的。还有一类更具体：项目选在可负担租金并不比市场租金便宜的区域。Bisnow 查了南洛杉矶和北好莱坞几个挂牌出售的项目所在街区，80% 到 120% AMI 的租金上限明显高于网上挂牌的市场化 studio 和一居室。租金上限不低于市场的项目，契约没带来租金端的支撑，合规成本却一分不少，融资优势明显减弱。
+
+        于是出现了一个 2026 年特有的现象：一批取得规划批文、图审走到后期或达到 RTI（Ready to Issue，许可待签发）状态的 ED1 项目，在开工前挂牌出售。Robertson 大道一宗 150 套，Echo Park 一宗 95 套，挂牌资料都以"许可待签发"作为卖点，卖的是批文，不是楼。Bisnow 在南洛杉矶和北好莱坞随手又找到了六个。
+
+        有人会说，管道里的项目多数是 2024、2025 年才批的，开工率低是因为时间还没到。Crosstown 今年 2 月专门算了 2023 年那一批：ED1 第一年获批的单元，两年多过去，拿到许可的只有 26%。单靠"项目还新"，解释不了全部缺口。
+
+        批文数和施工许可数之间的这段落差，我称之为「批文缺口」。它是衡量任何一项快批政策真实产出的那个数字。
+  - discriminant: pullQuote
+    value:
+      text: 批文缺口是评价一个 ED1 项目时第一个该问的问题：你在缺口的哪一边。
+  - discriminant: sectionHeading
+    value:
+      text: 一个 60 套的项目怎么算账
+  - discriminant: prose
+    value:
+      md: 下面是 SAREC 的 ED1 情景模型，参数取整，不对应任何具体项目。它的用途是把交换清单翻译成数字。
+  - discriminant: chartTable
+    value:
+      headers:
+        - 参数
+        - 设定
+        - 说明
+      rows:
+        - cells:
+            - 地块
+            - 10,000 平方英尺
+            - 洛杉矶多户住宅区常见的中等地块
+        - cells:
+            - 容积率
+            - 3.5:1
+            - 模型参数，不是统一上限；条例允许住宅区项目申请不超过 100% 的容积率增幅或
+              3.5:1（取较高者），最终面积受基础分区、客观标准和批准结果约束
+        - cells:
+            - 建筑面积
+            - 35,000 平方英尺
+            - 5 层
+        - cells:
+            - 单元
+            - 60 套：36 套一居 + 24 套 studio
+            - 与管道中 92% 为小户型的结构一致
+        - cells:
+            - 停车
+            - 无
+            - 模型假设选址满足 AB 2097（距主要公交站半英里内）或其他停车减免条件；不满足的项目须加回停车面积与造价
+        - cells:
+            - 租金
+            - 一居 1,950 美元/月，studio 1,750 美元/月
+            - SAREC 模型假设，用于展示量级；具体项目须用住房局指定的当年表格并扣除公用事业补贴
+        - cells:
+            - 地价
+            - 250 美元/平方英尺，250 万美元
+            - SAREC 模型假设
+        - cells:
+            - 建安
+            - 230 美元/平方英尺，805 万美元
+            - 按 SAREC 截至 2026 年中的洛杉矶项目经验，5 层介于 4 层与 6 层之间；模型假设建筑总高不超过 85
+              英尺，超过则须按条例附加的劳工标准重算人工成本
+        - cells:
+            - 软成本
+            - 建安的 18%，约 145 万美元
+            - 设计、报批、市政费用、保险、法律、开发管理
+        - cells:
+            - 建设期融资与持有
+            - 90 万美元
+            - 利息、贷款费、建设期地税与保险
+        - cells:
+            - 应急
+            - 建安的 5%，约 40 万美元
+            - SAREC 模型假设
+        - cells:
+            - 总投入
+            - 约 1,330 万美元
+            - 每套约 22.2 万美元，每建筑平方英尺约 380 美元
+  - discriminant: prose
+    value:
+      md: |-
+        收入侧：60 套满租月毛收入 112,200 美元，年 134.6 万美元；按 5% 空置与坏账扣减后，有效毛收入约 127.9 万美元。
+
+        费用侧分两块。不含地税的运营费用按每套 5,500 美元计，年 33 万美元，含管理费、人工与合规、保险、公用事业、维修换租和储备。可负担项目比常规公寓多出来的一块，是收入审核、年度认证和向主管机关报告的人工，这是固定开支，不随租金涨。地税单列：按总投入的 1.2% 估算（SAREC 模型假设，实际按评估值和税区税率计算），全额计入，年约 16 万美元。
+
+        于是债前的净营业收入（NOI）是 78.9 万美元，对应的成本收益率（Yield on Cost）是 5.9%。如果地税拿到豁免，净营业收入 94.9 万美元，Yield on Cost 7.1%。
+  - discriminant: chartTable
+    value:
+      headers:
+        - 情景
+        - 地税全额计入
+        - 假设取得完整福利豁免
+      rows:
+        - cells:
+            - 基准成本（总投入约 1,330 万美元）
+            - 5.9%
+            - 7.1%
+        - cells:
+            - 低成本（地价 150 美元/尺、建安 215 美元/尺，总投入约 1,166 万美元）
+            - 6.9%
+            - 8.1%
+  - discriminant: prose
+    value:
+      md: |-
+        这张表要这样读：地价和建安决定你落在哪一行，所有权结构决定你落在哪一列。同一行里两列之差稳定在 120 个基点左右，这就是下一节要讲的那一百多个基点。至于绝对水平，请把它当成"这类项目的量级"，不是"某个项目的收益"，土地便宜两三成、建安省一成，就是另一张表。
+
+        按「SAREC 压力测试」的做法再压两条。建安涨一成，基准情景的收益率掉约 50 个基点（地税随成本同步重估；若地税不变，约 40 个基点）。租金表下调 3%，掉约 30 个基点。后一条很多人没想过，下面会讲。
+  - discriminant: sectionHeading
+    value:
+      text: 银行能贷多少，股权要补多少
+  - discriminant: prose
+    value:
+      md: 上面是无杠杆的开发收益模型，不是银行的可贷模型。把它翻译成融资语言，还要三个参数：长期贷款利率、摊还期和偿债覆盖率（DSCR，净营业收入除以年还本付息额；本模型假设
+        1.20，不同银行和项目可能要求更高）。按 30 年摊还、DSCR 1.20、贷款价值比（LTV）上限 65%、估值按 5.5%
+        资本化率，基准情景能贷多少、股权缺口多大，一张表：
+  - discriminant: chartTable
+    value:
+      headers:
+        - 利率情景
+        - 地税全额计入
+        - 假设取得完整福利豁免
+      rows:
+        - cells:
+            - 永久贷款 6.25%
+            - 最大贷款约 890 万美元，股权约 440 万（占总投入 33%）
+            - 最大贷款约 1,070 万美元，股权约 260 万（20%）
+        - cells:
+            - 永久贷款 7.0%
+            - 最大贷款约 820 万美元，股权约 510 万（38%）
+            - 最大贷款约 990 万美元，股权约 340 万（26%）
+  - discriminant: prose
+    value:
+      md: 表中的最大贷款取 DSCR 约束与 65%
+        贷款价值比约束中的较低值，是简化的融资敏感性测算，不是银行授信；真实贷款还受债务收益率、储备要求、银行对租金和费用的重估、利率锁定和追索条件影响。但这张表就是批文缺口的算术。地税全额计入、利率
+        7%
+        的组合下，股权要占到总投入的近四成，远高于市场化开发商习惯的两三成；建设贷通常又按永久贷款的额度倒推，股权缺口在动工前就摆在桌上。拿到批文的项目在这一步停下来，不奇怪。
+  - discriminant: sectionHeading
+    value:
+      text: 地税那一百多个基点
+  - discriminant: prose
+    value:
+      md: |-
+        加州对可负担住房的地税豁免叫福利豁免（welfare exemption），依据是《税收与税务法》第 214 条 (g) 款。路径有两条。一条是房产由符合条件的非营利组织直接持有，按"九成以上租户为低收入"的口径申请，法律对这一口径设有豁免评估值上限。另一条是有限合伙持有：管理普通合伙人（GP）必须是符合条件的非营利组织，并且按州税务委员会第 140.1 号规则，这个非营利在合伙里要有实质的管理权和管理职责，不能只挂名；此外，项目还要有政府贷款、债券或补助并受租金限制，或者取得低收入住房税收抵免，再加上监管协议或契约限制，再经州税务委员会清关、县估税官核定。一个纯私人融资、市场化开发商全资持有的 ED1 项目，一般够不着这个豁免。
+
+        放回模型：地税全额计入是 5.9%，豁免是 7.1%。同一栋楼、同一张租金表、同一份成本，差的是所有权和融资结构。
+
+        所以这一百多个基点不取决于楼，取决于结构：愿不愿意让一个非营利坐进 GP 的位置，愿不愿意为了豁免去接政府融资或税收抵免，把一部分控制权和现金流分出去，换年年省下的地税。市场化开发商第一次做 ED1，往往在这一步犹豫。犹豫的成本可以算出来：基准情景下每年 16 万美元，按 5.5% 的资本化率估值，相当于约 300 万美元的资产价值；在 65% 贷款价值比的情景下，可贷额相差约 200 万美元。
+
+        联动费（Affordable Housing Linkage Fee，可负担住房联动费）是同一类问题，规模小得多。这是洛杉矶 2017 年底建立的收费制度，新建项目在取得建筑许可前，按新增面积、项目规模和所在市场分区计征，费率每年 7 月按通胀调整，2026 年 7 月已再次上调，具体金额以建筑许可签发时有效的费率表为准。低收入单元占两成以上的租赁项目可以豁免，100% 可负担项目在豁免之列。但豁免要申请，批下来之前，保守的做法是全额计入。
+
+        这里顺便说一句我们自己的做法。做 ED1 的测算表，地税、联动费这些可能免掉的钱，我们一律先按要交的算。别人的模型靠乐观假设撑收益，把可能免掉的税全额计入还站得住，才是这类项目的底气。豁免落地那天，收益率往上走，算意外之喜；模型不靠它。
+  - discriminant: sectionHeading
+    value:
+      text: 谁在建，谁在卖
+  - discriminant: prose
+    value:
+      md: |-
+        回到批文缺口。八千套拿到了施工许可，其中一部分已经建成，它们给了这个模式最真实的一组答案。
+
+        Bisnow 今年 6 月写了一个案例。开发商 Generation Real Estate Partners 是做市场化公寓出身的，从没做过 100% 可负担项目。他们在西洛杉矶 Sawtelle 一块原本只能建联排别墅的地上，用 ED1 做了 44 套，租金档最高到 120% AMI，前期 12 个月。中间一个邻居以规避环评为由对批文提出上诉，三个月后上诉被驳回，邻居又起诉了市政府，项目照建，整体大约耽误了几个月。相关程序以法院最终文件为准。
+
+        楼建成后整体出售，买家是市住房管理局（HACLA），成交价 1,670 万美元，每套约 37.9 万美元。按开发商在报道里的复盘，100% 可负担项目的收入审核、年度认证和监管报告，对一家市场化公寓开发商是全新的运营能力，这是他们选择出售的原因之一。
+
+        这个案例把 ED1 的退出讲透了。买家是持有型的专业机构，不是散户；价格按受限租金的现金流定，不按周边市场化公寓的可比价；卖家能卖出去，是因为楼已经建成、租金契约已经备案，买家买的是一份确定的现金流。项目的合伙人事后说，如果今天再来一次，他们不会再走 ED1，因为 2025 年之后州和市层面出了几个新工具，同样走非裁量审批、同样快，而且更贴近市场化开发商的路数。
+
+        Century Housing 的建设贷款负责人说得更直白：从她桌上过的 ED1 项目已经明显变少，兴趣过了峰值。
+
+        把这些放在一起，缺口两边的画像就清楚了。留在好的那一边的，是有可负担住房运营经验、资金路径提前锁定、选址在租金上限确实低于市场的团队。掉在另一边的，是把 ED1 当成"更快的市场化开发"来做的团队，他们拿到了批文，然后在融资、成本和运营能力上停了下来。
+  - discriminant: sectionHeading
+    value:
+      text: 退出与产权：资产退出只有整栋出售，资本回收另算
+  - discriminant: prose
+    value:
+      md: 模式②讲过「厨房分界线」：厨房配置是 guest room 与 dwelling unit
+        分类的主要分界之一，而房间能不能逐间卖，最终看产权记录里有没有可独立转让的空间。ED1
+        的出租型项目同样按整体持有来设计，理由完全不同，而且写在契约和分割程序里。
+  - discriminant: chartTable
+    value:
+      headers:
+        - ""
+        - 模式② Co-living
+        - 模式③ ED1
+      rows:
+        - cells:
+            - 为什么不能逐套卖
+            - 房间按 guest room 设计核准，产权记录里没有可独立转让的空间
+            - 分割申请不享受快批，须走常规分割审批；契约通常至少 99 年，跟地走
+        - cells:
+            - 换来了什么
+            - 更高的单位面积租金、更低的土地配额占用
+            - 规划局环节 60 天目标、免环评、密度；可申请的停车与税费减免
+        - cells:
+            - 交出了什么
+            - 产权流动性
+            - 产权流动性，加上通常 99 年的租金定价权
+        - cells:
+            - 资产退出
+            - 整栋出售
+            - 整栋出售给持有型机构
+        - cells:
+            - 资本回收
+            - 整体再融资
+            - 整体再融资
+        - cells:
+            - 逐套出售
+            - 当前产权结构下不可行
+            - 需另行申请分割，不享受快批，受可负担出售规则约束
+  - discriminant: prose
+    value:
+      md: |-
+        两条完全不同的法律理由，指向同一个产品设计：整体持有。
+
+        对整体持有的出租型项目，严格意义上的资产退出只有一条：整栋出售。买家池是可负担住房的专业持有者、非营利组织和公共机构，估值按受限租金的净营业收入除以资本化率，不按市场租金。再融资不是资产退出，是资本回收：稳定出租后，银行按净营业收入和估值发放长期贷款，偿还建设贷之后的净额返还股东，产权还在自己手里。这里沿用模式②的口径：贷款额不等于股东净回款，新贷款先还旧贷和交易费用，剩下的才是回笼的资本。逐套出售不是本文出租型模型的基础路径：条例没有在法律上一概禁止出售型项目，但分割申请本身不享受快批，还要另行满足分割审批、可负担出售价格、产权图和契约要求。
+
+        多说一句估值口径。Sawtelle 那个案例每套 37.9 万美元，放在我们的情景模型里，基准情景的估值每套只有 24 万到 29 万美元。可能的原因包括西洛杉矶的区位、更高的租金档、项目已经建成、契约条件和公共机构买方的需求；没有成交时的完整承销数据，没法把价差精确拆给其中哪一项。不要拿那个数字去套自己的项目。
+  - discriminant: sectionHeading
+    value:
+      text: 风险清单
+  - discriminant: prose
+    value:
+      md: |-
+        每一条都带着不确定性，这是这类文章的规矩，也是这类项目的实情。
+
+        租金锚在表上，表可上可下，实际还要跟市场比低。ED1 项目的合同租金不能超过住房局指定表格的上限：上限低于市场时，契约限制收入；上限高于市场时，只能按市场价出租，合规成本却一分不少。实际可收的租金，永远是法定上限和市场租金中的较低者。多数人默认这张表只会往上，但 Bisnow 报道的那个 Sawtelle 项目，2023 年签契约时的租金上限比 2025 年的新表还高。表的走向取决于 HUD 和州住房部每年公布的中位收入，2026 年洛杉矶县的 AMI 为 10.81 万美元，明年是多少，没有人能保证。按模型，表下调 3%，收益率掉 30 个基点。
+
+        运营合规是固定开支。收入审核、年度认证、监管报告，这些不随租金涨，也不随空置降。市场化开发商第一次做 ED1，常常低估这一块，Sawtelle 的开发商把这列为出售的原因之一。
+
+        政策会改，而且改得很快。ED1 在三年里出了三个修订版，历史保护区、租客占用地块、单户住宅区先后被排除；密度奖励的豁免项被限制到五项加一个。2025 年 CHIP 生效，SB 79 签署，两者都在分流 ED1 的项目。永久条例把游戏规则固定了下来，但固定的是规则，不是市场对规则的兴趣。
+
+        利率和建安决定批文能不能变成开工。这是批文缺口的主因，前面已经讲过。按模型，建安涨一成，收益率掉 50 个基点；工期每多拖半年，建设期融资与持有成本多三十万美元上下。
+
+        Measure ULA（洛杉矶高价房地产转让税）。2022 年底通过，门槛每年随通胀调整，2026 年 7 月 1 日起超过 540 万美元的交易征 4%，1,090 万美元及以上征 5.5%。有业内人士认为它压缩了包括 ED1 在内的可负担项目的利润空间，预计其中相当一部分不会建成。这是业内的判断，没有数据支撑，但退出那一天的税费确实要提前算进去。
+
+        退出流动性。买家池窄，周期长，估值按受限租金定。模式②讲过的 2.5 到 4 年，是洛杉矶小型新建项目的参考周期，不是 ED1 项目的统计样本；ED1 缩短的只是规划环节，完整周期仍取决于图审、融资、建设和出租。
+  - discriminant: sectionHeading
+    value:
+      text: 对跨境资本意味着什么
+  - discriminant: prose
+    value:
+      md: |-
+        对关注美国市场的中国资本来说，ED1 项目是一类很特别的资产：持有型、契约锁租、政策依赖。持有型，意味着它的价值在于现金流，不在于拆分出售；契约锁租，意味着收入的上限被锁死，稳定性换掉了弹性；政策依赖，意味着它的可行性建立在一套三年前才出现、三年里改了三次的规则上。
+
+        此类资产的进入条件，在我看来是这样的。合作方要有可负担住房的运营和合规经验，而不只是开发经验；资金路径要在拿批文之前就锁定，建设贷、所有权结构、豁免申请一起谈；选址时要同时测算法定租金上限和当地市场租金，按两者较低者承保；上限高于市场的街区，项目拿不到额外租金，却要承担可负担住房的合规成本。
+
+        它不适合的情形同样清楚：指望市场租金上涨带来估值提升的；需要在三到五年内拆分退出的；对政策变动容忍度低的。
+
+        这些是这类资产的结构特征，不是对任何具体项目的评价。具体事项请咨询持牌专业人士。
+  - discriminant: sectionHeading
+    value:
+      text: 下一条路径
+  - discriminant: prose
+    value:
+      md: |-
+        《美国房地产开发模式》写到第三篇，一条线已经清楚了。[第一篇](https://sinoamericanrec.org/zh/research/us-development-model-01-adu)的 ADU，靠州法把独栋后院变成可出租单元；第二篇的 co-living，靠 guest room 规则把出租颗粒度从住宅单元细分到房间；第三篇的 ED1，靠 100% 可负担换掉环评和听证。部分开发商在这三条制度路径之间切换，每一次都是用某种权利换某种速度。而这一切发生的背景，是[《大重置》](https://sinoamericanrec.org/zh/research/us-housing-great-reset-2026)里写过的那个市场：房价横盘、利率高企、新开工收缩，周期给不了的利润，开发商只能到结构里找。
+
+        下一条路径已经出现。2025 年生效的 CHIP 把密度奖励和快批机制铺到了全市的交通走廊和商业走廊，同年签署的 SB 79 在州法层面做了类似的事，做过 ED1 的开发商正在往那边看。那是第四篇的内容。
+
+        《SAREC ED1 项目资格自查清单》按条例的资格条款与性能标准逐项整理，可发邮件至 info@sinoamericanrec.org 预约领取，邮件注明「ED1」。
+  - discriminant: sectionHeading
+    value:
+      text: 研究口径
+  - discriminant: prose
+    value:
+      md: 本文财务数字为 SAREC ED1
+        情景模型测算，参数取整，不对应任何具体项目，非实际经营账目，文中的融资测算是简化的敏感性分析，不构成银行承销、贷款报价或授信承诺；ED1
+        管道数据来自市长办公室、市规划局及 Bisnow、Crosstown 等公开报道，申报与获批数截至 2026 年 4 月、施工许可数截至
+        2026 年 5 月、管道总量截至 2026 年 7 月；法规、租金表、费率与税率门槛核验至 2026 年 10 月 15
+        日，各项资格、豁免与费率以主管机关现行文件为准；文中提及的具体项目均来自公开报道，涉及上诉与诉讼的表述以法院最终文件为准；模式②提到的 66
+        单元对照项目，即本文所述作者参与的 ED1 项目，因账目尚未定稿，本篇不披露项目级数字，整理完成后更新。
+faq:
+  - question: 洛杉矶 ED1 是什么？
+    answer: ED1 是洛杉矶市长 Bass 于 2022 年 12 月 16 日签发的第 1 号行政令，对符合条件的完整申请设定 60
+      天规划审批目标，实行非裁量审批、免 CEQA 环评、免听证。2025 年 12 月市议会将其写入市法典，成为《可负担住房快批条例》。
+  - question: ED1 审批真的只要 60 天吗？
+    answer: 60
+      天只管规划局这一个环节，从申请被认定完整到发出批准函。之前的预审、之后的图审、水电消防清关、契约备案和施工许可都不在其中。一个被报道为进展较快的公开案例，前期也用了约
+      12 个月；实际时长因项目而异。
+  - question: 为什么很多 ED1 项目拿到批文却开不了工？
+    answer: 截至 2026 年 5 月，获批约 3.4 万套中取得建筑许可的 8,058 套，占
+      23%。主要原因是利率、建安成本和选址：可负担租金上限不低于所在街区市场租金的项目，融资优势明显减弱。数据来自市长办公室，经 Bisnow 报道。
+  - question: ED1 项目的租金怎么定？
+    answer: 按洛杉矶住房局每年发布的收入与租金表，全部面向不高于 80% AMI 的低收入家庭，或最多 20% 的单元面向不高于 120% AMI
+      的中等收入家庭，并录入通常至少 99
+      年的可负担契约（特定补贴协议或法定例外可能适用不同期限，以录入契约为准）。合同租金不能超过表上限，实际可收租金取表上限与市场租金的较低者；表可上可下。
+  - question: 80% AMI 在洛杉矶是多少钱？
+    answer: 2026 年洛杉矶县四口之家的 AMI 为 108,100 美元；官方表格中的单人低收入限额为 93,300 美元，这个数字经过 HUD
+      和州住房部调整，不等于 108,100 简单乘以 80%。不同项目适用的收入与租金表可能不同，最终由洛杉矶住房局指定；本文模型取一居 1,950
+      美元，是用于展示量级的模型假设。
+  - question: ED1 项目能不能拆成 condo 卖？
+    answer: 本文研究的出租型模型不以逐套出售为退出路径：分割申请本身不享受快批，须另行走分割审批并满足可负担出售价格与契约要求；契约通常至少 99
+      年，跟地走。对整体持有的出租型项目而言，严格意义上的资产退出是整栋出售；再融资属于资本回收，产权仍在原持有人手里。
+  - question: 99 年契约到期后怎么办？
+    answer: 契约期满后房产在理论上可回到市场化用途，但取决于届时的法律和所有权安排。99 年远超任何投资人的持有期，实务上应把它当作永久受限来评估。
+  - question: ED1 项目的地税能免吗？
+    answer: 有条件。加州福利豁免要求房产由符合条件的非营利组织持有，或由非营利担任管理普通合伙人、且有政府融资或低收入住房税收抵免支持的有限合伙持有，并受监管协议或契约限制，还要取得州税务委员会的清关证明；由市场化开发商全资持有、纯私人融资的项目一般不符合条件。以州税务委员会和县估税官的核定为准。
+  - question: ED1 和 SB 35、CHIP 有什么区别？
+    answer: SB 35（2023 年由 SB 423 延长并扩展）是州法层面的快批机制，适用范围含混合收入项目；CHIP 是洛杉矶 2025
+      年生效的全市住房激励计划，主要沿交通走廊和商业走廊给密度和快批；ED1 只针对 100%
+      可负担项目，给的是免项目层面环评的非裁量审批。三者可能叠加或替代，需逐项目核对。
+  - question: ED1 项目怎么估值？
+    answer: 按受限租金的净营业收入除以资本化率，不按周边市场化公寓的可比价；买家主要是可负担住房的专业持有者、非营利组织和公共机构。地税是否豁免直接影响净营业收入，同一栋楼两种口径的估值可以差两成上下。
+  - question: ED1 会不会被取消？
+    answer: 2025 年 12 月已写入市法典，取消需要市议会立法。但它在三年内已修订三次，此前几次修订总体是收紧适用范围、增加项目条件；SB
+      79、CHIP 等新工具也在分流项目。规则固定不等于市场兴趣固定。
+  - question: 中国投资人能不能参与 ED1 项目？
+    answer: 从结构上看，可以作为有限合伙人参与持有型项目，但需要具备可负担住房运营经验的合作方、提前锁定的资金路径和合规的所有权结构。本文不涉及任何具体项目或募集，具体事项请咨询持牌律师与税务顾问。
+sourceList:
+  - name: 洛杉矶市议会，Ordinance No. 188788《可负担住房快批条例》，LAMC §12.22 A.40，2025 年 12 月 9
+      日通过、12 月 19 日公告生效，Council File 23-0623-S1
+    url: https://cityclerk.lacity.org/onlinedocs/2023/23-0623-S1_misc_12-19-25.pdf
+  - name: Los Angeles City Planning，Housing Policy 页面（含 Executive Directive 1
+      及相关条例编号）
+    url: https://planning.lacity.gov/plans-policies/initiatives-policies/housing
+  - name: Los Angeles City Planning，Affordable Housing Streamlining Ordinance 条例摘要与
+      ED1 FAQ，案件号 CPC-2023-5273-CA
+    url: https://planning.lacity.gov/odocument/8db5f950-7948-481d-8f3d-e397d2dad2b6/ED_1_-_FAQ_Sheet_AD.pdf
+  - name: Los Angeles City Planning，ED1 Implementation Guidelines
+    url: https://planning.lacity.gov/odocument/d595b164-5df4-4d37-8b88-1f74d5b88766/ED_1_Implementation_Guidelines.pdf
+  - name: 洛杉矶市政法典，LAMC §16.61 Restricted Affordable Units，受限可负担单元契约通常至少 99 年
+    url: https://codelibrary.amlegal.com/codes/los_angeles/latest/lapz/0-0-0-58586
+  - name: Office of Mayor Karen Bass，Executive Directive 1 第三次修订备忘录，2024 年 7 月 1 日
+    url: https://planning.lacity.gov/odocument/4bdff0d5-a458-4bcc-a8c5-451e4af45ea7/ED1_revised_memo_3.pdf
+  - name: Office of Mayor Karen Bass，Mayor Bass unveils largest affordable housing
+      project under her Executive Directive One，2026 年 7 月 15 日
+    url: https://mayor.lacity.gov/news/mayor-bass-unveils-largest-affordable-housing-project-under-her-executive-directive-one
+  - name: Los Angeles Times（AOL 转载），L.A. City Council passes ordinance to streamline
+      affordable housing，2025 年 12 月 9 日
+    url: https://www.aol.com/news/l-city-council-passes-ordinance-233557224.html
+  - name: LAist，LA council members bypass strict labor standards for most
+      fast-tracked affordable housing projects，2025 年 10 月
+    url: https://laist.com/news/housing-homelessness/los-angeles-ed1-executive-directive-one-bass-affordable-housing-fastrack-labor-standards
+  - name: "Bisnow，Fast Approvals, Slow Delivery: Just 23% Of Units Approved Under ED
+      1 Have Been Permitted，2026 年 6 月 14 日"
+    url: https://www.bisnow.com/news/los-angeles/affordable-housing/ed-1-affordable-housing-streamlining-los-angeles-135010
+  - name: Bisnow，LA's Affordable Housing Streamlining Process Is Now Permanent，2025
+      年 12 月 10 日
+    url: https://www.bisnow.com/los-angeles/news/multifamily/mayors-affordable-housing-streamlining-ordinance-now-permanent-132290
+  - name: Crosstown，Mayor Bass says affordable housing is thriving, the numbers say
+      otherwise，2026 年 2 月 23 日
+    url: https://xtown.la/2026/02/23/affordable-housing-apartments-los-angeles/
+  - name: LAist，转载 Crosstown 报道，含 Measure ULA 影响的业内观点，2026 年 2 月
+    url: https://laist.com/news/housing-homelessness/mayor-bass-says-affordable-housing-is-thriving-but-the-numbers-say-otherwise
+  - name: 洛杉矶市政法典，LAMC §98.0603 Expiration of Plan Check，图审 18 个月有效期及延期例外
+    url: https://codelibrary.amlegal.com/codes/los_angeles/latest/lamc/0-0-0-190438
+  - name: ATC Research，Understanding Executive Directive 1 (ED1) Mandate 及 2024 年 4
+      月 1 日简报中的单元结构统计
+    url: https://atcresearch.co/understanding-executive-directive-1-ed1-mandate/
+  - name: Urbanize LA，Affordable housing streamlining ordinance clears City Planning
+      Commission，2023 年 11 月 20 日
+    url: https://la.urbanize.city/post/affordable-housing-streamlining-ordinance-clears-city-planning-commission
+  - name: CoStar，Order speeding apartment development in Los Angeles becomes
+      law，2025 年 12 月 11 日
+    url: https://www.costar.com/article/1675801145/order-speeding-apartment-development-in-los-angeles-becomes-law
+  - name: California State Board of Equalization，Property Tax Rule 140.1
+    url: https://www.boe.ca.gov/proptaxes/pdf/rules/Rule140_1.pdf
+  - name: California Department of Housing and Community Development，2026 State
+      Income Limits
+    url: https://www.hcd.ca.gov/sites/default/files/docs/grants-and-funding/income-limits-2026.pdf
+  - name: Los Angeles City Planning，AHLF 实施备忘录与市场分区图更新，2026 年 4 月 22
+      日，费率以建筑许可签发时有效的现行表为准
+    url: https://planning.lacity.gov/odocument/a098a8ca-11a2-4831-8f5a-d576285fe0b7/AHLF_Implementation_Memo_April_22,_2026.pdf
+  - name: Los Angeles Housing Department，Affordable Housing Linkage Fee Background
+    url: https://housing.lacity.gov/policy-data/affordable-housing-linkage-fee-background
+  - name: Los Angeles Housing Department，Land Use Rent and Income Schedules
+    url: https://housing.lacity.gov/partners/land-use-rent-income-schedules
+  - name: City of Los Angeles Office of Finance，Real Property Transfer Tax and
+      Measure ULA FAQ，2026 年 7 月 1 日起门槛
+    url: https://finance.lacity.gov/faq/measure-ula
+  - name: Marcus & Millichap，2600–2610 S Robertson Blvd 挂牌信息，150 套 RTI ED1 项目
+    url: https://www.marcusmillichap.com/properties/303950/2600-2610-s-robertson
+  - name: CBRE，419 N Lake St 挂牌信息，95 套 RTI ED1 项目
+    url: https://www.cbre.com/properties/properties-for-lease/land/details/US-SMPL-200011/permit-ready-95-unit-ed1-development-opportunity-419-n-lake-st-los-angeles-ca-90026
+  - name: SAREC，《美国房地产开发模式②｜Co-living 共居开发》，2026 年 8 月
+    url: https://sinoamericanrec.org/zh/research/us-development-model-02-coliving
+  - name: SAREC，《美国房地产开发模式①》，2026 年 7 月
+    url: https://sinoamericanrec.org/zh/research/us-development-model-01-adu
+  - name: SAREC，《美国房地产大重置（2026 年中期）》，2026 年 7 月
+    url: https://sinoamericanrec.org/zh/research/us-housing-great-reset-2026
+sources: []
+relatedSlugs: []
+cta:
+  discriminant: false
+heroMedia:
+  discriminant: false
