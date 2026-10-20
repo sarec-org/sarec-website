@@ -19,7 +19,7 @@ template:
       - 退出买家池与受限租金估值
     dataCutoff: 2026-10-15
 layout: classic
-status: draft
+status: published
 title: 美国房地产开发模式③｜ED1 可负担住房开发：3.4 万套批文，为什么四分之三还没拿到施工许可
 description: 洛杉矶 ED1 可负担住房快批解决了规划审批，却没有解决融资与开工。SAREC 拆解 3.4 万套获批项目中仅 23%
   取得施工许可的原因，并以 60 套情景模型分析成本、租金、地税豁免、偿债覆盖率和退出机制。
@@ -542,7 +542,10 @@ sourceList:
   - name: SAREC，《美国房地产大重置（2026 年中期）》，2026 年 7 月
     url: https://sinoamericanrec.org/zh/research/us-housing-great-reset-2026
 sources: []
-relatedSlugs: []
+relatedSlugs:
+  - us-development-model-02-coliving
+  - us-development-model-01-adu
+  - us-housing-great-reset-2026
 cta:
   discriminant: false
 heroMedia:
