@@ -26,7 +26,7 @@
 | M2 登录 + 报名 + 渐进式补资料 | ✅ | 7a86858、cb51444 | e2e 第 1–2 组 |
 | M3 付款核款 + 签到 + 会费 Zelle/Stripe 自助 + 积分抵扣 | ✅ | 7a86858、cb51444 | e2e 第 3–4、6 组；后台测试 |
 | M4 我的 + 会议室/月卡/电子屏 + 工作人员后台 | ✅ | cb51444 | `crm-api-tests.ts` 9 组；e2e 第 5、7 组 |
-| M5 /api/v1 + docs/api-v1.md + 预览 + PR | ✅ | 4328275 及之后 | 预览环境 e2e 全部通过，8 组；浏览器全流程 14 步 |
+| M5 /api/v1 + docs/api-v1.md + 预览 + PR | ✅ | 4328275 及之后；PR https://github.com/sarec-org/sarec-website/pull/18 | 预览环境 e2e 全部通过，8 组；浏览器全流程 14 步 |
 | M6 小程序 | ✅ | 小程序 7795209、7d0fc83、76efa8f | 编译通过，体验版已上传 0.1.2 |
 | M7 总验收与汇报 | ✅ | 见 git log | typecheck、build、三套测试全部通过 |
 
