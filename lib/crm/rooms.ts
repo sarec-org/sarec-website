@@ -34,7 +34,8 @@ export async function activeTier(db: Db, contactId: string): Promise<string | nu
     `SELECT COALESCE(t.slug, a.selected_tier_slug) AS slug
        FROM applications a LEFT JOIN membership_tiers t ON t.id = a.selected_tier_id
       WHERE a.contact_id = $1
-        AND a.application_status IN ('paid','approved','second_payment_due')
+        AND (a.application_status IN ('paid','approved','second_payment_due')
+             OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
         AND (a.membership_end_date IS NULL OR a.membership_end_date >= current_date)
       ORDER BY t.sort_order DESC NULLS LAST LIMIT 1`,
     [contactId]
@@ -42,9 +43,23 @@ export async function activeTier(db: Db, contactId: string): Promise<string | nu
   return rows[0]?.slug ?? null;
 }
 
-export function priceFor(standardCents: number, tier: string | null): number {
-  const d = tier ? TIER_DISCOUNT[tier] ?? 1 : 1;
+export function priceFor(standardCents: number, tier: string | null, discounts: Record<string, number> = TIER_DISCOUNT): number {
+  const d = tier ? discounts[tier] ?? 1 : 1;
   return Math.round(standardCents * d);
+}
+
+/** 会员价未公布前（crm_settings.member_prices_published = false）一律按标准价；公布后按后台配置的折扣。 */
+export async function effectiveDiscounts(db: Db): Promise<Record<string, number> | null> {
+  const { getSetting } = await import('./orders');
+  const published = await getSetting<boolean>(db, 'member_prices_published', false);
+  if (!published) return null;
+  return getSetting<Record<string, number>>(db, 'room_discount', TIER_DISCOUNT);
+}
+
+export async function myRoomPrice(db: Db, contactId: string | null, standardCents: number): Promise<{ cents: number; tier: string | null; published: boolean }> {
+  const tier = contactId ? await activeTier(db, contactId) : null;
+  const d = await effectiveDiscounts(db);
+  return { cents: d ? priceFor(standardCents, tier, d) : standardCents, tier, published: !!d };
 }
 
 export type BookingResult =
@@ -73,7 +88,7 @@ export async function bookRoom(
     if (pass[0]) return { kind: 'confirmed', bookingId: b[0].id, viaPass: true };
     const { rows: room } = await db.query<{ hourly_cents: number }>(`SELECT hourly_cents FROM rooms WHERE id = $1`, [args.roomId]);
     const hours = (args.endsAt.getTime() - args.startsAt.getTime()) / 3600e3;
-    const amount = priceFor(Math.round((room[0]?.hourly_cents ?? 0) * hours), await activeTier(db, args.contactId));
+    const amount = (await myRoomPrice(db, args.contactId, Math.round((room[0]?.hourly_cents ?? 0) * hours))).cents;
     const orderNo = args.orderNo();
     const { rows: o } = await db.query<{ id: string }>(
       `INSERT INTO orders (order_no, contact_id, purpose, related_id, description, amount_cents)

@@ -10,8 +10,8 @@ import { createHash } from 'node:crypto';
 import type { AgreementType, AgreementLanguageMode } from './types';
 
 export const AGREEMENT_VERSIONS: Record<AgreementType, string> = {
-  membership_agreement: '2026-v1-draft',
-  strategic_partnership_agreement: '2026-v1-draft',
+  membership_agreement: '2026-v2-draft',
+  strategic_partnership_agreement: '2026-v2-draft',
   privacy_policy: '2026-v1-draft'
 };
 
@@ -31,9 +31,9 @@ const AGREEMENT_TITLES: Record<AgreementType, string> = {
 // 稳定正文摘要常量（用于 hash 的规范化参照，非页面渲染源）。措辞待律师审核。
 const AGREEMENT_BODIES: Record<AgreementType, string> = {
   membership_agreement:
-    'SAREC Membership Agreement (2026 v1 draft). Membership takes effect once SAREC confirms the application and receives the applicable fee. Certain visibility, speaking, referral and content benefits are subject to SAREC review, scheduling, and editorial standards. SAREC does not guarantee any client, transaction, financing, or investment return. Fees are in USD; the 2026 Launch Rate is a limited-time offer. Pending attorney review. English version prevails.',
+    'SAREC Membership Agreement (2026 v2 draft). Membership takes effect upon payment (including a submitted Zelle payment note) without separate approval; SAREC may revoke it if payment is not actually received. Public display of member information is reviewed separately. Certain visibility, speaking, referral and content benefits are subject to SAREC review, scheduling, and editorial standards. SAREC does not guarantee any client, transaction, financing, or investment return. Fees are in USD; the 2026 Launch Rate is a limited-time offer. Pending attorney review. English version prevails.',
   strategic_partnership_agreement:
-    'SAREC Strategic Partnership Agreement (2026 v1 draft). The Partner is an independent organization; this agreement does not create any partnership, agency, employment, or similar relationship. Benefits are subject to SAREC review, scheduling, and editorial standards. SAREC does not guarantee any client, transaction, financing, or investment return. Fees are in USD; the Partner may pay in full or in two semi-annual installments. Pending attorney review. English version prevails.',
+    'SAREC Strategic Partnership Agreement (2026 v2 draft). The partnership takes effect upon payment without separate approval. The Partner is an independent organization; this agreement does not create any partnership, agency, employment, or similar relationship. Benefits are subject to SAREC review, scheduling, and editorial standards. SAREC does not guarantee any client, transaction, financing, or investment return. Fees are in USD; the Partner may pay in full or in two semi-annual installments. Pending attorney review. English version prevails.',
   privacy_policy:
     'SAREC Privacy Policy (2026 v1 draft). Describes the information SAREC collects, how it is used, and when it may be shared with necessary professionals or partners. SAREC does not sell personal information. Payments are processed by a third-party provider; SAREC does not store full card numbers. Pending attorney review. English version prevails.'
 };

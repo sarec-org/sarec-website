@@ -45,14 +45,15 @@ export default function MembershipAgreementPage() {
         <h2 className={styles.h2}>2. 生效方式</h2>
         <p className={styles.h2En}>How the agreement takes effect</p>
         <p>
-          申请人在入会申请表中勾选同意本协议并完成付款后，且经 SAREC 确认后，本协议生效、会员身份成立。
-          SAREC 保留对申请进行审核并决定是否接受的权利。
+          申请人在入会申请表中勾选同意本协议并完成付款（含提交 Zelle 付款说明）后，本协议生效、会员身份成立，无需另行审批。
+          如核实款项未实际到账，SAREC 有权撤销该会员身份。会员资料是否在官网公开展示，由 SAREC 另行审核，不影响会员身份。
         </p>
         <p>
-          This agreement takes effect and membership is established once the applicant checks the box to
-          accept this agreement in the enrollment form, completes payment, and SAREC confirms the
-          application. SAREC reserves the right to review each application and decide whether to accept
-          it.
+          This agreement takes effect and membership is established, without any separate approval, once
+          the applicant checks the box to accept this agreement in the enrollment form and completes payment
+          (including submitting a Zelle payment note). If the payment is found not to have been received,
+          SAREC may revoke the membership. Whether member information is displayed publicly on the SAREC
+          website is reviewed separately and does not affect membership status.
         </p>
       </section>
 

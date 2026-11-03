@@ -393,32 +393,32 @@ export default function MembershipPage() {
           <ol className={styles.applySteps}>
             <li className={styles.applyStep}>
               <span className={styles.applyNum}>01</span>
-              <h3 className={styles.applyH3}>提交申请</h3>
-              <p className={styles.applyBody}>填写&quot;申请加入会员&quot;表单。</p>
-              <p className={styles.applyBody}>提供你的背景、当前阶段、合作意向。</p>
+              <h3 className={styles.applyH3}>选择档位</h3>
+              <p className={styles.applyBody}>在&quot;在线入会&quot;页面选择会员档位,</p>
+              <p className={styles.applyBody}>填写姓名、邮箱、电话等基本资料。</p>
             </li>
             <li className={styles.applyStep}>
               <span className={styles.applyNum}>02</span>
-              <h3 className={styles.applyH3}>初步评估</h3>
-              <p className={styles.applyBody}>SAREC 团队在 1 个工作日内回复,</p>
-              <p className={styles.applyBody}>评估你的需求与 SAREC 服务的匹配度。</p>
+              <h3 className={styles.applyH3}>确认协议</h3>
+              <p className={styles.applyBody}>阅读并勾选《入会协议》与《隐私政策》,</p>
+              <p className={styles.applyBody}>无需等待审批。</p>
             </li>
             <li className={styles.applyStep}>
               <span className={styles.applyNum}>03</span>
-              <h3 className={styles.applyH3}>30 分钟沟通</h3>
-              <p className={styles.applyBody}>匹配的申请人将安排 30 分钟视频或电话沟通,</p>
-              <p className={styles.applyBody}>进一步了解需求,确认合作意向和会员级别。</p>
+              <h3 className={styles.applyH3}>在线付款</h3>
+              <p className={styles.applyBody}>Zelle 转账(备注订单号)或银行卡在线支付,</p>
+              <p className={styles.applyBody}>没有美国银行账户也可刷卡。</p>
             </li>
             <li className={styles.applyStep}>
               <span className={styles.applyNum}>04</span>
-              <h3 className={styles.applyH3}>正式入会</h3>
-              <p className={styles.applyBody}>确认合作意向后,提供会员费支付方式,</p>
-              <p className={styles.applyBody}>完成会员资格生效。</p>
+              <h3 className={styles.applyH3}>立即生效</h3>
+              <p className={styles.applyBody}>付款完成即成为正式会员,收到确认邮件,</p>
+              <p className={styles.applyBody}>在&quot;我的&quot;页面查看会员身份与到期日。</p>
             </li>
           </ol>
 
           <p className={styles.complianceNote}>
-            整个流程通常 3-5 个工作日完成。
+            全程在线自助,几分钟即可完成。官网展示资料由工作人员另行核对,不影响会员身份。
           </p>
         </div>
       </section>

@@ -5,10 +5,11 @@
  * M3 边界：不写 webhook、不标 paid、不发邮件、不做 subscription、不收第二期。
  * 金额只从 tiers.ts 解析（见 checkout.ts），客户端传价一律忽略。
  */
+import type { PoolClient } from 'pg';
 import { query, withTransaction } from '@/lib/db/client';
 import { getStripe } from '@/lib/stripe/client';
 import { getAgreementMeta, AGREEMENT_LANGUAGE_MODE } from './agreements';
-import { validateCheckout, type CheckoutRequest } from './checkout';
+import { validateCheckout, type CheckoutRequest, type NormalizedCheckout } from './checkout';
 import { SECOND_PAYMENT_DEFAULT_INTERVAL_MONTHS, type AgreementType } from './types';
 
 export type CheckoutContext = { ip: string | null; userAgent: string | null };
@@ -36,131 +37,14 @@ export async function createCheckoutSession(
   }
 
   const { applicationType, tier, paymentPlan, amountCents, fields } = v.value;
-
-  const mainAgreementType: AgreementType =
-    applicationType === 'membership'
-      ? 'membership_agreement'
-      : 'strategic_partnership_agreement';
-  const mainAgreement = getAgreementMeta(mainAgreementType);
+  const mainAgreement = getAgreementMeta(
+    applicationType === 'membership' ? 'membership_agreement' : 'strategic_partnership_agreement'
+  );
   const privacyAgreement = getAgreementMeta('privacy_policy');
 
-  // 战略合作伙伴半年两期：默认第二期到期日 = 今天 + 6 个月（未来允许管理员覆盖）。
-  let secondDue: string | null = null;
-  let secondDueSource: 'auto_calculated' | null = null;
-  if (applicationType === 'strategic_partner' && paymentPlan === 'semiAnnual') {
-    const d = new Date();
-    d.setMonth(d.getMonth() + SECOND_PAYMENT_DEFAULT_INTERVAL_MONTHS);
-    secondDue = d.toISOString().slice(0, 10);
-    secondDueSource = 'auto_calculated';
-  }
-
-  // 取档位 DB id（用于 FK）；缺失不阻断，slug 仍留档。
-  let tierId: number | null = null;
-  try {
-    const rows = await query<{ id: number }>(
-      'SELECT id FROM membership_tiers WHERE slug = $1',
-      [tier.slug]
-    );
-    tierId = rows[0]?.id ?? null;
-  } catch {
-    tierId = null;
-  }
-
-  // 一个事务内写入 application + payment + 两条 agreement acceptance。
-  const { applicationId, paymentId } = await withTransaction(async (client) => {
-    const appRes = await client.query(
-      `INSERT INTO applications (
-         application_type, selected_tier_id, selected_tier_slug, payment_plan,
-         application_status, payment_status,
-         company_name, contact_name, contact_title, email, phone,
-         company_address, website_url, industry_category, service_area,
-         company_description, notes,
-         standard_price_cents, current_price_cents, currency, promotion_label,
-         second_payment_due_date, second_payment_due_date_source
-       ) VALUES (
-         $1,$2,$3,$4,
-         'pending_payment','pending_payment',
-         $5,$6,$7,$8,$9,
-         $10,$11,$12,$13,
-         $14,$15,
-         $16,$17,$18,$19,
-         $20,$21
-       ) RETURNING id`,
-      [
-        applicationType,
-        tierId,
-        tier.slug,
-        paymentPlan,
-        fields.companyName,
-        fields.contactName,
-        fields.contactTitle,
-        fields.email,
-        fields.phone,
-        fields.companyAddress,
-        fields.websiteUrl,
-        fields.industryCategory,
-        fields.serviceArea,
-        fields.companyDescription,
-        fields.notes,
-        tier.standardPriceCents,
-        tier.currentPriceCents,
-        tier.currency,
-        tier.promotionLabel,
-        secondDue,
-        secondDueSource
-      ]
-    );
-    const applicationId = appRes.rows[0].id as string;
-
-    const payRes = await client.query(
-      `INSERT INTO payments (
-         application_id, payment_provider, payment_plan, installment_number,
-         amount_cents, currency, payment_status
-       ) VALUES ($1,'stripe',$2,1,$3,$4,'pending') RETURNING id`,
-      [applicationId, paymentPlan, amountCents, tier.currency]
-    );
-    const paymentId = payRes.rows[0].id as string;
-
-    for (const ag of [mainAgreement, privacyAgreement]) {
-      await client.query(
-        `INSERT INTO agreement_acceptances (
-           application_id, agreement_type, agreement_version, agreement_title,
-           agreement_url, agreement_hash, agreement_language_mode,
-           selected_tier, standard_price_cents, actual_paid_price_cents, promotion_label,
-           payment_plan, company_name, contact_name, email, phone,
-           agree_time, ip_address, user_agent, payment_status
-         ) VALUES (
-           $1,$2,$3,$4,
-           $5,$6,$7,
-           $8,$9,$10,$11,
-           $12,$13,$14,$15,$16,
-           now(),$17,$18,'pending'
-         )`,
-        [
-          applicationId,
-          ag.type,
-          ag.version,
-          ag.title,
-          ag.url,
-          ag.hash,
-          AGREEMENT_LANGUAGE_MODE,
-          tier.slug,
-          tier.standardPriceCents,
-          amountCents,
-          tier.promotionLabel,
-          paymentPlan,
-          fields.companyName,
-          fields.contactName,
-          fields.email,
-          fields.phone,
-          ctx.ip,
-          ctx.userAgent
-        ]
-      );
-    }
-
-    return { applicationId, paymentId };
-  });
+  const { applicationId, paymentId } = await withTransaction((client) =>
+    insertApplicationRecords(client, v.value, ctx, 'stripe')
+  );
 
   // 创建 Stripe Checkout Session（mode=payment，动态 price_data，不用固定 Price ID）。
   const stripe = getStripe();
@@ -213,3 +97,128 @@ export async function createCheckoutSession(
 
   return { ok: true, url: session.url };
 }
+
+/**
+ * 写入 application + payment + 两条协议确认（必须在事务内调用）。
+ * 旧 Stripe 直跳流程与新的统一订单流程（lib/crm/membership.ts）共用。
+ */
+export async function insertApplicationRecords(
+  client: PoolClient,
+  v: NormalizedCheckout,
+  ctx: CheckoutContext,
+  provider: 'stripe' | 'zelle' | 'offline',
+  amountOverrideCents?: number
+): Promise<{ applicationId: string; paymentId: string }> {
+  const { applicationType, tier, paymentPlan, fields } = v;
+  const amountCents = amountOverrideCents ?? v.amountCents;
+  const mainAgreement = getAgreementMeta(
+    applicationType === 'membership' ? 'membership_agreement' : 'strategic_partnership_agreement'
+  );
+  const privacyAgreement = getAgreementMeta('privacy_policy');
+  let secondDue: string | null = null;
+  let secondDueSource: 'auto_calculated' | null = null;
+  if (applicationType === 'strategic_partner' && paymentPlan === 'semiAnnual') {
+    const d = new Date();
+    d.setMonth(d.getMonth() + SECOND_PAYMENT_DEFAULT_INTERVAL_MONTHS);
+    secondDue = d.toISOString().slice(0, 10);
+    secondDueSource = 'auto_calculated';
+  }
+  let tierId: number | null = null;
+  {
+    const r = await client.query<{ id: number }>('SELECT id FROM membership_tiers WHERE slug = $1', [tier.slug]);
+    tierId = r.rows[0]?.id ?? null;
+  }
+
+    const appRes = await client.query(
+      `INSERT INTO applications (
+         application_type, selected_tier_id, selected_tier_slug, payment_plan,
+         application_status, payment_status,
+         company_name, contact_name, contact_title, email, phone,
+         company_address, website_url, industry_category, service_area,
+         company_description, notes,
+         standard_price_cents, current_price_cents, currency, promotion_label,
+         second_payment_due_date, second_payment_due_date_source
+       ) VALUES (
+         $1,$2,$3,$4,
+         'pending_payment','pending_payment',
+         $5,$6,$7,$8,$9,
+         $10,$11,$12,$13,
+         $14,$15,
+         $16,$17,$18,$19,
+         $20,$21
+       ) RETURNING id`,
+      [
+        applicationType,
+        tierId,
+        tier.slug,
+        paymentPlan,
+        fields.companyName,
+        fields.contactName,
+        fields.contactTitle,
+        fields.email,
+        fields.phone,
+        fields.companyAddress,
+        fields.websiteUrl,
+        fields.industryCategory,
+        fields.serviceArea,
+        fields.companyDescription,
+        fields.notes,
+        tier.standardPriceCents,
+        tier.currentPriceCents,
+        tier.currency,
+        tier.promotionLabel,
+        secondDue,
+        secondDueSource
+      ]
+    );
+    const applicationId = appRes.rows[0].id as string;
+
+    const payRes = await client.query(
+      `INSERT INTO payments (
+         application_id, payment_provider, payment_plan, installment_number,
+         amount_cents, currency, payment_status
+       ) VALUES ($1,$5,$2,1,$3,$4,'pending') RETURNING id`,
+      [applicationId, paymentPlan, amountCents, tier.currency, provider]
+    );
+    const paymentId = payRes.rows[0].id as string;
+
+    for (const ag of [mainAgreement, privacyAgreement]) {
+      await client.query(
+        `INSERT INTO agreement_acceptances (
+           application_id, agreement_type, agreement_version, agreement_title,
+           agreement_url, agreement_hash, agreement_language_mode,
+           selected_tier, standard_price_cents, actual_paid_price_cents, promotion_label,
+           payment_plan, company_name, contact_name, email, phone,
+           agree_time, ip_address, user_agent, payment_status
+         ) VALUES (
+           $1,$2,$3,$4,
+           $5,$6,$7,
+           $8,$9,$10,$11,
+           $12,$13,$14,$15,$16,
+           now(),$17,$18,'pending'
+         )`,
+        [
+          applicationId,
+          ag.type,
+          ag.version,
+          ag.title,
+          ag.url,
+          ag.hash,
+          AGREEMENT_LANGUAGE_MODE,
+          tier.slug,
+          tier.standardPriceCents,
+          amountCents,
+          tier.promotionLabel,
+          paymentPlan,
+          fields.companyName,
+          fields.contactName,
+          fields.email,
+          fields.phone,
+          ctx.ip,
+          ctx.userAgent
+        ]
+      );
+    }
+
+    return { applicationId, paymentId };
+  }

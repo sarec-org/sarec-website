@@ -207,7 +207,7 @@ export async function markPaymentPaid(
       `UPDATE applications SET
          payment_status=$2,
          application_status = CASE WHEN application_status IN ('draft','pending_payment')
-                                   THEN 'under_review' ELSE application_status END,
+                                   THEN 'approved' ELSE application_status END,
          first_payment_paid_at = COALESCE(first_payment_paid_at, now()),
          membership_start_date = COALESCE(membership_start_date, (now())::date),
          membership_end_date = COALESCE(membership_end_date,

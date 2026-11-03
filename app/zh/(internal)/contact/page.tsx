@@ -55,8 +55,8 @@ const intents = [
       '想接触专业服务伙伴网络'
     ],
     detail: [
-      '提交申请 → 初步评估 → 30 分钟沟通 → 正式入会',
-      '通常 3-5 个工作日完成'
+      '选择档位 → 确认协议 → 在线付款 → 立即生效',
+      '全程在线自助，无需等待审批'
     ],
     detailLabel: '申请流程',
     cta: '申请加入会员'
@@ -214,7 +214,7 @@ export default function ContactPage() {
                 </div>
 
                 <a
-                  href={`/zh/contact?intent=${it.intentKey}#inquiry-form`}
+                  href={it.intentKey === 'membership' ? '/zh/join' : `/zh/contact?intent=${it.intentKey}#inquiry-form`}
                   className={styles.intentCTA}
                 >
                   <span>{it.cta}</span>

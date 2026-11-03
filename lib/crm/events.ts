@@ -5,7 +5,6 @@
  * 关键原则：已报名 ≠ 已付款；到了门口 ≠ 有入场资格；重复扫码只产生一次结果。
  */
 import { randomBytes } from 'node:crypto';
-import { withTransaction } from '@/lib/db/client';
 import { pickRequired } from './engine';
 import {
   loadProfile,
@@ -229,36 +228,10 @@ export async function submitPaymentNote(db: Db, contactId: string, orderNo: stri
   );
 }
 
-/** 授权人员核对银行实际到账后确认：一次操作更新订单，并让“到场待核款”的人完成签到。 */
+/** 授权人员核对银行实际到账后确认：统一走 lib/crm/orders.ts 的 markOrderPaid（重复点击不重复处理）。 */
 export async function verifyPayment(orderNo: string, staff: string, bankReference?: string): Promise<boolean> {
-  return withTransaction(async (db) => {
-    const { rows } = await db.query<{ id: string; contact_id: string; purpose: string; related_id: string | null; status: string }>(
-      `UPDATE orders SET status = 'paid', paid_at = now(), verified_by = $2, bank_reference = $3, updated_at = now()
-        WHERE order_no = $1 AND status IN ('pending_payment','payment_submitted')
-        RETURNING id, contact_id, purpose, related_id, status`,
-      [orderNo, staff, bankReference ?? null]
-    );
-    if (!rows[0]) return false; // 已确认过：重复点击不重复处理
-    const o = rows[0];
-    await db.query(
-      `INSERT INTO crm_audit_log (actor, action, target_type, target_id, reason) VALUES ($1, 'verify_payment', 'order', $2, $3)`,
-      [`staff:${staff}`, orderNo, bankReference ?? null]
-    );
-    if (o.purpose === 'event_fee' && o.related_id) {
-      await db.query(
-        `UPDATE registrations SET arrival_status = 'checked_in', checked_in_at = now(), checkin_method = 'staff', updated_at = now()
-          WHERE event_id = $1 AND contact_id = $2 AND arrival_status = 'arrived_pending_payment'`,
-        [o.related_id, o.contact_id]
-      );
-    }
-    if (o.purpose === 'room_pass' && o.related_id) {
-      await db.query(`UPDATE room_passes SET status = 'active' WHERE id = $1`, [o.related_id]);
-    }
-    if (o.purpose === 'room_booking' && o.related_id) {
-      await db.query(`UPDATE room_bookings SET status = 'confirmed' WHERE id = $1 AND status = 'held'`, [o.related_id]);
-    }
-    return true;
-  });
+  const { markOrderPaid } = await import('./orders');
+  return (await markOrderPaid(orderNo, { staff, provider: 'zelle', reference: bankReference ?? null })).changed;
 }
 
 // ── 签到：表 7-4 入场判断（所有签到路径统一套用）──────────────────────────

@@ -98,6 +98,24 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
     return { outcome: 'ignored', detail: `session not paid (${session.payment_status})` };
   }
 
+  // 统一订单（会费 / 活动费 / 会议室 / 月卡 / 电子屏）：metadata.orderNo → lib/crm/orders.ts
+  if (session.metadata?.orderNo) {
+    try {
+      const { processOrderStripeSession } = await import('@/lib/crm/orders');
+      const detail = await processOrderStripeSession(session);
+      await query(
+        `INSERT INTO stripe_events (stripe_event_id, event_type, livemode, processing_status, raw_event_created, error_message)
+         VALUES ($1,$2,$3,'processed', to_timestamp($4), $5) ON CONFLICT (stripe_event_id) DO NOTHING`,
+        [event.id, event.type, event.livemode, event.created, `order ${session.metadata.orderNo}: ${detail}`]
+      );
+      return { outcome: 'processed', detail: `order ${detail}` };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'unknown error';
+      await recordEvent(event, 'failed', { error: `order ${session.metadata.orderNo}: ${msg}` });
+      return { outcome: 'failed', detail: msg };
+    }
+  }
+
   const missing = firstMissingMeta(session.metadata);
   if (missing) {
     await recordEvent(event, 'failed', { error: `missing metadata: ${missing}` });
@@ -178,7 +196,7 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
         await client.query(
           `UPDATE applications SET
              payment_status='partially_paid',
-             application_status='under_review',
+             application_status='approved',
              first_payment_paid_at=now(),
              membership_start_date=(now())::date,
              membership_end_date=(now()+interval '12 months')::date,
@@ -196,7 +214,7 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
         await client.query(
           `UPDATE applications SET
              payment_status='paid',
-             application_status='under_review',
+             application_status='approved',
              first_payment_paid_at=now(),
              membership_start_date=(now())::date,
              membership_end_date=(now()+interval '12 months')::date,
@@ -232,6 +250,6 @@ export async function processStripeEvent(event: Stripe.Event): Promise<WebhookOu
     outcome: 'processed',
     detail: isSemiAnnual
       ? 'semiAnnual first installment paid → application partially_paid'
-      : 'paid → application under_review'
+      : 'paid → application approved (membership effective)'
   };
 }
