@@ -30,7 +30,12 @@ class Client {
     return { status: res.status, json };
   }
   async login(email: string, name?: string) {
-    const s = await this.call('/api/v1/auth/code/send', { body: { channel: 'email', target: email } });
+    let s = await this.call('/api/v1/auth/code/send', { body: { channel: 'email', target: email } });
+    if (s.json.error?.code === 'too_soon') {
+      console.log('    （60 秒内不重复发码：等待后重试）');
+      await new Promise((r) => setTimeout(r, 61_000));
+      s = await this.call('/api/v1/auth/code/send', { body: { channel: 'email', target: email } });
+    }
     assert.equal(s.json.ok, true, `发码失败：${JSON.stringify(s.json)}`);
     assert.ok(s.json.devCode, '测试环境需 CRM_DEV_ECHO_CODES=1');
     const wrong = await this.call('/api/v1/auth/code/verify', { body: { channel: 'email', target: email, code: '000000' === s.json.devCode ? '111111' : '000000' } });
@@ -148,7 +153,7 @@ async function main() {
   ok('收费活动：待核款不放行 → 核款（重复点击只处理一次）→ 签到成功');
 
   console.log('5. 预约会议室 → 撞时段被拒');
-  const day = new Date(Date.now() + 3 * 864e5);
+  const day = new Date(Date.now() + (3 + Math.floor(Math.random() * 300)) * 864e5); // 每次换一天，避免与上次测试的预约撞上
   const laNine = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 18, 0)); // 洛杉矶上午 10–11 点（夏/冬令时都在开放时间内）
   const b1 = await u.call('/api/v1/rooms/book', { body: { roomId: 1, startsAt: laNine.toISOString(), endsAt: new Date(laNine.getTime() + 2 * 3600e3).toISOString() } });
   assert.equal(b1.json.ok, true, JSON.stringify(b1.json));

@@ -119,7 +119,7 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
       // 进入统一付款页（Zelle 或银行卡）；已有档案的需先用邮箱验证码登录
       const payUrl = `/zh/pay/${data.orderNo}`;
       window.location.href = data.needLogin
-        ? `/zh/login?next=${encodeURIComponent(payUrl)}&email=${encodeURIComponent(form.email)}`
+        ? `/zh/signin?next=${encodeURIComponent(payUrl)}&email=${encodeURIComponent(form.email)}`
         : payUrl;
     } catch {
       setError('网络不稳定，没有提交成功。您填的内容还在，请稍后再点一次。');

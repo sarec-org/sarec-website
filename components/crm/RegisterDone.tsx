@@ -37,7 +37,7 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
     load();
   }, [load]);
 
-  if (err) return <div className={s.page}><Link href={`/zh/e/${slug}`} className={s.back}>‹ 返回活动</Link><p className={s.error}>{err}</p>{err.includes('登录') && <Link className={s.btn} href={`/zh/login?next=/zh/e/${slug}/done`}>去登录</Link>}</div>;
+  if (err) return <div className={s.page}><Link href={`/zh/e/${slug}`} className={s.back}>‹ 返回活动</Link><p className={s.error}>{err}</p>{err.includes('登录') && <Link className={s.btn} href={`/zh/signin?next=/zh/e/${slug}/done`}>去登录</Link>}</div>;
   if (!me || !ev) return <div className={s.page}><p className={s.small}>加载中…</p></div>;
   const reg = me.registrations.find((r) => r.slug === slug);
   const e = ev.event;
