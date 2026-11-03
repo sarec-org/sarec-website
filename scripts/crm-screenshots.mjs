@@ -200,7 +200,9 @@ await step('Stripe 测试卡 4242 付款 → 回到订单 → 已到账', async 
   await jp.locator('#cardExpiry').fill('12 / 34');
   await jp.locator('#cardCvc').fill('123');
   if (await jp.locator('#billingName').count()) await jp.locator('#billingName').fill('Li Test');
-  if (await jp.locator('#billingPostalCode').count()) await jp.locator('#billingPostalCode').fill('91006');
+  await jp.locator('#billingPostalCode').fill('91006');
+  const link = jp.locator('#enableStripePass');
+  if ((await link.count()) && (await link.isChecked())) await link.uncheck({ force: true }); // 不保存到 Stripe Link（否则要求填手机号）
   await shot(jp, '20-stripe-test-card-filled', false);
   await jp.locator('[data-testid="hosted-payment-submit-button"]').click();
   await jp.waitForURL(/\/zh\/pay\/.*stripe=success/, { timeout: 60000 });
