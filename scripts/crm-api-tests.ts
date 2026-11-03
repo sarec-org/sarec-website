@@ -6,7 +6,8 @@
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
-import { staffFor, type Staff } from '@/lib/crm/auth';
+import { sendLoginCode, staffFor, verifyLoginCode, type Staff } from '@/lib/crm/auth';
+import { listEvents } from '@/lib/crm/flow';
 import { CrmError } from '@/lib/crm/events';
 import { applyMembership, memberStatus, pendingMembershipOrder } from '@/lib/crm/membership';
 import { getSetting, redeemPoints, setSetting, submitOrderNote, zelleForPayPage } from '@/lib/crm/orders';
@@ -158,6 +159,29 @@ async function main() {
   assert.equal(ro[0].status, 'cancelled');
   assert.equal((await memberStatus(pool, memberId)).endDate, endBefore, '未到账的续费不延长有效期');
   ok('Zelle 续费核实未到账：订单取消、积分冲回、有效期不变');
+
+  console.log('不公开活动：不出现在列表，凭链接可报名签到');
+  const hidden = await createEvent(staff, { title: `不公开讲课 ${sfx}`, startsAt: starts, feeCents: 0, listed: false });
+  assert.ok(!(await listEvents()).some((e) => e.slug === hidden.slug), '不公开活动不在列表里');
+  const hc = await staffCheckIn(staff, hidden.id, on.contactId);
+  assert.equal(hc.kind, 'checked_in', '凭链接/现场仍可报名签到');
+  await updateEvent(staff, hidden.id, { listed: true });
+  assert.ok((await listEvents()).some((e) => e.slug === hidden.slug), '改为公开后出现在列表');
+  ok('不公开活动：列表不显示、仍可签到；改公开后显示');
+
+  console.log('小程序审核账号：固定验证码、不发邮件、永远不是工作人员');
+  const reviewer = `review-${sfx}@example.com`;
+  process.env.CRM_REVIEW_EMAIL = reviewer;
+  process.env.CRM_REVIEW_CODE = '135790';
+  await sendLoginCode('email', reviewer);
+  await assert.rejects(verifyLoginCode('email', reviewer, '000000'), CrmError);
+  const rvLogin = await verifyLoginCode('email', reviewer, '135790', { name: '审核员' });
+  await pool.query(`INSERT INTO staff_roles (email, name, roles) VALUES ($1, '审核员', '{admin}')`, [reviewer]);
+  assert.equal(await staffFor(rvLogin.contactId), null, '即使误加了后台角色，审核账号也进不了后台');
+  await assert.rejects(sendLoginCode('email', `other-${sfx}@example.com`), CrmError, '其他邮箱不受影响（本地无邮件服务时照常报错）');
+  delete process.env.CRM_REVIEW_EMAIL;
+  delete process.env.CRM_REVIEW_CODE;
+  ok('审核账号：固定验证码可登录、错码拒绝；进不了后台；不影响其他邮箱');
 
   console.log('积分调整必须填原因；可撤销');
   await assert.rejects(adjustPoints(staff, on.contactId, 10, ''), (e: unknown) => e instanceof CrmError && /原因/.test(e.message));

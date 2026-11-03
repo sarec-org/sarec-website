@@ -69,6 +69,16 @@
 - 预览测试库：已开通（2026-11-03）。
 - 正式库：上线时开通（见下面上线步骤第 4 步）。
 
+## 小程序审核账号（2026-11-03）
+
+- Vercel Production 配 `CRM_REVIEW_EMAIL`、`CRM_REVIEW_CODE`（6 位数字）后，这个邮箱用固定验证码登录，不发邮件。
+- 审核账号永远进不了工作人员后台（即使误加了角色）。
+- 审核通过后删掉这两个环境变量，审核账号即失效。
+
+## 活动“不公开”
+
+- 后台建活动时可不勾“公开”；不公开的活动不出现在网站和小程序活动列表，凭链接或签到二维码仍可报名、签到。
+
 ## Zelle 付款开关（2026-11-03 东哥决定）
 
 - 后台“设置”页新增开关“Zelle 付款”（`crm_settings.zelle_enabled`），**默认关闭**。
@@ -81,7 +91,7 @@
 ## 上线步骤（2026-11-03 东哥批准，按顺序做）
 
 1. 备份正式库（Neon 控制台建分支或快照）。
-2. 在正式库按顺序执行 `db/migrations/0003_crm_events_points.sql`、`db/migrations/0004_crm_staff_qr_payments.sql`。只追加，不改已有表。
+2. 在正式库按顺序执行 `db/migrations/0003_crm_events_points.sql`、`db/migrations/0004_crm_staff_qr_payments.sql`、`db/migrations/0005_crm_event_listing.sql`（活动“不公开”开关，只加一列）。只追加，不改已有表。
 3. 运行一次性关联脚本：`DATABASE_URL=<正式库> pnpm dlx tsx scripts/link-applications-to-contacts.ts --i-know-this-is-not-production`。脚本的保护开关按名字是“确认不是正式库”，这里是有意对正式库执行。
 4. 开通后台人员：`DATABASE_URL=<正式库> pnpm dlx tsx scripts/seed-staff.ts wknmxjp@gmail.com "Andy Wang" checkin finance ops admin --i-know-this-is-not-production`。
 5. 在 Vercel Production 配置 `ZELLE_RECIPIENT_NAME`、`ZELLE_RECIPIENT_ID`（以及可选的 `ZELLE_QR_URL`），替换 `public/crm/zelle-qr.png` 为真二维码。

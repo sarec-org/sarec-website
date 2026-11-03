@@ -112,7 +112,7 @@ export async function listEvents(includePast = false) {
   const { rows } = await getPool().query(
     `SELECT e.*, (SELECT count(*)::int FROM registrations r WHERE r.event_id = e.id AND r.status = 'registered') AS registered
        FROM events e
-      WHERE e.event_status <> 'cancelled' AND ($1 OR coalesce(e.ends_at, e.starts_at) > now() - interval '1 day')
+      WHERE e.event_status <> 'cancelled' AND e.is_listed AND ($1 OR coalesce(e.ends_at, e.starts_at) > now() - interval '1 day')
       ORDER BY e.starts_at ${includePast ? 'DESC' : 'ASC'} LIMIT 100`,
     [includePast]
   );

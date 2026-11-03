@@ -54,6 +54,7 @@ export type EventInput = {
   feeCents?: number;
   topicTags?: string[];
   registrationOpen?: boolean;
+  listed?: boolean;
   eventStatus?: string;
 };
 
@@ -92,6 +93,7 @@ function eventFields(b: EventInput, partial: boolean) {
   if (b.feeCents !== undefined) out.fee_cents = Math.max(0, Math.round(Number(b.feeCents) || 0));
   if (b.topicTags !== undefined) out.topic_tags = (b.topicTags ?? []).filter((t) => t in TOPIC_LABELS);
   if (b.registrationOpen !== undefined) out.registration_open = !!b.registrationOpen;
+  if (b.listed !== undefined) out.is_listed = !!b.listed;
   if (b.eventStatus !== undefined) {
     if (!['scheduled', 'completed', 'postponed', 'cancelled'].includes(String(b.eventStatus))) throw new CrmError('bad_request', '活动状态不对');
     out.event_status = b.eventStatus;
@@ -102,7 +104,7 @@ function eventFields(b: EventInput, partial: boolean) {
 export async function listStaffEvents() {
   const { rows } = await getPool().query(
     `SELECT e.id, e.slug, e.title, e.starts_at, e.ends_at, e.location_name, e.capacity, e.fee_cents, e.topic_tags,
-            e.registration_open, e.event_status,
+            e.registration_open, e.is_listed, e.event_status,
             count(r.*) FILTER (WHERE r.status = 'registered')::int AS registered,
             count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted,
             count(r.*) FILTER (WHERE r.arrival_status = 'checked_in')::int AS checked_in,

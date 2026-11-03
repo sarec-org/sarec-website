@@ -6,7 +6,7 @@ import { useQr } from '@/components/crm/staff/QrCode';
 import { api, copyText, fmtDateTime, money } from '@/components/crm/client';
 import { EventForm } from '../EventForm';
 
-type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; event_status: string; fee_cents: number };
+type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
 type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null };
 
 export default function StaffEventDetail({ params }: { params: { id: string } }) {
@@ -60,6 +60,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
               <div className={styles.row}><span className={styles.rowLabel}>时间</span><span className={styles.rowValue}>{fmtDateTime(String(data.event.starts_at))}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>费用</span><span className={styles.rowValue}>{data.event.fee_cents ? money(data.event.fee_cents) : '免费'}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>报名页</span><span className={`${styles.rowValue} ${styles.mono}`}>/zh/e/{data.event.slug}</span></div>
+              <div className={styles.row}><span className={styles.rowLabel}>公开</span><span className={styles.rowValue}>{data.event.is_listed ? '公开（出现在活动列表）' : '不公开（只凭链接或二维码进入）'}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>报名</span><span className={styles.rowValue}>{data.event.registration_open ? '开放中' : '已关闭'}</span></div>
             </div>
 
@@ -97,6 +98,9 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                   </button>
                   <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => patch({ registrationOpen: !data.event.registration_open }, data.event.registration_open ? '已关闭报名' : '已重新开放报名')}>
                     {data.event.registration_open ? '关闭报名' : '重新开放报名'}
+                  </button>
+                  <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => patch({ listed: !data.event.is_listed }, data.event.is_listed ? '已设为不公开（凭链接或二维码仍可报名）' : '已公开')}>
+                    {data.event.is_listed ? '设为不公开' : '设为公开'}
                   </button>
                   {data.event.event_status === 'scheduled' && (
                     <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => patch({ eventStatus: 'completed' }, '已标记为已结束')}>

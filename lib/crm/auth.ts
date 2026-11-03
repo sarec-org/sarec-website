@@ -30,6 +30,17 @@ function devEcho(): boolean {
   return process.env.CRM_DEV_ECHO_CODES === '1' && process.env.VERCEL_ENV !== 'production';
 }
 
+/** 审核账号：CRM_REVIEW_EMAIL + CRM_REVIEW_CODE（6 位数字）都配置时，这个邮箱用固定验证码登录。 */
+export function reviewEmail(): string | null {
+  const e = process.env.CRM_REVIEW_EMAIL?.trim().toLowerCase();
+  const c = process.env.CRM_REVIEW_CODE?.trim();
+  return e && c && /^\d{6}$/.test(c) ? e : null;
+}
+function reviewLogin(channel: Channel, target: string): string | null {
+  const e = reviewEmail();
+  return channel === 'email' && e && target === e ? process.env.CRM_REVIEW_CODE!.trim() : null;
+}
+
 export function normalizeTarget(channel: Channel, raw: string): string | null {
   return channel === 'email' ? normalizeEmail(raw) : normalizePhone(raw);
 }
@@ -50,13 +61,17 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
   );
   if (recent[0]) throw new CrmError('too_soon', '验证码刚刚发过，请 60 秒后再试，或先查看收件箱/垃圾邮件');
 
-  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  // 小程序审核账号：固定验证码（环境变量配置），不发邮件；该账号不能成为工作人员
+  const review = reviewLogin(channel, target);
+  const code = review ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
   await pool.query(
     `INSERT INTO login_codes (channel, target, code_hash, expires_at) VALUES ($1, $2, $3, now() + make_interval(mins => $4))`,
     [channel, target, sha256(`${target}:${code}`), CODE_TTL_MIN]
   );
 
-  if (channel === 'email') {
+  if (review) {
+    // 不发送
+  } else if (channel === 'email') {
     if (isEmailConfigured()) {
       await getResend().emails.send({
         from: getFromAddress(),
@@ -278,7 +293,8 @@ export async function staffFor(contactId: string): Promise<Staff | null> {
       WHERE c.id = $1 AND c.email_verified_at IS NOT NULL AND s.is_active`,
     [contactId]
   );
-  return rows[0] ? { contactId, ...rows[0] } : null;
+  if (!rows[0] || rows[0].email.toLowerCase() === reviewEmail()) return null; // 审核账号永远不是工作人员
+  return { contactId, ...rows[0] };
 }
 
 export function staffCan(s: Staff | null, role: StaffRole): boolean {

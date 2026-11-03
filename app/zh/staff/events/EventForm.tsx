@@ -46,7 +46,8 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     address: String(initial?.address ?? ''),
     capacity: initial?.capacity == null ? '' : String(initial.capacity),
     fee: initial?.fee_cents ? String(Number(initial.fee_cents) / 100) : '0',
-    topicTags: (initial?.topic_tags as string[]) ?? []
+    topicTags: (initial?.topic_tags as string[]) ?? [],
+    listed: initial ? initial.is_listed !== false : true
   });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -65,7 +66,8 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       address: f.address,
       capacity: f.capacity === '' ? null : Number(f.capacity),
       feeCents: Math.round(Number(f.fee || 0) * 100),
-      topicTags: f.topicTags
+      topicTags: f.topicTags,
+      listed: f.listed
     };
     const r = initial
       ? await api<{ id: string }>(`/api/v1/staff/events/${initial.id}`, { method: 'PATCH', body: payload })
@@ -109,6 +111,11 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
             );
           })}
         </div>
+      </div>
+      <div className={styles.field}>
+        <label className={styles.label}>
+          <input type="checkbox" checked={f.listed} onChange={(e) => set('listed', e.target.checked)} /> 公开（出现在网站和小程序的活动列表；不勾选则只凭链接或二维码进入）
+        </label>
       </div>
       <button className={`${styles.btn} ${styles.btnBlock}`} disabled={busy} onClick={save}>
         {busy ? '处理中…' : initial ? '保存修改' : '创建活动'}
