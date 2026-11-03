@@ -406,7 +406,7 @@ export default function MembershipPage() {
             <li className={styles.applyStep}>
               <span className={styles.applyNum}>03</span>
               <h3 className={styles.applyH3}>在线付款</h3>
-              <p className={styles.applyBody}>Zelle 转账(备注订单号)或银行卡在线支付,</p>
+              <p className={styles.applyBody}>银行卡在线支付(Zelle 转账以付款页显示为准),</p>
               <p className={styles.applyBody}>没有美国银行账户也可刷卡。</p>
             </li>
             <li className={styles.applyStep}>

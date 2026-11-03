@@ -52,6 +52,8 @@ async function main() {
   await staff.login(STAFF_EMAIL);
   const me = await staff.call('/api/v1/staff/me');
   assert.equal(me.json.ok, true, '工作人员未开通：先运行 scripts/seed-staff.ts');
+  const st = (await staff.call('/api/v1/staff/settings')).json;
+  const zelleBefore = st.settings?.find((x: { key: string }) => x.key === 'zelle_enabled')?.value === true; // 跑完恢复原值
 
   const start = new Date(Date.now() + 2 * 864e5);
   start.setUTCMinutes(0, 0, 0);
@@ -137,6 +139,17 @@ async function main() {
   const ord = await u.call(`/api/v1/orders/${orderNo}`);
   assert.equal(ord.json.order.amountCents, 5000);
   assert.ok('configured' in ord.json.zelle);
+  // 后台开关“Zelle 付款”：关闭时付款页只给银行卡，不收 Zelle 付款说明
+  const setZelle = async (v: boolean) => assert.equal((await staff.call('/api/v1/staff/settings', { body: { kind: 'setting', key: 'zelle_enabled', value: v } })).json.ok, true);
+  await setZelle(false);
+  const offOrd = (await u.call(`/api/v1/orders/${orderNo}`)).json;
+  assert.equal(offOrd.zelle.enabled, false);
+  assert.equal(offOrd.zelle.id, null, '关闭时不下发收款信息');
+  const offNote = await u.call(`/api/v1/orders/${orderNo}/note`, { body: { note: 'Zelle 已付' } });
+  assert.equal(offNote.json.error?.code, 'zelle_off', '关闭时不能提交 Zelle 付款说明');
+  await setZelle(true);
+  assert.equal((await u.call(`/api/v1/orders/${orderNo}`)).json.zelle.enabled, true);
+  ok('后台“Zelle 付款”开关：关闭时付款页只显示刷卡、不收 Zelle 付款说明；打开后恢复');
   const note = await u.call(`/api/v1/orders/${orderNo}/note`, { body: { note: `Zelle 已付，备注 ${orderNo}` } });
   assert.equal(note.json.status, 'payment_submitted');
   const p2 = await u.call(`/api/v1/events/${paidEv.slug}/checkin`, { body: { k: paidEv.checkin_secret } });
@@ -211,6 +224,7 @@ async function main() {
   assert.ok(detail.json.timeline.length >= 6);
   ok('客户时间线完整（报名、签到、订单、到账、积分、资料）');
 
+  await setZelle(zelleBefore);
   console.log(`\n全部通过：${passed} 组端到端`);
 }
 

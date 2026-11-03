@@ -6,11 +6,11 @@ import styles from '@/components/legal/legal.module.css';
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 战略合作伙伴协议｜Strategic Partnership Agreement',
   description:
-    'SAREC 战略合作伙伴协议（网页点击确认版，版本 2026-v1）。适用于通过 SAREC 网站申请并支付战略合作伙伴费用的机构或个人。',
+    'SAREC 战略合作伙伴协议（网页点击确认版，版本 2026-v2）。适用于通过 SAREC 网站申请并支付战略合作伙伴费用的机构或个人。',
   path: '/legal/strategic-partnership-agreement'
 });
 
-// 正式网页点击确认版战略合作伙伴协议（版本 2026-v1）。申请人在申请表勾选同意并完成付款、经 SAREC 确认后生效。
+// 正式网页点击确认版战略合作伙伴协议（版本 2026-v2）。申请人在申请表勾选同意并款项到账后生效（刷卡即时，Zelle 经核对到账）。
 export default function StrategicPartnershipAgreementPage() {
   return (
     <article className={styles.doc}>
@@ -19,7 +19,7 @@ export default function StrategicPartnershipAgreementPage() {
       <p className={styles.titleEn}>SAREC Strategic Partnership Agreement</p>
 
       <div className={styles.notice}>
-        <p>版本 Version 2026-v1</p>
+        <p>版本 Version 2026-v2</p>
         <p>
           本协议为网页点击确认版协议。中英文如有不一致，以本中文页面展示为准，英文仅供参考。 / This is a
           click-to-accept agreement. In case of any inconsistency, the Chinese version shown on this page

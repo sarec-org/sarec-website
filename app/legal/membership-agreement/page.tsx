@@ -6,11 +6,11 @@ import styles from '@/components/legal/legal.module.css';
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 会员入会协议｜Membership Agreement',
   description:
-    'SAREC 中美房地产商会会员入会协议（网页点击确认版，版本 2026-v1）。适用于通过 SAREC 网站申请会员并付款的个人、公司或机构。',
+    'SAREC 中美房地产商会会员入会协议（网页点击确认版，版本 2026-v2）。适用于通过 SAREC 网站申请会员并付款的个人、公司或机构。',
   path: '/legal/membership-agreement'
 });
 
-// 正式网页点击确认版会员入会协议（版本 2026-v1）。申请人在入会表单勾选同意并完成付款、经 SAREC 确认后生效。
+// 正式网页点击确认版会员入会协议（版本 2026-v2）。申请人在入会表单勾选同意并款项到账后生效（刷卡即时，Zelle 经核对到账）。
 export default function MembershipAgreementPage() {
   return (
     <article className={styles.doc}>
@@ -19,7 +19,7 @@ export default function MembershipAgreementPage() {
       <p className={styles.titleEn}>SAREC Membership Agreement</p>
 
       <div className={styles.notice}>
-        <p>版本 Version 2026-v1</p>
+        <p>版本 Version 2026-v2</p>
         <p>
           本协议为网页点击确认版协议。中英文如有不一致，以本中文页面展示为准，英文仅供参考。 / This is a
           click-to-accept agreement. In case of any inconsistency, the Chinese version shown on this page

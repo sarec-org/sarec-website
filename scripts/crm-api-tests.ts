@@ -9,7 +9,7 @@ import { getPool, withTransaction } from '@/lib/db/client';
 import { staffFor, type Staff } from '@/lib/crm/auth';
 import { CrmError } from '@/lib/crm/events';
 import { applyMembership, memberStatus, pendingMembershipOrder } from '@/lib/crm/membership';
-import { redeemPoints, submitOrderNote } from '@/lib/crm/orders';
+import { getSetting, redeemPoints, setSetting, submitOrderNote, zelleForPayPage } from '@/lib/crm/orders';
 import { pointsBalance } from '@/lib/crm/profile';
 import {
   adjustPoints,
@@ -46,6 +46,19 @@ async function main() {
   const staff = (await staffFor(sc[0].id)) as Staff;
   assert.ok(staff && staff.roles.includes('admin'));
   ok('工作人员身份由 staff_roles + 已验证邮箱决定');
+
+  console.log('后台开关“Zelle 付款”：默认关闭，关闭时不收 Zelle 付款说明');
+  const zelleBefore = await getSetting<boolean | null>(pool, 'zelle_enabled', null);
+  await pool.query(`DELETE FROM crm_settings WHERE key = 'zelle_enabled'`);
+  assert.equal((await zelleForPayPage(pool)).enabled, false, '未设置时默认关闭');
+  const zo = await applyMembership({ applicationType: 'membership', tierSlug: 'member', contactName: `开关${sfx}`, email: `zoff-${sfx}@example.com`, agree: true }, { ip: null, userAgent: 'test' }, null);
+  const { rows: zc } = await pool.query<{ contact_id: string }>(`SELECT contact_id FROM orders WHERE order_no = $1`, [zo.orderNo]);
+  await assert.rejects(submitOrderNote(zo.orderNo, zc[0].contact_id, 'Zelle 已付'), (e: unknown) => e instanceof CrmError && e.code === 'zelle_off');
+  await setSetting(pool, 'zelle_enabled', true, 'test');
+  const zp = await zelleForPayPage(pool);
+  assert.equal(zp.enabled, true);
+  assert.equal((await submitOrderNote(zo.orderNo, zc[0].contact_id, 'Zelle 已付')).status, 'payment_submitted');
+  ok('Zelle 开关：默认关闭、关闭时拒收付款说明；打开后正常');
 
   console.log('收费活动：现场登记 → 待核款 → 核款 → 自动签到');
   const starts = new Date(Date.now() + 3600e3).toISOString();
@@ -175,6 +188,8 @@ async function main() {
   assert.ok(d.answers.some((a) => a.item_code === 'Q03' && a.source === 'self_select'));
   ok('时间线含报名、签到、订单、到账、积分、资料、操作记录；答案带来源');
 
+  if (zelleBefore === null) await pool.query(`DELETE FROM crm_settings WHERE key = 'zelle_enabled'`);
+  else await setSetting(pool, 'zelle_enabled', zelleBefore, 'test');
   console.log(`\n全部通过：${passed} 组后台测试`);
   await pool.end();
 }

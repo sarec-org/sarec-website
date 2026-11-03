@@ -17,7 +17,7 @@ type Data = {
     status: 'pending_payment' | 'payment_submitted' | 'paid' | 'cancelled' | 'refunded'; statusLabel: string; provider: string; payerNote: string | null;
     submittedAt: string | null; paidAt: string | null; rejectReason: string | null; relatedId: string | null;
   };
-  zelle: { name: string | null; id: string | null; qrUrl: string; configured: boolean };
+  zelle: { enabled: boolean; name: string | null; id: string | null; qrUrl: string; configured: boolean };
   stripe: { available: boolean };
 };
 
@@ -151,6 +151,8 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
 
       {o.status === 'pending_payment' && (
         <>
+          {d.zelle.enabled && (
+            <>
           <h2 className={s.h2}>方式一：Zelle 转账（推荐）</h2>
           <p className={s.notice} style={{ fontSize: '1.15rem' }}>
             <b>付款备注请填订单号：<span className={s.mono} style={{ color: 'var(--gold-bright)' }}>{o.orderNo}</span></b>
@@ -173,11 +175,13 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
             <label className={s.label}>代付人姓名（别人帮您付时填写）</label>
             <input className={s.input} value={payer} onChange={(e) => setPayer(e.target.value)} />
           </div>
-          {err && <p className={s.error} role="alert">{err}</p>}
           <button className={`${s.btn} ${s.btnBlock}`} disabled={busy} onClick={submitNote}>{busy ? '处理中…' : '我已用 Zelle 付款，提交'}</button>
+            </>
+          )}
 
-          <h2 className={s.h2}>方式二：银行卡在线支付</h2>
-          <p className={s.muted}>没有美国银行账户，或想用信用卡，可以用这个方式（由 Stripe 安全处理，付完立即确认）。</p>
+          <h2 className={s.h2}>{d.zelle.enabled ? '方式二：银行卡在线支付' : '银行卡在线支付'}</h2>
+          <p className={s.muted}>{d.zelle.enabled ? '没有美国银行账户，或想用信用卡，可以用这个方式（由 Stripe 安全处理，付完立即确认）。' : '支持信用卡、借记卡，由 Stripe 安全处理，付款成功立即确认。'}</p>
+          {err && <p className={s.error} role="alert">{err}</p>}
           <button className={`${s.btn} ${s.btnGhost} ${s.btnBlock}`} disabled={busy || !d.stripe.available} onClick={payByCard}>
             {d.stripe.available ? (busy ? '正在打开…' : `银行卡支付 ${money(o.amountCents)}`) : '银行卡支付暂不可用'}
           </button>

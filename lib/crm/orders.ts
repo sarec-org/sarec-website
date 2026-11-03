@@ -86,6 +86,17 @@ export function zelleInfo(): { name: string | null; id: string | null; qrUrl: st
   return { name, id, qrUrl: process.env.ZELLE_QR_URL?.trim() || '/crm/zelle-qr.png', configured: !!(name && id) };
 }
 
+/** 后台开关“Zelle 付款”（crm_settings.zelle_enabled），默认关闭：关闭时付款页只显示银行卡，也不接受新的 Zelle 付款说明。 */
+export async function zelleEnabled(db: Db): Promise<boolean> {
+  return (await getSetting<boolean>(db, 'zelle_enabled', false)) === true;
+}
+
+/** 给付款页的 Zelle 信息：开关关闭时不下发收款信息。 */
+export async function zelleForPayPage(db: Db) {
+  if (!(await zelleEnabled(db))) return { enabled: false, name: null, id: null, qrUrl: '', configured: false };
+  return { enabled: true, ...zelleInfo() };
+}
+
 export function stripeAvailable(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY);
 }
@@ -110,6 +121,11 @@ export async function submitOrderNote(
   payerName?: string | null
 ): Promise<OrderRow> {
   return withTransaction(async (db) => {
+    if (!(await zelleEnabled(db))) {
+      const cur = await getOwnOrder(db, orderNo, contactId);
+      if (cur.status === 'pending_payment') throw new CrmError('zelle_off', 'Zelle 付款暂未开放，请用银行卡在线支付');
+      return cur;
+    }
     const { rows } = await db.query<OrderRow>(
       `UPDATE orders SET status = 'payment_submitted', provider = 'zelle', payer_note = $3, payer_name = $4,
               submitted_at = now(), updated_at = now()

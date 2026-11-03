@@ -59,6 +59,10 @@ const staffCtx = await browser.newContext(iphone);
 await apiLogin(staffCtx, STAFF_EMAIL);
 const start = new Date(Date.now() + 5 * 864e5);
 start.setUTCHours(2, 0, 0, 0); // 洛杉矶晚上 7 点前后
+const setZelle = async (v) => {
+  const j = await (await staffCtx.request.post(`${BASE}/api/v1/staff/settings`, { data: { kind: 'setting', key: 'zelle_enabled', value: v } })).json();
+  if (!j.ok) throw new Error('切换 Zelle 开关失败');
+};
 const mk = async (body) => (await (await staffCtx.request.post(`${BASE}/api/v1/staff/events`, { data: body })).json()).event;
 const freeEv = await mk({ title: 'ADU 加建与小型开发讲座', slug: `adu-${RUN}`, summary: '从政策、成本到施工节奏，一晚讲清楚 ADU 怎么做。', startsAt: start.toISOString(), endsAt: new Date(start.getTime() + 2 * 3600e3).toISOString(), locationName: 'SAREC 会议室', address: '1 E Huntington Dr, Arcadia, CA 91006', capacity: 60, feeCents: 0, topicTags: ['adu'] });
 const paidEv = await mk({ title: 'AI 与房地产实战课（收费）', slug: `ai-${RUN}`, summary: '用 AI 做市场分析与客户运营。', startsAt: start.toISOString(), endsAt: new Date(start.getTime() + 3 * 3600e3).toISOString(), locationName: 'SAREC 会议室', address: '1 E Huntington Dr, Arcadia, CA 91006', capacity: 30, feeCents: 5000, topicTags: ['ai'] });
@@ -127,6 +131,15 @@ await step('收费活动：再次报名（必答同屏）→ 付款页', async (
   await page.getByRole('link', { name: /去付款/ }).click();
   await page.waitForURL(/\/zh\/pay\//);
   paidOrder = page.url().split('/zh/pay/')[1].split('?')[0];
+  // 后台开关“Zelle 付款”关闭：付款页只显示银行卡
+  await setZelle(false);
+  await page.reload();
+  await page.getByRole('heading', { name: '银行卡在线支付' }).waitFor();
+  if (await page.getByText('付款备注请填订单号').count()) throw new Error('Zelle 关闭时不应显示 Zelle');
+  await shot(page, '09a-pay-card-only');
+  // 打开后显示 Zelle + 银行卡
+  await setZelle(true);
+  await page.reload();
   await page.getByText('付款备注请填订单号').waitFor();
   await shot(page, '09-pay-zelle-and-card');
 });
@@ -221,6 +234,9 @@ await step('后台页面', async () => {
   await sp.goto(`${BASE}/zh/staff`);
   await sp.waitForTimeout(1500);
   await shot(sp, '23-staff-home');
+  await sp.goto(`${BASE}/zh/staff/settings`);
+  await sp.getByText('Zelle 付款').first().waitFor();
+  await shot(sp, '23a-staff-settings-zelle-switch');
   await sp.goto(`${BASE}/zh/staff/events/${freeEv.id}`);
   await sp.waitForTimeout(2500);
   await shot(sp, '24-staff-event-qr');

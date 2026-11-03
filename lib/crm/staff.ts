@@ -562,7 +562,7 @@ export async function reviewScreenAd(
 }
 
 // ── 配置（管理员）──────────────────────────────────────────────────────────
-export const SETTING_KEYS = ['room_discount', 'screen_fee_cents', 'member_prices_published', 'points_per_dollar', 'room_pass_cents'] as const;
+export const SETTING_KEYS = ['room_discount', 'screen_fee_cents', 'member_prices_published', 'points_per_dollar', 'room_pass_cents', 'zelle_enabled'] as const;
 
 export async function getSettings() {
   const pool = getPool();
@@ -577,7 +577,7 @@ export async function getSettings() {
 
 export async function updateSetting(s: Staff, key: string, value: unknown) {
   if (!(SETTING_KEYS as readonly string[]).includes(key)) throw new CrmError('bad_request', '不能修改这个配置');
-  if (key === 'member_prices_published' && typeof value !== 'boolean') throw new CrmError('bad_request', '请选择是或否');
+  if ((key === 'member_prices_published' || key === 'zelle_enabled') && typeof value !== 'boolean') throw new CrmError('bad_request', '请选择是或否');
   if ((key === 'points_per_dollar' || key === 'room_pass_cents') && !(Number(value) > 0)) throw new CrmError('bad_request', '请填写正数');
   if ((key === 'room_discount' || key === 'screen_fee_cents') && (typeof value !== 'object' || value === null || Array.isArray(value))) {
     throw new CrmError('bad_request', '格式不对');

@@ -57,12 +57,22 @@ export default function StaffSettings() {
   }
 
   const published = d ? val(d, 'member_prices_published') === true : false;
+  const zelleOn = d ? val(d, 'zelle_enabled') === true : false;
   return (
     <StaffGate title="设置" role="admin">
       {() =>
         d && (
           <>
             <Msg m={msg} />
+            <h2 className={styles.h2}>Zelle 付款</h2>
+            <div className={styles.card}>
+              <p>当前：<strong>{zelleOn ? '已打开（付款页显示 Zelle 和银行卡）' : '已关闭（付款页只显示银行卡）'}</strong></p>
+              <button className={styles.btn} onClick={() => post({ kind: 'setting', key: 'zelle_enabled', value: !zelleOn }, zelleOn ? 'Zelle 付款已关闭' : 'Zelle 付款已打开')}>
+                {zelleOn ? '关闭 Zelle 付款' : '打开 Zelle 付款'}
+              </button>
+              <p className={styles.small}>关闭时：付款页不显示 Zelle 二维码和收款信息，会员不能提交新的 Zelle 付款说明；已提交待核对的订单照常在核款工作台处理。</p>
+            </div>
+
             <h2 className={styles.h2}>会员价是否对外公布</h2>
             <div className={styles.card}>
               <p>当前：<strong>{published ? '已公布（按等级折扣收费）' : '未公布（页面显示“会员价即将公布”，按标准价收费）'}</strong></p>
