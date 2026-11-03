@@ -10,8 +10,8 @@
 |---|---|
 | 网站原工作区（未改动） | `~/Desktop/sarec-cleanroom/sarec-website`（分支 `feature/terra-capital-corebusiness`） |
 | 本次开发 worktree | `~/Desktop/sarec-cleanroom/sarec-crm`，分支 `feature/crm-phase1`（基于 origin/main `600f936`） |
-| 推送位置 | fork `github.com/360cpacorp/sarec-website`。360cpacorp 对 sarec-org 只有读权限；PR 从 fork 发往 sarec-org |
-| 小程序 | `~/WeChatProjects/sarec-miniprogram`，只有本地 git，没有权限在 sarec-org 建仓库 |
+| 推送位置 | 直接推到 `sarec-org/sarec-website`，分支 `feature/crm-phase1`，用 Andy20161014 推送；PR #19。原 fork PR #18 已关闭。360cpacorp 是另一个客户的账号，不再用于 SAREC |
+| 小程序 | `~/WeChatProjects/sarec-miniprogram` → 私有仓库 `sarec-org/sarec-miniprogram` |
 | 本地测试库 | 自建 Postgres 14，端口 5544：`postgres://postgres@127.0.0.1:5544/sarec_crm_dev` |
 | 预览数据库 | 新建的 Neon 资源 `sarec-crm-preview`，只连 Preview 环境，变量前缀 `CRMPREVIEW_`；0001–0004 已执行 |
 | 预览网站 | https://sarec-crm-preview.vercel.app（CLI 部署，部署时用 `--env DATABASE_URL=<预览库>` 覆盖，不改项目设置，不碰正式库） |
@@ -26,7 +26,7 @@
 | M2 登录 + 报名 + 渐进式补资料 | ✅ | 7a86858、cb51444 | e2e 第 1–2 组 |
 | M3 付款核款 + 签到 + 会费 Zelle/Stripe 自助 + 积分抵扣 | ✅ | 7a86858、cb51444 | e2e 第 3–4、6 组；后台测试 |
 | M4 我的 + 会议室/月卡/电子屏 + 工作人员后台 | ✅ | cb51444 | `crm-api-tests.ts` 9 组；e2e 第 5、7 组 |
-| M5 /api/v1 + docs/api-v1.md + 预览 + PR | ✅ | 4328275 及之后；PR https://github.com/sarec-org/sarec-website/pull/18 | 预览环境 e2e 全部通过，8 组；浏览器全流程 14 步 |
+| M5 /api/v1 + docs/api-v1.md + 预览 + PR | ✅ | 4328275 及之后；PR https://github.com/sarec-org/sarec-website/pull/19（#18 已关闭） | 预览环境 e2e 全部通过，8 组；浏览器全流程 14 步 |
 | M6 小程序 | ✅ | 小程序 7795209、7d0fc83、76efa8f | 编译通过，体验版已上传 0.1.2 |
 | M7 总验收与汇报 | ✅ | 见 git log | typecheck、build、三套测试全部通过 |
 
@@ -44,7 +44,7 @@
 ## 待东哥确认清单（我自己做的判断）
 
 1. 正式库和预览共用同一个库，所以另建了独立预览库（Neon `sarec-crm-preview`，只给 Preview），migration 只在本地库和预览库上执行。
-2. GitHub 账号 360cpacorp 不能推送到 sarec-org，所以 fork 到 `360cpacorp/sarec-website` 后发 PR。小程序仓库没能建在 sarec-org，只保留本地 git。
+2. 2026-11-03 更正：改用东哥本人的 GitHub 账号 Andy20161014，提交身份也是 Andy20161014。本分支在 `vercel.json` 里关掉了 Vercel 自动预览，因为 Preview 连的是正式库。
 3. 仓库是公开的：规格文档（方案、题库、交接、bundle）不提交。第一次推送时曾带上这些文件，几分钟内已从分支历史移除，但 GitHub 上旧提交可能短时间内仍能按编号访问。
 4. 会费用 Zelle 时，**提交付款说明即生效为正式会员**，工作人员事后核对到账；核实未到账就撤销（按东哥的补充要求）。活动费、会议室等其他订单仍以核款为准。
 5. 未登录的人按邮箱申请入会时，只有新建的档案才直接进付款页；邮箱已有档案的，要先收验证码登录，防止冒用别人的积分和档案。未验证的手机号不用来认人。
