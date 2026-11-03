@@ -94,6 +94,7 @@ AI 提取答案留了入口：`recordAnswer(..., source: 'ai_confirmed', settle:
 
 - `contact`
 - `member`：`isMember`、`tierName`、`startDate`、`endDate`、`paymentPending`、`expired`
+- `membershipPending`：已提交 Zelle、待确认到账的会费订单；没有时为 null
 - `points`：`balance` 和 `ledger`
 - `profile`：资料完成度，X/13 或 X/14
 - `registrations`
@@ -108,7 +109,7 @@ AI 提取答案留了入口：`recordAnswer(..., source: 'ai_confirmed', settle:
 | 接口 | 权限 | 参数 | 返回 | 重复请求 |
 |---|---|---|---|---|
 | `GET /orders/:no?stripe=success` | 👤（仅本人） | `stripe=success` 时，主动向 Stripe 核实一次 | `{ order, zelle: { name, id, qrUrl, configured }, stripe: { available } }`。Zelle 信息来自环境变量 `ZELLE_RECIPIENT_NAME`、`ZELLE_RECIPIENT_ID`、`ZELLE_QR_URL`，缺失时显示“待配置” | — |
-| `POST /orders/:no/note` | 👤 | `{ note, payerName? }` | `{ status: 'payment_submitted' }`。会费订单提交后立即生效为正式会员 | 只从“待付款”变为“待核款”一次；重复提交返回原状态 |
+| `POST /orders/:no/note` | 👤 | `{ note, payerName? }` | `{ status: 'payment_submitted' }`，即“已提交，待确认到账”。会费也要等工作人员核对到账才生效 | 只从“待付款”变为“待核款”一次；重复提交返回原状态 |
 | `POST /orders/:no/stripe` | 👤 | — | `{ url }`，即 Stripe 付款页 | 订单已提交付款时返回 `conflict` |
 
 到账只有两条路径，到账后的业务动作统一由 `onOrderPaid()` 执行：
@@ -127,7 +128,7 @@ AI 提取答案留了入口：`recordAnswer(..., source: 'ai_confirmed', settle:
 
 `membership/apply` 的补充说明：
 
-- 填表并同意协议后生成会费订单，不需要审批。
+- 填表并同意协议后生成会费订单，不需要审批。款项到账即生效：刷卡即时到账；Zelle 要等工作人员在核款工作台点“确认到账”后才生效。核实未到账的，订单取消，抵扣的积分冲回。
 - 未登录时，只有本次新建的档案会直接拿到会话。邮箱已有档案时返回 `needLogin=true`，需先用验证码登录，防止冒用他人邮箱。
 
 积分抵扣规则：
@@ -164,7 +165,7 @@ AI 提取答案留了入口：`recordAnswer(..., source: 'ai_confirmed', settle:
 | `POST /staff/checkin` | checkin | `{ eventId, contactId }` 代签到；`{ eventId, onsite: { name, phone?, email?, roleSub? } }` 现场登记加签到。都走 `checkIn()` |
 | `GET /staff/orders?status=&purpose=&q=` | finance | 核款工作台，“待核款”排在最前 |
 | `POST /staff/orders/:no/verify` | finance | `{ reference? }` 一键确认到账。重复点击返回 `changed:false` |
-| `POST /staff/orders/:no/reject` | finance | `{ reason }`（必填）核实未到账：取消订单、退回抵扣积分；Zelle 先生效的会籍同时撤销 |
+| `POST /staff/orders/:no/reject` | finance | `{ reason }`（必填）核实未到账：取消订单、退回抵扣积分（会费订单的申请同时取消） |
 | `GET /staff/contacts?q=&region=&roleCategory=&topic=&tag=&member=&format=csv` | ops | 客户查询与筛选；`format=csv` 导出（UTF-8 BOM，Excel 可直接打开） |
 | `GET /staff/contacts/:id` | ops | 档案、标签（带来源）、每题回答历史（带来源和状态）、完整时间线 |
 | `POST /staff/points` | admin | `{ contactId, points, reason }` 调整积分；`{ reverseLedgerId, reason }` 冲正。原因必填 |

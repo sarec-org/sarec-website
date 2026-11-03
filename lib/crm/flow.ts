@@ -7,7 +7,7 @@
 import { getPool, withTransaction } from '@/lib/db/client';
 import { afterRequiredMessage, completeness, itemBadge, pickOptional } from './engine';
 import { CrmError, getEventBySlug, startRegistration, submitAnswers, type EventRow } from './events';
-import { memberStatus } from './membership';
+import { memberStatus, pendingMembershipOrder } from './membership';
 import { PURPOSE_LABEL, STATUS_LABEL } from './orders';
 import { loadProfile, pointsBalance, recordAnswer, resolveTask, skippedInTask, type Db, type Task } from './profile';
 import {
@@ -328,6 +328,7 @@ export async function myOverview(contactId: string) {
   );
   if (!c[0]) throw new CrmError('unauthorized', '登录已失效，请重新登录');
   const member = await memberStatus(pool, contactId);
+  const membershipPending = await pendingMembershipOrder(pool, contactId);
   const balance = await pointsBalance(pool, contactId);
   const { view, answered } = await loadProfile(pool, contactId);
   const { rows: regs } = await pool.query(
@@ -360,6 +361,7 @@ export async function myOverview(contactId: string) {
   return {
     contact: { ...c[0], role_label: role?.label ?? null },
     member,
+    membershipPending,
     points: { balance, ledger: points },
     profile: completeness(view, answered),
     registrations: regs,

@@ -3,8 +3,9 @@
  * ------------------------------------------------------------------
  * 填表 → 确认协议 → 生成会费订单（orders.purpose = 'membership'）→ 付款页选择：
  *   · Stripe 刷卡：webhook / 回跳核验后立即生效；
- *   · Zelle：提交付款说明（备注订单号）即生效；工作人员事后核对到账，核实未到账才撤销。
- * 付款前没有任何人工审批；“能否在官网展示”是另一件事（display_status），不影响会员身份。
+ *   · Zelle：提交付款说明（备注订单号）后为“待确认到账”；工作人员核对到账、点“确认到账”即生效；
+ *     核实未到账则订单取消、积分抵扣冲回。
+ * 没有人工审批，只核对到账；“能否在官网展示”是另一件事（display_status），不影响会员身份。
  * 续费可用积分抵扣，最多抵一半，只用于续费、不用于首次入会（C.3）。
  */
 import type { PoolClient } from 'pg';
@@ -30,6 +31,16 @@ export type MemberStatus = {
   paymentPending: boolean;
   expired: boolean;
 };
+
+/** 已提交 Zelle 付款说明、等待核对到账的会费订单 */
+export async function pendingMembershipOrder(db: Db, contactId: string): Promise<{ orderNo: string; description: string | null } | null> {
+  const { rows } = await db.query<{ order_no: string; description: string | null }>(
+    `SELECT order_no, description FROM orders WHERE contact_id = $1 AND purpose = 'membership' AND status = 'payment_submitted'
+      ORDER BY submitted_at DESC LIMIT 1`,
+    [contactId]
+  );
+  return rows[0] ? { orderNo: rows[0].order_no, description: rows[0].description } : null;
+}
 
 export async function memberStatus(db: Db, contactId: string): Promise<MemberStatus> {
   const { rows: c } = await db.query<{ member_no: string; name: string }>(`SELECT member_no::text, name FROM contacts WHERE id = $1`, [contactId]);
@@ -157,7 +168,7 @@ export async function applyMembership(
 }
 
 /** 让会费生效（幂等）：正式会员身份 + 有效期；续费接在原到期日之后。 */
-export async function activateMembership(db: Db, applicationId: string, source: 'zelle_submitted' | 'paid'): Promise<boolean> {
+export async function activateMembership(db: Db, applicationId: string, source: 'paid'): Promise<boolean> {
   const { rows } = await db.query<{
     id: string; contact_id: string | null; application_status: string; application_type: string; payment_plan: string | null;
     membership_end_date: string | null;
@@ -165,9 +176,9 @@ export async function activateMembership(db: Db, applicationId: string, source: 
   const a = rows[0];
   if (!a) return false;
   const semi = a.application_type === 'strategic_partner' && a.payment_plan === 'semiAnnual';
-  const payStatus = source === 'paid' ? (semi ? 'partially_paid' : 'paid') : 'pending_payment';
+  const payStatus = semi ? 'partially_paid' : 'paid';
   if (a.application_status === 'approved' && a.membership_end_date) {
-    if (source === 'paid') await db.query(`UPDATE applications SET payment_status = $2, updated_at = now() WHERE id = $1`, [applicationId, payStatus]);
+    await db.query(`UPDATE applications SET payment_status = $2, updated_at = now() WHERE id = $1`, [applicationId, payStatus]);
     return false; // 已生效
   }
   // 续费：从本人现有有效期结束的第二天开始；否则从今天开始
@@ -180,7 +191,7 @@ export async function activateMembership(db: Db, applicationId: string, source: 
   const start = prev[0]?.end ? `(date '${prev[0].end}' + 1)` : 'current_date';
   await db.query(
     `UPDATE applications SET application_status = 'approved', payment_status = $2,
-            first_payment_paid_at = CASE WHEN $2 <> 'pending_payment' THEN COALESCE(first_payment_paid_at, now()) ELSE first_payment_paid_at END,
+            first_payment_paid_at = COALESCE(first_payment_paid_at, now()),
             membership_start_date = ${start}, membership_end_date = (${start} + interval '12 months' - interval '1 day')::date,
             second_payment_due_date = CASE WHEN $3 AND second_payment_due_date_source <> 'manual_override' THEN (current_date + interval '6 months')::date ELSE second_payment_due_date END,
             updated_at = now()
@@ -189,7 +200,7 @@ export async function activateMembership(db: Db, applicationId: string, source: 
   );
   await db.query(
     `INSERT INTO crm_audit_log (actor, action, target_type, target_id, reason) VALUES ('system', 'activate_membership', 'application', $1, $2)`,
-    [applicationId, source === 'paid' ? '付款到账，会籍生效' : '已提交 Zelle 付款说明，会籍先生效，待核对到账']
+    [applicationId, '款项到账，会籍生效']
   );
   await sendWelcomeEmail(db, applicationId, source).catch((e) =>
     console.error('[membership] welcome email failed:', e instanceof Error ? e.message : 'unknown')
@@ -212,7 +223,7 @@ export async function membershipPaid(db: Db, o: OrderRow, provider: string): Pro
   await activateMembership(db, o.related_id!, 'paid');
 }
 
-async function sendWelcomeEmail(db: Db, applicationId: string, source: 'zelle_submitted' | 'paid'): Promise<void> {
+async function sendWelcomeEmail(db: Db, applicationId: string, _source: 'paid'): Promise<void> {
   if (!isEmailConfigured()) return;
   const { rows } = await db.query<{ email: string; contact_name: string | null; slug: string; end: string; member_no: string | null }>(
     `SELECT a.email, a.contact_name, a.selected_tier_slug AS slug, a.membership_end_date::text AS end, c.member_no::text
@@ -223,8 +234,7 @@ async function sendWelcomeEmail(db: Db, applicationId: string, source: 'zelle_su
   if (!r) return;
   const tier = getTierSeed(r.slug);
   const site = (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
-  const pendingLine =
-    source === 'zelle_submitted' ? '我们已收到您的 Zelle 付款说明，工作人员会尽快核对到账，核对期间会员身份照常有效。' : '您的付款已到账。';
+  const pendingLine = '您的会费已到账，会员身份即日生效。';
   const text = `${r.contact_name ?? ''} 您好：
 
 欢迎正式加入中美房地产商会（SAREC）！
@@ -248,9 +258,7 @@ ${pendingLine}
       from: getFromAddress(),
       to: admin,
       subject: `[SAREC] 新会员生效：${r.contact_name ?? r.email}（${tier?.nameZh ?? r.slug}）`,
-      text: `${r.contact_name ?? ''} <${r.email}> 已成为 ${tier?.nameZh ?? r.slug}，有效期至 ${r.end}。\n${
-        source === 'zelle_submitted' ? '付款方式 Zelle：请在后台“核款工作台”核对到账。' : '付款已到账。'
-      }\n${site}/zh/staff/payments`
+      text: `${r.contact_name ?? ''} <${r.email}> 已成为 ${tier?.nameZh ?? r.slug}，有效期至 ${r.end}（款项已到账）。\n${site}/zh/staff/payments`
     });
   }
 }

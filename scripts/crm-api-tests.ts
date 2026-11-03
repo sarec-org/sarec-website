@@ -8,7 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { staffFor, type Staff } from '@/lib/crm/auth';
 import { CrmError } from '@/lib/crm/events';
-import { applyMembership, memberStatus } from '@/lib/crm/membership';
+import { applyMembership, memberStatus, pendingMembershipOrder } from '@/lib/crm/membership';
 import { redeemPoints, submitOrderNote } from '@/lib/crm/orders';
 import { pointsBalance } from '@/lib/crm/profile';
 import {
@@ -100,7 +100,7 @@ async function main() {
   assert.equal((await rejectOrder(staff, no2, '核实未到账')).changed, false);
   ok('标记未到账：订单取消、抵扣积分冲回、重复操作不重复处理');
 
-  console.log('会费：Zelle 提交即生效；核实未到账撤销');
+  console.log('会费：Zelle 核对到账后才生效；核实未到账订单取消、积分冲回');
   const email = `member-${sfx}@example.com`;
   const app = await applyMembership(
     { applicationType: 'membership', tierSlug: 'member', contactName: `会员${sfx}`, email, phone: '6265550199', agree: true },
@@ -111,17 +111,40 @@ async function main() {
   const memberId = oc[0].contact_id;
   assert.equal((await memberStatus(pool, memberId)).isMember, false, '付款前不是会员');
   await submitOrderNote(app.orderNo, memberId, `Zelle 已付，备注 ${app.orderNo}`);
-  const ms = await memberStatus(pool, memberId);
-  assert.equal(ms.isMember, true, '提交 Zelle 付款说明即生效');
-  assert.ok(ms.endDate);
+  assert.equal((await memberStatus(pool, memberId)).isMember, false, '提交 Zelle 付款说明后还不是正式会员');
+  assert.equal((await pendingMembershipOrder(pool, memberId))?.orderNo, app.orderNo, '“我的”显示待确认到账');
   const pending = await listOrders({});
   assert.equal(pending[0].status, 'payment_submitted', '待核款排在最前');
   const { rows: appRow } = await pool.query<{ id: string }>(`SELECT related_id AS id FROM orders WHERE order_no = $1`, [app.orderNo]);
   await setDisplay(staff, appRow[0].id, 'approved', '资料齐全');
-  assert.equal((await memberStatus(pool, memberId)).isMember, true, '官网展示审核不影响会员身份');
-  await rejectOrder(staff, app.orderNo, '核实未到账');
-  assert.equal((await memberStatus(pool, memberId)).isMember, false, '核实未到账后撤销');
-  ok('会费 Zelle：提交即正式会员；展示审核不影响身份；核实未到账撤销');
+  assert.equal((await memberStatus(pool, memberId)).isMember, false, '官网展示审核不影响会员身份（也不会让人提前生效）');
+  assert.equal((await verifyOrder(staff, app.orderNo, 'ZELLE-OK')).changed, true);
+  const ms = await memberStatus(pool, memberId);
+  assert.equal(ms.isMember, true, '确认到账后立即生效');
+  assert.ok(ms.endDate);
+  assert.equal(await pendingMembershipOrder(pool, memberId), null);
+  assert.equal((await verifyOrder(staff, app.orderNo, 'ZELLE-OK')).changed, false, '重复确认不重复处理');
+  ok('会费 Zelle：提交后待确认到账、不是会员；确认到账即正式会员；展示审核不影响身份');
+
+  console.log('会费续费：Zelle 核实未到账 → 订单取消、积分抵扣冲回、会籍不变');
+  await adjustPoints(staff, memberId, 2000, '测试：续费抵扣用积分');
+  const balBefore = await pointsBalance(pool, memberId);
+  const renew = await applyMembership(
+    { applicationType: 'membership', tierSlug: 'member', contactName: `会员${sfx}`, email, agree: true, usePoints: true },
+    { ip: null, userAgent: 'test' },
+    memberId
+  );
+  assert.equal(renew.amountCents, 10000, '续费 $200 最多抵一半');
+  assert.equal(renew.pointsRedeemed, 1000);
+  assert.equal(await pointsBalance(pool, memberId), balBefore - 1000);
+  await submitOrderNote(renew.orderNo, memberId, 'Zelle 已付');
+  const endBefore = (await memberStatus(pool, memberId)).endDate;
+  assert.equal((await rejectOrder(staff, renew.orderNo, '核实未到账')).changed, true);
+  assert.equal(await pointsBalance(pool, memberId), balBefore, '抵扣积分冲回');
+  const { rows: ro } = await pool.query<{ status: string }>(`SELECT status FROM orders WHERE order_no = $1`, [renew.orderNo]);
+  assert.equal(ro[0].status, 'cancelled');
+  assert.equal((await memberStatus(pool, memberId)).endDate, endBefore, '未到账的续费不延长有效期');
+  ok('Zelle 续费核实未到账：订单取消、积分冲回、有效期不变');
 
   console.log('积分调整必须填原因；可撤销');
   await assert.rejects(adjustPoints(staff, on.contactId, 10, ''), (e: unknown) => e instanceof CrmError && /原因/.test(e.message));

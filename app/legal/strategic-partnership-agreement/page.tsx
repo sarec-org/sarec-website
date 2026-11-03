@@ -45,15 +45,15 @@ export default function StrategicPartnershipAgreementPage() {
         <h2 className={styles.h2}>2. 生效方式</h2>
         <p className={styles.h2En}>How the agreement takes effect</p>
         <p>
-          申请人在申请表中勾选同意本协议并完成付款（含提交 Zelle 付款说明）后，本协议生效、合作关系成立，无需另行审批。
-          如核实款项未实际到账，SAREC 有权撤销该合作关系。品牌展示内容由 SAREC 另行审核排期，不影响合作关系生效。
+          申请人在申请表中勾选同意本协议并完成付款，款项到账后本协议生效、合作关系成立（银行卡在线支付即时到账；Zelle 转账经 SAREC 核对到账后生效），无需另行审批。
+          如核实款项未到账，相应订单取消。品牌展示内容由 SAREC 另行审核排期，不影响合作关系生效。
         </p>
         <p>
-          This agreement takes effect and the partnership is established, without any separate approval,
-          once the applicant checks the box to accept this agreement in the application form and completes
-          payment (including submitting a Zelle payment note). If the payment is found not to have been
-          received, SAREC may revoke the partnership. Brand display content is reviewed and scheduled
-          separately and does not affect the partnership taking effect.
+          This agreement takes effect and the partnership is established, without any separate approval, once
+          the applicant checks the box to accept this agreement in the application form and the payment is
+          received (card payments are received immediately; Zelle transfers take effect once SAREC confirms
+          receipt). If a payment is found not to have been received, the order is cancelled. Brand display
+          content is reviewed and scheduled separately and does not affect the partnership taking effect.
         </p>
       </section>
 

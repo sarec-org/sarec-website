@@ -324,7 +324,7 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
               : '下一步：选择付款方式'}
         </button>
         <p className={styles.formHint}>
-          下一步可选 Zelle 转账（备注订单号）或银行卡在线支付。付款完成即成为正式会员，无需等待审批，并会收到确认邮件。
+          下一步可选银行卡在线支付（即时生效）或 Zelle 转账（备注订单号，核对到账后生效，通常 1 个工作日内）。无需审批，生效后会收到确认邮件。
         </p>
       </div>
     </form>

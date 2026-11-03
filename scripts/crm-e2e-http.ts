@@ -164,7 +164,7 @@ async function main() {
   assert.equal(b2.status, 409, JSON.stringify(b2.json));
   ok(`会议室先定先得：第一人生成订单 ${b1.json.booking.orderNo}，撞时段第二人被拒（${b2.json.error.message}）`);
 
-  console.log('6. 网上自助入会：填表 → 协议 → Zelle 付款说明 → 立即成为正式会员');
+  console.log('6. 网上自助入会：填表 → 协议 → Zelle 付款说明 → 待确认到账 → 工作人员确认到账 → 正式会员');
   const j = new Client();
   const jEmail = `e2e-join-${RUN}@example.com`;
   const apply = await j.call('/api/v1/membership/apply', { body: { applicationType: 'membership', tierSlug: 'member', contactName: '入会测试', email: jEmail, phone: '6265550199', agree: true } });
@@ -173,17 +173,33 @@ async function main() {
   assert.equal(apply.json.needLogin, false);
   const jOrd = await j.call(`/api/v1/orders/${apply.json.orderNo}`);
   assert.equal(jOrd.json.order.purpose, 'membership');
-  const before = (await j.call('/api/v1/me')).json.member;
-  assert.equal(before.isMember, false, '付款前不是会员');
+  assert.equal((await j.call('/api/v1/me')).json.member.isMember, false, '付款前不是会员');
   await j.call(`/api/v1/orders/${apply.json.orderNo}/note`, { body: { note: 'Zelle 已付' } });
-  const after = (await j.call('/api/v1/me')).json.member;
-  assert.equal(after.isMember, true, '提交付款说明后立即成为正式会员（无需审批）');
-  assert.ok(after.endDate, '有到期日');
+  const mid = (await j.call('/api/v1/me')).json;
+  assert.equal(mid.member.isMember, false, '提交 Zelle 付款说明后还不是正式会员');
+  assert.equal(mid.membershipPending?.orderNo, apply.json.orderNo, '“我的”显示已提交、待确认到账');
   const dupApply = await new Client().call('/api/v1/membership/apply', { body: { applicationType: 'membership', tierSlug: 'member', contactName: '冒用', email: jEmail, agree: true } });
   assert.equal(dupApply.json.needLogin, true, '已有档案的邮箱必须验证码登录，不能冒用');
   const jv = await staff.call(`/api/v1/staff/orders/${apply.json.orderNo}/verify`, { body: { reference: 'ZELLE-JOIN' } });
   assert.equal(jv.json.changed, true);
-  ok(`入会：${after.tierName} 有效期至 ${after.endDate}；工作人员核对到账不影响会籍生效`);
+  const after = (await j.call('/api/v1/me')).json;
+  assert.equal(after.member.isMember, true, '工作人员确认到账后立即成为正式会员');
+  assert.ok(after.member.endDate, '有到期日');
+  assert.equal(after.membershipPending, null);
+  ok(`入会：Zelle 待确认到账时不是会员；确认到账后为${after.member.tierName}，有效期至 ${after.member.endDate}`);
+
+  console.log('6b. Zelle 会费核实未到账 → 订单取消，不成为会员');
+  const k = new Client();
+  const kApply = await k.call('/api/v1/membership/apply', { body: { applicationType: 'membership', tierSlug: 'member', contactName: '未到账测试', email: `e2e-nopay-${RUN}@example.com`, agree: true } });
+  await k.call(`/api/v1/orders/${kApply.json.orderNo}/note`, { body: { note: 'Zelle 已付' } });
+  const noReason = await staff.call(`/api/v1/staff/orders/${kApply.json.orderNo}/reject`, { body: { reason: '' } });
+  assert.equal(noReason.json.ok, false, '标记未到账必须填原因');
+  const rj = await staff.call(`/api/v1/staff/orders/${kApply.json.orderNo}/reject`, { body: { reason: '核实未到账' } });
+  assert.equal(rj.json.ok, true, JSON.stringify(rj.json));
+  const kOrd = (await k.call(`/api/v1/orders/${kApply.json.orderNo}`)).json.order;
+  assert.equal(kOrd.status, 'cancelled');
+  assert.equal((await k.call('/api/v1/me')).json.member.isMember, false);
+  ok('核实未到账：订单取消，不成为会员（积分冲回见后台测试）');
 
   console.log('7. 后台查到这个人的完整时间线');
   const search = await staff.call(`/api/v1/staff/contacts?q=${encodeURIComponent(email)}`);

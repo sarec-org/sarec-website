@@ -329,7 +329,7 @@ export function PartnerForm({
           {submitting ? '处理中…' : '下一步：选择付款方式'}
         </button>
         <p className={styles.formHint}>
-          下一步可选 Zelle 转账（备注订单号）或银行卡在线支付。付款完成即生效，无需等待审批；半年两期本次仅收第一期。
+          下一步可选银行卡在线支付（即时生效）或 Zelle 转账（备注订单号，核对到账后生效）。无需审批；半年两期本次仅收第一期。
         </p>
       </div>
     </form>

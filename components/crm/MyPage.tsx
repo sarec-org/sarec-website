@@ -11,6 +11,7 @@ import s from './crm.module.css';
 type Me = {
   contact: { name: string; member_no: number; email: string | null; phone_e164: string | null; role_label: string | null };
   member: { isMember: boolean; tierName: string | null; startDate: string | null; endDate: string | null; paymentPending: boolean; expired: boolean };
+  membershipPending: { orderNo: string; description: string | null } | null;
   points: { balance: number; ledger: { category: string; points: number; reason: string | null; created_at: string }[] };
   profile: { done: number; total: number };
   registrations: { slug: string; title: string; starts_at: string; status: string; arrival_status: string; order_no: string | null; order_status: string | null }[];
@@ -84,8 +85,12 @@ export function MyPage() {
         <div className={s.row}><span className={s.rowLabel}>编号</span><span className={`${s.rowValue} ${s.mono}`}>No. {d.contact.member_no}</span></div>
         <div className={s.row}><span className={s.rowLabel}>身份</span><span className={s.rowValue}>{m.isMember ? <b style={{ color: 'var(--gold-bright)' }}>{m.tierName}</b> : m.expired ? `会籍已到期（${m.tierName}）` : '注册用户'}</span></div>
         {m.isMember && m.endDate && <div className={s.row}><span className={s.rowLabel}>有效期至</span><span className={s.rowValue}>{fmtDate(m.endDate + 'T12:00:00')}</span></div>}
-        {m.isMember && m.paymentPending && <p className={s.small}>Zelle 到账核对中，会员身份照常有效。</p>}
-        {!m.isMember && (
+        {d.membershipPending && (
+          <p className={s.notice} style={{ marginTop: '0.75rem' }}>
+            {d.membershipPending.description ?? '会费'}：已提交，待确认到账（通常 1 个工作日内）。确认后自动成为正式会员。
+          </p>
+        )}
+        {!m.isMember && !d.membershipPending && (
           <Link className={`${s.btn} ${s.btnGhost} ${s.btnBlock}`} style={{ marginTop: '0.75rem' }} href="/zh/join">
             {m.expired ? '续费会员' : '成为正式会员'}
           </Link>

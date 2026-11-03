@@ -121,7 +121,7 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
     <div className={s.page}>
       <Link href="/zh/me" className={s.back}>‹ 我的</Link>
       <p className={s.eyebrow}>PAYMENT · {o.purposeLabel}</p>
-      <h1 className={s.h1}>{o.status === 'paid' ? '付款已到账' : o.status === 'payment_submitted' ? '已提交，等待核款' : o.status === 'cancelled' ? '订单已取消' : `付款 ${money(o.amountCents)}`}</h1>
+      <h1 className={s.h1}>{o.status === 'paid' ? '付款已到账' : o.status === 'payment_submitted' ? '已提交，待确认到账' : o.status === 'cancelled' ? '订单已取消' : `付款 ${money(o.amountCents)}`}</h1>
 
       <div className={`${s.card} ${s.cardGold}`}>
         <p className={s.cardTitle}>{o.description ?? o.purposeLabel}</p>
@@ -141,10 +141,10 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
         <>
           <p className={s.notice}>
             {isMembership
-              ? '会员身份已生效，确认邮件已发送。工作人员会尽快核对 Zelle 到账，核对期间会员身份照常有效。'
-              : '付款说明已收到。工作人员核对到账后会自动确认，不需要您再操作。'}
+              ? '已提交，待确认到账（通常 1 个工作日内）。工作人员核对 Zelle 到账后，您会自动成为正式会员并收到确认邮件，不需要再操作。'
+              : '已提交，待确认到账（通常 1 个工作日内）。核对到账后会自动确认，不需要您再操作。'}
           </p>
-          <Link className={`${s.btn} ${s.btnBlock}`} href={nextHref}>{isMembership ? '查看我的会员身份' : '回到我的'}</Link>
+          <Link className={`${s.btn} ${s.btnBlock}`} href={nextHref}>回到我的</Link>
         </>
       )}
       {o.status === 'cancelled' && <p className={s.error}>{o.rejectReason ? `原因：${o.rejectReason}。` : ''}如有疑问请联系商会工作人员。</p>}

@@ -29,6 +29,7 @@
 | M5 /api/v1 + docs/api-v1.md + 预览 + PR | ✅ | 4328275 及之后；PR https://github.com/sarec-org/sarec-website/pull/19（#18 已关闭） | 预览环境 e2e 全部通过，8 组；浏览器全流程 14 步 |
 | M6 小程序 | ✅ | 小程序 7795209、7d0fc83、76efa8f | 编译通过，体验版已上传 0.1.2 |
 | M7 总验收与汇报 | ✅ | 见 git log | typecheck、build、三套测试全部通过 |
+| 修改：Zelle 会费改为核对到账后生效；后台只开 Andy Wang | ✅ | 见 git log | 验收 11 组、后台 10 组、端到端 9 组（本地与预览站都通过） |
 
 ## 补充任务：线上入会“付不了款 / 要等审批”诊断（2026-11-03，只读，线上没有改动）
 
@@ -39,14 +40,14 @@
   3. 付款后状态写成 `under_review`，确认邮件写“将审核您的资料”“进入人工审核”。
   4. 无法确认 Stripe **正式模式**的 webhook 是否配置、能否送达。若送不到，付款页会一直停在“处理中”，需要人工标记，看起来就像在审批。
 - 诊断时在正式库留下 3 条测试草稿申请，邮箱 `test+sarec-diag@example.com`、姓名“TEST 测试 请删除”，状态为待付款，需要东哥或工作人员删除。对应的 Stripe 会话 24 小时后自动过期，没有输入任何卡号。
-- 已在分支上改好：付款即生效（`approved`）；邮件改为“已生效”；入会页和联系页流程改为“选择档位 → 确认协议 → 在线付款 → 立即生效”，入会按钮指向 `/zh/join`；协议生效条款改为付款（含提交 Zelle 付款说明）即生效，版本升到 v2-draft，**需律师复核**；老数据中已付款但状态是 `under_review` 的，同样算有效会员。
+- 已在分支上改好：付款即生效（`approved`）；邮件改为“已生效”；入会页和联系页流程改为“选择档位 → 确认协议 → 在线付款 → 立即生效”，入会按钮指向 `/zh/join`；协议生效条款改为“款项到账后生效（刷卡即时，Zelle 经核对到账）”，版本升到 v2-draft，**需律师复核**；老数据中已付款但状态是 `under_review` 的，同样算有效会员。
 
 ## 待东哥确认清单（我自己做的判断）
 
 1. 正式库和预览共用同一个库，所以另建了独立预览库（Neon `sarec-crm-preview`，只给 Preview），migration 只在本地库和预览库上执行。
 2. 2026-11-03 更正：改用东哥本人的 GitHub 账号 Andy20161014，提交身份也是 Andy20161014。本分支在 `vercel.json` 里关掉了 Vercel 自动预览，因为 Preview 连的是正式库。
 3. 仓库是公开的：规格文档（方案、题库、交接、bundle）不提交。第一次推送时曾带上这些文件，几分钟内已从分支历史移除，但 GitHub 上旧提交可能短时间内仍能按编号访问。
-4. 会费用 Zelle 时，**提交付款说明即生效为正式会员**，工作人员事后核对到账；核实未到账就撤销（按东哥的补充要求）。活动费、会议室等其他订单仍以核款为准。
+4. **东哥 2026-11-03 拍板，已改**：会费用 Zelle 时，**核对到账后才生效**。提交付款说明后，页面和“我的”里显示“已提交，待确认到账（通常 1 个工作日内）”，这时还不是正式会员。工作人员在核款工作台点“确认到账”后，立即自动生效、发确认邮件，“我的”里显示等级和到期日。Stripe 刷卡付款成功立即生效。核实未到账的：订单取消、积分抵扣冲回。全程没有人工审批，只核对到账。
 5. 未登录的人按邮箱申请入会时，只有新建的档案才直接进付款页；邮箱已有档案的，要先收验证码登录，防止冒用别人的积分和档案。未验证的手机号不用来认人。
 6. 积分抵扣会费只在登录后、续费时可用：默认 10 积分抵 1 美元，最多抵一半；取消或未到账时积分冲回。
 7. 会员价折扣、电子屏月费、会议室 $50/小时、月卡 $299 都是配置项。会员价公布前一律按标准价，页面显示“会员价即将公布”。电子屏不在提交时收费，审核排期时才按等级生成订单。
@@ -61,6 +62,24 @@
 16. 预览环境设置了 `CRM_DEV_ECHO_CODES=1`（接口直接返回验证码，方便自动测试）。只在预览上有效，生产强制无效；预览用的是独立测试库。
 17. 小程序体验版目前连预览测试库（`USE_DEV=true`），上线前改回 false。
 18. Stripe 付款成功后回到订单页时，系统会主动向 Stripe 核实一次，所以 webhook 晚到或没配置也能立即到账。webhook 也能识别新的统一订单。
+
+## 工作人员后台账号
+
+唯一后台人员：**Andy Wang，wknmxjp@gmail.com**，开通全部角色：签到、核款、运营、管理员。
+- 预览测试库：已开通（2026-11-03）。
+- 正式库：上线时开通（见下面上线步骤第 4 步）。
+
+## 上线步骤（等东哥点头后按顺序做）
+
+1. 备份正式库（Neon 控制台建分支或快照）。
+2. 在正式库按顺序执行 `db/migrations/0003_crm_events_points.sql`、`db/migrations/0004_crm_staff_qr_payments.sql`。只追加，不改已有表。
+3. 运行一次性关联脚本：`DATABASE_URL=<正式库> pnpm dlx tsx scripts/link-applications-to-contacts.ts --i-know-this-is-not-production`。脚本的保护开关按名字是“确认不是正式库”，这里是有意对正式库执行。
+4. 开通后台人员：`DATABASE_URL=<正式库> pnpm dlx tsx scripts/seed-staff.ts wknmxjp@gmail.com "Andy Wang" checkin finance ops admin --i-know-this-is-not-production`。
+5. 在 Vercel Production 配置 `ZELLE_RECIPIENT_NAME`、`ZELLE_RECIPIENT_ID`（以及可选的 `ZELLE_QR_URL`），替换 `public/crm/zelle-qr.png` 为真二维码。
+6. 在 Stripe 后台（Live 模式）确认 webhook `https://sinoamericanrec.org/api/stripe/webhook` 送达正常。
+7. 合并 PR #19。合并前删掉 `vercel.json` 里 `feature/crm-phase1` 的关闭预览设置也可以，留着也不影响 main。
+8. 上线后用 wknmxjp@gmail.com 登录 `/zh/staff` 检查各页面；用一笔 Zelle 小额订单走一遍“确认到账”。
+9. 小程序：把 `utils/config.js` 的 `USE_DEV` 改回 false，上传新版本；在小程序后台配服务器域名、隐私指引，然后提交审核。
 
 ## 下一步
 

@@ -411,14 +411,14 @@ export default function MembershipPage() {
             </li>
             <li className={styles.applyStep}>
               <span className={styles.applyNum}>04</span>
-              <h3 className={styles.applyH3}>立即生效</h3>
-              <p className={styles.applyBody}>付款完成即成为正式会员,收到确认邮件,</p>
-              <p className={styles.applyBody}>在&quot;我的&quot;页面查看会员身份与到期日。</p>
+              <h3 className={styles.applyH3}>到账生效</h3>
+              <p className={styles.applyBody}>刷卡即时生效;Zelle 核对到账后生效(通常 1 个工作日内),</p>
+              <p className={styles.applyBody}>收到确认邮件,在&quot;我的&quot;页面查看会员身份与到期日。</p>
             </li>
           </ol>
 
           <p className={styles.complianceNote}>
-            全程在线自助,几分钟即可完成。官网展示资料由工作人员另行核对,不影响会员身份。
+            全程在线自助,无需审批,只核对到账。官网展示资料由工作人员另行核对,不影响会员身份。
           </p>
         </div>
       </section>

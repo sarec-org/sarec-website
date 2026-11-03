@@ -3,8 +3,8 @@
  * ------------------------------------------------------------------
  * - 付款方式：Zelle（主，备注订单号，后台核款）或 Stripe 刷卡（webhook 验签后自动到账）。
  * - 到账后的业务动作只在 onOrderPaid() 一处，无论 Zelle 核款还是 Stripe 回调都走它。
- * - 会费例外（东哥 2026-11-03 拍板）：提交 Zelle 付款说明即生效为正式会员；
- *   工作人员事后核对到账，核实未到账才撤销。活动费等其他订单仍以核款为准。
+ * - 所有订单（含会费）都以“款项到账”为准（东哥 2026-11-03 拍板）：
+ *   Stripe 刷卡即时到账；Zelle 提交付款说明后为“待确认到账”，工作人员核对到账后才生效。
  */
 import { randomBytes } from 'node:crypto';
 import type Stripe from 'stripe';
@@ -116,12 +116,7 @@ export async function submitOrderNote(
         WHERE order_no = $1 AND contact_id = $2 AND status = 'pending_payment' RETURNING *`,
       [orderNo, contactId, note.slice(0, 500), payerName?.slice(0, 100) ?? null]
     );
-    const o = rows[0] ?? (await getOwnOrder(db, orderNo, contactId)); // 重复提交：原样返回
-    if (rows[0] && o.purpose === 'membership' && o.related_id) {
-      const { activateMembership } = await import('./membership');
-      await activateMembership(db, o.related_id, 'zelle_submitted');
-    }
-    return o;
+    return rows[0] ?? (await getOwnOrder(db, orderNo, contactId)); // 重复提交：原样返回
   });
 }
 
