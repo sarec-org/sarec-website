@@ -256,6 +256,13 @@ export async function register(slug: string, contactId: string, input: RegisterI
 /** 选填题：下一道 + 提示；同时返回本任务已得积分与完成度。 */
 export async function nextQuestion(contactId: string, taskId?: string | null, opts: { eventSlug?: string | null } = {}) {
   const pool = getPool();
+  if (!taskId && opts.eventSlug) {
+    const { rows } = await pool.query<{ id: string }>(
+      `SELECT t.id FROM profile_tasks t JOIN events e ON e.id = t.event_id WHERE t.contact_id = $1 AND e.slug = $2 AND t.kind = 'event'`,
+      [contactId, opts.eventSlug]
+    );
+    taskId = rows[0]?.id ?? null;
+  }
   const task = await withTransaction((db) => resolveTask(db, contactId, taskId));
   const { view, answered, settled, cooling } = await loadProfile(pool, contactId);
   let topics: string[] = [];

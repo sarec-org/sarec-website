@@ -95,11 +95,11 @@ async function contactForApplication(db: Db, sessionContactId: string | null, em
   if (sessionContactId) return { id: sessionContactId, created: false };
   const { rows } = await db.query<{ id: string }>(`SELECT id FROM contacts WHERE email = $1`, [email]);
   if (rows[0]) return { id: rows[0].id, created: false };
-  const p = phone ? normalizePhone(phone) : null;
-  const { rows: byPhone } = p ? await db.query<{ id: string }>(`SELECT id FROM contacts WHERE phone_e164 = $1`, [p]) : { rows: [] as { id: string }[] };
-  if (byPhone[0]) {
-    await db.query(`UPDATE contacts SET email = COALESCE(email, $2), updated_at = now() WHERE id = $1`, [byPhone[0].id, email]);
-    return { id: byPhone[0].id, created: false };
+  // 未验证的手机号不用来认人（防止把申请挂到别人档案上）；号码已被占用时只存在申请表里
+  let p = phone ? normalizePhone(phone) : null;
+  if (p) {
+    const { rows: taken } = await db.query(`SELECT 1 FROM contacts WHERE phone_e164 = $1`, [p]);
+    if (taken[0]) p = null;
   }
   // 未验证邮箱先建档；会员以后用同一邮箱收验证码登录，即进入同一份档案
   const { rows: ins } = await db.query<{ id: string }>(

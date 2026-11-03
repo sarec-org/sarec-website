@@ -43,6 +43,9 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
   const [form, setForm] = useState<FormState>(initialState);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 续费积分抵扣（只用于续费，最多抵一半；需已登录）
+  const [quote, setQuote] = useState<{ renewal: boolean; feeCents: number; balance: number; maxDiscountCents: number; pointsNeeded: number } | null>(null);
+  const [usePoints, setUsePoints] = useState(false);
 
   // 卡片按钮通过 /zh/join?tier=<slug>#apply 预选档位；挂载时读取 query。
   useEffect(() => {
@@ -51,6 +54,14 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
       setForm((curr) => ({ ...curr, tierSlug: t }));
     }
   }, [tiers]);
+
+  useEffect(() => {
+    if (!form.tierSlug) return;
+    fetch(`/api/v1/membership/quote?tier=${encodeURIComponent(form.tierSlug)}`, { credentials: 'same-origin' })
+      .then((r) => r.json())
+      .then((d) => setQuote(d?.ok ? d.quote : null))
+      .catch(() => setQuote(null));
+  }, [form.tierSlug]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((curr) => ({ ...curr, [key]: value }));
@@ -75,7 +86,7 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
     }
     setSubmitting(true);
     try {
-      const res = await fetch('/api/checkout', {
+      const res = await fetch('/api/v1/membership/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,19 +101,28 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
           websiteUrl: form.websiteUrl,
           industryCategory: form.industryCategory,
           notes: form.notes,
-          agree: form.agree
+          agree: form.agree,
+          usePoints: usePoints && !!quote?.renewal
         })
       });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
-        setError(data.error || '提交失败，请稍后再试。');
+      const data = (await res.json()) as {
+        ok?: boolean;
+        orderNo?: string;
+        needLogin?: boolean;
+        error?: { message?: string };
+      };
+      if (!res.ok || !data.orderNo) {
+        setError(data.error?.message || '提交失败，请稍后再试。您填写的内容还在。');
         setSubmitting(false);
         return;
       }
-      // 跳转到 Stripe Checkout。
-      window.location.href = data.url;
+      // 进入统一付款页（Zelle 或银行卡）；已有档案的需先用邮箱验证码登录
+      const payUrl = `/zh/pay/${data.orderNo}`;
+      window.location.href = data.needLogin
+        ? `/zh/login?next=${encodeURIComponent(payUrl)}&email=${encodeURIComponent(form.email)}`
+        : payUrl;
     } catch {
-      setError('网络异常，请稍后再试。');
+      setError('网络不稳定，没有提交成功。您填的内容还在，请稍后再点一次。');
       setSubmitting(false);
     }
   }
@@ -279,6 +299,16 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
         </div>
       </div>
 
+      {quote?.renewal && quote.maxDiscountCents > 0 && (
+        <div className={styles.agreeCheck}>
+          <input type="checkbox" id="usePoints" checked={usePoints} onChange={(e) => setUsePoints(e.target.checked)} />
+          <label htmlFor="usePoints">
+            续费可用积分抵扣：用 {quote.pointsNeeded} 积分抵 ${(quote.maxDiscountCents / 100).toLocaleString()}
+            （现有 {quote.balance} 积分；最多抵年费的一半）
+          </label>
+        </div>
+      )}
+
       {error && (
         <p className={styles.formError} role="alert">
           {error}
@@ -288,13 +318,13 @@ export function JoinForm({ tiers }: { tiers: JoinTierOption[] }) {
       <div>
         <button type="submit" className={styles.btnPrimary} disabled={submitting}>
           {submitting
-            ? '正在跳转付款…'
+            ? '处理中…'
             : selected
-              ? `继续支付${selected.nameZh}年费 ${selected.currentPriceLabel}`
-              : '继续安全付款'}
+              ? `下一步：支付${selected.nameZh}年费 ${quote && usePoints && quote.maxDiscountCents > 0 ? `$${((quote.feeCents - quote.maxDiscountCents) / 100).toLocaleString()}` : selected.currentPriceLabel}`
+              : '下一步：选择付款方式'}
         </button>
         <p className={styles.formHint}>
-          付款由 Stripe 安全处理；提交后将跳转至 Stripe 付款页。付款完成后我们将确认记录。
+          下一步可选 Zelle 转账（备注订单号）或银行卡在线支付。付款完成即成为正式会员，无需等待审批，并会收到确认邮件。
         </p>
       </div>
     </form>

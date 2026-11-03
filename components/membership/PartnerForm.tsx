@@ -69,7 +69,7 @@ export function PartnerForm({
     }
     setSubmitting(true);
     try {
-      const res = await fetch('/api/checkout', {
+      const res = await fetch('/api/v1/membership/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,15 +90,24 @@ export function PartnerForm({
           agree: form.agree
         })
       });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
-        setError(data.error || '提交失败，请稍后再试。');
+      const data = (await res.json()) as {
+        ok?: boolean;
+        orderNo?: string;
+        needLogin?: boolean;
+        error?: { message?: string };
+      };
+      if (!res.ok || !data.orderNo) {
+        setError(data.error?.message || '提交失败，请稍后再试。您填写的内容还在。');
         setSubmitting(false);
         return;
       }
-      window.location.href = data.url;
+      // 进入统一付款页（Zelle 或银行卡）；已有档案的需先用邮箱验证码登录
+      const payUrl = `/zh/pay/${data.orderNo}`;
+      window.location.href = data.needLogin
+        ? `/zh/login?next=${encodeURIComponent(payUrl)}&email=${encodeURIComponent(form.email)}`
+        : payUrl;
     } catch {
-      setError('网络异常，请稍后再试。');
+      setError('网络不稳定，没有提交成功。您填的内容还在，请稍后再点一次。');
       setSubmitting(false);
     }
   }
@@ -317,10 +326,10 @@ export function PartnerForm({
 
       <div>
         <button type="submit" className={styles.btnPrimary} disabled={submitting}>
-          {submitting ? '正在跳转付款…' : '继续安全付款'}
+          {submitting ? '处理中…' : '下一步：选择付款方式'}
         </button>
         <p className={styles.formHint}>
-          付款由 Stripe 安全处理；提交后将跳转至 Stripe 付款页。半年两期本次仅收第一期，付款完成后我们将确认记录。
+          下一步可选 Zelle 转账（备注订单号）或银行卡在线支付。付款完成即生效，无需等待审批；半年两期本次仅收第一期。
         </p>
       </div>
     </form>
