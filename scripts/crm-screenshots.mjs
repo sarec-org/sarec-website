@@ -133,7 +133,7 @@ await step('收费活动：再次报名（必答同屏）→ 付款页', async (
 await step('收费活动未核款扫码 → 显示待付款 / 待核款', async () => {
   await page.goto(`${BASE}/zh/pay/${paidOrder}`);
   await page.getByRole('button', { name: /我已用 Zelle 付款/ }).click();
-  await page.getByText('已提交，等待核款').waitFor();
+  await page.getByText('已提交，待确认到账').first().waitFor();
   await shot(page, '10-pay-submitted', false);
   await page.goto(`${BASE}/zh/checkin/${paidEv.slug}?k=${paidK}`);
   await page.getByText('待付款 / 待核款').waitFor({ timeout: 10000 });
