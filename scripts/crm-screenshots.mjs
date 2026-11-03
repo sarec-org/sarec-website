@@ -164,9 +164,18 @@ await step('工作人员核款工作台 → 一键确认', async () => {
 });
 await step('会议室三步预约 + 撞时段', async () => {
   await page.goto(`${BASE}/zh/rooms`);
-  await page.locator('button[class*="tab"]').nth(4).click();
-  await page.waitForTimeout(1000);
+  // 选空位最多的一天（预览库里有之前测试留下的预约）
+  const tabs = page.locator('button[class*="tab"]');
   const slots = page.locator('button[class*="slot"]:not([disabled])');
+  let best = 1, most = -1;
+  for (let i = 1; i < Math.min(await tabs.count(), 14); i++) {
+    await tabs.nth(i).click();
+    await page.waitForTimeout(400);
+    const n = await slots.count();
+    if (n > most) { most = n; best = i; }
+  }
+  await tabs.nth(best).click();
+  await page.waitForTimeout(800);
   await slots.nth(2).click();
   await slots.nth(4).click();
   await page.getByText('您的价格').first().waitFor();
