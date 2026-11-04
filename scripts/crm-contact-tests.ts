@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { createHmac, randomBytes } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
-import { sendLoginCode, verifyLoginCode } from '@/lib/crm/auth';
+import { approveQrLogin, createQrLogin, sendLoginCode, verifyLoginCode } from '@/lib/crm/auth';
 import {
   checkPhoneCode,
   confirmEmailToken,
@@ -99,7 +99,9 @@ async function main() {
     await pool.query(`DELETE FROM profile_answers WHERE contact_id = $1`, [v.contactId]);
     await pool.query(`DELETE FROM contacts WHERE id = $1`, [v.contactId]);
   });
-  ok('报名填的邮箱未确认前，不能用来登录进入这份档案');
+  const qr = await createQrLogin();
+  await assert.rejects(approveQrLogin(qr.code, old), code('need_verified'), '只有微信身份：不能扫码登录网站');
+  ok('报名填的邮箱未确认前，不能用来登录进入这份档案；只有微信身份不能扫码登录网站');
 
   console.log('确认邮箱：一键确认 → 已确认，并写进身份（之后可用它登录网站）');
   const tokA = await issueEmailToken(pool, (await method(a, 'email')).id);

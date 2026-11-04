@@ -264,6 +264,12 @@ export async function createQrLogin(): Promise<{ code: string; poll: string; exp
 }
 
 export async function approveQrLogin(code: string, contactId: string): Promise<boolean> {
+  // 只有已验证的邮箱 / 手机号才能登录网站：只有微信身份的档案不能扫码登录网站
+  const { rows: v } = await getPool().query(
+    `SELECT 1 FROM contacts WHERE id = $1 AND (email_verified_at IS NOT NULL OR phone_verified_at IS NOT NULL)`,
+    [contactId]
+  );
+  if (!v[0]) throw new CrmError('need_verified', '登录网站需要先验证邮箱：请在小程序“我的 → 关联网站账号”验证一次');
   const { rowCount } = await getPool().query(
     `UPDATE qr_logins SET status = 'approved', contact_id = $2 WHERE code_hash = $1 AND status = 'pending' AND expires_at > now()`,
     [sha256(code), contactId]
