@@ -21,7 +21,7 @@ import {
 } from '@/lib/crm/contactInfo';
 import { CrmError } from '@/lib/crm/events';
 import { register } from '@/lib/crm/flow';
-import { runEventReminders, saveSubscriptions } from '@/lib/crm/reminders';
+import { publicTemplateIds, runEventReminders, saveSubscriptions } from '@/lib/crm/reminders';
 import { contactDetail, onsiteRegister, searchContacts } from '@/lib/crm/staff';
 import { verifySvix } from '@/lib/crm/svix';
 import type { Staff } from '@/lib/crm/auth';
@@ -277,6 +277,38 @@ async function main() {
     assert.match(pushed[0].data.time2.value, /^\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}$/);
     await assert.rejects(saveSubscriptions(old, `nope-${sfx}`, ['day_before']), code('not_registered'));
     ok('到点推送、每种只推一次；未报名不能订阅');
+
+    console.log('正式模板：报名时请求确认通知 + 开始提醒；授权一次只发前 2 小时，再授权补前 1 天');
+    process.env.WX_SUBSCRIBE_TEMPLATES = JSON.stringify({
+      confirm: { id: 'TMPL_OK', fields: { title: 'thing1', time: 'time2', place: 'thing6', note: 'thing5' } },
+      reminder: { id: 'TMPL_START', fields: { title: 'thing4', time: 'time2', place: 'thing5', note: 'thing3' } }
+    });
+    assert.deepEqual([publicTemplateIds().day_before, publicTemplateIds().two_hours], ['TMPL_OK', 'TMPL_START'], '1.1.0 小程序一次请求两个不同模板');
+    const f = await wechatUser('f');
+    await register(slug, f, { name: '孙八', roleSub: 'agent', phone: `626${P}0006`, email: `f-${sfx}@example.com` });
+    pushed.length = 0;
+    const s1 = await saveSubscriptions(f, slug, ['TMPL_OK', 'TMPL_START']);
+    assert.deepEqual(s1.saved, ['confirm', 'two_hours']);
+    assert.equal(s1.confirmSent, true);
+    assert.equal(pushed.length, 1);
+    assert.equal(pushed[0].template_id, 'TMPL_OK');
+    assert.equal(pushed[0].data.thing5.value, '报名成功，请准时参加');
+    assert.equal(pushed[0].data.thing1.value, '联系方式测试讲座');
+    assert.ok(pushed[0].data.thing6.value && pushed[0].data.time2.value);
+    const s2 = await saveSubscriptions(f, slug, ['TMPL_OK', 'TMPL_START']);
+    assert.deepEqual(s2.saved, ['confirm', 'day_before']);
+    assert.equal(pushed.length, 1, '确认通知只推一次');
+    const s3 = await saveSubscriptions(f, slug, ['TMPL_START']);
+    assert.deepEqual(s3.saved, [], '两条提醒都已占用');
+    await pool.query(`UPDATE event_reminder_subs SET accepted_at = now() - interval '3 days' WHERE contact_id = $1`, [f]);
+    await runEventReminders(new Date(starts.getTime() - 23 * 3600_000));
+    await runEventReminders(new Date(starts.getTime() - 110 * 60_000));
+    const notes = pushed.filter((p) => p.template_id === 'TMPL_START').map((p) => p.data.thing3.value);
+    assert.deepEqual(notes, ['明天开讲，请准时到场', '2 小时后开始']);
+    const g = await wechatUser('g');
+    await register(slug, g, { name: '周九', roleSub: 'agent', phone: `626${P}0007`, email: `g-${sfx}@example.com` });
+    assert.deepEqual((await saveSubscriptions(g, slug, ['TMPL_START'])).saved, ['two_hours'], '只授权一次：只有前 2 小时');
+    ok('确认通知立即推一次；开始提醒按授权次数分配，备注文案正确');
   } finally {
     globalThis.fetch = realFetch;
     delete process.env.WX_APPID;
