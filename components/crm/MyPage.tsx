@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api, fmtDate, fmtDateTime, money } from './client';
 import { LoginBox } from './LoginBox';
+import { ContactInfoCard, type ContactInfo } from './ContactInfo';
 import s from './crm.module.css';
 
 type Me = {
   contact: { name: string; member_no: number; email: string | null; phone_e164: string | null; role_label: string | null };
+  contactInfo: ContactInfo;
   member: { isMember: boolean; tierName: string | null; startDate: string | null; endDate: string | null; paymentPending: boolean; expired: boolean };
   membershipPending: { orderNo: string; description: string | null } | null;
   points: { balance: number; ledger: { category: string; points: number; reason: string | null; created_at: string }[] };
@@ -77,6 +79,9 @@ export function MyPage() {
         </p>
       )}
       {err && <p className={s.error}>{err}</p>}
+
+      {/* 联系方式：常驻顶部；退信 / 短信失败标红；满 6 个月再确认 */}
+      <ContactInfoCard info={d.contactInfo} onChange={(ci) => setD({ ...d, contactInfo: ci })} />
 
       {/* 会员卡简版 */}
       <div className={`${s.card} ${m.isMember ? s.cardGold : ''}`} style={m.isMember ? { background: 'linear-gradient(135deg, rgba(201,165,103,0.16), rgba(10,23,48,0.6))' } : undefined}>

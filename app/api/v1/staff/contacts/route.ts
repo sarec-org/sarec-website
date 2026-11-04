@@ -9,7 +9,8 @@ export const GET = handler(async (req: Request) => {
   const m = sp.get('member');
   const f: ContactFilter = {
     q: sp.get('q'), region: sp.get('region'), roleCategory: sp.get('roleCategory'), topic: sp.get('topic'), tag: sp.get('tag'),
-    member: m === 'member' || m === 'registered' ? m : null
+    member: m === 'member' || m === 'registered' ? m : null,
+    emailStatus: (['confirmed', 'unconfirmed', 'invalid', 'none'] as const).find((x) => x === sp.get('emailStatus')) ?? null
   };
   if (sp.get('format') === 'csv') {
     const csv = await exportContactsCsv(s, f);

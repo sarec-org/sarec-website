@@ -7,6 +7,7 @@
 import { getPool, withTransaction } from '@/lib/db/client';
 import { afterRequiredMessage, completeness, itemBadge, pickOptional } from './engine';
 import { CrmError, getEventBySlug, startRegistration, submitAnswers, type EventRow } from './events';
+import { getContactInfo, parseContactInput, saveContactInput, sendConfirmEmailSafe, type ContactInfo } from './contactInfo';
 import { memberStatus, pendingMembershipOrder } from './membership';
 import { PURPOSE_LABEL, STATUS_LABEL } from './orders';
 import { loadProfile, pointsBalance, recordAnswer, resolveTask, skippedInTask, type Db, type Task } from './profile';
@@ -146,13 +147,15 @@ export type RegisterPreview = {
   required: QuestionDTO[];
   name: string | null;
   identity: { email: string | null; phone: string | null };
+  /** 当前联系方式（报名表预填；未登录为 null） */
+  contactInfo: ContactInfo | null;
 };
 
 export async function previewRegistration(slug: string, contactId: string | null): Promise<RegisterPreview> {
   const pool = getPool();
   const ev = await requireEvent(pool, slug);
   if (!contactId) {
-    return { event: publicEvent(ev), loggedIn: false, firstTime: true, alreadyRegistered: false, registrationStatus: null, required: [], name: null, identity: { email: null, phone: null } };
+    return { event: publicEvent(ev), loggedIn: false, firstTime: true, alreadyRegistered: false, registrationStatus: null, required: [], name: null, identity: { email: null, phone: null }, contactInfo: null };
   }
   const { rows: c } = await pool.query<{ name: string; email: string | null; phone_e164: string | null; role_sub: string | null }>(
     `SELECT name, email, phone_e164, role_sub FROM contacts WHERE id = $1`,
@@ -183,7 +186,8 @@ export async function previewRegistration(slug: string, contactId: string | null
     registrationStatus: reg[0]?.status ?? null,
     required,
     name: c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null,
-    identity: { email: c[0]?.email ?? null, phone: c[0]?.phone_e164 ?? null }
+    identity: { email: c[0]?.email ?? null, phone: c[0]?.phone_e164 ?? null },
+    contactInfo: await getContactInfo(pool, contactId)
   };
 }
 
@@ -197,11 +201,17 @@ export type RegisterInput = {
   answers?: { code: string; value: unknown }[];
   ref?: string | null;
   channel?: string | null;
+  /** 联系方式（2026-11 起报名必填；只检查格式，不发验证码）。旧版小程序不传时不强制。 */
+  phone?: string;
+  email?: string;
 };
 
-export async function register(slug: string, contactId: string, input: RegisterInput) {
-  return withTransaction(async (db) => {
+export async function register(slug: string, contactId: string, input: RegisterInput, opts: { base?: string } = {}) {
+  const wantsContact = input.phone !== undefined || input.email !== undefined;
+  const given = wantsContact ? parseContactInput(input, { phone: true, email: true }) : null;
+  const out = await withTransaction(async (db) => {
     const ev = await requireEvent(db, slug);
+    if (given) await saveContactInput(db, contactId, given, 'registration');
     const { answered } = await loadProfile(db, contactId);
     const firstTime = !answered.has('Q03');
     let refContactId: string | null = null;
@@ -217,7 +227,8 @@ export async function register(slug: string, contactId: string, input: RegisterI
       if (!name) throw new CrmError('answers_required', '请填写怎么称呼您');
       if (!role) throw new CrmError('answers_required', '请选择您的主要行业');
       const { rows: c } = await db.query<{ email: string | null; phone_e164: string | null }>(`SELECT email, phone_e164 FROM contacts WHERE id = $1`, [contactId]);
-      const contact = c[0]?.phone_e164 ? { phone: c[0].phone_e164 } : { email: c[0]?.email ?? '' };
+      const ph = c[0]?.phone_e164 ?? given?.phone ?? null;
+      const contact = ph ? { phone: ph } : { email: c[0]?.email ?? given?.email ?? '' };
       if (input.nameAlt?.trim()) await db.query(`UPDATE contacts SET name_alt = $2 WHERE id = $1`, [contactId, input.nameAlt.trim().slice(0, 100)]);
       const r = await submitAnswers(db, contactId, out.task, [
         { code: 'Q01', value: { text: name.slice(0, 100) } },
@@ -243,6 +254,7 @@ export async function register(slug: string, contactId: string, input: RegisterI
     }
     const { rows: t } = await db.query<Task>(`SELECT * FROM profile_tasks WHERE id = $1`, [out.task.id]);
     return {
+      eventId: ev.id,
       status: out.registration.status,
       alreadyRegistered: out.alreadyRegistered,
       orderNo: out.orderNo,
@@ -251,6 +263,16 @@ export async function register(slug: string, contactId: string, input: RegisterI
       pointsAwarded
     };
   });
+  // 报名成功：发确认邮件（含“确认邮箱”按钮）；失败不影响报名
+  if (!out.alreadyRegistered && opts.base) await sendConfirmEmailSafe(contactId, opts.base, out.eventId);
+  const info = await getContactInfo(getPool(), contactId);
+  const { eventId: _e, ...rest } = out;
+  void _e;
+  return {
+    ...rest,
+    /** 报名成功页：“活动通知将发送到：手机（打码）、邮箱（打码）” */
+    notify: { phone: info.phone?.masked ?? null, email: info.email?.masked ?? null, phoneStatus: info.phone?.status ?? null, emailStatus: info.email?.status ?? null }
+  };
 }
 
 /** 选填题：下一道 + 提示；同时返回本任务已得积分与完成度。 */
@@ -360,6 +382,7 @@ export async function myOverview(contactId: string) {
   const role = findRoleSub(c[0].role_sub);
   return {
     contact: { ...c[0], role_label: role?.label ?? null },
+    contactInfo: await getContactInfo(pool, contactId),
     member,
     membershipPending,
     points: { balance, ledger: points },

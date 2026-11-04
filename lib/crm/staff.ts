@@ -8,7 +8,8 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import type { Staff } from './auth';
-import { CrmError, checkIn, findOrCreateContact, normalizeEmail, normalizePhone, startRegistration, submitAnswers, type EventRow } from './events';
+import { STATUS_TEXT, setMethod, type MethodStatus } from './contactInfo';
+import { CrmError, checkIn, normalizeEmail, normalizePhone, startRegistration, submitAnswers, type EventRow } from './events';
 import { cancelOrder, getSetting, markOrderPaid, newOrderNo, setSetting, PURPOSE_LABEL, STATUS_LABEL } from './orders';
 import { loadProfile, type Db } from './profile';
 import { QUESTION_BY_CODE, TOPIC_LABELS, findRoleSub } from './questionBank';
@@ -233,14 +234,7 @@ export async function onsiteRegister(
   if (!role) throw new CrmError('bad_request', '请选择主要行业');
   return withTransaction(async (db) => {
     const ev = await eventById(db, eventId);
-    const c = await findOrCreateContact(db, { phone, email }, name);
-    if (c.created) {
-      // 工作人员录入，联系方式未经本人验证
-      await db.query(
-        `UPDATE contacts SET phone_verified_at = NULL, email_verified_at = NULL, acquisition_source = COALESCE(acquisition_source, 'onsite_staff') WHERE id = $1`,
-        [c.id]
-      );
-    }
+    const c = await staffFindOrCreate(db, { phone, email }, name);
     const out = await startRegistration(db, ev, c.id, { source: 'staff' });
     const { answered } = await loadProfile(db, c.id);
     if (!answered.has('Q03')) {
@@ -258,6 +252,34 @@ export async function onsiteRegister(
     await audit(db, s, 'onsite_register', 'contact', c.id, { after: { event: ev.slug, result: r.kind, created: c.created } });
     return { contactId: c.id, created: c.created, result: r };
   });
+}
+
+/**
+ * 工作人员代录：只按“已验证”的手机号 / 邮箱认人（未验证的值不用来合并档案）。
+ * 找不到就新建；代录的联系方式记为未验证，被别的档案占用的值不写进身份，只记在联系方式里。
+ */
+async function staffFindOrCreate(db: Db, v: { phone: string | null; email: string | null }, name: string): Promise<{ id: string; created: boolean }> {
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT id FROM contacts
+      WHERE ($1::text IS NOT NULL AND phone_e164 = $1 AND phone_verified_at IS NOT NULL)
+         OR ($2::text IS NOT NULL AND email = $2 AND email_verified_at IS NOT NULL)
+      ORDER BY created_at LIMIT 1`,
+    [v.phone, v.email]
+  );
+  if (rows[0]) return { id: rows[0].id, created: false };
+  const free = async (col: 'phone_e164' | 'email', val: string | null) => {
+    if (!val) return null;
+    const { rows: t } = await db.query(`SELECT 1 FROM contacts WHERE ${col} = $1`, [val]);
+    return t[0] ? null : val;
+  };
+  const { rows: ins } = await db.query<{ id: string }>(
+    `INSERT INTO contacts (name, phone_e164, email, acquisition_source) VALUES ($1, $2, $3, 'onsite_staff') RETURNING id`,
+    [name, await free('phone_e164', v.phone), await free('email', v.email)]
+  );
+  const id = ins[0].id;
+  if (v.phone) await setMethod(db, id, 'phone', v.phone, 'staff');
+  if (v.email) await setMethod(db, id, 'email', v.email, 'staff');
+  return { id, created: true };
 }
 
 // ── 核款工作台 ────────────────────────────────────────────────────────────
@@ -309,6 +331,8 @@ export type ContactFilter = {
   topic?: string | null;
   tag?: string | null;
   member?: 'member' | 'registered' | null;
+  /** 邮箱状态：confirmed 已确认 / unconfirmed 未确认 / invalid 无效 / none 没填 */
+  emailStatus?: 'confirmed' | 'unconfirmed' | 'invalid' | 'none' | null;
 };
 
 export async function searchContacts(f: ContactFilter, limit = 200) {
@@ -326,19 +350,29 @@ export async function searchContacts(f: ContactFilter, limit = 200) {
             m.selected_tier_slug AS tier, m.membership_end_date::text AS member_until,
             (SELECT coalesce(sum(points),0)::int FROM points_ledger p WHERE p.contact_id = c.id) AS points,
             (SELECT array_agg(DISTINCT t.tag) FROM contact_tags t WHERE t.contact_id = c.id) AS tags,
-            (SELECT count(*)::int FROM registrations r WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in') AS attended
+            (SELECT count(*)::int FROM registrations r WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in') AS attended,
+            me.value AS cur_email, me.status AS email_status, mp.value AS cur_phone, mp.status AS phone_status
        FROM contacts c LEFT JOIN m ON m.contact_id = c.id
+       LEFT JOIN contact_methods me ON me.contact_id = c.id AND me.kind = 'email' AND me.is_current
+       LEFT JOIN contact_methods mp ON mp.contact_id = c.id AND mp.kind = 'phone' AND mp.is_current
       WHERE ($1 = '' OR c.name ILIKE '%' || $1 || '%' OR c.name_alt ILIKE '%' || $1 || '%' OR c.email ILIKE '%' || $1 || '%'
-             OR ($2::text IS NOT NULL AND c.phone_e164 = $2) OR c.member_no::text = $1)
+             OR me.value ILIKE '%' || $1 || '%'
+             OR ($2::text IS NOT NULL AND (c.phone_e164 = $2 OR mp.value = $2)) OR c.member_no::text = $1)
+        AND ($9::text IS NULL OR coalesce(me.status, 'none') = $9)
         AND ($3::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag = '区域:' || $3))
         AND ($4::text IS NULL OR c.role_category = $4)
         AND ($5::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag = '主题:' || $5))
         AND ($6::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag ILIKE '%' || $6 || '%'))
         AND ($7::text IS NULL OR ($7 = 'member' AND m.contact_id IS NOT NULL) OR ($7 = 'registered' AND m.contact_id IS NULL))
       ORDER BY c.created_at DESC LIMIT $8`,
-    [q, phone, f.region || null, f.roleCategory || null, f.topic || null, f.tag || null, f.member || null, limit]
+    [q, phone, f.region || null, f.roleCategory || null, f.topic || null, f.tag || null, f.member || null, limit, f.emailStatus || null]
   );
-  return rows.map((r) => ({ ...r, role_label: findRoleSub(r.role_sub)?.label ?? null }));
+  return rows.map((r) => ({
+    ...r,
+    role_label: findRoleSub(r.role_sub)?.label ?? null,
+    email_status_text: r.email_status ? STATUS_TEXT.email[r.email_status as MethodStatus] : '无',
+    phone_status_text: r.phone_status ? STATUS_TEXT.phone[r.phone_status as MethodStatus] : '无'
+  }));
 }
 
 const csvCell = (v: unknown) => {
@@ -348,9 +382,9 @@ const csvCell = (v: unknown) => {
 
 export async function exportContactsCsv(s: Staff, f: ContactFilter): Promise<string> {
   const rows = await searchContacts(f, 5000);
-  const head = ['会员编号', '姓名', '另一姓名', '邮箱', '手机', '行业', '会员等级', '会员到期', '积分', '到场次数', '标签', '建档时间'];
+  const head = ['会员编号', '姓名', '另一姓名', '邮箱', '邮箱状态', '手机', '手机状态', '行业', '会员等级', '会员到期', '积分', '到场次数', '标签', '建档时间'];
   const lines = rows.map((r) =>
-    [r.member_no, r.name, r.name_alt, r.email, r.phone_e164, r.role_label, r.tier ?? '注册用户', r.member_until, r.points, r.attended, r.tags, r.created_at]
+    [r.member_no, r.name, r.name_alt, r.cur_email ?? r.email, r.email_status_text, r.cur_phone ?? r.phone_e164, r.phone_status_text, r.role_label, r.tier ?? '注册用户', r.member_until, r.points, r.attended, r.tags, r.created_at]
       .map(csvCell)
       .join(',')
   );
@@ -420,9 +454,15 @@ export async function contactDetail(id: string) {
      ) t WHERE at IS NOT NULL ORDER BY at DESC LIMIT 500`,
     [id]
   );
+  const { rows: methods } = await pool.query(
+    `SELECT kind, value, status, is_current, source, confirmed_at, invalid_at, invalid_reason, created_at, replaced_at
+       FROM contact_methods WHERE contact_id = $1 ORDER BY kind, is_current DESC, created_at DESC`,
+    [id]
+  );
   const balance = points.reduce((n, p) => n + Number(p.points), 0);
   return {
     contact: c[0],
+    contactMethods: methods.map((m) => ({ ...m, status_text: STATUS_TEXT[m.kind as 'email' | 'phone'][m.status as MethodStatus] })),
     roleLabel: findRoleSub(c[0].role_sub)?.label ?? null,
     tags,
     answers: answers.map((a) => ({ ...a, prompt: QUESTION_BY_CODE[a.item_code]?.prompt ?? a.item_code })),

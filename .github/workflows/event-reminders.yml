@@ -1,0 +1,22 @@
+# 活动提醒（微信订阅消息）：每 15 分钟调用一次网站的定时接口。
+# Vercel 免费版定时任务一天只能跑一次，所以“开课前 2 小时”用 GitHub Actions 触发。
+# 密钥 REMINDER_CRON_SECRET 存在仓库 Secrets 里，不写进代码。
+name: event-reminders
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Trigger reminders
+        env:
+          SECRET: ${{ secrets.REMINDER_CRON_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then echo "REMINDER_CRON_SECRET not set"; exit 0; fi
+          code=$(curl -s -o /tmp/out.json -w '%{http_code}' -X POST -H "Authorization: Bearer $SECRET" https://sinoamericanrec.org/api/cron/event-reminders)
+          cat /tmp/out.json; echo
+          test "$code" = "200"

@@ -5,13 +5,14 @@ import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
 import { api } from '@/components/crm/client';
 
-type C = { id: string; member_no: number; name: string; email: string | null; phone_e164: string | null; role_label: string | null; tier: string | null; member_until: string | null; points: number; attended: number };
+type C = { id: string; member_no: number; name: string; email: string | null; phone_e164: string | null; cur_email: string | null; cur_phone: string | null; email_status: string | null; email_status_text: string; phone_status: string | null; phone_status_text: string; role_label: string | null; tier: string | null; member_until: string | null; points: number; attended: number };
+const STATUS_COLOR: Record<string, string> = { confirmed: '#9fd6a8', unconfirmed: 'var(--ivory-mute)', invalid: '#f3a1a1' };
 type Meta = { roleCategories: { key: string; label: string }[]; topics: Record<string, string> };
 const REGIONS = ['洛杉矶市区', '圣盖博谷（阿罕布拉、圣盖博、阿卡迪亚等）', '东区（核桃、钻石吧、罗兰岗等）', '橙县', '内陆帝国', '南湾', '北加州', '德州', '其他州'];
 const TOPIC_TAGS = ['ADU 加建', '地块分割与小型开发', '新建开发项目', '买房出租', '翻新转卖', '商业地产', '贷款融资', '税务与资产配置', '保险与传承', '投资移民', '中国企业出海', 'AI 与房地产科技', '物业管理', '政策法规'];
 
 export default function StaffContacts() {
-  const [f, setF] = useState({ q: '', region: '', roleCategory: '', topic: '', tag: '', member: '' });
+  const [f, setF] = useState({ q: '', region: '', roleCategory: '', topic: '', tag: '', member: '', emailStatus: '' });
   const [rows, setRows] = useState<C[] | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [err, setErr] = useState('');
@@ -45,6 +46,7 @@ export default function StaffContacts() {
           </div>
           <div className={styles.grid2} style={{ marginBottom: '0.75rem' }}>
             {sel('member', '身份', [['member', '正式会员'], ['registered', '注册用户']])}
+            {sel('emailStatus', '邮箱状态', [['confirmed', '已确认'], ['unconfirmed', '未确认'], ['invalid', '无效'], ['none', '没填']])}
             {sel('region', '关注区域', REGIONS.map((r) => [r, r]))}
             {sel('roleCategory', '行业大类', (meta?.roleCategories ?? []).map((c) => [c.key, c.label]))}
             {sel('topic', '关注主题', TOPIC_TAGS.map((t) => [t, t]))}
@@ -60,12 +62,13 @@ export default function StaffContacts() {
           <p className={styles.small}>{rows ? `共 ${rows.length} 人（最多显示 200）` : '加载中…'}</p>
           <div style={{ overflowX: 'auto' }}>
             <table className={styles.table}>
-              <thead><tr><th>姓名</th><th>联系方式</th><th>行业</th><th>身份</th><th>积分</th><th>到场</th></tr></thead>
+              <thead><tr><th>姓名</th><th>邮箱</th><th>手机</th><th>行业</th><th>身份</th><th>积分</th><th>到场</th></tr></thead>
               <tbody>
                 {rows?.map((c) => (
                   <tr key={c.id}>
                     <td><Link href={`/zh/staff/contacts/${c.id}`} style={{ color: 'var(--gold)' }}>{c.name}</Link> <span className={styles.small}>#{c.member_no}</span></td>
-                    <td className={styles.small}>{c.phone_e164 ?? c.email}</td>
+                    <td className={styles.small}>{c.cur_email ?? c.email ?? '—'}<br /><span style={{ color: STATUS_COLOR[c.email_status ?? ''] ?? 'var(--ivory-mute)' }}>{c.email_status_text}</span></td>
+                    <td className={styles.small}>{c.cur_phone ?? c.phone_e164 ?? '—'}<br /><span style={{ color: STATUS_COLOR[c.phone_status ?? ''] ?? 'var(--ivory-mute)' }}>{c.phone_status_text}</span></td>
                     <td className={styles.small}>{c.role_label ?? '—'}</td>
                     <td className={styles.small}>{c.tier ? `${c.tier}（至 ${c.member_until}）` : '注册用户'}</td>
                     <td>{c.points}</td>

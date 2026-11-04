@@ -63,24 +63,31 @@ export function ContactCodeFields({
 
   return (
     <>
+      <div className={s.btnRow} role="tablist" aria-label="验证方式" style={{ marginBottom: '0.75rem' }}>
+        {(['email', 'sms'] as const).map((ch) => (
+          <button
+            key={ch}
+            type="button"
+            role="tab"
+            aria-selected={c.channel === ch}
+            className={`${s.btn} ${c.channel === ch ? '' : s.btnQuiet}`}
+            style={{ flex: 1 }}
+            onClick={() => { c.setChannel(ch); setMsg(null); }}
+          >
+            {ch === 'email' ? '邮箱验证' : '手机号验证'}
+          </button>
+        ))}
+      </div>
       <div className={s.field}>
         <label className={s.label}>
           {c.channel === 'email' ? '邮箱' : '手机号'}
           <span className={s.required}>*</span>
-          <button
-            type="button"
-            className={s.back}
-            style={{ marginLeft: '0.8rem', fontSize: '0.9rem', minHeight: 0, color: 'var(--gold)' }}
-            onClick={() => c.setChannel(c.channel === 'email' ? 'sms' : 'email')}
-          >
-            {c.channel === 'email' ? '改用手机号' : '改用邮箱'}
-          </button>
         </label>
         {c.channel === 'email' ? (
           <input className={s.input} type="email" inputMode="email" autoComplete="email" placeholder="you@example.com" value={c.email} onChange={(e) => c.setEmail(e.target.value)} />
         ) : (
           <>
-            {!smsAvailable && <p className={s.small}>短信暂不可用，请用邮箱。</p>}
+            {!smsAvailable && <p className={s.small}>短信暂时发不出，请改用邮箱验证。</p>}
             <div className={s.inputRow}>
               <select className={s.select} style={{ flex: '0 0 9.5rem' }} value={c.cc} onChange={(e) => c.setCc(e.target.value)} aria-label="国家码">
                 {COUNTRIES.map((x) => (
@@ -113,6 +120,9 @@ export function ContactCodeFields({
           </button>
         </div>
         {msg && <p className={msg.ok ? s.small : s.error} role={msg.ok ? undefined : 'alert'}>{msg.text}</p>}
+        {msg && !msg.ok && c.channel === 'sms' && (
+          <button type="button" className={`${s.btn} ${s.btnGhost}`} onClick={() => { c.setChannel('email'); setMsg(null); }}>改用邮箱验证</button>
+        )}
       </div>
     </>
   );

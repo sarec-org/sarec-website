@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { api, fmtDateTime, money, useDraft } from './client';
 import { ContactCodeFields, useContactInput, useMeta, verifyCode } from './LoginBox';
+import { EmailInput, PhoneInput, joinPhone, splitPhone, type ContactInfo } from './ContactInfo';
 import { QuestionInput, RolePicker, isAnswered, toValue, type AnswerDraft, type QuestionDTO } from './Questions';
 import s from './crm.module.css';
 
@@ -22,6 +23,7 @@ type Preview = {
   required: QuestionDTO[];
   name: string | null;
   identity: { email: string | null; phone: string | null };
+  contactInfo: ContactInfo | null;
 };
 
 export function EventEssentials({ e }: { e: Preview['event'] }) {
@@ -41,7 +43,7 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
   const meta = useMeta();
   const [p, setP] = useState<Preview | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
-  const [form, setForm, clearForm] = useDraft(`reg:${slug}`, { name: '', roleSub: '', roleOther: '', answers: {} as Record<string, AnswerDraft> });
+  const [form, setForm, clearForm] = useDraft(`reg:${slug}`, { name: '', roleSub: '', roleOther: '', cc: '+1', phone: '', email: '', answers: {} as Record<string, AnswerDraft> });
   const c = useContactInput();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
@@ -53,6 +55,15 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
     if (!r.ok) return setLoadErr(r.message);
     setP(r.data);
     if (r.data.name) setForm((f) => (f.name ? f : { ...f, name: r.data.name! }));
+    // 预填联系方式：当前记录 → 登录身份
+    const ci = r.data.contactInfo;
+    const ph = ci?.phone?.value ?? r.data.identity.phone;
+    const em = ci?.email?.value ?? r.data.identity.email;
+    setForm((f) => ({
+      ...f,
+      ...(f.phone || !ph ? {} : { cc: splitPhone(ph).cc || '+1', phone: splitPhone(ph).num }),
+      ...(f.email || !em ? {} : { email: em })
+    }));
   }, [slug, setForm]);
 
   useEffect(() => {
@@ -70,6 +81,11 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
     setErr(null);
     setBusy(true);
     try {
+      // 手机号、邮箱必填（只检查格式，不另发验证码；登录用的那一项已验证）
+      const phone = !p.loggedIn && c.channel === 'sms' ? c.target : joinPhone(form.cc, form.phone);
+      const email = !p.loggedIn && c.channel === 'email' ? c.email.trim() : form.email.trim();
+      if (!phone) return setErr('请填写手机号');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErr('请填写正确的邮箱');
       if (!p.loggedIn) {
         if (!form.name.trim()) return setErr('请填写怎么称呼您');
         if (!form.roleSub) return setErr('请选择您的主要行业');
@@ -78,8 +94,8 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
         if (!v.ok) return setErr(v.message);
       }
       const answers = p.required.map((q) => ({ code: q.code, value: toValue(q, form.answers[q.code] ?? {}) }));
-      const r = await api<{ status: string; orderNo: string | null; taskId: string; message: string }>(`/api/v1/events/${encodeURIComponent(slug)}/register`, {
-        body: { name: form.name, roleSub: form.roleSub, roleOther: form.roleOther, answers, ref: refCode, channel }
+      const r = await api<{ status: string; orderNo: string | null; taskId: string; message: string; notify: { phone: string | null; email: string | null } }>(`/api/v1/events/${encodeURIComponent(slug)}/register`, {
+        body: { name: form.name, roleSub: form.roleSub, roleOther: form.roleOther, answers, ref: refCode, channel, phone, email }
       });
       if (!r.ok) {
         if (r.code === 'answers_required') {
@@ -97,7 +113,15 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
 
   const needFirst = !p.loggedIn || p.firstTime;
   const reqLeft = p.required.filter((q) => !isAnswered(q, form.answers[q.code])).length;
-  const ready = needFirst ? !!form.name.trim() && !!form.roleSub && (p.loggedIn || code.length === 6) : reqLeft === 0;
+  const contactOk = (p.loggedIn || c.channel !== 'sms' ? !!form.phone.trim() : true) && (p.loggedIn || c.channel !== 'email' ? !!form.email.trim() : true);
+  const ready = (needFirst ? !!form.name.trim() && !!form.roleSub && (p.loggedIn || code.length === 6) : reqLeft === 0) && contactOk;
+  const contactFields = (
+    <>
+      {(p.loggedIn || c.channel !== 'sms') && <PhoneInput cc={form.cc} num={form.phone} setCc={(v) => setForm({ ...form, cc: v })} setNum={(v) => setForm({ ...form, phone: v })} />}
+      {(p.loggedIn || c.channel !== 'email') && <EmailInput value={form.email} setValue={(v) => setForm({ ...form, email: v })} />}
+      <p className={s.small}>活动通知会发到这里，报名后请留意确认邮件。</p>
+    </>
+  );
 
   return (
     <div className={s.page}>
@@ -117,7 +141,7 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
       ) : !started && !(p.loggedIn && !p.firstTime && p.required.length) ? (
         <div className={s.bottomBar}>
           <div className={s.bottomInner}>
-            {p.loggedIn && !p.firstTime && p.required.length === 0 ? (
+            {p.loggedIn && !p.firstTime && p.required.length === 0 && !!form.phone.trim() && !!form.email.trim() ? (
               <button className={s.btn} disabled={busy} onClick={submit}>{busy ? '处理中…' : '一键报名'}</button>
             ) : (
               <button className={s.btn} onClick={() => setStarted(true)}>报名</button>
@@ -134,10 +158,11 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
                 <input className={s.input} autoComplete="name" placeholder="中文或英文名都可以" value={form.name} onChange={(x) => setForm({ ...form, name: x.target.value })} />
               </div>
               {p.loggedIn ? (
-                <p className={s.small}>联系方式：{p.identity.email ?? p.identity.phone}（已验证）</p>
+                <p className={s.small}>登录身份：{p.identity.email ?? p.identity.phone}（已验证）</p>
               ) : (
                 <ContactCodeFields c={c} code={code} setCode={setCode} smsAvailable={!!meta?.smsAvailable} />
               )}
+              {contactFields}
               <div className={s.field}>
                 <label className={s.label}>您目前主要从事哪个行业？<span className={s.required}>*</span></label>
                 <RolePicker meta={meta} value={form.roleSub} onChange={(k) => setForm({ ...form, roleSub: k })} other={form.roleOther} setOther={(v) => setForm({ ...form, roleOther: v })} />
@@ -146,6 +171,7 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
           ) : (
             <>
               <p className={s.notice}>{reqLeft > 0 ? `还需回答 ${reqLeft} 题即可完成报名` : '都答好了，点下方完成报名'}</p>
+              {contactFields}
               {p.required.map((q) => (
                 <div key={q.code} className={s.card}>
                   <p className={s.cardTitle}>{q.prompt}</p>

@@ -10,6 +10,7 @@ import { getPool, withTransaction } from '@/lib/db/client';
 import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
 import { CrmError, findOrCreateContact, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
+import { SMS_FALLBACK, noteVerified, phoneSendLimits, twilioVerify, twilioVerifyConfigured } from './contactInfo';
 
 export const SESSION_COOKIE = 'sarec_session';
 export const SESSION_DAYS = 90;
@@ -21,9 +22,12 @@ export const sha256 = (s: string) => createHash('sha256').update(s, 'utf8').dige
 
 export type Channel = 'email' | 'sms';
 
+/** 短信验证码（Twilio Verify）是否可用。手机号选项在页面上始终保留；不可用时提示改用邮箱。 */
 export function smsConfigured(): boolean {
-  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM);
+  return twilioVerifyConfigured();
 }
+/** login_codes 里短信验证码的占位：验证码由 Twilio Verify 生成和校验，库里不存 */
+const VERIFY_MARK = 'twilio-verify';
 
 /** 测试环境（本地 / 验收脚本）可以拿到验证码；正式环境永远不返回。 */
 function devEcho(): boolean {
@@ -51,9 +55,8 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
   if (!target) {
     throw new CrmError('bad_target', channel === 'email' ? '邮箱格式不对，请检查后再试' : '手机号格式不对，请加国家码，例如 +1 626 555 1234');
   }
-  if (channel === 'sms' && !smsConfigured()) {
-    throw new CrmError('sms_unavailable', '短信暂不可用，请用邮箱接收验证码');
-  }
+  const viaVerify = channel === 'sms' && smsConfigured();
+  if (channel === 'sms' && !viaVerify && !devEcho()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
   const pool = getPool();
   const { rows: recent } = await pool.query(
     `SELECT 1 FROM login_codes WHERE target = $1 AND created_at > now() - make_interval(secs => $2) LIMIT 1`,
@@ -64,6 +67,20 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
   // 小程序审核账号：固定验证码（环境变量配置），不发邮件；该账号不能成为工作人员
   const review = reviewLogin(channel, target);
   const code = review ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
+
+  if (viaVerify) {
+    // 短信：Twilio Verify 发码；同一号码 60 秒一次、一天 10 次；发不出 → 提示改用邮箱
+    await phoneSendLimits(pool, target, null);
+    const r = await twilioVerify('Verifications', { To: target, Channel: 'sms', Locale: 'zh' });
+    await pool.query(`INSERT INTO phone_verify_sends (phone, ok, error) VALUES ($1, $2, $3)`, [target, r.ok, r.ok ? null : String(r.code ?? 'error')]);
+    if (!r.ok) throw new CrmError('sms_failed', SMS_FALLBACK);
+    await pool.query(
+      `INSERT INTO login_codes (channel, target, code_hash, expires_at) VALUES ('sms', $1, $2, now() + make_interval(mins => $3))`,
+      [target, VERIFY_MARK, CODE_TTL_MIN]
+    );
+    return { target };
+  }
+
   await pool.query(
     `INSERT INTO login_codes (channel, target, code_hash, expires_at) VALUES ($1, $2, $3, now() + make_interval(mins => $4))`,
     [channel, target, sha256(`${target}:${code}`), CODE_TTL_MIN]
@@ -87,19 +104,8 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
     } else if (!devEcho()) {
       throw new CrmError('email_unavailable', '邮件服务暂不可用，请稍后再试或联系工作人员');
     }
-  } else {
-    const sid = process.env.TWILIO_ACCOUNT_SID!;
-    const body = new URLSearchParams({ To: target, From: process.env.TWILIO_FROM!, Body: `SAREC 验证码 ${code}，10 分钟内有效。` });
-    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body
-    });
-    if (!res.ok) throw new CrmError('sms_failed', '短信发送失败，请改用邮箱接收验证码');
   }
+  // 短信（仅本地测试、未配置 Twilio 时）：验证码随响应返回，不真正发送
   return devEcho() ? { target, devCode: code } : { target };
 }
 
@@ -124,7 +130,16 @@ export async function verifyLoginCode(
     if (!row) throw new CrmError('no_code', '请先获取验证码');
     if (row.expires_at.getTime() < Date.now()) throw new CrmError('code_expired', '验证码已过期，请重新获取');
     if (row.attempts >= MAX_ATTEMPTS) throw new CrmError('too_many_attempts', '输错次数太多，请重新获取验证码');
-    if (row.code_hash !== sha256(`${target}:${clean}`)) {
+    if (row.code_hash === VERIFY_MARK) {
+      const r = await twilioVerify('VerificationCheck', { To: target, Code: clean });
+      if (!r.ok && r.code === 20404) throw new CrmError('code_expired', '验证码已过期，请重新获取');
+      if (!r.ok) throw new CrmError('sms_failed', SMS_FALLBACK);
+      if (r.status !== 'approved') {
+        await db.query(`UPDATE login_codes SET attempts = attempts + 1 WHERE id = $1`, [row.id]);
+        const left = MAX_ATTEMPTS - row.attempts - 1;
+        throw new CrmError('code_wrong', left > 0 ? `验证码不对，还可以再试 ${left} 次` : '输错次数太多，请重新获取验证码');
+      }
+    } else if (row.code_hash !== sha256(`${target}:${clean}`)) {
       await db.query(`UPDATE login_codes SET attempts = attempts + 1 WHERE id = $1`, [row.id]);
       const left = MAX_ATTEMPTS - row.attempts - 1;
       throw new CrmError('code_wrong', left > 0 ? `验证码不对，还可以再试 ${left} 次` : '输错次数太多，请重新获取验证码');
@@ -149,6 +164,8 @@ export async function verifyLoginCode(
         await db.query(`UPDATE contacts SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1`, [contactId]);
       }
     }
+    // 联系方式记录同步为“已验证”（只有已验证的值才用于登录与合并）
+    await noteVerified(db, contactId, channel === 'email' ? 'email' : 'phone', target);
     const token = await createSession(db, contactId, opts.sessionChannel ?? 'web');
     return { token, contactId, created };
   });
@@ -261,6 +278,12 @@ export async function createQrLogin(): Promise<{ code: string; poll: string; exp
 }
 
 export async function approveQrLogin(code: string, contactId: string): Promise<boolean> {
+  // 只有已验证的邮箱 / 手机号才能登录网站：只有微信身份的档案不能扫码登录网站
+  const { rows: v } = await getPool().query(
+    `SELECT 1 FROM contacts WHERE id = $1 AND (email_verified_at IS NOT NULL OR phone_verified_at IS NOT NULL)`,
+    [contactId]
+  );
+  if (!v[0]) throw new CrmError('need_verified', '登录网站需要先验证邮箱：请在小程序“我的 → 关联网站账号”验证一次');
   const { rowCount } = await getPool().query(
     `UPDATE qr_logins SET status = 'approved', contact_id = $2 WHERE code_hash = $1 AND status = 'pending' AND expires_at > now()`,
     [sha256(code), contactId]
