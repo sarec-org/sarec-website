@@ -35,11 +35,12 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     load();
   }
   // 下载物料：报名小程序码（微信接口，正式版）/ 海报版 / A4 签到码
-  async function fetchCode(): Promise<Blob | null> {
-    const res = await fetch(`/api/v1/staff/events/${params.id}/wxacode`, { credentials: 'same-origin', cache: 'no-store' }).catch(() => null);
+  async function fetchCode(kind: 'register' | 'checkin' = 'register', quiet = false): Promise<Blob | null> {
+    const q = kind === 'checkin' ? '?kind=checkin' : '';
+    const res = await fetch(`/api/v1/staff/events/${params.id}/wxacode${q}`, { credentials: 'same-origin', cache: 'no-store' }).catch(() => null);
     if (res && res.ok && (res.headers.get('content-type') || '').startsWith('image/')) return res.blob();
     const j = (await res?.json().catch(() => null)) as { error?: { message?: string } } | null;
-    setMsg({ ok: false, text: j?.error?.message || '生成小程序码失败，请稍后再试' });
+    if (!quiet) setMsg({ ok: false, text: j?.error?.message || '生成小程序码失败，请稍后再试' });
     return null;
   }
   async function make(kind: 'code' | 'poster' | 'a4') {
@@ -49,8 +50,19 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     setMsg(null);
     try {
       if (kind === 'a4') {
-        if (!link) return;
-        saveBlob(await checkinA4(ev, link), `签到码-A4-${ev.slug}.png`);
+        // 优先用签到小程序码（微信扫一扫直接进小程序，按微信身份认人）；取不到时退回签到链接二维码
+        const code = await fetchCode('checkin', true);
+        if (!code && !link) return;
+        const url = code ? URL.createObjectURL(code) : null;
+        try {
+          saveBlob(await checkinA4(ev, url ? { codeSrc: url } : { url: link! }), `签到码-A4-${ev.slug}.png`);
+        } finally {
+          if (url) URL.revokeObjectURL(url);
+        }
+        if (!code) {
+          setMsg({ ok: false, text: '签到小程序码暂时生成不了，已改用签到链接二维码（微信扫码会打开网页版签到）。稍后可再下载一次' });
+          return;
+        }
       } else {
         const code = await fetchCode();
         if (!code) return;
