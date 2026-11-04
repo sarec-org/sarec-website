@@ -11,7 +11,7 @@ import { ProfileFlow } from './ProfileFlow';
 import s from './crm.module.css';
 
 type Reg = { slug: string; title: string; status: string; arrival_status: string; order_no: string | null; order_status: string | null; fee_cents: number };
-type Me = { contact: { name: string; member_no: number }; registrations: Reg[] };
+type Me = { contact: { name: string; member_no: number }; registrations: Reg[]; contactInfo?: { phone: { masked: string } | null; email: { masked: string; status: string } | null } };
 type Ev = { event: Parameters<typeof EventEssentials>[0]['e'] };
 
 function mapsUrl(q: string): string {
@@ -73,6 +73,14 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
         )}
         <p className={s.small} style={{ marginTop: '0.5rem' }}>到场请扫现场屏幕右上角的二维码签到。</p>
       </div>
+
+      {!cancelled && me.contactInfo && (me.contactInfo.phone || me.contactInfo.email) && (
+        <p className={s.notice}>
+          活动通知将发送到：{[me.contactInfo.phone && `手机 ${me.contactInfo.phone.masked}`, me.contactInfo.email && `邮箱 ${me.contactInfo.email.masked}`].filter(Boolean).join('、')}
+          {me.contactInfo.email?.status === 'unconfirmed' ? '（请到邮箱点“确认邮箱”）' : ''}。
+          有变化？<Link href="/zh/me" style={{ color: 'var(--gold)' }}>点这里修改 ›</Link>
+        </p>
+      )}
 
       {!cancelled && (
         <div className={s.btnRow} style={{ marginBottom: '1rem' }}>

@@ -12,6 +12,7 @@ type Detail = {
   points: { balance: number; ledger: { id: string; category: string; points: number; reason: string | null; created_by: string; created_at: string; reverses_id: string | null }[] };
   applications: { id: string; selected_tier_slug: string; application_status: string; payment_status: string; membership_end_date: string | null; display_status: string }[];
   timeline: { at: string; kind: string; text: string }[];
+  contactMethods: { kind: 'email' | 'phone'; value: string; status: string; status_text: string; is_current: boolean; source: string; created_at: string; replaced_at: string | null; invalid_reason: string | null }[];
 };
 const SOURCE: Record<string, string> = { self_select: '本人点选', self_text: '本人原文', ai_confirmed: 'AI 整理经本人确认', staff: '工作人员记录', behavior: '系统行为', ai_guess: 'AI 推测' };
 const STATUS: Record<string, string> = { current: '当前', history: '历史', expired: '已失效', pending_confirm: '待本人确认' };
@@ -29,7 +30,7 @@ function show(v: unknown): string {
 
 export default function StaffContactDetail({ params }: { params: { id: string } }) {
   const [d, setD] = useState<Detail | null>(null);
-  const [tab, setTab] = useState<'timeline' | 'answers' | 'points'>('timeline');
+  const [tab, setTab] = useState<'timeline' | 'answers' | 'points' | 'methods'>('timeline');
   const [adj, setAdj] = useState({ points: '', reason: '' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const load = useCallback(async () => {
@@ -67,8 +68,19 @@ export default function StaffContactDetail({ params }: { params: { id: string } 
               <div className={styles.card}>
                 <div className={styles.row}><span className={styles.rowLabel}>会员编号</span><span className={styles.rowValue}>#{c.member_no}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>另一姓名</span><span className={styles.rowValue}>{c.name_alt ?? '—'}</span></div>
-                <div className={styles.row}><span className={styles.rowLabel}>手机</span><span className={styles.rowValue}>{c.phone_e164 ?? '—'}{c.phone_verified_at ? ' ✓' : ''}</span></div>
-                <div className={styles.row}><span className={styles.rowLabel}>邮箱</span><span className={styles.rowValue}>{c.email ?? '—'}{c.email_verified_at ? ' ✓' : ''}</span></div>
+                {(['phone', 'email'] as const).map((k) => {
+                  const m = d.contactMethods.find((x) => x.kind === k && x.is_current);
+                  return (
+                    <div key={k} className={styles.row}>
+                      <span className={styles.rowLabel}>{k === 'phone' ? '手机' : '邮箱'}</span>
+                      <span className={styles.rowValue}>
+                        {m ? m.value : '—'}
+                        {m && <span style={{ marginLeft: '0.4rem', color: m.status === 'confirmed' ? '#9fd6a8' : m.status === 'invalid' ? '#f3a1a1' : 'var(--ivory-mute)' }}>{m.status_text}</span>}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className={styles.row}><span className={styles.rowLabel}>登录身份</span><span className={styles.rowValue}>{[c.email_verified_at ? c.email : null, c.phone_verified_at ? c.phone_e164 : null].filter(Boolean).join('、') || '无（不能登录网站）'}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>微信</span><span className={styles.rowValue}>{c.wechat_openid ? '已绑定' : '—'}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>主要行业</span><span className={styles.rowValue}>{d.roleLabel ?? '—'}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>来源</span><span className={styles.rowValue}>{c.acquisition_source ?? '—'}</span></div>
@@ -90,10 +102,29 @@ export default function StaffContactDetail({ params }: { params: { id: string } 
             </div>
 
             <div className={styles.tabs}>
-              {([['timeline', '时间线'], ['answers', '资料答案与来源'], ['points', '积分明细']] as const).map(([k, l]) => (
+              {([['timeline', '时间线'], ['answers', '资料答案与来源'], ['points', '积分明细'], ['methods', '联系方式历史']] as const).map(([k, l]) => (
                 <button key={k} className={`${styles.tab} ${tab === k ? styles.tabOn : ''}`} onClick={() => setTab(k)}>{l}</button>
               ))}
             </div>
+
+            {tab === 'methods' && (
+              <table className={styles.table}>
+                <thead><tr><th>类型</th><th>号码 / 邮箱</th><th>状态</th><th>来源</th><th>填写时间</th><th>被替换</th></tr></thead>
+                <tbody>
+                  {d.contactMethods.map((m, i) => (
+                    <tr key={i} style={m.is_current ? undefined : { opacity: 0.6 }}>
+                      <td>{m.kind === 'phone' ? '手机' : '邮箱'}{m.is_current ? '（当前）' : ''}</td>
+                      <td className={styles.mono}>{m.value}</td>
+                      <td>{m.status_text}{m.invalid_reason ? `：${m.invalid_reason}` : ''}</td>
+                      <td className={styles.small}>{({ registration: '报名', profile: '本人修改', login: '验证码登录', staff: '工作人员', backfill: '原有' } as Record<string, string>)[m.source] ?? m.source}</td>
+                      <td className={styles.small}>{fmtDateTime(m.created_at)}</td>
+                      <td className={styles.small}>{m.replaced_at ? fmtDateTime(m.replaced_at) : '—'}</td>
+                    </tr>
+                  ))}
+                  {!d.contactMethods.length && <tr><td colSpan={6} className={styles.small}>暂无</td></tr>}
+                </tbody>
+              </table>
+            )}
 
             {tab === 'timeline' && (
               <ul className={styles.list}>

@@ -10,6 +10,7 @@ import { getPool, withTransaction } from '@/lib/db/client';
 import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
 import { CrmError, findOrCreateContact, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
+import { noteVerified } from './contactInfo';
 
 export const SESSION_COOKIE = 'sarec_session';
 export const SESSION_DAYS = 90;
@@ -149,6 +150,8 @@ export async function verifyLoginCode(
         await db.query(`UPDATE contacts SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1`, [contactId]);
       }
     }
+    // 联系方式记录同步为“已验证”（只有已验证的值才用于登录与合并）
+    await noteVerified(db, contactId, channel === 'email' ? 'email' : 'phone', target);
     const token = await createSession(db, contactId, opts.sessionChannel ?? 'web');
     return { token, contactId, created };
   });
