@@ -13,6 +13,7 @@
  */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
+import { wxAccessToken, wxConfigured } from './wechat';
 
 export type ReminderKind = 'day_before' | 'two_hours';
 export type SubKind = 'confirm' | ReminderKind;
@@ -133,19 +134,6 @@ export async function saveSubscriptions(contactId: string, slug: string, accepte
 }
 
 // ── 发送 ────────────────────────────────────────────────────────────────
-let cachedToken: { token: string; exp: number } | null = null;
-async function accessToken(): Promise<string> {
-  if (cachedToken && cachedToken.exp > Date.now() + 60_000) return cachedToken.token;
-  const res = await fetch('https://api.weixin.qq.com/cgi-bin/stable_token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ grant_type: 'client_credential', appid: process.env.WX_APPID, secret: process.env.WX_SECRET })
-  });
-  const d = (await res.json()) as { access_token?: string; expires_in?: number; errcode?: number };
-  if (!d.access_token) throw new Error(`wechat token error ${d.errcode ?? ''}`);
-  cachedToken = { token: d.access_token, exp: Date.now() + (d.expires_in ?? 7200) * 1000 };
-  return d.access_token;
-}
 
 const cut = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
 
@@ -158,9 +146,6 @@ function fmtTime(d: Date, tz: string): string {
   return `${p.year}年${p.month}月${p.day}日 ${p.hour === '24' ? '00' : p.hour}:${p.minute}`;
 }
 
-function wxConfigured(): boolean {
-  return !!(process.env.WX_APPID && process.env.WX_SECRET);
-}
 
 type EvInfo = { slug: string; title: string; starts_at: Date; timezone: string; location_name: string | null; address: string | null };
 
@@ -174,7 +159,7 @@ async function pushOne(tm: Tmpl, openid: string, ev: EvInfo, kind: SubKind): Pro
   };
   const data: Record<string, { value: string }> = {};
   for (const [k, key] of Object.entries(tm.fields)) if (key) data[key] = { value: values[k] };
-  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${await accessToken()}`, {
+  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${await wxAccessToken()}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/event/event?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
