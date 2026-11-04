@@ -95,6 +95,7 @@ export async function saveSubscriptions(contactId: string, slug: string, accepte
   }
 
   let confirmSent = false;
+  let confirmError: string | undefined;
   for (const k of kinds) {
     if (k === 'confirm') {
       // 确认通知每场只推一次
@@ -115,7 +116,8 @@ export async function saveSubscriptions(contactId: string, slug: string, accepte
         await pushOne(t.confirm, r.openid, r, 'confirm');
         confirmSent = true;
       } catch (e) {
-        await pool.query(`UPDATE event_reminder_subs SET status = 'failed', error = $2 WHERE id = $1`, [id, (e instanceof Error ? e.message : 'error').slice(0, 200)]);
+        confirmError = (e instanceof Error ? e.message : 'error').slice(0, 200);
+        await pool.query(`UPDATE event_reminder_subs SET status = 'failed', error = $2 WHERE id = $1`, [id, confirmError]);
       }
       continue;
     }
@@ -127,7 +129,7 @@ export async function saveSubscriptions(contactId: string, slug: string, accepte
       [r.event_id, contactId, k, r.openid]
     );
   }
-  return { saved: kinds, confirmSent };
+  return { saved: kinds, confirmSent, confirmError };
 }
 
 // ── 发送 ────────────────────────────────────────────────────────────────
@@ -222,6 +224,7 @@ export async function runEventReminders(now = new Date()): Promise<{ sent: numbe
       sent++;
     } catch (e) {
       failed++;
+      console.log(`[reminders] kind=${d.kind} template=${tm.id} error=${(e instanceof Error ? e.message : 'error').slice(0, 80)}`);
       await pool.query(`UPDATE event_reminder_subs SET status = 'failed', error = $2 WHERE id = $1`, [d.id, (e instanceof Error ? e.message : 'error').slice(0, 200)]);
     }
   }
