@@ -8,5 +8,10 @@
       "path": "/api/indexnow",
       "schedule": "0 17 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "feature/crm-phase1": false
+    }
+  }
 }

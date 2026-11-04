@@ -92,8 +92,8 @@ export function buildApplicantConfirmation(d: PaymentEmailData): {
     );
     rows.push(
       p(
-        'Your partnership is now entering manual review and arrangement.',
-        '您的合作伙伴身份现进入人工审核与安排阶段。'
+        'Your partnership is now in effect. No further approval is needed.',
+        '您的战略合作伙伴身份已生效，无需再等待审批。'
       )
     );
   } else if (d.applicationType === 'strategic_partner') {
@@ -105,8 +105,8 @@ export function buildApplicantConfirmation(d: PaymentEmailData): {
     );
     rows.push(
       p(
-        'SAREC will review your information and contact you to arrange partner visibility and benefits.',
-        'SAREC 团队将审核您的资料，并联系确认合作伙伴展示与权益安排。'
+        'Your partnership is in effect now. SAREC will contact you separately to arrange brand display; this does not affect your partnership.',
+        '您的合作伙伴身份已生效。品牌展示安排我们会另行与您联系，不影响合作伙伴身份。'
       )
     );
   } else {
@@ -118,8 +118,8 @@ export function buildApplicantConfirmation(d: PaymentEmailData): {
     );
     rows.push(
       p(
-        'SAREC will review your information and contact you to arrange visibility and benefits.',
-        'SAREC 团队将审核您的资料，并联系确认展示与权益安排。'
+        'You are now a full SAREC member. If you would like your organization shown on the SAREC website, we will contact you separately; this does not affect your membership.',
+        '您已是 SAREC 正式会员。如需在商会官网展示单位资料，我们会另行与您联系核对，不影响会员身份。'
       )
     );
   }
@@ -133,7 +133,7 @@ export function buildApplicantConfirmation(d: PaymentEmailData): {
     kv('Tier / 档位', tierLine),
     kv('Amount / 金额', `${amount} ${d.currency.toUpperCase()}`),
     kv('Status / 状态', isSemiAnnualFirst ? 'First installment paid (partially paid) / 第一期已付（部分付款）' : 'Paid / 已付款'),
-    kv('Review / 审核', 'Under review / 人工审核中')
+    kv('Membership / 会员身份', 'Active / 已生效')
   ];
   if (d.membershipStartDate && d.membershipEndDate) {
     details.push(kv('Term / 有效期', `${d.membershipStartDate} → ${d.membershipEndDate}`));

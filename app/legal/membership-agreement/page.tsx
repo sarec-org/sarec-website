@@ -6,11 +6,11 @@ import styles from '@/components/legal/legal.module.css';
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 会员入会协议｜Membership Agreement',
   description:
-    'SAREC 中美房地产商会会员入会协议（网页点击确认版，版本 2026-v1）。适用于通过 SAREC 网站申请会员并付款的个人、公司或机构。',
+    'SAREC 中美房地产商会会员入会协议（网页点击确认版，版本 2026-v2）。适用于通过 SAREC 网站申请会员并付款的个人、公司或机构。',
   path: '/legal/membership-agreement'
 });
 
-// 正式网页点击确认版会员入会协议（版本 2026-v1）。申请人在入会表单勾选同意并完成付款、经 SAREC 确认后生效。
+// 正式网页点击确认版会员入会协议（版本 2026-v2）。申请人在入会表单勾选同意并款项到账后生效（刷卡即时，Zelle 经核对到账）。
 export default function MembershipAgreementPage() {
   return (
     <article className={styles.doc}>
@@ -19,7 +19,7 @@ export default function MembershipAgreementPage() {
       <p className={styles.titleEn}>SAREC Membership Agreement</p>
 
       <div className={styles.notice}>
-        <p>版本 Version 2026-v1</p>
+        <p>版本 Version 2026-v2</p>
         <p>
           本协议为网页点击确认版协议。中英文如有不一致，以本中文页面展示为准，英文仅供参考。 / This is a
           click-to-accept agreement. In case of any inconsistency, the Chinese version shown on this page
@@ -45,14 +45,15 @@ export default function MembershipAgreementPage() {
         <h2 className={styles.h2}>2. 生效方式</h2>
         <p className={styles.h2En}>How the agreement takes effect</p>
         <p>
-          申请人在入会申请表中勾选同意本协议并完成付款后，且经 SAREC 确认后，本协议生效、会员身份成立。
-          SAREC 保留对申请进行审核并决定是否接受的权利。
+          申请人在入会申请表中勾选同意本协议并完成付款，款项到账后本协议生效、会员身份成立（银行卡在线支付即时到账；Zelle 转账经 SAREC 核对到账后生效），无需另行审批。
+          如核实款项未到账，相应订单取消。会员资料是否在官网公开展示，由 SAREC 另行审核，不影响会员身份。
         </p>
         <p>
-          This agreement takes effect and membership is established once the applicant checks the box to
-          accept this agreement in the enrollment form, completes payment, and SAREC confirms the
-          application. SAREC reserves the right to review each application and decide whether to accept
-          it.
+          This agreement takes effect and membership is established, without any separate approval, once the
+          applicant checks the box to accept this agreement in the enrollment form and the payment is received
+          (card payments are received immediately; Zelle transfers take effect once SAREC confirms receipt).
+          If a payment is found not to have been received, the order is cancelled. Whether member information
+          is displayed publicly on the SAREC website is reviewed separately and does not affect membership status.
         </p>
       </section>
 

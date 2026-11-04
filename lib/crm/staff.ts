@@ -1,0 +1,710 @@
+/**
+ * 工作人员后台服务（D.8）：活动管理、现场签到台、核款工作台、客户查询、积分调整、会议室与电子屏、配置、官网展示审核。
+ * ------------------------------------------------------------------
+ * - 所有签到都走 checkIn()（表 7-4 入场判断），核款走 markOrderPaid / cancelOrder（与 Stripe 同一套）。
+ * - 关键操作写 crm_audit_log：谁、何时、对什么、依据。
+ * - 权限在 API 层用 requireStaff 判断；本文件只做业务。
+ */
+import { randomBytes, randomUUID } from 'node:crypto';
+import { getPool, withTransaction } from '@/lib/db/client';
+import type { Staff } from './auth';
+import { CrmError, checkIn, findOrCreateContact, normalizeEmail, normalizePhone, startRegistration, submitAnswers, type EventRow } from './events';
+import { cancelOrder, getSetting, markOrderPaid, newOrderNo, setSetting, PURPOSE_LABEL, STATUS_LABEL } from './orders';
+import { loadProfile, type Db } from './profile';
+import { QUESTION_BY_CODE, TOPIC_LABELS, findRoleSub } from './questionBank';
+
+export const actor = (s: Staff) => `staff:${s.name}`;
+
+export async function audit(
+  db: Db,
+  s: Staff | string,
+  action: string,
+  targetType: string,
+  targetId: string,
+  opts: { before?: unknown; after?: unknown; reason?: string | null } = {}
+): Promise<void> {
+  await db.query(
+    `INSERT INTO crm_audit_log (actor, action, target_type, target_id, before_value, after_value, reason)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      typeof s === 'string' ? s : actor(s),
+      action,
+      targetType,
+      targetId,
+      opts.before === undefined ? null : JSON.stringify(opts.before),
+      opts.after === undefined ? null : JSON.stringify(opts.after),
+      opts.reason ?? null
+    ]
+  );
+}
+
+const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+
+// ── 活动 ────────────────────────────────────────────────────────────────
+export type EventInput = {
+  title?: string;
+  slug?: string;
+  summary?: string;
+  startsAt?: string;
+  endsAt?: string | null;
+  timezone?: string;
+  locationName?: string;
+  address?: string;
+  capacity?: number | null;
+  feeCents?: number;
+  topicTags?: string[];
+  registrationOpen?: boolean;
+  listed?: boolean;
+  eventStatus?: string;
+};
+
+function slugify(title: string, startsAt: Date): string {
+  const d = startsAt.toISOString().slice(0, 10);
+  const ascii = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return `${d}-${ascii || 'event'}-${randomBytes(2).toString('hex')}`;
+}
+
+function eventFields(b: EventInput, partial: boolean) {
+  const out: Record<string, unknown> = {};
+  if (!partial || b.title !== undefined) {
+    const t = str(b.title, 200);
+    if (!t) throw new CrmError('bad_request', '请填写活动标题');
+    out.title = t;
+  }
+  if (!partial || b.startsAt !== undefined) {
+    const s = new Date(String(b.startsAt));
+    if (Number.isNaN(s.getTime())) throw new CrmError('bad_request', '请填写开始时间');
+    out.starts_at = s;
+  }
+  if (b.endsAt !== undefined) {
+    const e = b.endsAt ? new Date(b.endsAt) : null;
+    if (e && Number.isNaN(e.getTime())) throw new CrmError('bad_request', '结束时间格式不对');
+    out.ends_at = e;
+  }
+  if (b.summary !== undefined) out.summary = str(b.summary, 2000) || null;
+  if (b.timezone !== undefined) out.timezone = str(b.timezone, 60) || 'America/Los_Angeles';
+  if (b.locationName !== undefined) out.location_name = str(b.locationName, 200) || null;
+  if (b.address !== undefined) out.address = str(b.address, 300) || null;
+  if (b.capacity !== undefined) out.capacity = b.capacity == null || b.capacity === ('' as unknown) ? null : Math.max(0, Math.floor(Number(b.capacity)));
+  if (b.feeCents !== undefined) out.fee_cents = Math.max(0, Math.round(Number(b.feeCents) || 0));
+  if (b.topicTags !== undefined) out.topic_tags = (b.topicTags ?? []).filter((t) => t in TOPIC_LABELS);
+  if (b.registrationOpen !== undefined) out.registration_open = !!b.registrationOpen;
+  if (b.listed !== undefined) out.is_listed = !!b.listed;
+  if (b.eventStatus !== undefined) {
+    if (!['scheduled', 'completed', 'postponed', 'cancelled'].includes(String(b.eventStatus))) throw new CrmError('bad_request', '活动状态不对');
+    out.event_status = b.eventStatus;
+  }
+  return out;
+}
+
+export async function listStaffEvents() {
+  const { rows } = await getPool().query(
+    `SELECT e.id, e.slug, e.title, e.starts_at, e.ends_at, e.location_name, e.capacity, e.fee_cents, e.topic_tags,
+            e.registration_open, e.is_listed, e.event_status,
+            count(r.*) FILTER (WHERE r.status = 'registered')::int AS registered,
+            count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted,
+            count(r.*) FILTER (WHERE r.arrival_status = 'checked_in')::int AS checked_in,
+            count(r.*) FILTER (WHERE r.arrival_status = 'arrived_pending_payment')::int AS arrived_pending
+       FROM events e LEFT JOIN registrations r ON r.event_id = e.id
+      GROUP BY e.id ORDER BY e.starts_at DESC LIMIT 200`
+  );
+  return rows;
+}
+
+export async function getStaffEvent(id: string) {
+  const { rows } = await getPool().query(`SELECT * FROM events WHERE id = $1`, [id]);
+  if (!rows[0]) throw new CrmError('not_found', '找不到这场活动');
+  const { rows: regs } = await getPool().query(
+    `SELECT r.status, r.arrival_status, r.source, r.checked_in_at, r.created_at, c.id AS contact_id, c.name, c.member_no::int,
+            c.email, c.phone_e164,
+            (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status
+       FROM registrations r JOIN contacts c ON c.id = r.contact_id WHERE r.event_id = $1 ORDER BY r.created_at`,
+    [id]
+  );
+  return { event: rows[0], registrations: regs };
+}
+
+export async function createEvent(s: Staff, b: EventInput) {
+  const f = eventFields(b, false);
+  const slug = str(b.slug, 80).toLowerCase().replace(/[^a-z0-9-]/g, '') || slugify(f.title as string, f.starts_at as Date);
+  return withTransaction(async (db) => {
+    const cols = ['slug', ...Object.keys(f)];
+    const vals = [slug, ...Object.values(f)];
+    const { rows } = await db.query<{ id: string; slug: string }>(
+      `INSERT INTO events (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id, slug`,
+      vals
+    ).catch((e: { code?: string }) => {
+      if (e.code === '23505') throw new CrmError('conflict', '这个链接名已被占用，请换一个');
+      throw e;
+    });
+    await audit(db, s, 'create_event', 'event', rows[0].id, { after: { ...f, slug } });
+    return rows[0];
+  });
+}
+
+export async function updateEvent(s: Staff, id: string, b: EventInput) {
+  const f = eventFields(b, true);
+  if (!Object.keys(f).length) throw new CrmError('bad_request', '没有要修改的内容');
+  return withTransaction(async (db) => {
+    const { rows: before } = await db.query(`SELECT * FROM events WHERE id = $1 FOR UPDATE`, [id]);
+    if (!before[0]) throw new CrmError('not_found', '找不到这场活动');
+    const keys = Object.keys(f);
+    await db.query(
+      `UPDATE events SET ${keys.map((k, i) => `${k} = $${i + 2}`).join(', ')}, updated_at = now() WHERE id = $1`,
+      [id, ...Object.values(f)]
+    );
+    await audit(db, s, 'update_event', 'event', id, {
+      before: Object.fromEntries(keys.map((k) => [k, before[0][k]])),
+      after: f
+    });
+    return { id };
+  });
+}
+
+export async function regenerateCheckinSecret(s: Staff, id: string) {
+  return withTransaction(async (db) => {
+    const secret = randomBytes(16).toString('hex');
+    const { rowCount } = await db.query(`UPDATE events SET checkin_secret = $2, updated_at = now() WHERE id = $1`, [id, secret]);
+    if (!rowCount) throw new CrmError('not_found', '找不到这场活动');
+    await audit(db, s, 'regenerate_checkin_code', 'event', id, { reason: '旧签到码作废' });
+    return { secret };
+  });
+}
+
+// ── 现场签到台 ────────────────────────────────────────────────────────────
+export async function searchPeople(q: string, eventId?: string | null) {
+  const t = q.trim();
+  if (t.length < 1) return [];
+  const phone = normalizePhone(t);
+  const email = normalizeEmail(t);
+  const digits = t.replace(/\D/g, '');
+  const { rows } = await getPool().query(
+    `SELECT c.id, c.member_no::int, c.name, c.name_alt, c.email, c.phone_e164, c.role_sub,
+            r.status AS reg_status, r.arrival_status, r.checked_in_at
+       FROM contacts c
+       LEFT JOIN registrations r ON r.contact_id = c.id AND r.event_id = $5
+      WHERE c.name ILIKE $1 OR c.name_alt ILIKE $1 OR ($2::text IS NOT NULL AND c.phone_e164 = $2)
+         OR ($3::text IS NOT NULL AND c.email = $3) OR c.email ILIKE $1
+         OR (length($4) >= 4 AND c.phone_e164 LIKE '%' || $4) OR c.member_no::text = $6
+      ORDER BY (r.status IS NOT NULL) DESC, c.name LIMIT 30`,
+    [`%${t}%`, phone, email, digits, eventId || null, t]
+  );
+  return rows.map((r) => ({ ...r, role_label: findRoleSub(r.role_sub)?.label ?? null }));
+}
+
+async function eventById(db: Db, id: string): Promise<EventRow> {
+  const { rows } = await db.query<EventRow>(`SELECT * FROM events WHERE id = $1`, [id]);
+  if (!rows[0]) throw new CrmError('not_found', '找不到这场活动');
+  return rows[0];
+}
+
+/** 工作人员代签到：同样套用入场判断（收费活动未核款不显示签到成功）。 */
+export async function staffCheckIn(s: Staff, eventId: string, contactId: string) {
+  return withTransaction(async (db) => {
+    const ev = await eventById(db, eventId);
+    const r = await checkIn(db, ev, contactId, 'staff');
+    await db.query(
+      `UPDATE registrations SET checkin_by = $3 WHERE event_id = $1 AND contact_id = $2 AND arrival_status = 'checked_in' AND checkin_by IS NULL`,
+      [eventId, contactId, actor(s)]
+    );
+    await audit(db, s, 'staff_checkin', 'contact', contactId, { after: { event: ev.slug, result: r.kind } });
+    return r;
+  });
+}
+
+/** 现场登记（不会扫码 / 没手机）：最少三项建档 → 报名 → 签到。 */
+export async function onsiteRegister(
+  s: Staff,
+  eventId: string,
+  b: { name?: string; phone?: string; email?: string; roleSub?: string }
+) {
+  const name = str(b.name, 100);
+  if (!name) throw new CrmError('bad_request', '请填写姓名');
+  const phone = b.phone ? normalizePhone(b.phone) : null;
+  const email = b.email ? normalizeEmail(b.email) : null;
+  if (b.phone && !phone) throw new CrmError('bad_request', '手机号格式不对，美国号码 10 位，其他国家请加 +国家码');
+  if (b.email && !email) throw new CrmError('bad_request', '邮箱格式不对');
+  if (!phone && !email) throw new CrmError('bad_request', '请填写手机号或邮箱');
+  const role = findRoleSub(b.roleSub || 'other');
+  if (!role) throw new CrmError('bad_request', '请选择主要行业');
+  return withTransaction(async (db) => {
+    const ev = await eventById(db, eventId);
+    const c = await findOrCreateContact(db, { phone, email }, name);
+    if (c.created) {
+      // 工作人员录入，联系方式未经本人验证
+      await db.query(
+        `UPDATE contacts SET phone_verified_at = NULL, email_verified_at = NULL, acquisition_source = COALESCE(acquisition_source, 'onsite_staff') WHERE id = $1`,
+        [c.id]
+      );
+    }
+    const out = await startRegistration(db, ev, c.id, { source: 'staff' });
+    const { answered } = await loadProfile(db, c.id);
+    if (!answered.has('Q03')) {
+      await submitAnswers(db, c.id, out.task, [
+        { code: 'Q01', value: { text: name } },
+        { code: 'Q02', value: phone ? { phone } : { email: email! } },
+        { code: 'Q03', value: { category: role.category, sub: role.key } }
+      ]);
+    }
+    const r = await checkIn(db, ev, c.id, 'staff');
+    await db.query(
+      `UPDATE registrations SET checkin_by = $3 WHERE event_id = $1 AND contact_id = $2 AND checkin_by IS NULL`,
+      [eventId, c.id, actor(s)]
+    );
+    await audit(db, s, 'onsite_register', 'contact', c.id, { after: { event: ev.slug, result: r.kind, created: c.created } });
+    return { contactId: c.id, created: c.created, result: r };
+  });
+}
+
+// ── 核款工作台 ────────────────────────────────────────────────────────────
+export async function listOrders(f: { status?: string | null; purpose?: string | null; q?: string | null }) {
+  const status = f.status && f.status !== 'open' ? f.status : null;
+  const q = (f.q ?? '').trim();
+  const { rows } = await getPool().query(
+    `SELECT o.order_no, o.purpose, o.description, o.amount_cents, o.gross_cents, o.points_redeemed, o.status, o.provider,
+            o.payer_name, o.payer_note, o.submitted_at, o.paid_at, o.verified_by, o.bank_reference, o.reject_reason, o.created_at,
+            c.id AS contact_id, c.name, c.email, c.phone_e164, c.member_no::int
+       FROM orders o JOIN contacts c ON c.id = o.contact_id
+      WHERE ($1::text IS NULL AND o.status IN ('payment_submitted','pending_payment') OR o.status = $1)
+        AND ($2::text IS NULL OR o.purpose = $2)
+        AND ($3 = '' OR o.order_no ILIKE '%' || $3 || '%' OR c.name ILIKE '%' || $3 || '%' OR c.email ILIKE '%' || $3 || '%')
+      ORDER BY CASE o.status WHEN 'payment_submitted' THEN 0 WHEN 'pending_payment' THEN 1 ELSE 2 END,
+               coalesce(o.submitted_at, o.created_at) DESC
+      LIMIT 200`,
+    [status, f.purpose || null, q]
+  );
+  return rows.map((o) => ({
+    ...o,
+    purpose_label: PURPOSE_LABEL[o.purpose as keyof typeof PURPOSE_LABEL],
+    status_label: STATUS_LABEL[o.status as keyof typeof STATUS_LABEL]
+  }));
+}
+
+export async function verifyOrder(s: Staff, orderNo: string, reference?: string | null) {
+  const r = await markOrderPaid(orderNo, { staff: s.name, provider: 'zelle', reference: str(reference, 120) || null });
+  if (!r.order) throw new CrmError('not_found', '找不到这个订单');
+  return {
+    changed: r.changed,
+    status: r.order.status,
+    message: r.changed ? '已确认到账' : r.order.status === 'paid' ? '这笔已经确认过了，不会重复处理' : `订单状态为「${STATUS_LABEL[r.order.status]}」，不能确认`
+  };
+}
+
+export async function rejectOrder(s: Staff, orderNo: string, reason: string) {
+  const why = str(reason, 300);
+  if (!why) throw new CrmError('bad_request', '请填写原因，例如“核实未到账”');
+  const changed = await cancelOrder(orderNo, actor(s), why);
+  return { changed, message: changed ? '已标记未到账并取消订单' : '订单已处理过，不会重复处理' };
+}
+
+// ── 客户查询 ──────────────────────────────────────────────────────────────
+export type ContactFilter = {
+  q?: string | null;
+  region?: string | null;
+  roleCategory?: string | null;
+  topic?: string | null;
+  tag?: string | null;
+  member?: 'member' | 'registered' | null;
+};
+
+export async function searchContacts(f: ContactFilter, limit = 200) {
+  const q = (f.q ?? '').trim();
+  const phone = q ? normalizePhone(q) : null;
+  const { rows } = await getPool().query(
+    `WITH m AS (
+       SELECT DISTINCT ON (a.contact_id) a.contact_id, a.selected_tier_slug, a.membership_end_date
+         FROM applications a
+        WHERE a.contact_id IS NOT NULL AND a.membership_end_date >= current_date
+          AND (a.application_status IN ('approved','paid','second_payment_due')
+               OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
+        ORDER BY a.contact_id, a.membership_end_date DESC)
+     SELECT c.id, c.member_no::int, c.name, c.name_alt, c.email, c.phone_e164, c.role_category, c.role_sub, c.created_at,
+            m.selected_tier_slug AS tier, m.membership_end_date::text AS member_until,
+            (SELECT coalesce(sum(points),0)::int FROM points_ledger p WHERE p.contact_id = c.id) AS points,
+            (SELECT array_agg(DISTINCT t.tag) FROM contact_tags t WHERE t.contact_id = c.id) AS tags,
+            (SELECT count(*)::int FROM registrations r WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in') AS attended
+       FROM contacts c LEFT JOIN m ON m.contact_id = c.id
+      WHERE ($1 = '' OR c.name ILIKE '%' || $1 || '%' OR c.name_alt ILIKE '%' || $1 || '%' OR c.email ILIKE '%' || $1 || '%'
+             OR ($2::text IS NOT NULL AND c.phone_e164 = $2) OR c.member_no::text = $1)
+        AND ($3::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag = '区域:' || $3))
+        AND ($4::text IS NULL OR c.role_category = $4)
+        AND ($5::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag = '主题:' || $5))
+        AND ($6::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag ILIKE '%' || $6 || '%'))
+        AND ($7::text IS NULL OR ($7 = 'member' AND m.contact_id IS NOT NULL) OR ($7 = 'registered' AND m.contact_id IS NULL))
+      ORDER BY c.created_at DESC LIMIT $8`,
+    [q, phone, f.region || null, f.roleCategory || null, f.topic || null, f.tag || null, f.member || null, limit]
+  );
+  return rows.map((r) => ({ ...r, role_label: findRoleSub(r.role_sub)?.label ?? null }));
+}
+
+const csvCell = (v: unknown) => {
+  const s = v == null ? '' : Array.isArray(v) ? v.join('；') : v instanceof Date ? v.toISOString() : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+export async function exportContactsCsv(s: Staff, f: ContactFilter): Promise<string> {
+  const rows = await searchContacts(f, 5000);
+  const head = ['会员编号', '姓名', '另一姓名', '邮箱', '手机', '行业', '会员等级', '会员到期', '积分', '到场次数', '标签', '建档时间'];
+  const lines = rows.map((r) =>
+    [r.member_no, r.name, r.name_alt, r.email, r.phone_e164, r.role_label, r.tier ?? '注册用户', r.member_until, r.points, r.attended, r.tags, r.created_at]
+      .map(csvCell)
+      .join(',')
+  );
+  await audit(getPool(), s, 'export_contacts', 'contact', 'filter', { after: { filter: f, count: rows.length } });
+  return '﻿' + [head.join(','), ...lines].join('\r\n');
+}
+
+export async function contactDetail(id: string) {
+  const pool = getPool();
+  const { rows: c } = await pool.query(`SELECT c.*, c.member_no::int AS member_no FROM contacts c WHERE c.id = $1`, [id]);
+  if (!c[0]) throw new CrmError('not_found', '找不到这个人');
+  const { rows: tags } = await pool.query(`SELECT tag, source, created_at FROM contact_tags WHERE contact_id = $1 ORDER BY tag`, [id]);
+  const { rows: answers } = await pool.query(
+    `SELECT a.item_code, a.value, a.is_unknown, a.source, a.status, a.recorded_by, a.expires_at, a.note, a.created_at,
+            e.title AS task_event
+       FROM profile_answers a LEFT JOIN profile_tasks t ON t.id = a.task_id LEFT JOIN events e ON e.id = t.event_id
+      WHERE a.contact_id = $1 ORDER BY a.item_code, a.created_at DESC`,
+    [id]
+  );
+  const { rows: points } = await pool.query(
+    `SELECT id, category, points, reason, event_key, created_by, reverses_id, created_at FROM points_ledger WHERE contact_id = $1 ORDER BY created_at DESC`,
+    [id]
+  );
+  const { rows: apps } = await pool.query(
+    `SELECT id, application_type, selected_tier_slug, application_status, payment_status, membership_start_date::text,
+            membership_end_date::text, display_status, is_approved_for_display, company_name, created_at
+       FROM applications WHERE contact_id = $1 ORDER BY created_at DESC`,
+    [id]
+  );
+  const { rows: tl } = await pool.query(
+    `SELECT * FROM (
+       SELECT r.created_at AS at, 'registration' AS kind, '报名：' || e.title || CASE r.status WHEN 'waitlisted' THEN '（候补）' WHEN 'cancelled' THEN '（已取消）' ELSE '' END || '，来源 ' || r.source AS text
+         FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1
+       UNION ALL
+       SELECT r.checked_in_at, 'checkin', '签到：' || e.title || coalesce('（' || r.checkin_method || '）', '')
+         FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1 AND r.checked_in_at IS NOT NULL
+       UNION ALL
+       SELECT r.arrived_at, 'arrival', '到场待核款：' || e.title
+         FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1 AND r.arrival_status = 'arrived_pending_payment'
+       UNION ALL
+       SELECT r.cancelled_at, 'cancel', '取消报名：' || e.title
+         FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1 AND r.cancelled_at IS NOT NULL
+       UNION ALL
+       SELECT o.created_at, 'order', '下单 ' || o.order_no || '：' || coalesce(o.description, o.purpose) || ' $' || (o.amount_cents / 100.0)::numeric(10,2)
+         FROM orders o WHERE o.contact_id = $1
+       UNION ALL
+       SELECT o.submitted_at, 'payment_note', '提交付款说明 ' || o.order_no || coalesce('：' || o.payer_note, '')
+         FROM orders o WHERE o.contact_id = $1 AND o.submitted_at IS NOT NULL
+       UNION ALL
+       SELECT o.paid_at, 'paid', '到账 ' || o.order_no || '（' || o.provider || coalesce('，' || o.verified_by, '') || '）'
+         FROM orders o WHERE o.contact_id = $1 AND o.paid_at IS NOT NULL
+       UNION ALL
+       SELECT p.created_at, 'points', '积分 ' || CASE WHEN p.points > 0 THEN '+' ELSE '' END || p.points || '：' || coalesce(p.reason, p.category)
+         FROM points_ledger p WHERE p.contact_id = $1
+       UNION ALL
+       SELECT b.created_at, 'room', '会议室预约 ' || to_char(b.starts_at AT TIME ZONE 'America/Los_Angeles', 'MM-DD HH24:MI') || '–' || to_char(b.ends_at AT TIME ZONE 'America/Los_Angeles', 'HH24:MI') || '（' || b.status || '）'
+         FROM room_bookings b WHERE b.contact_id = $1
+       UNION ALL
+       SELECT a.created_at, 'application', '会费申请：' || a.selected_tier_slug || '（' || a.application_status || '/' || a.payment_status || '）'
+         FROM applications a WHERE a.contact_id = $1
+       UNION ALL
+       SELECT l.created_at, 'audit', l.action || '（' || l.actor || '）' || coalesce('：' || l.reason, '')
+         FROM crm_audit_log l WHERE l.target_type = 'contact' AND l.target_id = $1::text
+       UNION ALL
+       SELECT x.created_at, 'answer', '资料 ' || x.item_code || '（' || x.source || '）'
+         FROM profile_answers x WHERE x.contact_id = $1
+     ) t WHERE at IS NOT NULL ORDER BY at DESC LIMIT 500`,
+    [id]
+  );
+  const balance = points.reduce((n, p) => n + Number(p.points), 0);
+  return {
+    contact: c[0],
+    roleLabel: findRoleSub(c[0].role_sub)?.label ?? null,
+    tags,
+    answers: answers.map((a) => ({ ...a, prompt: QUESTION_BY_CODE[a.item_code]?.prompt ?? a.item_code })),
+    points: { balance, ledger: points },
+    applications: apps,
+    timeline: tl
+  };
+}
+
+// ── 积分调整（必须填原因）──────────────────────────────────────────────────
+export async function adjustPoints(s: Staff, contactId: string, points: number, reason: string) {
+  const why = str(reason, 300);
+  if (!why) throw new CrmError('bad_request', '调整积分必须填写原因');
+  const n = Math.trunc(Number(points));
+  if (!n || Math.abs(n) > 100000) throw new CrmError('bad_request', '请填写要增加或扣减的积分（负数为扣减）');
+  return withTransaction(async (db) => {
+    const { rows } = await db.query<{ id: string }>(
+      `INSERT INTO points_ledger (contact_id, category, points, event_key, reason, created_by)
+       VALUES ($1, 'adjust', $2, $3, $4, $5) RETURNING id`,
+      [contactId, n, `adjust:${randomUUID()}`, why, actor(s)]
+    );
+    await audit(db, s, 'adjust_points', 'contact', contactId, { after: { points: n, ledger: rows[0].id }, reason: why });
+    return { id: rows[0].id };
+  });
+}
+
+export async function reversePoints(s: Staff, ledgerId: string, reason: string) {
+  const why = str(reason, 300);
+  if (!why) throw new CrmError('bad_request', '撤销积分必须填写原因');
+  return withTransaction(async (db) => {
+    const { rows } = await db.query<{ id: string; contact_id: string; points: number }>(
+      `SELECT id, contact_id, points FROM points_ledger WHERE id = $1`,
+      [ledgerId]
+    );
+    if (!rows[0]) throw new CrmError('not_found', '找不到这笔积分');
+    const { rows: ins } = await db.query<{ id: string }>(
+      `INSERT INTO points_ledger (contact_id, category, points, event_key, reason, reverses_id, created_by)
+       VALUES ($1, 'adjust', $2, $3, $4, $5, $6) ON CONFLICT (event_key) DO NOTHING RETURNING id`,
+      [rows[0].contact_id, -rows[0].points, `reverse:${ledgerId}`, `撤销：${why}`, ledgerId, actor(s)]
+    );
+    if (!ins[0]) return { changed: false, message: '这笔积分已经撤销过了' };
+    await audit(db, s, 'reverse_points', 'contact', rows[0].contact_id, { after: { ledger: ledgerId }, reason: why });
+    return { changed: true, message: '已撤销' };
+  });
+}
+
+// ── 会议室与电子屏 ────────────────────────────────────────────────────────
+export async function listBookings(from: string, to: string) {
+  const { rows } = await getPool().query(
+    `SELECT b.id, r.name AS room, b.starts_at, b.ends_at, b.status, b.purpose, b.pass_id IS NOT NULL AS via_pass,
+            c.id AS contact_id, c.name, c.phone_e164, c.email, o.order_no, o.status AS order_status, o.amount_cents
+       FROM room_bookings b JOIN rooms r ON r.id = b.room_id JOIN contacts c ON c.id = b.contact_id LEFT JOIN orders o ON o.id = b.order_id
+      WHERE b.starts_at < $2 AND b.ends_at > $1 ORDER BY b.starts_at`,
+    [new Date(from), new Date(to)]
+  );
+  return rows;
+}
+
+export async function staffCancelBooking(s: Staff, id: string, reason: string) {
+  const why = str(reason, 300) || '工作人员取消';
+  return withTransaction(async (db) => {
+    const { rows } = await db.query<{ status: string; contact_id: string; order_no: string | null; order_status: string | null }>(
+      `SELECT b.status, b.contact_id, o.order_no, o.status AS order_status FROM room_bookings b LEFT JOIN orders o ON o.id = b.order_id WHERE b.id = $1 FOR UPDATE OF b`,
+      [id]
+    );
+    if (!rows[0]) throw new CrmError('not_found', '找不到这个预约');
+    if (rows[0].status === 'cancelled') return { changed: false };
+    await db.query(`UPDATE room_bookings SET status = 'cancelled' WHERE id = $1`, [id]);
+    if (rows[0].order_no && ['pending_payment', 'payment_submitted'].includes(rows[0].order_status ?? '')) {
+      await db.query(`UPDATE orders SET status = 'cancelled', reject_reason = $2, updated_at = now() WHERE order_no = $1`, [rows[0].order_no, why]);
+    }
+    await audit(db, s, 'cancel_booking', 'contact', rows[0].contact_id, { after: { booking: id }, reason: why });
+    return { changed: true };
+  });
+}
+
+export async function listScreenAds(status?: string | null) {
+  const { rows } = await getPool().query(
+    `SELECT s.*, s.start_month::text AS start_month, c.name, c.email, c.phone_e164, o.order_no, o.status AS order_status
+       FROM screen_ads s JOIN contacts c ON c.id = s.contact_id LEFT JOIN orders o ON o.id = s.order_id
+      WHERE ($1::text IS NULL OR s.status = $1) ORDER BY s.created_at DESC LIMIT 200`,
+    [status || null]
+  );
+  return rows;
+}
+
+export async function reviewScreenAd(
+  s: Staff,
+  id: string,
+  b: { action?: 'approve' | 'reject' | 'schedule'; startMonth?: string; note?: string }
+) {
+  return withTransaction(async (db) => {
+    const { rows } = await db.query<{ id: string; contact_id: string; status: string; months: number; tier_at_apply: string | null; org_name: string; order_id: string | null }>(
+      `SELECT id, contact_id, status, months, tier_at_apply, org_name, order_id FROM screen_ads WHERE id = $1 FOR UPDATE`,
+      [id]
+    );
+    const ad = rows[0];
+    if (!ad) throw new CrmError('not_found', '找不到这条申请');
+    const note = str(b.note, 300) || null;
+    if (b.action === 'reject') {
+      if (!note) throw new CrmError('bad_request', '请填写不通过的原因，会员能看到');
+      await db.query(`UPDATE screen_ads SET status = 'rejected', staff_note = $2, updated_at = now() WHERE id = $1`, [id, note]);
+      if (ad.order_id) await db.query(`UPDATE orders SET status = 'cancelled', reject_reason = $2, updated_at = now() WHERE id = $1 AND status = 'pending_payment'`, [ad.order_id, note]);
+      await audit(db, s, 'reject_screen_ad', 'contact', ad.contact_id, { after: { ad: id }, reason: note });
+      return { status: 'rejected', orderNo: null };
+    }
+    const startMonth = b.startMonth && /^\d{4}-\d{2}$/.test(b.startMonth) ? `${b.startMonth}-01` : null;
+    if (b.action === 'schedule') {
+      await db.query(
+        `UPDATE screen_ads SET status = 'scheduled', start_month = COALESCE($2, start_month), staff_note = COALESCE($3, staff_note), updated_at = now() WHERE id = $1`,
+        [id, startMonth, note]
+      );
+      await audit(db, s, 'schedule_screen_ad', 'contact', ad.contact_id, { after: { ad: id, startMonth } });
+      return { status: 'scheduled', orderNo: null };
+    }
+    if (ad.status !== 'submitted') throw new CrmError('conflict', '这条申请已经审核过了');
+    const fees = await getSetting<Record<string, number>>(db, 'screen_fee_cents', {});
+    const tier = ad.tier_at_apply ?? 'none';
+    const free = tier === 'vp' || tier === 'strategic_partner';
+    const monthly = free ? 0 : Number(fees[tier] ?? fees.none ?? 5000);
+    const amount = monthly * ad.months;
+    let orderNo: string | null = null;
+    if (amount > 0) {
+      orderNo = newOrderNo();
+      const { rows: o } = await db.query<{ id: string }>(
+        `INSERT INTO orders (order_no, contact_id, purpose, related_id, description, amount_cents, gross_cents)
+         VALUES ($1, $2, 'screen_ad', $3, $4, $5, $5) RETURNING id`,
+        [orderNo, ad.contact_id, id, `电子屏轮播 ${ad.org_name} ${ad.months} 个月`, amount]
+      );
+      await db.query(`UPDATE screen_ads SET order_id = $2 WHERE id = $1`, [id, o[0].id]);
+    }
+    await db.query(
+      `UPDATE screen_ads SET status = 'approved', amount_cents = $2, start_month = COALESCE($3, start_month), staff_note = COALESCE($4, staff_note), updated_at = now() WHERE id = $1`,
+      [id, amount, startMonth, note]
+    );
+    await audit(db, s, 'approve_screen_ad', 'contact', ad.contact_id, { after: { ad: id, amount, orderNo } });
+    return { status: 'approved', orderNo, amountCents: amount };
+  });
+}
+
+// ── 配置（管理员）──────────────────────────────────────────────────────────
+export const SETTING_KEYS = ['room_discount', 'screen_fee_cents', 'member_prices_published', 'points_per_dollar', 'room_pass_cents', 'zelle_enabled'] as const;
+
+export async function getSettings() {
+  const pool = getPool();
+  const { rows } = await pool.query<{ key: string; value: unknown; updated_by: string | null; updated_at: Date }>(
+    `SELECT key, value, updated_by, updated_at FROM crm_settings ORDER BY key`
+  );
+  const { rows: rooms } = await pool.query(`SELECT id, name, hourly_cents, is_active FROM rooms ORDER BY id`);
+  const { rows: offers } = await pool.query(`SELECT *, valid_until::text AS valid_until FROM merchant_offers ORDER BY sort_order, merchant`);
+  const { rows: staff } = await pool.query(`SELECT email, name, roles, is_active, updated_at FROM staff_roles ORDER BY name`);
+  return { settings: rows, rooms, offers, staff };
+}
+
+export async function updateSetting(s: Staff, key: string, value: unknown) {
+  if (!(SETTING_KEYS as readonly string[]).includes(key)) throw new CrmError('bad_request', '不能修改这个配置');
+  if ((key === 'member_prices_published' || key === 'zelle_enabled') && typeof value !== 'boolean') throw new CrmError('bad_request', '请选择是或否');
+  if ((key === 'points_per_dollar' || key === 'room_pass_cents') && !(Number(value) > 0)) throw new CrmError('bad_request', '请填写正数');
+  if ((key === 'room_discount' || key === 'screen_fee_cents') && (typeof value !== 'object' || value === null || Array.isArray(value))) {
+    throw new CrmError('bad_request', '格式不对');
+  }
+  if (key === 'room_discount') {
+    for (const v of Object.values(value as Record<string, unknown>)) {
+      if (!(Number(v) > 0 && Number(v) <= 1)) throw new CrmError('bad_request', '折扣请填 0–1 之间的小数，例如 9 折填 0.9');
+    }
+  }
+  return withTransaction(async (db) => {
+    const before = await getSetting(db, key, null);
+    await setSetting(db, key, typeof value === 'number' || typeof value === 'boolean' ? value : value, s.name);
+    await audit(db, s, 'update_setting', 'setting', key, { before, after: value });
+    return { key };
+  });
+}
+
+export async function upsertRoom(s: Staff, b: { id?: number; name?: string; hourlyCents?: number; isActive?: boolean }) {
+  const name = str(b.name, 100);
+  const cents = Math.max(0, Math.round(Number(b.hourlyCents) || 0));
+  return withTransaction(async (db) => {
+    let id = b.id;
+    if (id) {
+      await db.query(
+        `UPDATE rooms SET name = COALESCE(NULLIF($2, ''), name), hourly_cents = $3, is_active = COALESCE($4, is_active) WHERE id = $1`,
+        [id, name, cents, b.isActive ?? null]
+      );
+    } else {
+      if (!name) throw new CrmError('bad_request', '请填写会议室名称');
+      const { rows } = await db.query<{ id: number }>(`INSERT INTO rooms (name, hourly_cents) VALUES ($1, $2) RETURNING id`, [name, cents]);
+      id = rows[0].id;
+    }
+    await audit(db, s, 'upsert_room', 'room', String(id), { after: { name, cents, isActive: b.isActive } });
+    return { id };
+  });
+}
+
+export async function upsertOffer(
+  s: Staff,
+  b: { id?: string; merchant?: string; category?: string; offer?: string; conditions?: string; contact?: string; validUntil?: string | null; isActive?: boolean; sortOrder?: number; delete?: boolean }
+) {
+  return withTransaction(async (db) => {
+    if (b.id && b.delete) {
+      await db.query(`DELETE FROM merchant_offers WHERE id = $1`, [b.id]);
+      await audit(db, s, 'delete_offer', 'offer', b.id);
+      return { id: b.id };
+    }
+    const merchant = str(b.merchant, 120);
+    const offer = str(b.offer, 500);
+    if (!merchant || !offer) throw new CrmError('bad_request', '请填写商家和优惠内容');
+    const vals = [merchant, str(b.category, 60) || null, offer, str(b.conditions, 500) || null, str(b.contact, 200) || null, b.validUntil || null, b.isActive ?? true, Number(b.sortOrder) || 0];
+    let id = b.id;
+    if (id) {
+      await db.query(
+        `UPDATE merchant_offers SET merchant=$2, category=$3, offer=$4, conditions=$5, contact=$6, valid_until=$7, is_active=$8, sort_order=$9 WHERE id = $1`,
+        [id, ...vals]
+      );
+    } else {
+      const { rows } = await db.query<{ id: string }>(
+        `INSERT INTO merchant_offers (merchant, category, offer, conditions, contact, valid_until, is_active, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+        vals
+      );
+      id = rows[0].id;
+    }
+    await audit(db, s, 'upsert_offer', 'offer', id!, { after: { merchant, offer } });
+    return { id };
+  });
+}
+
+const ROLE_VALUES = ['checkin', 'finance', 'ops', 'admin'];
+
+export async function upsertStaffRole(s: Staff, b: { email?: string; name?: string; roles?: string[]; isActive?: boolean }) {
+  const email = normalizeEmail(String(b.email ?? ''));
+  if (!email) throw new CrmError('bad_request', '请填写工作人员邮箱');
+  const roles = (b.roles ?? []).filter((r) => ROLE_VALUES.includes(r));
+  const name = str(b.name, 60) || email.split('@')[0];
+  if (email === s.email && (!roles.includes('admin') || b.isActive === false)) {
+    throw new CrmError('bad_request', '不能取消自己的管理员权限，避免没人能管理后台');
+  }
+  return withTransaction(async (db) => {
+    await db.query(
+      `INSERT INTO staff_roles (email, name, roles, is_active) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, roles = EXCLUDED.roles, is_active = EXCLUDED.is_active, updated_at = now()`,
+      [email, name, roles, b.isActive ?? true]
+    );
+    await audit(db, s, 'upsert_staff', 'staff', email, { after: { roles, isActive: b.isActive ?? true } });
+    return { email };
+  });
+}
+
+// ── 官网展示审核（不影响会员身份）─────────────────────────────────────────
+export const DISPLAY_STATUSES = ['not_submitted', 'pending_review', 'approved', 'rejected', 'published', 'expired', 'hidden'] as const;
+
+export async function listDisplayReview() {
+  const { rows } = await getPool().query(
+    `SELECT a.id, a.application_type, a.selected_tier_slug, a.application_status, a.payment_status, a.company_name, a.contact_name,
+            a.email, a.website_url, a.company_description, a.display_status, a.is_approved_for_display,
+            a.membership_end_date::text, a.created_at, a.contact_id
+       FROM applications a
+      WHERE a.application_status IN ('approved','paid','second_payment_due','under_review')
+      ORDER BY CASE a.display_status WHEN 'pending_review' THEN 0 WHEN 'not_submitted' THEN 1 ELSE 2 END, a.created_at DESC LIMIT 300`
+  );
+  return rows;
+}
+
+export async function setDisplay(s: Staff, applicationId: string, displayStatus: string, note?: string) {
+  if (!(DISPLAY_STATUSES as readonly string[]).includes(displayStatus)) throw new CrmError('bad_request', '展示状态不对');
+  return withTransaction(async (db) => {
+    const { rows } = await db.query<{ display_status: string; contact_id: string | null }>(
+      `SELECT display_status, contact_id FROM applications WHERE id = $1 FOR UPDATE`,
+      [applicationId]
+    );
+    if (!rows[0]) throw new CrmError('not_found', '找不到这份申请');
+    const approved = displayStatus === 'approved' || displayStatus === 'published';
+    // 只改展示字段；会员身份（application_status / 有效期）不动
+    await db.query(
+      `UPDATE applications SET display_status = $2, is_approved_for_display = $3, display_on_website = $3, updated_at = now() WHERE id = $1`,
+      [applicationId, displayStatus, approved]
+    );
+    await audit(db, s, 'set_display', 'application', applicationId, {
+      before: { display_status: rows[0].display_status },
+      after: { display_status: displayStatus },
+      reason: str(note, 300) || null
+    });
+    return { id: applicationId, displayStatus };
+  });
+}
