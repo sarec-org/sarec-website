@@ -5,6 +5,7 @@ import { Msg, StaffGate, can } from '@/components/crm/staff/StaffGate';
 import { useQr } from '@/components/crm/staff/QrCode';
 import { api, copyText, fmtDateTime, money } from '@/components/crm/client';
 import { EventForm } from '../EventForm';
+import { checkinA4, registerPoster, saveBlob, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
 type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null };
@@ -15,6 +16,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
   const [full, setFull] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [origin, setOrigin] = useState('');
+  const [making, setMaking] = useState<string | null>(null);
   const load = useCallback(async () => {
     const r = await api<{ event: Ev; registrations: Reg[] }>(`/api/v1/staff/events/${params.id}`);
     if (r.ok) setData(r.data);
@@ -31,6 +33,39 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     const r = await api(`/api/v1/staff/events/${params.id}`, { method: 'PATCH', body });
     setMsg(r.ok ? { ok: true, text: ok } : { ok: false, text: r.message });
     load();
+  }
+  // 下载物料：报名小程序码（微信接口，正式版）/ 海报版 / A4 签到码
+  async function fetchCode(): Promise<Blob | null> {
+    const res = await fetch(`/api/v1/staff/events/${params.id}/wxacode`, { credentials: 'same-origin', cache: 'no-store' }).catch(() => null);
+    if (res && res.ok && (res.headers.get('content-type') || '').startsWith('image/')) return res.blob();
+    const j = (await res?.json().catch(() => null)) as { error?: { message?: string } } | null;
+    setMsg({ ok: false, text: j?.error?.message || '生成小程序码失败，请稍后再试' });
+    return null;
+  }
+  async function make(kind: 'code' | 'poster' | 'a4') {
+    if (!data || making) return;
+    const ev = data.event as unknown as MaterialEvent;
+    setMaking(kind);
+    setMsg(null);
+    try {
+      if (kind === 'a4') {
+        if (!link) return;
+        saveBlob(await checkinA4(ev, link), `签到码-A4-${ev.slug}.png`);
+      } else {
+        const code = await fetchCode();
+        if (!code) return;
+        if (kind === 'code') saveBlob(code, `报名小程序码-${ev.slug}.png`);
+        else {
+          const url = URL.createObjectURL(code);
+          try { saveBlob(await registerPoster(ev, url), `报名海报-${ev.slug}.png`); } finally { URL.revokeObjectURL(url); }
+        }
+      }
+      setMsg({ ok: true, text: '已开始下载' });
+    } catch (e) {
+      setMsg({ ok: false, text: e instanceof Error ? e.message : '生成失败，请稍后再试' });
+    } finally {
+      setMaking(null);
+    }
   }
   async function regen() {
     const r = await api(`/api/v1/staff/events/${params.id}`, { body: { action: 'regenerate_code' } });
@@ -87,6 +122,22 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                   作废旧码，重新生成
                 </button>
               )}
+            </div>
+
+            <h2 className={styles.h2}>下载物料</h2>
+            <div className={styles.card}>
+              <p className={styles.small}>报名码扫码直接进本场活动报名页（正式版小程序）；海报竖版适合发朋友圈和微信群；A4 签到码打印贴在门口。重新生成签到码后，A4 需重新下载打印。</p>
+              <div className={styles.btnRow}>
+                <button className={styles.btn} disabled={!!making} onClick={() => make('code')}>
+                  {making === 'code' ? '生成中…' : '下载小程序报名码'}
+                </button>
+                <button className={`${styles.btn} ${styles.btnGhost}`} disabled={!!making} onClick={() => make('poster')}>
+                  {making === 'poster' ? '生成中…' : '下载海报版报名码'}
+                </button>
+                <button className={`${styles.btn} ${styles.btnGhost}`} disabled={!!making || !link} onClick={() => make('a4')}>
+                  {making === 'a4' ? '生成中…' : '下载 A4 打印版签到码'}
+                </button>
+              </div>
             </div>
 
             {can(s, 'ops') && (

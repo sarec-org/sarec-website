@@ -24,6 +24,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   sms_unavailable: 503,
   email_unavailable: 503,
   wechat_unconfigured: 503,
+  wx_error: 502,
   merge_needed: 409,
   conflict: 409
 };
