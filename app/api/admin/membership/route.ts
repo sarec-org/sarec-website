@@ -9,6 +9,7 @@
  */
 import { NextResponse } from 'next/server';
 import { verifyAdminAuth, isAdminConfigured } from '@/lib/admin/auth';
+import { databaseUrl } from '@/lib/db/client';
 import {
   AdminError,
   listApplications,
@@ -24,7 +25,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request): Promise<Response> {
-  if (!process.env.DATABASE_URL) {
+  if (!databaseUrl()) {
     return NextResponse.json({ error: 'not configured' }, { status: 503 });
   }
   if (!isAdminConfigured()) {

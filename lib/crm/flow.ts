@@ -219,7 +219,11 @@ export async function register(slug: string, contactId: string, input: RegisterI
       const { rows } = await db.query<{ id: string }>(`SELECT id FROM contacts WHERE member_no = $1`, [Number(input.ref)]);
       refContactId = rows[0]?.id && rows[0].id !== contactId ? rows[0].id : null;
     }
-    const out = await startRegistration(db, ev, contactId, { refContactId, channelCode: input.channel ?? null });
+    const out = await startRegistration(db, ev, contactId, {
+      refContactId,
+      channelCode: input.channel ?? null,
+      source: input.channel === 'onsite' ? 'onsite' : 'online'
+    });
     let pointsAwarded = 0;
     if (firstTime) {
       const name = (input.name ?? '').trim();

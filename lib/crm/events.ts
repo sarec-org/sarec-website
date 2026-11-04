@@ -134,7 +134,9 @@ export async function startRegistration(
   const alreadyRegistered = !!reg && reg.status !== 'cancelled';
   if (!reg || reg.status === 'cancelled') {
     if (!ev.registration_open && opts.source !== 'staff') throw new CrmError('registration_closed', '本场报名已截止');
-    const full = ev.capacity != null && (await activeCount(db, ev.id)) >= ev.capacity;
+    // 现场来的人（扫签到码 / 工作人员登记）已经到了门口：不受名额限制，直接算已报名。
+    const onsite = opts.source === 'onsite' || opts.source === 'staff';
+    const full = !onsite && ev.capacity != null && (await activeCount(db, ev.id)) >= ev.capacity;
     const status = full ? 'waitlisted' : 'registered';
     const { rows } = await db.query<Registration>(
       reg
@@ -185,6 +187,11 @@ export async function submitAnswers(
 }
 
 export async function cancelRegistration(db: Db, eventId: string, contactId: string): Promise<void> {
+  const { rows: cur } = await db.query<{ arrival_status: string }>(
+    `SELECT arrival_status FROM registrations WHERE event_id = $1 AND contact_id = $2 AND status <> 'cancelled'`,
+    [eventId, contactId]
+  );
+  if (cur[0] && cur[0].arrival_status !== 'none') throw new CrmError('already_checked_in', '您已签到，不能再取消报名');
   await db.query(
     `UPDATE registrations SET status = 'cancelled', cancelled_at = now(), updated_at = now()
       WHERE event_id = $1 AND contact_id = $2 AND status <> 'cancelled' AND arrival_status = 'none'`,
@@ -264,7 +271,14 @@ export async function checkIn(
     const out = await startRegistration(db, ev, contactId, { source: 'onsite' });
     reg = out.registration;
   }
-  if (reg.status === 'waitlisted') return { kind: 'waitlisted', message: '本场已满员，您在候补名单中，请联系现场工作人员' };
+  if (reg.status === 'waitlisted') {
+    // 候补的人到了现场：直接转为已报名再签到（满员也让进，现场按签到人数控制）。
+    const { rows: up } = await db.query<Registration>(
+      `UPDATE registrations SET status = 'registered', updated_at = now() WHERE id = $1 RETURNING *`,
+      [reg.id]
+    );
+    reg = up[0];
+  }
   if (reg.arrival_status === 'checked_in') return { kind: 'already', message: '您已签到，无需重复操作。里面请！' };
 
   if (ev.fee_cents > 0) {

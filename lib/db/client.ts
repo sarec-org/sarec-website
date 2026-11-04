@@ -10,10 +10,19 @@ import { Pool, type PoolClient } from 'pg';
 
 let pool: Pool | undefined;
 
+/**
+ * Vercel 预览部署（VERCEL_ENV=preview）只连独立测试库 CRMPREVIEW_DATABASE_URL，永远不读 DATABASE_URL——
+ * 即使有人误把正式库配进 Preview 环境，预览网址也碰不到正式库。测试库没配时直接报错，不回退。
+ */
+export function databaseUrl(): string | undefined {
+  if (process.env.VERCEL_ENV === 'preview') return process.env.CRMPREVIEW_DATABASE_URL;
+  return process.env.DATABASE_URL;
+}
+
 export function getPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = databaseUrl();
   if (!connectionString) {
-    throw new Error('DATABASE_URL is not set');
+    throw new Error(process.env.VERCEL_ENV === 'preview' ? 'CRMPREVIEW_DATABASE_URL is not set' : 'DATABASE_URL is not set');
   }
   if (!pool) {
     // max 保守：Serverless 环境避免连接爆炸；sslmode 由连接串自带（Neon 需 require）。

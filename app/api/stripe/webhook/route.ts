@@ -11,13 +11,14 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe/client';
 import { processStripeEvent } from '@/lib/membership/webhook-service';
+import { databaseUrl } from '@/lib/db/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request): Promise<Response> {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret || !process.env.STRIPE_SECRET_KEY || !process.env.DATABASE_URL) {
+  if (!secret || !process.env.STRIPE_SECRET_KEY || !databaseUrl()) {
     console.error('[webhook] missing config (STRIPE_WEBHOOK_SECRET / STRIPE_SECRET_KEY / DATABASE_URL)');
     // 500 → Stripe 会重试，等配置就绪后成功。
     return NextResponse.json({ error: 'webhook not configured' }, { status: 500 });

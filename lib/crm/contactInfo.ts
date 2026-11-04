@@ -117,6 +117,8 @@ export async function setMethod(
   value: string,
   source: string
 ): Promise<{ changed: boolean; status: MethodStatus; methodId: string }> {
+  // 同一人并发提交（现场连点）：先锁档案行，两次写联系方式排队执行，避免撞唯一约束报“系统忙”。
+  await db.query(`SELECT 1 FROM contacts WHERE id = $1 FOR UPDATE`, [contactId]);
   const { rows: cur } = await db.query<{ id: string; value: string; status: MethodStatus }>(
     `SELECT id, value, status FROM contact_methods WHERE contact_id = $1 AND kind = $2 AND is_current FOR UPDATE`,
     [contactId, kind]
@@ -126,9 +128,18 @@ export async function setMethod(
   const confirmed = await previouslyConfirmed(db, contactId, kind, value);
   const { rows } = await db.query<{ id: string }>(
     `INSERT INTO contact_methods (contact_id, kind, value, status, source, confirmed_at)
-     VALUES ($1, $2, $3, $4, $5, CASE WHEN $4 = 'confirmed' THEN now() END) RETURNING id`,
+     VALUES ($1, $2, $3, $4, $5, CASE WHEN $4 = 'confirmed' THEN now() END)
+     ON CONFLICT (contact_id, kind) WHERE is_current DO NOTHING RETURNING id`,
     [contactId, kind, value, confirmed ? 'confirmed' : 'unconfirmed', source]
   );
+  if (!rows[0]) {
+    // 不在事务里时仍可能并发：另一请求刚写入，以它为准。
+    const { rows: now } = await db.query<{ id: string; value: string; status: MethodStatus }>(
+      `SELECT id, value, status FROM contact_methods WHERE contact_id = $1 AND kind = $2 AND is_current`,
+      [contactId, kind]
+    );
+    return { changed: now[0]?.value !== cur[0]?.value, status: now[0].status, methodId: now[0].id };
+  }
   return { changed: true, status: confirmed ? 'confirmed' : 'unconfirmed', methodId: rows[0].id };
 }
 
