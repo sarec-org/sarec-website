@@ -299,7 +299,7 @@ export async function checkIn(
      VALUES ($1, 'checkin', $2, $3, '参加活动签到', $4) ON CONFLICT (event_key) DO NOTHING`,
     [contactId, CHECKIN_POINTS, `checkin:${contactId}:${ev.id}`, ev.id]
   );
-  return { kind: 'checked_in', message: '签到成功，谢谢您！里面请！', first: true };
+  return { kind: 'checked_in', message: '签到成功，欢迎光临！', first: true };
 }
 
 export class CrmError extends Error {

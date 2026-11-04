@@ -211,8 +211,8 @@ export async function registerPoster(e: MaterialEvent, codeSrc: string): Promise
   return toBlob(c);
 }
 
-/** A4 打印版签到码（300dpi）：checkinUrl 为签到链接 */
-export async function checkinA4(e: MaterialEvent, checkinUrl: string): Promise<Blob> {
+/** A4 打印版签到码（300dpi）：优先放签到小程序码（codeSrc，微信扫一扫直接进小程序）；没有时用签到链接画普通二维码 */
+export async function checkinA4(e: MaterialEvent, src: { codeSrc?: string; url?: string }): Promise<Blob> {
   await document.fonts?.ready;
   const W = 2480, H = 3508;
   const mm = W / 210;
@@ -255,8 +255,10 @@ export async function checkinA4(e: MaterialEvent, checkinUrl: string): Promise<B
   roundRect(g, bx, by, box, box, 6 * mm);
   g.stroke();
   const qrSize = Math.round(box - 12 * mm);
-  const qrUrl = await QRCode.toDataURL(checkinUrl, { width: qrSize, margin: 0, errorCorrectionLevel: 'M', color: { dark: C.ink, light: '#FFFFFF' } });
-  g.drawImage(await loadImg(qrUrl), bx + 6 * mm, by + 6 * mm, qrSize, qrSize);
+  const img = src.codeSrc
+    ? src.codeSrc
+    : await QRCode.toDataURL(src.url || '', { width: qrSize, margin: 0, errorCorrectionLevel: 'M', color: { dark: C.ink, light: '#FFFFFF' } });
+  g.drawImage(await loadImg(img), bx + 6 * mm, by + 6 * mm, qrSize, qrSize);
 
   g.fillStyle = C.navy;
   g.font = `700 ${15 * mm}px ${FONT}`;

@@ -4,6 +4,7 @@ import { CrmError, checkIn } from '@/lib/crm/events';
 import { register, requireEvent } from '@/lib/crm/flow';
 import { loadProfile } from '@/lib/crm/profile';
 import { body, handler, ok, requireContact, siteUrl } from '@/lib/crm/http';
+import { checkinKeyOk } from '@/lib/crm/wechat';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const POST = handler(async (req: Request, { params }: { params: { slug: string } }) => {
@@ -14,7 +15,7 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
     'SELECT checkin_secret FROM events WHERE id = $1',
     [ev.id]
   );
-  if (!b.k || b.k !== rows[0]?.checkin_secret) {
+  if (!checkinKeyOk(b.k, rows[0]?.checkin_secret)) {
     throw new CrmError('wrong_code', '这不是本场活动的签到码，请扫描现场屏幕右上角的二维码');
   }
   // 现场新客：先最少登记三项（姓名、联系方式=已验证身份、主要角色）
