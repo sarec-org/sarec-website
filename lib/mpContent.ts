@@ -25,7 +25,7 @@ export type Node =
 export const RESTRICTED_NOTICE = '本页涉及投资、融资或移民相关内容，小程序内只提供简介。如需进一步了解，请联系商会工作人员。';
 
 /** 标题 / slug 命中即只给简介 */
-const RESTRICT_RE = /(EB-?5|投资|融资|收益|回报|募资|资本|资金|移民|IRR|ROE|Cap\s*Rate|LP\s*\/\s*GP|capital|eb5|irr|lp-gp)/i;
+const RESTRICT_RE = /(EB-?5|投资|值得投|可投|融资|收益|回报|现金流|赚钱|盈利|利润|募资|资本|资金|移民|IRR|ROE|Cap\s*Rate|LP\s*\/\s*GP|capital|eb5|irr|lp-gp)/i;
 /** 段落命中即去掉：收益数字、金额、百分比、募资 / 认购等推介字样 */
 const FIGURE_RE = /(IRR|ROE|ROI|回报|收益率|年化|利润率|分红|cap\s*rate|募资|募集|认购|最低投资|投资额|EB-?5|\$\s?\d|\d[\d,.]*\s*(%|％|万美元|亿美元|美元|万元|亿元))/i;
 
