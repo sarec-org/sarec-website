@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, money, useDraft } from './client';
 import { LoginBox } from './LoginBox';
 import s from './crm.module.css';
+import { benefitsContent } from '@/lib/benefitsContent';
 
 const TZ = 'America/Los_Angeles';
 
@@ -211,15 +212,13 @@ export function BenefitsPage() {
     <div className={s.page}>
       <Link href="/zh/me" className={s.back}>‹ 我的</Link>
       <p className={s.eyebrow}>BENEFITS · 会员权益</p>
-      <h1 className={s.h1}>会员权益与场地服务</h1>
-      <div className={s.card}>
-        <p className={s.cardTitle}>随时到访</p>
-        <p className={s.muted}>缴费会员在办公室开放期间随时来喝茶、交流项目，可带朋友和客户；不限次数、不扣积分、不用领券。</p>
-      </div>
-      <div className={s.card}>
-        <p className={s.cardTitle}>专委会与俱乐部</p>
-        <p className={s.muted}>陆续成立投资委员会、开发建设专委会、设计联盟及兴趣俱乐部等；活动不承诺固定场次，统一在活动日历发布。棋牌类活动只做娱乐联谊，不涉及金钱输赢，商会不抽水。</p>
-      </div>
+      <h1 className={s.h1}>{benefitsContent.title}</h1>
+      {benefitsContent.items.map((b) => (
+        <div key={b.title} className={s.card}>
+          <p className={s.cardTitle}>{b.title}</p>
+          <p className={s.muted}>{b.body}</p>
+        </div>
+      ))}
       <div className={s.grid2}>
         <Link href="/zh/rooms" className={`${s.card} ${s.cardGold}`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <p className={s.cardTitle}>预约会议室 ›</p>
@@ -231,7 +230,7 @@ export function BenefitsPage() {
         </Link>
       </div>
       <h2 className={s.h2}>商家优惠</h2>
-      {offers === null ? <p className={s.small}>加载中…</p> : offers.length === 0 ? <p className={s.muted}>合作商家优惠正在洽谈，谈妥后会在这里公布。</p> : (
+      {offers === null ? <p className={s.small}>加载中…</p> : offers.length === 0 ? <p className={s.muted}>{benefitsContent.offersEmpty}</p> : (
         <ul className={s.list}>
           {offers.map((o) => (
             <li key={o.id} className={s.listItem}>
@@ -242,7 +241,7 @@ export function BenefitsPage() {
           ))}
         </ul>
       )}
-      <p className={s.small} style={{ marginTop: '1rem' }}>到店出示“我的”页面的会员身份即可享受。</p>
+      <p className={s.small} style={{ marginTop: '1rem' }}>{benefitsContent.offersNote}</p>
     </div>
   );
 }
