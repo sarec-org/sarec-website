@@ -340,22 +340,43 @@ export function twilioVerifyConfigured(): boolean {
   return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID);
 }
 
-async function twilio(path: string, params: Record<string, string>): Promise<{ ok: boolean; status?: string; code?: number }> {
+/** 短信发不出时（余额不足、号码无效、Twilio 故障）的统一提示：不让用户卡住 */
+export const SMS_FALLBACK = '短信暂时发不出，请改用邮箱验证';
+
+export async function twilioVerify(path: 'Verifications' | 'VerificationCheck', params: Record<string, string>): Promise<{ ok: boolean; status?: string; code?: number }> {
   const sid = process.env.TWILIO_ACCOUNT_SID!;
-  const res = await fetch(`https://verify.twilio.com/v2/Services/${process.env.TWILIO_VERIFY_SERVICE_SID}/${path}`, {
+  let res: Response;
+  try {
+    res = await fetch(`https://verify.twilio.com/v2/Services/${process.env.TWILIO_VERIFY_SERVICE_SID}/${path}`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${Buffer.from(`${sid}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
       'Content-Type': 'application/x-www-form-urlencoded'
     },
     body: new URLSearchParams(params)
-  });
+    });
+  } catch {
+    return { ok: false, code: -1 };
+  }
   const data = (await res.json().catch(() => ({}))) as { status?: string; code?: number };
   return { ok: res.ok, status: data.status, code: data.code };
 }
 
 /** 号码本身有问题（不存在、座机、不支持短信）的 Twilio 错误码 → 标“发送失败” */
 const BAD_NUMBER_CODES = new Set([60200, 60205, 21211, 21614, 21408, 60410]);
+
+/** 同一号码 60 秒一次、一天最多 10 次（同一档案一天也最多 10 次）。 */
+export async function phoneSendLimits(db: Db, phone: string, contactId: string | null): Promise<void> {
+  const { rows: lim } = await db.query<{ recent: number; today: number; mine: number }>(
+    `SELECT count(*) FILTER (WHERE phone = $1 AND created_at > now() - make_interval(secs => $3))::int AS recent,
+            count(*) FILTER (WHERE phone = $1)::int AS today,
+            count(*) FILTER (WHERE $2::uuid IS NOT NULL AND contact_id = $2)::int AS mine
+       FROM phone_verify_sends WHERE (phone = $1 OR ($2::uuid IS NOT NULL AND contact_id = $2)) AND created_at > now() - interval '1 day'`,
+    [phone, contactId, PHONE_GAP_SEC]
+  );
+  if (lim[0].recent > 0) throw new CrmError('too_soon', '验证码刚刚发过，请 60 秒后再试');
+  if (lim[0].today >= PHONE_DAILY_MAX || lim[0].mine >= PHONE_DAILY_MAX) throw new CrmError('too_many_attempts', '今天发送次数已达上限（10 次），请明天再试，或改用邮箱验证');
+}
 
 export async function sendPhoneCode(contactId: string): Promise<{ alreadyVerified: boolean; masked: string; message: string }> {
   const pool = getPool();
@@ -372,24 +393,15 @@ export async function sendPhoneCode(contactId: string): Promise<{ alreadyVerifie
     });
     return { alreadyVerified: true, masked: maskPhone(m.value), message: '这个号码已验证过，无需再验证' };
   }
-  if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', '短信验证暂未开通，手机号先保存为“未验证”');
-  const { rows: lim } = await pool.query<{ recent: number; today: number; mine: number }>(
-    `SELECT count(*) FILTER (WHERE phone = $1 AND created_at > now() - make_interval(secs => $3))::int AS recent,
-            count(*) FILTER (WHERE phone = $1 AND created_at > now() - interval '1 day')::int AS today,
-            count(*) FILTER (WHERE contact_id = $2 AND created_at > now() - interval '1 day')::int AS mine
-       FROM phone_verify_sends WHERE (phone = $1 OR contact_id = $2) AND created_at > now() - interval '1 day'`,
-    [m.value, contactId, PHONE_GAP_SEC]
-  );
-  if (lim[0].recent > 0) throw new CrmError('too_soon', '验证码刚刚发过，请 60 秒后再试');
-  if (lim[0].today >= PHONE_DAILY_MAX || lim[0].mine >= PHONE_DAILY_MAX) throw new CrmError('too_many_attempts', '今天发送次数已达上限（10 次），请明天再试');
-  const r = await twilio('Verifications', { To: m.value, Channel: 'sms', Locale: 'zh' });
+  if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
+  await phoneSendLimits(pool, m.value, contactId);
+  const r = await twilioVerify('Verifications', { To: m.value, Channel: 'sms', Locale: 'zh' });
   await pool.query(`INSERT INTO phone_verify_sends (phone, contact_id, ok, error) VALUES ($1, $2, $3, $4)`, [m.value, contactId, r.ok, r.ok ? null : String(r.code ?? 'error')]);
   if (!r.ok) {
     if (r.code && BAD_NUMBER_CODES.has(r.code)) {
       await pool.query(`UPDATE contact_methods SET status = 'invalid', invalid_at = now(), invalid_reason = '短信发送失败' WHERE id = $1`, [m.id]);
-      throw new CrmError('sms_failed', '短信发不到这个号码，请检查手机号后修改');
     }
-    throw new CrmError('sms_failed', '短信发送失败，请稍后再试');
+    throw new CrmError('sms_failed', SMS_FALLBACK);
   }
   return { alreadyVerified: false, masked: maskPhone(m.value), message: `验证码已发送到 ${maskPhone(m.value)}` };
 }
@@ -405,10 +417,11 @@ export async function checkPhoneCode(contactId: string, code: string): Promise<{
   const m = rows[0];
   if (!m) throw new CrmError('no_phone', '请先填写手机号');
   if (m.status === 'confirmed') return { message: '手机号已验证' };
-  if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', '短信验证暂未开通');
-  const r = await twilio('VerificationCheck', { To: m.value, Code: clean });
+  if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
+  const r = await twilioVerify('VerificationCheck', { To: m.value, Code: clean });
   if (!r.ok && r.code === 20404) throw new CrmError('code_expired', '验证码已过期，请重新获取');
-  if (!r.ok || r.status !== 'approved') throw new CrmError('code_wrong', '验证码不对，请再试一次');
+  if (!r.ok) throw new CrmError('sms_failed', SMS_FALLBACK);
+  if (r.status !== 'approved') throw new CrmError('code_wrong', '验证码不对，请再试一次');
   await withTransaction(async (db) => {
     await noteVerified(db, contactId, 'phone', m.value);
     await promoteIdentity(db, contactId, 'phone', m.value);

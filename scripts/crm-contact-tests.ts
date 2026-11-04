@@ -172,7 +172,7 @@ async function main() {
     if (u.includes('verify.twilio.com')) {
       const p = new URLSearchParams(String(init?.body));
       if (u.endsWith('/VerificationCheck')) return new Response(JSON.stringify({ status: p.get('Code') === '123456' ? 'approved' : 'pending' }), { status: 200 });
-      if (p.get('To') === `+1626${P}0999`) return new Response(JSON.stringify({ code: 60200 }), { status: 400 });
+      if (/099[89]$/.test(p.get('To') ?? '')) return new Response(JSON.stringify({ code: 60200 }), { status: 400 });
       return new Response(JSON.stringify({ status: 'pending' }), { status: 201 });
     }
     return realFetch(url, init);
@@ -207,6 +207,15 @@ async function main() {
     await assert.rejects(sendPhoneCode(e), code('sms_failed'));
     assert.equal((await getContactInfo(pool, e)).needsUpdate, true);
     ok('首次验证一次；60 秒一次、一天 10 次；已验证不再验证；发送失败标红');
+
+    // 手机号登录（与邮箱并列）：已验证的号码登录进入同一份档案；发不出时提示改用邮箱
+    const lc = await sendLoginCode('sms', `626${P}0003`);
+    assert.equal(lc.devCode, undefined, 'Twilio 发码，不回传验证码');
+    await assert.rejects(verifyLoginCode('sms', `626${P}0003`, '000000'), code('code_wrong'));
+    const sl = await verifyLoginCode('sms', `626${P}0003`, '123456');
+    assert.equal(sl.contactId, c, '手机号登录与原档案是同一个人');
+    await assert.rejects(sendLoginCode('sms', `626${P}0998`), (e: unknown) => e instanceof CrmError && e.code === 'sms_failed' && e.message === '短信暂时发不出，请改用邮箱验证');
+    ok('手机号验证码登录走 Twilio Verify；进入同一档案；发不出提示改用邮箱');
   } finally {
     globalThis.fetch = realFetch;
     delete process.env.TWILIO_ACCOUNT_SID;

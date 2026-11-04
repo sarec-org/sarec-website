@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { runEventReminders } from '@/lib/crm/reminders';
+import { checkTwilioBalanceDaily } from '@/lib/crm/twilioBalance';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,7 +24,10 @@ async function run(req: Request) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   try {
-    return NextResponse.json({ ok: true, ...(await runEventReminders()) });
+    const reminders = await runEventReminders();
+    // 每天一次：Twilio 余额低于 $10 发邮件提醒
+    const twilio = await checkTwilioBalanceDaily().catch(() => ({ status: 'error' as const }));
+    return NextResponse.json({ ok: true, ...reminders, twilio: twilio.status });
   } catch (e) {
     console.error('[cron/event-reminders]', e instanceof Error ? e.message : 'error');
     return NextResponse.json({ ok: false }, { status: 500 });
