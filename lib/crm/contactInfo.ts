@@ -106,6 +106,11 @@ async function previouslyConfirmed(db: Db, contactId: string, kind: Kind, value:
   return !!rows[0];
 }
 
+/** 档案行排他锁（同一人的并发写排队）。所有会锁报名行的路径都要先调它，保证加锁顺序一致：档案 → 报名。 */
+export async function lockContact(db: Db, contactId: string): Promise<void> {
+  await db.query(`SELECT 1 FROM contacts WHERE id = $1 FOR NO KEY UPDATE`, [contactId]);
+}
+
 /**
  * 设定当前联系方式（报名 / “我的”里修改）。值没变：不动；变了：旧值转为历史，新值从“未确认”开始
  * （本人以前验证过的同一值直接算已验证）。返回新状态与是否变化。
@@ -118,7 +123,8 @@ export async function setMethod(
   source: string
 ): Promise<{ changed: boolean; status: MethodStatus; methodId: string }> {
   // 同一人并发提交（现场连点）：先锁档案行，两次写联系方式排队执行，避免撞唯一约束报“系统忙”。
-  await db.query(`SELECT 1 FROM contacts WHERE id = $1 FOR UPDATE`, [contactId]);
+  // 用 FOR NO KEY UPDATE（不挡外键引用）：签到写积分要对档案行加 KEY SHARE，用 FOR UPDATE 会和它互相等待而死锁。
+  await lockContact(db, contactId);
   const { rows: cur } = await db.query<{ id: string; value: string; status: MethodStatus }>(
     `SELECT id, value, status FROM contact_methods WHERE contact_id = $1 AND kind = $2 AND is_current FOR UPDATE`,
     [contactId, kind]
