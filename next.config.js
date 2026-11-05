@@ -2,7 +2,11 @@
 const nextConfig = {
   images: {
     // 小程序内容图片统一走本站 /_next/image 压缩；视频封面放在 R2 媒体桶
-    remotePatterns: [{ protocol: 'https', hostname: 'pub-750866849946432cb842827f7414652c.r2.dev', pathname: '/**' }]
+    remotePatterns: [
+      { protocol: 'https', hostname: 'pub-750866849946432cb842827f7414652c.r2.dev', pathname: '/**' },
+      // 1.2：活动相册、封面、头像、商会微信二维码（Vercel Blob）
+      { protocol: 'https', hostname: '*.public.blob.vercel-storage.com', pathname: '/**' }
+    ]
   },
   async redirects() {
     return [

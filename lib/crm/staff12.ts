@@ -1,0 +1,179 @@
+/**
+ * SAREC 1.2 后台：线下预约登记（日历防撞期）与收款登记、会议室展示信息、1.2 配置项（商会微信二维码、视频号、专委会、内容显示范围）。
+ */
+import { getPool, withTransaction } from '@/lib/db/client';
+import { CrmError } from './events';
+import { getSetting, newOrderNo, setSetting } from './orders';
+import { audit } from './staff';
+import type { Staff } from './auth';
+
+const str = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
+
+// ── 会议室展示信息（小程序只展示：照片、容纳人数、设备、地址、会员优惠说明，不写金额）──────────────
+const MONEY_RE = /(\$|＄|美元|美金|元\/|USD|\d+\s*(元|块))/i;
+
+export async function updateRoomInfo(s: Staff, b: { id?: number; capacity?: number | null; equipment?: string; intro?: string; photoUrls?: string[] }) {
+  const id = Number(b.id);
+  if (!id) throw new CrmError('bad_request', '请选择会议室');
+  const equipment = str(b.equipment, 500);
+  const intro = str(b.intro, 1000);
+  if (MONEY_RE.test(equipment) || MONEY_RE.test(intro)) throw new CrmError('bad_request', '会议室介绍会显示在小程序里，请不要写价格或金额');
+  const photos = Array.isArray(b.photoUrls) ? b.photoUrls.filter((u) => typeof u === 'string' && /^https:\/\//.test(u)).slice(0, 9) : undefined;
+  return withTransaction(async (db) => {
+    await db.query(
+      `UPDATE rooms SET capacity = $2, equipment = NULLIF($3, ''), intro = NULLIF($4, ''), photo_urls = COALESCE($5, photo_urls) WHERE id = $1`,
+      [id, b.capacity == null || b.capacity === ('' as unknown) ? null : Math.max(0, Math.round(Number(b.capacity))), equipment, intro, photos ?? null]
+    );
+    await audit(db, s, 'update_room_info', 'room', String(id), { after: { capacity: b.capacity, equipment, intro, photos: photos?.length } });
+    return { id };
+  });
+}
+
+export async function roomsInfo() {
+  const pool = getPool();
+  const { rows } = await pool.query<{ id: number; name: string; capacity: number | null; equipment: string | null; intro: string | null; photo_urls: string[] }>(
+    `SELECT id, name, capacity, equipment, intro, photo_urls FROM rooms WHERE is_active ORDER BY id`
+  );
+  const notice = await getSetting<string>(pool, 'room_notice', '会员按等级享受会议室优惠，具体请联系商会工作人员。');
+  return { rooms: rows.map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, equipment: r.equipment, intro: r.intro, photos: r.photo_urls ?? [] })), notice: MONEY_RE.test(notice) ? '会员按等级享受会议室优惠，具体请联系商会工作人员。' : notice };
+}
+
+// ── 线下预约登记（工作人员电话 / 微信谈好后记一笔）────────────────────────────
+
+export async function staffCreateBooking(
+  s: Staff,
+  b: {
+    roomId?: number; contactId?: string; newName?: string; startsAt?: string; endsAt?: string; note?: string;
+    payment?: { amountCents?: number; provider?: string; reference?: string } | null;
+  }
+) {
+  const roomId = Number(b.roomId);
+  const start = b.startsAt ? new Date(b.startsAt) : null;
+  const end = b.endsAt ? new Date(b.endsAt) : null;
+  if (!roomId) throw new CrmError('bad_request', '请选择会议室');
+  if (!start || !end || isNaN(+start) || isNaN(+end) || end <= start) throw new CrmError('bad_request', '请填写正确的开始和结束时间');
+  return withTransaction(async (db) => {
+    let contactId = b.contactId && /^[0-9a-f-]{36}$/.test(b.contactId) ? b.contactId : null;
+    if (!contactId) {
+      const name = str(b.newName, 100);
+      if (!name) throw new CrmError('bad_request', '请选择会员，或填写来访者姓名');
+      // 工作人员代录：没有身份的档案（不能登录，后续可合并）
+      const { rows } = await db.query<{ id: string }>(`INSERT INTO contacts (name, acquisition_source) VALUES ($1, 'staff_room_booking') RETURNING id`, [name]);
+      contactId = rows[0].id;
+    }
+    let orderId: string | null = null;
+    if (b.payment && Number(b.payment.amountCents) > 0) {
+      const provider = ['zelle', 'cash', 'check', 'stripe', 'waived'].includes(String(b.payment.provider)) ? String(b.payment.provider) : 'zelle';
+      const { rows } = await db.query<{ id: string }>(
+        `INSERT INTO orders (order_no, contact_id, purpose, description, amount_cents, gross_cents, provider, status, paid_at, verified_by, bank_reference)
+         VALUES ($1, $2, 'room_booking', '会议室（线下登记）', $3, $3, $4, 'paid', now(), $5, $6) RETURNING id`,
+        [newOrderNo(), contactId, Math.round(Number(b.payment.amountCents)), provider, s.name, str(b.payment.reference, 100) || null]
+      );
+      orderId = rows[0].id;
+    }
+    try {
+      const { rows } = await db.query<{ id: string }>(
+        `INSERT INTO room_bookings (room_id, contact_id, starts_at, ends_at, status, order_id, purpose, source, note, created_by)
+         VALUES ($1, $2, $3, $4, 'confirmed', $5, $6, 'staff', $7, $8) RETURNING id`,
+        [roomId, contactId, start, end, orderId, str(b.note, 200) || null, str(b.note, 500) || null, s.name]
+      );
+      if (orderId) await db.query(`UPDATE orders SET related_id = $2 WHERE id = $1`, [orderId, rows[0].id]);
+      await audit(db, s, 'staff_create_booking', 'contact', contactId, { after: { booking: rows[0].id, roomId, start, end, paid: !!orderId } });
+      return { id: rows[0].id, contactId };
+    } catch (e) {
+      if ((e as { code?: string }).code === '23P01') throw new CrmError('conflict', '这个时段已经有预约了，请换一个时间');
+      throw e;
+    }
+  });
+}
+
+/** 给已有预约登记收款（线下谈好、到账后记一笔） */
+export async function staffRecordBookingPayment(s: Staff, bookingId: string, p: { amountCents?: number; provider?: string; reference?: string }) {
+  const amount = Math.round(Number(p.amountCents));
+  if (!(amount > 0)) throw new CrmError('bad_request', '请填写金额');
+  return withTransaction(async (db) => {
+    const { rows } = await db.query<{ contact_id: string; order_id: string | null }>(`SELECT contact_id, order_id FROM room_bookings WHERE id = $1 FOR UPDATE`, [bookingId]);
+    if (!rows[0]) throw new CrmError('not_found', '找不到这个预约');
+    const provider = ['zelle', 'cash', 'check', 'stripe', 'waived'].includes(String(p.provider)) ? String(p.provider) : 'zelle';
+    if (rows[0].order_id) {
+      await db.query(
+        `UPDATE orders SET status = 'paid', paid_at = COALESCE(paid_at, now()), provider = $2, verified_by = $3, bank_reference = COALESCE($4, bank_reference), updated_at = now()
+          WHERE id = $1 AND status <> 'paid'`,
+        [rows[0].order_id, provider, s.name, str(p.reference, 100) || null]
+      );
+    } else {
+      const { rows: o } = await db.query<{ id: string }>(
+        `INSERT INTO orders (order_no, contact_id, purpose, related_id, description, amount_cents, gross_cents, provider, status, paid_at, verified_by, bank_reference)
+         VALUES ($1, $2, 'room_booking', $3, '会议室（线下登记）', $4, $4, $5, 'paid', now(), $6, $7) RETURNING id`,
+        [newOrderNo(), rows[0].contact_id, bookingId, amount, provider, s.name, str(p.reference, 100) || null]
+      );
+      await db.query(`UPDATE room_bookings SET order_id = $2, status = 'confirmed' WHERE id = $1`, [bookingId, o[0].id]);
+    }
+    await audit(db, s, 'record_booking_payment', 'contact', rows[0].contact_id, { after: { booking: bookingId, amount, provider } });
+    return { ok: true };
+  });
+}
+
+// ── 1.2 配置项（ops 可改）───────────────────────────────────────────────
+
+export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address'] as const;
+export type GrowthKey = (typeof GROWTH_KEYS)[number];
+
+export async function growthSettings() {
+  const pool = getPool();
+  const out: Record<string, unknown> = {};
+  for (const k of GROWTH_KEYS) out[k] = await getSetting(pool, k, null);
+  return out;
+}
+
+export async function updateGrowthSetting(s: Staff, key: string, value: unknown) {
+  if (!(GROWTH_KEYS as readonly string[]).includes(key)) throw new CrmError('bad_request', '不能修改这个配置');
+  if (key === 'wechat_qr_url' && !(value === '' || (typeof value === 'string' && /^https:\/\//.test(value)))) throw new CrmError('bad_request', '请上传二维码图片');
+  if (key === 'channels_finder_id' && !(typeof value === 'string' && /^(|sph[A-Za-z0-9]{4,40})$/.test(value.trim()))) {
+    throw new CrmError('bad_request', '视频号 ID 以 sph 开头（在视频号助手 → 账号设置里查看）；不填则小程序不显示视频号入口');
+  }
+  if (key === 'room_notice' && (typeof value !== 'string' || MONEY_RE.test(value))) throw new CrmError('bad_request', '会议室说明会显示在小程序里，请不要写价格或金额');
+  if (key === 'room_address' && (typeof value !== 'string' || value.length > 200)) throw new CrmError('bad_request', '地址太长了');
+  if (key === 'committees') {
+    if (!Array.isArray(value) || value.some((c) => !c || typeof c.name !== 'string' || !['active', 'preparing'].includes(c.status))) {
+      throw new CrmError('bad_request', '格式不对');
+    }
+  }
+  if (key === 'content_visibility' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
+  return withTransaction(async (db) => {
+    const before = await getSetting(db, key, null);
+    await setSetting(db, key, typeof value === 'string' ? value.trim() : value, s.name);
+    await audit(db, s, 'update_setting', 'setting', key, { before, after: value });
+    return { key };
+  });
+}
+
+// ── 专委会与俱乐部意向 ───────────────────────────────────────────────────
+
+export type Committee = { key: string; name: string; status: 'active' | 'preparing' };
+
+export async function committees(contactId: string | null) {
+  const pool = getPool();
+  const list = await getSetting<Committee[]>(pool, 'committees', []);
+  const mine = contactId
+    ? new Set((await pool.query<{ committee: string }>(`SELECT committee FROM committee_interests WHERE contact_id = $1`, [contactId])).rows.map((r) => r.committee))
+    : new Set<string>();
+  return list.map((c) => ({ ...c, statusLabel: c.status === 'active' ? '已成立' : '筹备中', interested: mine.has(c.key) }));
+}
+
+export async function setCommitteeInterest(contactId: string, key: string, on: boolean) {
+  const pool = getPool();
+  const list = await getSetting<Committee[]>(pool, 'committees', []);
+  if (!list.some((c) => c.key === key)) throw new CrmError('bad_request', '没有这个专委会');
+  if (on) await pool.query(`INSERT INTO committee_interests (contact_id, committee) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [contactId, key]);
+  else await pool.query(`DELETE FROM committee_interests WHERE contact_id = $1 AND committee = $2`, [contactId, key]);
+  return committees(contactId);
+}
+
+export async function committeeInterestStats() {
+  const { rows } = await getPool().query(
+    `SELECT ci.committee, count(*)::int AS n, array_agg(c.name ORDER BY ci.created_at DESC) AS names
+       FROM committee_interests ci JOIN contacts c ON c.id = ci.contact_id GROUP BY ci.committee`
+  );
+  return rows;
+}
