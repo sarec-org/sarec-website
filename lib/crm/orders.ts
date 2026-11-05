@@ -94,7 +94,9 @@ export async function zelleEnabled(db: Db): Promise<boolean> {
 /** 给付款页的 Zelle 信息：开关关闭时不下发收款信息。 */
 export async function zelleForPayPage(db: Db) {
   if (!(await zelleEnabled(db))) return { enabled: false, name: null, id: null, qrUrl: '', configured: false };
-  return { enabled: true, ...zelleInfo() };
+  // 用收款手机号转账收不到钱（2026-11-04），付款页只给二维码和收款人名字，不再下发收款手机号。
+  const z = zelleInfo();
+  return { enabled: true, ...z, id: null };
 }
 
 export function stripeAvailable(): boolean {

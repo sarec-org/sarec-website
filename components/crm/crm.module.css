@@ -174,7 +174,7 @@
 .copyBtn { min-height: 44px; min-width: 88px; padding: 0.4rem 0.9rem; border-radius: 6px; border: 1px solid var(--gold); background: transparent; color: var(--gold); font-size: 0.95rem; cursor: pointer; }
 
 .qrBox { text-align: center; margin: 1rem 0; }
-.qrImg { width: 240px; max-width: 80vw; height: auto; background: #fff; padding: 10px; border-radius: 8px; -webkit-touch-callout: default; }
+.qrImg { display: block; margin: 0 auto; width: 240px; max-width: 80vw; height: auto; background: #fff; padding: 10px; border-radius: 8px; -webkit-touch-callout: default; }
 
 .progress { height: 6px; background: var(--line-2); border-radius: 999px; overflow: hidden; margin: 0.5rem 0 0.25rem; }
 .progressBar { height: 100%; background: var(--gold); }
