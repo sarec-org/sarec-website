@@ -15,6 +15,7 @@ import { buildBreadcrumbJsonLd } from '@/lib/geo/schema';
 import { EVENT_STATUS_LABEL, REGISTRATION_STATUS_LABEL } from '@/lib/cms/labels';
 import type { RegistrationStatus } from '@/lib/cms/types';
 import d from '@/components/cms/detail.module.css';
+import { AgentChat } from '@/components/agent/AgentChat';
 
 /**
  * 活动详情 —— /zh/events/<slug>。
@@ -269,6 +270,9 @@ export default function EventDetailPage({ params }: { params: Params }) {
           </div>
         </div>
       </section>
+
+      {/* 商会 AI 助手：右下角唤起；停留 30 秒弹一次固定问候（不调模型） */}
+      <AgentChat variant="launcher" context={{ page: 'event', slug: event.slug, title: event.title }} />
     </main>
   );
 }

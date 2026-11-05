@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // AI 助手知识库在接口里同步读取 content/（文章、活动、新闻 YAML）；确保这些文件随函数一起部署
+    outputFileTracingIncludes: {
+      '/api/v1/agent/**': ['./content/**/*', './app/zh/(internal)/research/*/page.tsx']
+    }
+  },
   images: {
     // 小程序内容图片统一走本站 /_next/image 压缩；视频封面放在 R2 媒体桶
     remotePatterns: [{ protocol: 'https', hostname: 'pub-750866849946432cb842827f7414652c.r2.dev', pathname: '/**' }]

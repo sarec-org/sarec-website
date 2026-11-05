@@ -15,6 +15,7 @@ const NAV = [
   ['/zh/staff/contacts', '客户'],
   ['/zh/staff/rooms', '会议室/电子屏'],
   ['/zh/staff/display', '官网展示'],
+  ['/zh/staff/agent', 'AI 助手'],
   ['/zh/staff/settings', '设置']
 ];
 
