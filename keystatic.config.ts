@@ -521,6 +521,25 @@ export default config({
           description: '列出文章最关键的结论，供读者与 AI 快速抓要点；每行一条。',
           itemLabel: (p) => p.value,
         }),
+        directAnswer: fields.text({
+          label: '直接回答（GEO）',
+          description: '文章开头的「直接回答」段：2–4 句，第一句直接回答标题问题。不写收益数字。',
+          multiline: true,
+        }),
+        en: fields.object(
+          {
+            title: fields.text({ label: '英文标题' }),
+            directAnswer: fields.text({ label: '英文直接回答', description: '2–4 句英文。', multiline: true }),
+            faq: fields.array(
+              fields.object({
+                question: fields.text({ label: 'Question' }),
+                answer: fields.text({ label: 'Answer', multiline: true }),
+              }),
+              { label: '英文问答（3–5 组）', itemLabel: (p) => p.fields.question.value }
+            ),
+          },
+          { label: '英文对照（English summary）', description: '前台以 lang="en" 显示在文末「English summary」区。' }
+        ),
         blocks: blocksField,
         faq: fields.array(
           fields.object({

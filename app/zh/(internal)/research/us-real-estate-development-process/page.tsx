@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -203,11 +207,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/us-real-estate-development-process.ts）。
+const geo = getLegacyResearch('us-real-estate-development-process');
+
 export default function UsRealEstateDevelopmentProcessPage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · 开发完整流程"
         title="美国房地产开发完整流程"
         summary={`从一块土地到一个可出租、可出售、可再融资的项目，美国房地产开发不是简单的"买地、盖楼、卖掉"，而是一套由土地、审批、融资、设计、施工、运营、退出和合作结构共同决定的系统工程。`}
@@ -221,6 +229,8 @@ export default function UsRealEstateDevelopmentProcessPage() {
         anchors={heroAnchors}
         mediaCaption="DEVELOPMENT PROCESS / APPROVALS / CONSTRUCTION"
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="开发不是线性动作，而是系统判断"
@@ -379,6 +389,8 @@ export default function UsRealEstateDevelopmentProcessPage() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({

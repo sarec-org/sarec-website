@@ -10,7 +10,8 @@
  * 不依赖本地 content 访问层(citation 用的 Source[] 由 caller 解析后注入),
  * 以免序列化层与本地内容注册表绑死(将来切 CMS/DB 不受牵连)。
  */
-import type { Article, Source, FAQItem } from './types';
+import type { Article, Source, FAQItem, Author, Locale } from './types';
+import { authorJsonLd } from './author';
 
 type JsonLd = Record<string, unknown>;
 
@@ -64,16 +65,19 @@ export function buildArticleJsonLd(
     inLanguage: article.locale,
     datePublished: article.publishedAt,
     dateModified: article.updatedAt ?? article.publishedAt,
-    author: {
-      '@type': 'Person',
-      name: options.authorName ?? article.author.name
-    }
+    author: authorJsonLd(
+      { ...article.author, name: options.authorName ?? article.author.name },
+      options.siteUrl
+    )
   };
+  if (article.directAnswer) jsonLd.abstract = article.directAnswer;
 
   if (options.publisherName) {
     const publisher: JsonLd = {
       '@type': 'Organization',
-      name: options.publisherName
+      '@id': `${options.siteUrl}/#organization`,
+      name: options.publisherName,
+      url: options.siteUrl
     };
     if (options.publisherLogoUrl) {
       publisher.logo = {
@@ -108,6 +112,51 @@ export function buildArticleJsonLd(
   return jsonLd;
 }
 
+/**
+ * 旧版手写研究页（无 Article 对象）的 Article JSON-LD。
+ * 无可靠发布日期时不输出 datePublished（禁止用构建时间冒充）。
+ */
+export function buildResearchPageJsonLd(input: {
+  siteUrl: string;
+  pathname: string;
+  headline: string;
+  description: string;
+  abstract?: string;
+  author: Author;
+  publisherName: string;
+  inLanguage?: Locale | string;
+  datePublished?: string;
+  dateModified?: string;
+  citations?: Array<{ name: string; url?: string }>;
+}): Record<string, unknown> {
+  const url = `${input.siteUrl}${input.pathname}`;
+  const jsonLd: JsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    '@id': url,
+    url,
+    mainEntityOfPage: { '@type': 'WebPage', '@id': url },
+    headline: input.headline,
+    description: input.description,
+    inLanguage: input.inLanguage ?? 'zh-CN',
+    author: authorJsonLd(input.author, input.siteUrl),
+    publisher: {
+      '@type': 'Organization',
+      '@id': `${input.siteUrl}/#organization`,
+      name: input.publisherName,
+      url: input.siteUrl
+    }
+  };
+  if (input.abstract) jsonLd.abstract = input.abstract;
+  if (input.datePublished) jsonLd.datePublished = input.datePublished;
+  if (input.dateModified ?? input.datePublished) jsonLd.dateModified = input.dateModified ?? input.datePublished;
+  const citation = (input.citations ?? [])
+    .filter((c) => Boolean(c.name))
+    .map((c) => ({ '@type': 'CreativeWork', name: c.name, ...(c.url ? { url: c.url } : {}) }));
+  if (citation.length > 0) jsonLd.citation = citation;
+  return jsonLd;
+}
+
 export function buildBreadcrumbJsonLd(
   items: Array<{ name: string; url: string }>
 ): Record<string, unknown> {
@@ -123,23 +172,36 @@ export function buildBreadcrumbJsonLd(
   };
 }
 
+/**
+ * FAQPage JSON-LD。可选 englishFaqs：英文对照问答并入同一个 FAQPage（每个 Question 标 inLanguage），
+ * 一页只输出一个 FAQPage。
+ */
 export function buildFAQPageJsonLd(
-  faqs: FAQItem[]
+  faqs: FAQItem[],
+  englishFaqs?: FAQItem[]
 ): Record<string, unknown> | null {
-  if (!faqs || faqs.length === 0) {
+  const zh = (faqs ?? []).filter((f) => f.question && f.answer);
+  const en = (englishFaqs ?? []).filter((f) => f.question && f.answer);
+  if (zh.length === 0 && en.length === 0) {
     return null;
   }
+
+  const toQuestion = (faq: FAQItem, lang?: string) => ({
+    '@type': 'Question',
+    name: faq.question,
+    ...(lang ? { inLanguage: lang } : {}),
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: faq.answer
+    }
+  });
 
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: faqs.map((faq) => ({
-      '@type': 'Question',
-      name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer
-      }
-    }))
+    mainEntity: [
+      ...zh.map((f) => toQuestion(f, en.length > 0 ? 'zh-CN' : undefined)),
+      ...en.map((f) => toQuestion(f, 'en'))
+    ]
   };
 }

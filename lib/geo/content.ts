@@ -11,7 +11,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import type { Article, Case, Cluster, ClusterId, Source } from './types';
+import type { Article, Case, Cluster, ClusterId, LegacyResearchGeo, Source } from './types';
 import { fromKeystaticArticle } from './keystatic-adapter';
 import { clusters } from '../../content/geo/clusters';
 import { sources } from '../../content/geo/sources';
@@ -19,6 +19,16 @@ import { stubArticle } from '../../content/geo/articles/_stub';
 import { chineseCapitalUsRealEstate10Traps } from '../../content/geo/articles/chinese-capital-us-real-estate-10-traps';
 import { stubCase } from '../../content/geo/cases/_stub';
 import { oceanwidePlazaCase } from '../../content/geo/cases/oceanwide-plaza';
+// 旧版手写研究页的 GEO 补充数据（直接回答 / 问答 / 来源 / 英文对照）。顺序 = 研究中心索引顺序。
+import legacyEd1 from '../../content/geo/legacy/los-angeles-ed1-affordable-housing';
+import legacyDevProcess from '../../content/geo/legacy/us-real-estate-development-process';
+import legacyLpGp from '../../content/geo/legacy/lp-gp-structure';
+import legacyCapRate from '../../content/geo/legacy/cap-rate-irr-roe';
+import legacyFramework from '../../content/geo/legacy/framework';
+import legacyChineseRisks from '../../content/geo/legacy/chinese-investors-us-real-estate-risks';
+import legacyRiskChecklist from '../../content/geo/legacy/risk-checklist';
+import legacyPitfalls from '../../content/geo/legacy/investment-pitfalls';
+import legacyEb5 from '../../content/geo/legacy/eb5';
 
 // ── 旧 TS 文章(Core 阶段手写注册表)──────────────────────────────────
 const tsArticles: Article[] = [stubArticle, chineseCapitalUsRealEstate10Traps];
@@ -107,6 +117,27 @@ export function listCases(filter?: ContentFilter): Case[] {
 // ── 集群 ──────────────────────────────────────────────────────────
 export function getCluster(id: ClusterId): Cluster | null {
   return clusters.find((c) => c.id === id) ?? null;
+}
+
+// ── 旧版手写研究页 GEO 补充数据 ─────────────────────────────────────
+const legacyResearch: LegacyResearchGeo[] = [
+  legacyEd1,
+  legacyDevProcess,
+  legacyLpGp,
+  legacyCapRate,
+  legacyFramework,
+  legacyChineseRisks,
+  legacyRiskChecklist,
+  legacyPitfalls,
+  legacyEb5,
+];
+
+export function listLegacyResearch(): LegacyResearchGeo[] {
+  return legacyResearch;
+}
+
+export function getLegacyResearch(slug: string): LegacyResearchGeo | null {
+  return legacyResearch.find((r) => r.slug === slug) ?? null;
 }
 
 // ── 证据来源 ──────────────────────────────────────────────────────

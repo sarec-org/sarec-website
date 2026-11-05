@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -38,12 +42,12 @@ const pitfalls = [
   {
     title: '风险3：资金来源合规准备不足',
     body:
-      'EB-5申请中，资金合法来源证明（Source of Funds）是最常被拒原因之一。很多申请人低估了USCIS对资金溯源的严格程度：赠与款、出售资产所得、股权转让收入——每一笔都需要文件链条。提前1-2年开始准备，而不是等签约再补材料。'
+      'EB-5申请中，资金合法来源证明（Source of Funds）是 USCIS 审查的重点之一。很多申请人低估了USCIS对资金溯源的严格程度：赠与款、出售资产所得、股权转让收入——每一笔都需要文件链条。尽早开始准备，而不是等签约再补材料。'
   },
   {
     title: '风险4：对美国开发周期的预期不现实',
     body:
-      '中国的地产开发节奏和美国完全不同。美国的许可审批流程（Entitlement）可能需要2-3年，在此期间资金锁定，市场可能已经变化。进场前，把开发周期按最悲观的估算再乘以1.5倍来计划资金。'
+      '中国的地产开发节奏和美国完全不同。美国的许可审批流程（Entitlement）可能需要数年（视项目和辖区而定），在此期间资金锁定，市场可能已经变化。进场前，按偏保守的开发周期估算，并预留足够的时间和资金缓冲。'
   },
   {
     title: '风险5：选择了错误的投资结构',
@@ -111,11 +115,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/investment-pitfalls.ts）。
+const geo = getLegacyResearch('investment-pitfalls');
+
 export default function InvestmentPitfallsPage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · 实战陷阱"
         title="华人投资美国房产，这7类风险最容易被忽视"
         summary={subtitle}
@@ -129,6 +137,8 @@ export default function InvestmentPitfallsPage() {
         anchors={heroAnchors}
         mediaCaption="COMMON PITFALLS / CROSS-BORDER RISK / FIELD-TESTED"
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="先识别常见陷阱，再决定是否进入深度尽调"
@@ -210,6 +220,8 @@ export default function InvestmentPitfallsPage() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({

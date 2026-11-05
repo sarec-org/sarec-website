@@ -13,6 +13,8 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { Article, Block } from '@/lib/geo/types';
 import { columnLabel } from '@/lib/geo/labels';
+import { displayAuthorName } from '@/lib/geo/author';
+import { DirectAnswer } from './GeoAnswerSections';
 import { renderInline } from './renderInline';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
 import { ArticleSection } from '@/components/sections/research/ArticleSection';
@@ -278,7 +280,7 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
       title={article.title}
       summary={article.summary.join(' ')}
       author={{
-        name: article.author.name,
+        name: displayAuthorName(article.author),
         ...(article.author.title ? { title: article.author.title } : {})
       }}
       dates={{
@@ -296,7 +298,7 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
       <div className={styles.centeredByline}>
         <span>
           作者
-          <span className={styles.bylineName}>{article.author.name}</span>
+          <span className={styles.bylineName}>{displayAuthorName(article.author)}</span>
           {article.author.title ? (
             <span className={styles.bylineTitle}>{article.author.title}</span>
           ) : null}
@@ -311,6 +313,9 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
     </header>
   );
 
+  // GEO · J：开头「直接回答」段，紧跟 hero（三种版式一致）。
+  const directAnswer = <DirectAnswer text={article.directAnswer} />;
+
   const body = article.blocks.map((block, index) =>
     index === hoistIndex ? null : renderBlock(block, index, headingIds)
   );
@@ -320,6 +325,7 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
     return (
       <article className={`${styles.article} ${styles.report}`}>
         {hero}
+        {directAnswer}
         <div className={styles.reportGrid}>
           <TableOfContents entries={tocEntries} />
           <div className={styles.reportMain}>
@@ -338,6 +344,7 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
     return (
       <article className={`${styles.article} ${styles.compact}`}>
         {hero}
+        {directAnswer}
         {digest.length > 0 ? (
           <section className={styles.compactDigest} aria-label="速览">
             <div className={styles.compactDigestLabel}>速览</div>
@@ -361,6 +368,7 @@ export function GeoArticleRenderer(props: { article: Article }): ReactElement {
   return (
     <article className={styles.article}>
       {hero}
+      {directAnswer}
       <TemplateHeader article={article} />
       {article.blocks.map((block, index) => renderBlock(block, index, headingIds))}
       <TemplateFooter article={article} />

@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -158,11 +162,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/chinese-investors-us-real-estate-risks.ts）。
+const geo = getLegacyResearch('chinese-investors-us-real-estate-risks');
+
 export default function ChineseInvestorsUsRealEstateRisksPage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · 跨境投资风险"
         title="中国投资人美国房地产常见风险"
         summary="美国房地产市场规则稳定、资产透明度较高，但对跨境投资人而言，真正的风险往往不在“有没有项目”，而在是否理解土地、审批、融资、建设、租赁、退出和合作结构背后的真实逻辑。"
@@ -175,6 +183,8 @@ export default function ChineseInvestorsUsRealEstateRisksPage() {
         secondaryCta={{ label: '提交项目初筛', href: '/zh/services/strategy/' }}
         anchors={heroAnchors}
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="先建立一套可以反复使用的判断框架"
@@ -221,6 +231,8 @@ export default function ChineseInvestorsUsRealEstateRisksPage() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({

@@ -74,6 +74,13 @@ export type FAQItem = {
   answer: string;
 };
 
+// 英文对照摘要（GEO · J）：英文直接回答 + 英文问答；前台在「English summary」区以 lang="en" 显示。
+export type EnglishSummary = {
+  title: string; // 英文标题（题目即问题）
+  directAnswer: string; // 2–4 句英文直接回答
+  faq: FAQItem[]; // 3–5 组英文问答
+};
+
 export type QaUnit = {
   id: string;
   question: string;
@@ -141,6 +148,10 @@ export type Article = {
   publishedAt: string;
   updatedAt?: string;
   summary: string[];
+  // GEO · J：开头「直接回答」段（2–4 句，直接回答标题问题）；缺省时前台不显示该段。
+  directAnswer?: string;
+  // GEO · J：英文对照（English summary 区）；缺省时前台不显示。
+  en?: EnglishSummary;
   blocks: Block[];
   faq?: FAQItem[];
   sources: string[]; // source ids
@@ -161,6 +172,18 @@ export type Article = {
     impact?: string;
     judgment?: string;
   };
+};
+
+// 旧版手写研究页（app/zh/(internal)/research/<slug>/page.tsx）的 GEO 补充数据。
+// 正文仍在各自 JSX 页面里；这里只放直接回答 / 问答 / 来源 / 英文对照，供页面、JSON-LD 与 llms.txt 共用。
+export type LegacyResearchGeo = {
+  slug: string; // 路径段：/zh/research/<slug>
+  title: string; // 页面中文标题（与页面 H1 一致）
+  description: string; // 一句话摘要（llms.txt / JSON-LD description）
+  directAnswer: string; // 2–4 句中文直接回答
+  faq: FAQItem[]; // 3–5 组中文问答
+  sourceList: SourceItem[]; // 公开来源（只收文中已引用或官方 / 一手公开页面，URL 已核实）
+  en: EnglishSummary;
 };
 
 export type LegalNode = {

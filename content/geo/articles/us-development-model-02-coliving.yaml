@@ -18,7 +18,7 @@ template:
 layout: classic
 status: published
 title: 美国房地产开发模式②|Co-living 共居开发:30 个房间,为什么不是 30 套房
-description: SAREC 以真实洛杉矶项目拆解 Co-living 共居开发:双密度框架、四层成本口径、压力测试与产权结构,解释按房间出租为什么赚钱、为什么只能整体持有。
+description: SAREC 以作者投资开发的真实洛杉矶项目(非商会项目)拆解 Co-living 共居开发:双密度框架、四层成本口径、压力测试与产权结构,解释按房间出租为什么赚钱、为什么只能整体持有。
 author:
   name: 东哥
   title: SAREC 中美房地产商会创始人
@@ -31,6 +31,40 @@ summary:
   - 基础施工 $285/尺只是四层成本口径的第一层,含土地全口径 $476/尺,再计入约 4 年完整周期的利息情景还要更高
   - 常规项目 City 审批通常约 9–12 个月、6 层及以上更长(SAREC 经验);组合台账显示,小型 ground-up 从买地到出租的完整周期约
     2.5–4.3 年,另有在建项目台账计划约 4.4 年
+directAnswer: >-
+  因为这 30 个房间只有独立卫生间、没有独立厨房,在洛杉矶 LAMC 12.03 的定义体系里更可能按 guest room 而非 dwelling unit 设计和核准;整栋楼也从未通过 final map、parcel map 或 condominium plan 创建可独立转让的产权空间,在 County 记录里只是一宗房产。
+  所以 30 个房间是运营上的 30 个收租单元,不是法律和产权上的 30 套房,一间都不能单独出售。
+  按房间出租换来了更细的出租颗粒和更高的收租密度,代价是更重的运营,以及在现有产权结构下只能整体持有、整体再融资或整栋出售。
+en:
+  title: "Co-living development in Los Angeles: why are 30 rooms not 30 homes?"
+  directAnswer: >-
+    Because the 30 rooms have private bathrooms but no kitchens, they are more likely to be designed and approved as "guest rooms" rather than "dwelling units" under the definitions in Los Angeles Municipal Code (LAMC) 12.03,
+    and the building has never recorded a final map, parcel map or condominium plan that would create separately transferable ownership interests; the county records it as a single property.
+    The 30 rooms are therefore 30 rentable doors for operations, not 30 legal homes, and none can be sold individually.
+    Renting by the room raises rental density, but it comes with heavier operations and, under the current title structure, an exit only as a whole: hold, refinance the whole building, or sell it in one piece.
+  faq:
+    - question: What is co-living development?
+      answer: >-
+        It means buying a low-density residential property and, within what zoning and permits allow, redeveloping it into a higher-density asset rented by the room rather than by the unit.
+        Tenants have a private bedroom and bathroom and share the kitchen and common areas; the owner holds and operates the building as a whole and does not sell it off room by room.
+    - question: Why do co-living rooms have no kitchens?
+      answer: >-
+        Under the Los Angeles code, kitchens are one of the main factors separating a guest room from a dwelling unit (with exceptions such as light housekeeping rooms).
+        Without a kitchen, a space is more likely to be approved as a guest room, and guest rooms use less land area per unit: in R3 zones 500 sq ft per guest room versus 800 sq ft per dwelling unit, and in R4 zones 200 versus 400.
+        The final legal use is set by the project's approved plans and permits.
+    - question: Why can't the 30 rooms be sold separately?
+      answer: >-
+        The rooms were never created as separately transferable interests through a final map, parcel map or condominium plan, so the building is one parcel of title.
+        Selling units individually would require redesign and new local approval under the Subdivision Map Act, and the existing 30 guest rooms could not simply be converted one-for-one into 30 saleable homes.
+    - question: What does it really cost to build co-living in Los Angeles?
+      answer: >-
+        In the case project, base construction was modeled at about $285 per sq ft, total development cost about $380 per sq ft, and about $476 per sq ft including land.
+        Adding a scenario estimate of interest over a roughly four-year full development cycle pushes the cost basis to around $575 per sq ft, before construction-period taxes, insurance and loan fees.
+        Quoting only the contractor's price badly understates the capital required.
+    - question: If the rooms cannot be sold, how is capital recovered?
+      answer: >-
+        Mainly by refinancing the whole building once it is stabilized: the lender sizes a long-term loan on NOI and value.
+        The new loan first repays the acquisition and construction loans and fees, so the gross loan amount is not the same as cash returned to the owners.
 blocks:
   - discriminant: assetBreak
     value:
@@ -40,7 +74,7 @@ blocks:
   - discriminant: prose
     value:
       md: |-
-        本文案例是我们自己投资开发的项目,数字来自项目账目与测算模型,不是网上抄来的行业均值。也正因如此,这篇文章不构成任何投资建议或出资邀约——账摊开给你看,是为了讲清楚一种开发模式,判断请你自己下。
+        本文案例是作者自己投资开发的项目(属作者个人业务,不是 SAREC 商会的项目),数字来自项目账目与测算模型,不是网上抄来的行业均值。也正因如此,这篇文章不构成任何投资建议或出资邀约——账摊开给你看,是为了讲清楚一种开发模式,判断请你自己下。
 
         2021 年 1 月,我们在洛杉矶 West Adams 用 98.5 万美元买下一栋房子。地块约 7,800 平方英尺,上面是一栋 2,935 平方英尺的老独立屋,5 间卧室。到 2025 年二季度,这块地上站着的是一栋 10,241 平方英尺的新建筑,里面 30 个房间,每个房间带独立卫生间,按稳定运营的模型口径,一个月租金收入 5 万多美元。
 
