@@ -22,6 +22,7 @@
 import Link from 'next/link';
 import styles from './HeroV3B.module.css';
 import { MobileNav } from '@/components/layout/MobileNav';
+import { HeroDeskCard } from '@/components/home/HomeDesk';
 
 const cx = (...keys: Array<string | false | null | undefined>) =>
   keys
@@ -357,8 +358,8 @@ export function HeroV3B() {
         </p>
 
         <div className={styles['cta-row']}>
-          <Link href="/zh/contact" className={styles['cta-primary']}>
-            <span>预约 30 分钟沟通</span>
+          <Link href="/zh/join" className={styles['cta-primary']}>
+            <span>加入商会</span>
             <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
               <path
                 d="M1 6h15m0 0L11 1m5 5L11 11"
@@ -368,11 +369,14 @@ export function HeroV3B() {
               />
             </svg>
           </Link>
-          <Link href="/zh/about" className={styles['cta-ghost']}>
-            了解 SAREC
+          <Link href="/zh/contact?intent=consult#inquiry-form" className={styles['cta-ghost']}>
+            找商会谈项目
           </Link>
         </div>
       </div>
+
+      {/* 1.2 首屏办事区：大图右侧叠“最近一场 · 一键报名”卡（≥ 1180px 显示；登录过的人显示他的报名和签到码） */}
+      <HeroDeskCard />
 
       {/* Bottom strip */}
       <div className={styles['bottom-strip']}>

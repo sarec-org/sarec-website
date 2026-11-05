@@ -10,6 +10,10 @@ import { H08ResearchPreview, type ResearchCard } from '@/components/sections/H08
 import { H09FAQ } from '@/components/sections/H09FAQ';
 import { H10CTABanner } from '@/components/sections/H10CTABanner';
 import { SiteFooter } from '@/components/layout/SiteFooter';
+import { MobileNav } from '@/components/layout/MobileNav';
+import { HomeEventsAndAgent, MobileDesk, MobileTabBar, type FeedItem } from '@/components/home/HomeDesk';
+import desk from '@/components/home/desk.module.css';
+import { contentResearchList } from '@/lib/mpContent';
 import { listArticles } from '@/lib/geo/content';
 import { columnLabel } from '@/lib/geo/labels';
 
@@ -36,10 +40,24 @@ export default function HomePage() {
       href: `/zh/research/${a.slug}`
     }));
 
+  // 手机版服务台“研究与动态”：缩略图 + 标题
+  const feed: FeedItem[] = contentResearchList()
+    .items.slice(0, 4)
+    .map((c) => ({ title: c.title, href: `/zh/research/${c.slug}`, image: c.image?.src ?? null, tag: c.tag ?? '研究' }));
+
   return (
     <main>
-      {/* H01 — Hero v3-B Final (with embedded nav) */}
-      <HeroV3B />
+      {/* 1.2 手机版（≤ 768px）：状态卡 + 8 入口 + 信息流 + 底部三栏，和小程序一致 */}
+      <MobileNav variant="overlay" />
+      <MobileDesk feed={feed} />
+
+      {/* H01 — Hero v3-B Final (with embedded nav)；手机版由上面的服务台代替 */}
+      <div className={desk.desktopOnly}>
+        <HeroV3B />
+      </div>
+
+      {/* 1.2 近期活动 + 商会 AI 助手（电脑版） */}
+      <HomeEventsAndAgent />
 
       {/* H02–H10 — Placeholders for Phase 1 visual implementation.
           Each is a 100vh dark section with a section ID and copy stub.
@@ -63,6 +81,7 @@ export default function HomePage() {
       <H10CTABanner />
 
       <SiteFooter />
+      <MobileTabBar />
     </main>
   );
 }

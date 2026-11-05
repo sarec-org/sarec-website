@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, fmtDateTime, money, useDraft } from './client';
 import { ContactCodeFields, useContactInput, useMeta, verifyCode } from './LoginBox';
 import { EmailInput, PhoneInput, joinPhone, splitPhone, type ContactInfo } from './ContactInfo';
-import { QuestionInput, RolePicker, isAnswered, toValue, type AnswerDraft, type QuestionDTO } from './Questions';
+import { RolePicker, isAnswered, toValue, type AnswerDraft, type QuestionDTO } from './Questions';
 import s from './crm.module.css';
 
 type Preview = {
@@ -24,6 +24,7 @@ type Preview = {
   name: string | null;
   identity: { email: string | null; phone: string | null };
   contactInfo: ContactInfo | null;
+  oneStepReady?: boolean;
 };
 
 export function EventEssentials({ e }: { e: Preview['event'] }) {
@@ -81,11 +82,11 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
     setErr(null);
     setBusy(true);
     try {
-      // 手机号、邮箱必填（只检查格式，不另发验证码；登录用的那一项已验证）
+      // 1.2 一步报名：新用户只填姓名、手机、行业（邮箱选填）；老用户资料齐全时一键报名
       const phone = !p.loggedIn && c.channel === 'sms' ? c.target : joinPhone(form.cc, form.phone);
       const email = !p.loggedIn && c.channel === 'email' ? c.email.trim() : form.email.trim();
-      if (!phone) return setErr('请填写手机号');
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErr('请填写正确的邮箱');
+      if (!phone && !p.oneStepReady) return setErr('请填写手机号');
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErr('邮箱格式不对');
       if (!p.loggedIn) {
         if (!form.name.trim()) return setErr('请填写怎么称呼您');
         if (!form.roleSub) return setErr('请选择您的主要行业');
@@ -93,9 +94,8 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
         const v = await verifyCode(c, code, form.name.trim());
         if (!v.ok) return setErr(v.message);
       }
-      const answers = p.required.map((q) => ({ code: q.code, value: toValue(q, form.answers[q.code] ?? {}) }));
       const r = await api<{ status: string; orderNo: string | null; taskId: string; message: string; notify: { phone: string | null; email: string | null } }>(`/api/v1/events/${encodeURIComponent(slug)}/register`, {
-        body: { name: form.name, roleSub: form.roleSub, roleOther: form.roleOther, answers, ref: refCode, channel, phone, email }
+        body: { name: form.name, roleSub: form.roleSub, roleOther: form.roleOther, ref: refCode, channel: channel ?? 'web', phone: phone || undefined, email: email || undefined, oneStep: true }
       });
       if (!r.ok) {
         if (r.code === 'answers_required') {
@@ -112,14 +112,21 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
   }
 
   const needFirst = !p.loggedIn || p.firstTime;
-  const reqLeft = p.required.filter((q) => !isAnswered(q, form.answers[q.code])).length;
-  const contactOk = (p.loggedIn || c.channel !== 'sms' ? !!form.phone.trim() : true) && (p.loggedIn || c.channel !== 'email' ? !!form.email.trim() : true);
-  const ready = (needFirst ? !!form.name.trim() && !!form.roleSub && (p.loggedIn || code.length === 6) : reqLeft === 0) && contactOk;
+  void isAnswered;
+  void toValue;
+  // 手机必填（用短信验证码登录的，手机就是那个号码）；邮箱选填
+  const contactOk = p.oneStepReady || (p.loggedIn || c.channel !== 'sms' ? !!form.phone.trim() : true);
+  const ready = (needFirst ? !!form.name.trim() && !!form.roleSub && (p.loggedIn || code.length === 6) : true) && contactOk;
   const contactFields = (
     <>
       {(p.loggedIn || c.channel !== 'sms') && <PhoneInput cc={form.cc} num={form.phone} setCc={(v) => setForm({ ...form, cc: v })} setNum={(v) => setForm({ ...form, phone: v })} />}
-      {(p.loggedIn || c.channel !== 'email') && <EmailInput value={form.email} setValue={(v) => setForm({ ...form, email: v })} />}
-      <p className={s.small}>活动通知会发到这里，报名后请留意确认邮件。</p>
+      {(p.loggedIn || c.channel !== 'email') && (
+        <>
+          <EmailInput value={form.email} setValue={(v) => setForm({ ...form, email: v })} />
+          <p className={s.small} style={{ marginTop: '-0.5rem' }}>邮箱选填，填了可以收到报名确认邮件。</p>
+        </>
+      )}
+      <p className={s.small}>活动通知会发到这里。</p>
     </>
   );
 
@@ -138,10 +145,10 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
         </div>
       ) : closed ? (
         <p className={s.notice}>{e.status === 'cancelled' ? '本场活动已取消' : e.status === 'completed' ? '本场活动已结束' : '本场报名已截止'}。可以看看<Link href="/zh/events">其他活动</Link>。</p>
-      ) : !started && !(p.loggedIn && !p.firstTime && p.required.length) ? (
+      ) : !started ? (
         <div className={s.bottomBar}>
           <div className={s.bottomInner}>
-            {p.loggedIn && !p.firstTime && p.required.length === 0 && !!form.phone.trim() && !!form.email.trim() ? (
+            {p.loggedIn && !p.firstTime && p.oneStepReady ? (
               <button className={s.btn} disabled={busy} onClick={submit}>{busy ? '处理中…' : '一键报名'}</button>
             ) : (
               <button className={s.btn} onClick={() => setStarted(true)}>报名</button>
@@ -170,21 +177,15 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
             </>
           ) : (
             <>
-              <p className={s.notice}>{reqLeft > 0 ? `还需回答 ${reqLeft} 题即可完成报名` : '都答好了，点下方完成报名'}</p>
+              <p className={s.notice}>补一个手机号就能报名，活动变动会通知您。</p>
               {contactFields}
-              {p.required.map((q) => (
-                <div key={q.code} className={s.card}>
-                  <p className={s.cardTitle}>{q.prompt}</p>
-                  <QuestionInput q={q} value={form.answers[q.code]} onChange={(v) => setForm({ ...form, answers: { ...form.answers, [q.code]: v } })} />
-                </div>
-              ))}
             </>
           )}
           {err && <p className={s.error} role="alert">{err}</p>}
           <div className={s.bottomBar}>
             <div className={s.bottomInner}>
               <button className={s.btn} disabled={busy || !ready}>
-                {busy ? '处理中…' : e.feeCents > 0 ? `完成报名，去付款 ${money(e.feeCents)}` : '完成报名'}
+                {busy ? '处理中…' : e.feeCents > 0 ? `完成报名（费用 ${money(e.feeCents)}）` : '完成报名'}
               </button>
             </div>
           </div>

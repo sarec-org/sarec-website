@@ -19,6 +19,22 @@ function mapsUrl(q: string): string {
   return ios ? `https://maps.apple.com/?q=${encodeURIComponent(q)}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
 }
 
+/** 个人签到码（工作人员扫码核验） */
+function PersonalQr({ slug }: { slug: string }) {
+  const [qr, setQr] = useState<string | null>(null);
+  useEffect(() => {
+    api<{ qr: string }>(`/api/v1/me/checkin-qr?slug=${encodeURIComponent(slug)}`).then((r) => r.ok && setQr(r.data.qr));
+  }, [slug]);
+  if (!qr) return null;
+  return (
+    <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginTop: '0.75rem' }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={qr} alt="我的签到码" style={{ width: 120, height: 120, background: 'var(--ivory)', padding: 4 }} />
+      <p className={s.small} style={{ margin: 0 }}>我的签到码：到场出示给工作人员即可。</p>
+    </div>
+  );
+}
+
 export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: string | null; msg: string | null }) {
   const [me, setMe] = useState<Me | null>(null);
   const [ev, setEv] = useState<Ev | null>(null);
@@ -72,7 +88,8 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
         {reg.order_no && (
           <div className={s.row}><span className={s.rowLabel}>费用</span><span className={s.rowValue}>{money(reg.fee_cents)} · {reg.order_status === 'paid' ? '已付款' : reg.order_status === 'payment_submitted' ? '待核款' : '待付款'}</span></div>
         )}
-        <p className={s.small} style={{ marginTop: '0.5rem' }}>到场请用微信扫一扫，扫门口的签到码。</p>
+        <p className={s.small} style={{ marginTop: '0.5rem' }}>到场请用微信扫一扫，扫门口的活动码；或出示下面的个人签到码，由工作人员核验。</p>
+        {!cancelled && !checkedIn && <PersonalQr slug={slug} />}
       </div>
 
       {!cancelled && me.contactInfo && (me.contactInfo.phone || me.contactInfo.email) && (
