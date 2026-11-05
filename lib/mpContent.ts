@@ -199,7 +199,7 @@ function serviceCards(): Card[] {
 // ── 页面 ────────────────────────────────────────────────────────────────
 function homeNodes(): Node[] {
   const nodes: Node[] = [
-    { t: 'quote', text: homeCopy.quote.text, by: homeCopy.quote.by },
+    // 金句只出现一次：小程序首页在创始人卡片下方显示 founder.quote
     { t: 'h', text: homeCopy.why.title },
     { t: 'list', items: homeCopy.why.cards.filter((c) => safe(c.body)).map((c) => `${c.title}：${clean(c.body)}`) },
     { t: 'h', text: homeCopy.entriesTitle },
