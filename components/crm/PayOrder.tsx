@@ -1,7 +1,7 @@
 'use client';
 /**
  * 付款页 /zh/pay/[orderNo]：会费、活动费、会议室、月卡、电子屏共用。
- * Zelle（主）：二维码 + 收款邮箱/电话 + 收款人，各一键复制；醒目提示“付款备注请填订单号”。
+ * Zelle（主）：二维码 + 收款人名字；醒目提示“请用银行 App 扫码付款，备注填订单号”（收款手机号收不到钱，已隐藏）。
  * 银行卡（Stripe）：给没有美国银行账户的会员。
  * 从银行 App 返回时自动回到本订单（地址不变；“我的”也会提示继续付款）。
  */
@@ -155,18 +155,17 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
             <>
           <h2 className={s.h2}>方式一：Zelle 转账（推荐）</h2>
           <p className={s.notice} style={{ fontSize: '1.15rem' }}>
-            <b>付款备注请填订单号：<span className={s.mono} style={{ color: 'var(--gold-bright)' }}>{o.orderNo}</span></b>
+            <b>请用银行 App 扫码付款，备注填订单号：<span className={s.mono} style={{ color: 'var(--gold-bright)' }}>{o.orderNo}</span></b>
           </p>
           <div className={s.card}>
             <div className={s.qrBox}>
               <img src={d.zelle.qrUrl} alt="商会 Zelle 收款二维码" className={s.qrImg} />
               <p className={s.small}>{touch ? '长按二维码可保存到相册，在银行 App 的 Zelle 里扫码' : '可用手机银行 App 的 Zelle 扫这个二维码'}</p>
             </div>
-            <CopyRow label="收款邮箱 / 电话" value={d.zelle.id} />
-            <CopyRow label="收款人名字" value={d.zelle.name} mono={false} />
+            <div className={s.row}><span className={s.rowLabel}>收款人</span><span className={s.rowValue}>{d.zelle.name ?? '待配置'}</span></div>
             {!d.zelle.configured && <p className={s.small}>收款信息待配置，请稍后再付或联系工作人员。</p>}
           </div>
-          <p className={s.small}>步骤：复制金额和订单号 → 打开银行 App 的 Zelle → 付款时备注订单号 → 回到本页点下面的按钮。</p>
+          <p className={s.small}>步骤：打开银行 App 的 Zelle → 扫上面的二维码 → 核对收款人 → 付款时备注订单号 → 回到本页点下面的按钮。</p>
           <div className={s.field} style={{ marginTop: '1rem' }}>
             <label className={s.label}>付款说明（选填）</label>
             <input className={s.input} placeholder="例如：已用 Chase Zelle 付款，备注了订单号" value={note} onChange={(e) => setNote(e.target.value)} />
