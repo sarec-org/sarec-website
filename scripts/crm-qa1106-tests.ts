@@ -79,6 +79,22 @@ async function main() {
   assert.equal(m.length, 2);
   ok('三次并发提交都成功，每种联系方式只有一条当前值');
 
+  console.log('现场签到连点（报名 + 签到两步，与线上接口顺序一致）：不死锁、不报错');
+  const evFixed = await evRow();
+  for (let round = 0; round < 5; round++) {
+    const e = await wechatUser(`e${round}`);
+    const one = async () => {
+      await register(slug, e, { name: `QA戊${sfx}`, roleSub: 'agent', phone: `213${P}02${round}5`, email: `qa-e${round}-${sfx}@example.com`, channel: 'onsite' });
+      return withTransaction(async (db) => checkIn(db, evFixed, e));
+    };
+    const rs = await Promise.allSettled(Array.from({ length: 5 }, one));
+    const errs = rs.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+    assert.equal(errs.length, 0, `第 ${round + 1} 轮报错：${errs.map((x) => (x.reason as Error).message).join('; ')}`);
+    const kinds = rs.map((r) => (r as PromiseFulfilledResult<{ kind: string }>).value.kind).sort();
+    assert.deepEqual(kinds, ['already', 'already', 'already', 'already', 'checked_in']);
+  }
+  ok('5 轮 × 5 次并发：每轮 1 次签到成功、4 次“已签到”，没有死锁');
+
   console.log(`\n全部通过：${passed} 组`);
 }
 async function regOf(id: string) {

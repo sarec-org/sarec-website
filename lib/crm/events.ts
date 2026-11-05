@@ -261,6 +261,8 @@ export async function checkIn(
   if (ev.event_status === 'cancelled') return { kind: 'rejected', message: '本场活动已取消' };
   if (ev.event_status === 'completed') return { kind: 'rejected', message: '本场活动已结束' };
 
+  // 加锁顺序与报名一致：先档案、后报名，同一人连点签到时不会互相等待而死锁。
+  await db.query(`SELECT 1 FROM contacts WHERE id = $1 FOR NO KEY UPDATE`, [contactId]);
   const { rows } = await db.query<Registration>(
     `SELECT * FROM registrations WHERE event_id = $1 AND contact_id = $2 FOR UPDATE`,
     [ev.id, contactId]
