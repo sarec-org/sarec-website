@@ -245,3 +245,106 @@ export const contactCopy = {
   ],
   org: { en: 'Sino-American Real Estate Chamber (SAREC)', zh: '中美房地产商会', hq: '总部所在:洛杉矶 · 中美双语' }
 };
+
+/** 网站首页（app/zh/page.tsx 的 H01–H09）文案；H03 / H04 / H09 直接引用这里 */
+export const homeCopy = {
+  hero: {
+    eyebrow: 'Cross-Border Real Estate Capital & Project Platform',
+    title: '连接中美资本，重构房地产项目协作',
+    sub: 'SAREC 围绕项目判断、结构设计、风险控制与资源协同，帮助中国资本、美国项目方和专业服务机构建立更高效的跨境合作路径。'
+  },
+  quote: { text: '跨境房地产合作的核心，不是信息差，而是判断力、结构能力和长期信任。', by: 'Andy Wang · SAREC 创始人' },
+  why: {
+    title: '中美房地产合作真正的门槛',
+    cards: [
+    {
+      number: '01',
+      title: '培训供给充足，但项目判断稀缺',
+      body:
+        '市场上有大量入门级和理念型的培训内容。但客户真正需要的不是"美国房地产入门"，而是"如何看懂一个具体项目、识别风险、评估结构"。'
+    },
+    {
+      number: '02',
+      title: '一次性服务很多，但深度把控很少',
+      body:
+        '许多服务方靠"介绍项目"赚取一次性佣金。但项目判断只是第一步。项目能否成立、是否符合投资人利益、风险如何控制 —— 这些需要持续的专业把控。'
+    },
+    {
+      number: '03',
+      title: '中介视角丰富，但投资人视角缺失',
+      body:
+        '许多机构服务的是项目方 —— 帮项目方找钱。但投资人视角下需要的是另一套服务：项目筛选、结构设计、风险评估、过程监督、利益对齐。'
+    },
+    {
+      number: '04',
+      title: '业务边界模糊，专业服务伙伴未分工',
+      body:
+        '许多服务方同时做地产、保险、移民、税务、贷款。更稳健的做法 —— 主叙事聚焦地产，其他服务由专业服务伙伴网络分工提供。'
+    }
+  ] as { number: string; title: string; body: string }[]
+  },
+  entriesTitle: '中美房地产项目，判断先于投入。',
+  entries: [
+    {
+      code: '01',
+      title: '投资人 & 开发者',
+      preview: '为跨境投资人与开发者提供项目风险判断、可行性评估与开发全程顾问。',
+      linkHref: '/zh/services/investors',
+      weight: 'primary'
+    },
+    {
+      code: '02',
+      title: '项目方',
+      preview: '为项目方提供市场定位、内容资产与投资人教育，建立 AI 搜索可见度与品牌信任。',
+      linkHref: '/zh/services/project-owners',
+      weight: 'secondary'
+    },
+    {
+      code: '03',
+      title: '专业服务机构',
+      preview: '面向律师、会计、顾问等专业服务机构的协作入口。',
+      linkHref: '/zh/services/professional-firms',
+      weight: 'muted'
+    }
+  ] as { code: string; title: string; preview: string; linkHref: string; weight: 'primary' | 'secondary' | 'muted' }[],
+  faqTitle: '来访者最常问的',
+  faq: [
+    {
+      question: 'SAREC 是商会还是投资机构？',
+      answer: [
+        '都是，但不只是。',
+        'SAREC 以商会为入口，以项目判断、结构设计和风险控制为核心。',
+        '我们提供长期学习与交流服务（研究、培训、活动、考察），',
+        '也提供项目咨询与结构设计（项目尽调、财务建模、项目判断与说明），',
+        '并在符合参与标准的项目中提供合作结构设计支持。'
+      ]
+    },
+    {
+      question: 'SAREC 服务的是哪类客户？',
+      answer: [
+        'SAREC 主要服务四类客户：',
+        '在美华人投资人、出海企业家、中国地产同行、美国项目方。',
+        '不在以上 4 类的客户，可以预约 30 分钟沟通讨论匹配度。'
+      ]
+    },
+    {
+      question: 'SAREC 和市场上其他地产服务机构有什么不同？',
+      answer: [
+        '我们做培训和展会，但围绕真实项目而非基础卖课；',
+        '项目判断只是第一步，把控才是核心；',
+        '我们提供合作结构设计，不直接作为施工开发主体，也不设资金池；',
+        '我们做跨境房地产合作，但只服务能看懂项目、能承担风险的客户。'
+      ]
+    },
+    {
+      question: '如何与 SAREC 开始合作？',
+      answer: [
+        '三种方式：',
+        '预约 30 分钟沟通（适合还在了解阶段）、',
+        '提交项目评估（适合已有具体项目）、',
+        '申请加入会员（适合长期培育型客户）。',
+        '提交后 1 个工作日内由 SAREC 团队回复。'
+      ]
+    }
+  ]
+};

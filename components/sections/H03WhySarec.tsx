@@ -2,6 +2,7 @@
 
 import { motion, type Variants } from 'framer-motion';
 import styles from './H03WhySarec.module.css';
+import { homeCopy } from '@/lib/sitePagesCopy';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -34,32 +35,7 @@ type Card = {
   body: string;
 };
 
-const CARDS: Card[] = [
-  {
-    number: '01',
-    title: '培训供给充足，但项目判断稀缺',
-    body:
-      '市场上有大量入门级和理念型的培训内容。但客户真正需要的不是"美国房地产入门"，而是"如何看懂一个具体项目、识别风险、评估结构"。'
-  },
-  {
-    number: '02',
-    title: '一次性服务很多，但深度把控很少',
-    body:
-      '许多服务方靠"介绍项目"赚取一次性佣金。但项目判断只是第一步。项目能否成立、是否符合投资人利益、风险如何控制 —— 这些需要持续的专业把控。'
-  },
-  {
-    number: '03',
-    title: '中介视角丰富，但投资人视角缺失',
-    body:
-      '许多机构服务的是项目方 —— 帮项目方找钱。但投资人视角下需要的是另一套服务：项目筛选、结构设计、风险评估、过程监督、利益对齐。'
-  },
-  {
-    number: '04',
-    title: '业务边界模糊，专业服务伙伴未分工',
-    body:
-      '许多服务方同时做地产、保险、移民、税务、贷款。更稳健的做法 —— 主叙事聚焦地产，其他服务由专业服务伙伴网络分工提供。'
-  }
-];
+const CARDS: Card[] = homeCopy.why.cards;
 
 export function H03WhySarec() {
   return (

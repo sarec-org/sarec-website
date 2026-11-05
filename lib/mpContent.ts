@@ -11,8 +11,8 @@
  * - 图片（lib/mpImages.ts）：主视觉、服务 / 研究卡片图、文章配图、logo、人物与项目照片，走网站图片压缩；
  *   含收益数字、投资回报的图表和数据图不给；视频用封面图代替。
  */
-import { aboutPage, homePage, researchPages, servicePages, servicesOverviewPage, site, stats } from '@/lib/content';
-import { aboutCopy, contactCopy, partnerCopy, partnerNetwork, servicesCopy } from '@/lib/sitePagesCopy';
+import { aboutPage, homePage, researchPages, servicePages, servicesOverviewPage, site } from '@/lib/content';
+import { aboutCopy, contactCopy, homeCopy, partnerCopy, partnerNetwork, servicesCopy } from '@/lib/sitePagesCopy';
 import { listArticles, getArticle } from '@/lib/geo/content';
 import type { Article, Block } from '@/lib/geo/types';
 import { indexCategories } from '@/lib/researchIndex';
@@ -177,20 +177,49 @@ function researchCards(): Card[] {
 /** 列表输出不带 brief（受限文章列表里不显示摘要） */
 const listCards = () => researchCards().map(({ brief: _b, ...c }) => c);
 
+/**
+ * 小程序服务卡片 / 详情页用中性标题（有意与网站不同）：网站详情页标题是推介式问句
+ * （如“洛杉矶有哪些值得投的房产开发机会？”），小程序里不能出现。
+ */
+const MP_SERVICE_TITLES: Record<string, string> = {
+  strategy: '项目初筛与判断',
+  development: '项目开发与落地支持',
+  'due-diligence': '风险识别与尽职调查',
+  capital: '资本与项目协同'
+};
+
 function serviceCards(): Card[] {
   return servicesOverviewPage.services.map((s) => {
     const slug = slugOf(s.href);
     const page = servicePage(slug);
-    return { slug, title: page?.title ?? s.title, summary: safeSummary(page?.subtitle ?? s.description), restricted: isRestricted(s.title, page?.title, slug), image: serviceImage(slug) };
+    return { slug, title: MP_SERVICE_TITLES[slug] ?? s.title, summary: safeSummary(s.description), restricted: isRestricted(s.title, page?.title, slug), image: serviceImage(slug) };
   });
 }
 
 // ── 页面 ────────────────────────────────────────────────────────────────
+function homeNodes(): Node[] {
+  const nodes: Node[] = [
+    { t: 'quote', text: homeCopy.quote.text, by: homeCopy.quote.by },
+    { t: 'h', text: homeCopy.why.title },
+    { t: 'list', items: homeCopy.why.cards.filter((c) => safe(c.body)).map((c) => `${c.title}：${clean(c.body)}`) },
+    { t: 'h', text: homeCopy.entriesTitle },
+    { t: 'list', items: homeCopy.entries.map((e) => `${e.title}：${e.preview}`).filter((x) => safe(x)) },
+    { t: 'h', text: homeCopy.faqTitle }
+  ];
+  for (const q of homeCopy.faq) {
+    // 答案里有入会付款等要去掉的内容，整题不放（避免“三种方式”只剩两种）
+    if (q.answer.some((x) => /会员|付款|支付/.test(x) || !safe(x))) continue;
+    const items = q.answer.map(clean);
+    if (items.length) nodes.push({ t: 'list', title: q.question, items: [items.join('')] });
+  }
+  return nodes;
+}
+
 export function contentHome() {
   return {
     site: { name: site.name, fullName: site.fullName, positioning: site.positioning },
     logo: IMAGES.logo,
-    hero: { eyebrow: homePage.hero.eyebrow, title: homePage.hero.title, subtitle: homePage.hero.subtitle, image: IMAGES.homeHero },
+    hero: { eyebrow: 'SAREC · 中美房地产商会', title: homeCopy.hero.title, subtitle: homeCopy.hero.sub, image: IMAGES.homeHero },
     // 与网站首页“代表性项目”“创始人”两块同源（去掉收益、资金结构相关文字）
     featured: {
       eyebrow: 'FEATURED PROJECT · 代表性项目',
@@ -210,9 +239,11 @@ export function contentHome() {
     },
     services: { title: homePage.serviceTitle, items: serviceCards() },
     research: { title: homePage.researchTitle, items: listCards().slice(0, 3) },
-    stats,
-    activity: { eyebrow: homePage.activity.eyebrow, title: homePage.activity.title, lines: homePage.activity.lines },
-    trust: { title: homePage.trustTitle, text: homePage.partners },
+    // 网站首页现行文案：为什么需要 SAREC、三类客户入口、常见问题（去掉合作结构 / 资金路径 / 年限数字等）
+    nodes: homeNodes(),
+    stats: [] as { value: string; label: string }[],
+    activity: null,
+    trust: { title: '', text: '' },
     disclaimer: '页面内容仅作信息说明与研究参考，不构成证券发行、收益承诺或投资建议。'
   };
 }
@@ -270,7 +301,7 @@ export function contentService(slug: string) {
   const page = servicePage(slug);
   if (!card || !page) return null;
   const hero = serviceImage(slug, 750);
-  if (card.restricted) return { slug, title: page.title, summary: card.summary, hero, restricted: true, notice: RESTRICTED_NOTICE, nodes: [] as Node[] };
+  if (card.restricted) return { slug, title: card.title, summary: card.summary, hero, restricted: true, notice: RESTRICTED_NOTICE, nodes: [] as Node[] };
   const nodes: Node[] = [];
   const intro = safe(page.problemIntro);
   if (intro) nodes.push({ t: 'p', text: intro });
@@ -288,11 +319,11 @@ export function contentService(slug: string) {
   if (judge) nodes.push({ t: 'quote', text: judge, by: 'SAREC 判断' });
   const fit = page.fit.map(safe).filter((x): x is string => !!x);
   if (fit.length) nodes.push({ t: 'h', text: '适合谁' }, { t: 'list', items: fit });
-  return { slug, title: page.title, summary: safeSummary(page.subtitle) || card.summary, hero, restricted: false, nodes };
+  return { slug, title: card.title, summary: safeSummary(page.subtitle) || card.summary, hero, restricted: false, nodes };
 }
 
 export function contentResearchList() {
-  return { title: '研究中心', subtitle: '基于真实项目积累的政策与判断研究', hero: IMAGES.researchHero, items: listCards() };
+  return { title: '研究中心', subtitle: '', hero: IMAGES.researchHero, items: listCards() };
 }
 
 function geoNodes(a: Article): Node[] {
@@ -354,7 +385,7 @@ export function contentContact() {
   nodes.push({ t: 'h', text: '联系之后' });
   nodes.push({
     t: 'list',
-    items: contactCopy.steps.map((st) => `${st.title}：${st.body.split('；').filter((x) => !/会员费|付款|支付/.test(x)).join('；')}`)
+    items: contactCopy.steps.filter((st) => !/表单/.test(st.body)).map((st) => `${st.title}：${st.body.split('；').filter((x) => !/会员费|付款|支付/.test(x)).join('；')}`)
   });
   nodes.push({ t: 'h', text: partnerCopy.title }, { t: 'p', text: partnerCopy.lead });
   nodes.push({ t: 'list', items: partnerNetwork.filter((p) => safe(p.body)).map((p) => `${p.title}：${p.body}`) });
