@@ -8,19 +8,23 @@
  *   · 标题涉及投资、融资、EB-5、收益、募资、资本等的页面：只给简介和“联系商会”，不给正文；
  *   · 其余页面：去掉所有数据表、指标卡、图表，以及含收益数字 / 金额 / 百分比 / 募资字样的段落；
  *   · 不输出任何付款、外部链接或表单。
+ * - 图片（lib/mpImages.ts）：主视觉、服务 / 研究卡片图、文章配图、logo、人物与项目照片，走网站图片压缩；
+ *   含收益数字、投资回报的图表和数据图不给；视频用封面图代替。
  */
 import { aboutPage, homePage, researchPages, servicePages, servicesOverviewPage, site, stats } from '@/lib/content';
 import { listArticles, getArticle } from '@/lib/geo/content';
 import type { Article, Block } from '@/lib/geo/types';
 import { indexCategories } from '@/lib/researchIndex';
 import { benefitsContent } from '@/lib/benefitsContent';
+import { IMAGES, img, imageAllowed, researchPoster, serviceImage, type MpImage } from '@/lib/mpImages';
 
 export type Node =
   | { t: 'h'; text: string }
   | { t: 'p'; text: string }
   | { t: 'list'; items: string[]; title?: string }
   | { t: 'quote'; text: string; by?: string }
-  | { t: 'note'; text: string };
+  | { t: 'note'; text: string }
+  | { t: 'img'; img: MpImage; caption?: string };
 
 export const RESTRICTED_NOTICE = '本页涉及投资、融资或移民相关内容，小程序内只提供简介。如需进一步了解，请联系商会工作人员。';
 
@@ -95,20 +99,37 @@ function blockNodes(b: Block): Node[] {
       const j = safe(b.data.judgment);
       return j && !FIGURE_RE.test(b.data.question) ? [{ t: 'h', text: clean(b.data.question) }, { t: 'p', text: j }] : [];
     }
-    // 数据表、指标卡、图表、媒体、案例引用、行动按钮：小程序不展示
+    case 'assetBreak': {
+      // 文章配图：图片直接用，视频用封面图；示意图 / 数据图 / 含收益数字的不给
+      const d = b.data;
+      const path = d.kind === 'video' ? d.poster : d.src;
+      if (!path || !imageAllowed(d.alt, d.title, d.eyebrow, d.body)) return [];
+      return [{ t: 'img', img: img(path, d.alt), caption: d.title ? clean(d.title) : undefined }];
+    }
+    // 数据表、指标卡、图表、案例引用、行动按钮：小程序不展示
     default:
       return [];
   }
 }
 
 // ── 列表数据 ────────────────────────────────────────────────────────────
-type Card = { slug: string; title: string; summary: string; restricted: boolean; tag?: string; date?: string };
+type Card = { slug: string; title: string; summary: string; restricted: boolean; tag?: string; date?: string; image?: MpImage | null };
+
+/** 文章第一张可用配图（卡片封面） */
+function articleCover(a: Article, w: 384 | 750 = 384): MpImage | null {
+  for (const b of a.blocks) {
+    if (b.type !== 'assetBreak') continue;
+    const path = b.data.kind === 'video' ? b.data.poster : b.data.src;
+    if (path && imageAllowed(b.data.alt, b.data.title, b.data.eyebrow, b.data.body)) return img(path, b.data.alt, w);
+  }
+  return null;
+}
 
 function researchCards(): Card[] {
   const geo = listArticles({ status: 'published' })
     .slice()
     .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
-    .map((a) => ({ slug: a.slug, title: a.title, summary: safeSummary(a.description), restricted: isRestricted(a.title, a.slug), tag: '研究', date: a.publishedAt }));
+    .map((a) => ({ slug: a.slug, title: a.title, summary: safeSummary(a.description), restricted: isRestricted(a.title, a.slug), tag: '研究', date: a.publishedAt, image: articleCover(a) }));
   const seen = new Set(geo.map((g) => g.slug));
   const idx: Card[] = [];
   for (const cat of indexCategories) {
@@ -116,7 +137,7 @@ function researchCards(): Card[] {
       const slug = slugOf(art.href);
       if (seen.has(slug)) continue;
       seen.add(slug);
-      idx.push({ slug, title: art.title, summary: safeSummary(art.desc), restricted: isRestricted(art.title, slug), tag: cat.title });
+      idx.push({ slug, title: art.title, summary: safeSummary(art.desc), restricted: isRestricted(art.title, slug), tag: cat.title, image: researchPoster(slug, art.title) });
     }
   }
   return [...geo, ...idx];
@@ -126,7 +147,7 @@ function serviceCards(): Card[] {
   return servicesOverviewPage.services.map((s) => {
     const slug = slugOf(s.href);
     const page = servicePage(slug);
-    return { slug, title: s.title, summary: safeSummary(s.description), restricted: isRestricted(s.title, page?.title, slug) };
+    return { slug, title: s.title, summary: safeSummary(s.description), restricted: isRestricted(s.title, page?.title, slug), image: serviceImage(slug) };
   });
 }
 
@@ -134,7 +155,25 @@ function serviceCards(): Card[] {
 export function contentHome() {
   return {
     site: { name: site.name, fullName: site.fullName, positioning: site.positioning },
-    hero: { eyebrow: homePage.hero.eyebrow, title: homePage.hero.title, subtitle: homePage.hero.subtitle },
+    logo: IMAGES.logo,
+    hero: { eyebrow: homePage.hero.eyebrow, title: homePage.hero.title, subtitle: homePage.hero.subtitle, image: IMAGES.homeHero },
+    // 与网站首页“代表性项目”“创始人”两块同源（去掉收益、资金结构相关文字）
+    featured: {
+      eyebrow: 'FEATURED PROJECT · 代表性项目',
+      title: '4136 Rosewood Ave',
+      subtitle: 'East Hollywood, Los Angeles · ED1 经济适用房',
+      image: IMAGES.featuredProject,
+      role: '项目合作',
+      text: '与本地有 15 年美国经验的合作开发商共同推进。'
+    },
+    founder: {
+      eyebrow: 'FOUNDER · 创始人',
+      name: 'Andy Wang',
+      title: 'SAREC 创始人',
+      image: IMAGES.founder,
+      credentials: ['中欧国际工商学院 EMBA', '长期从事房地产项目操盘与跨境合作实践', '中美双向跨境合作经验', '在美国推动 SAREC 落地'],
+      quote: '跨境房地产合作的核心，不是信息差，而是判断力、结构能力和长期信任。'
+    },
     services: { title: homePage.serviceTitle, items: serviceCards() },
     research: { title: homePage.researchTitle, items: researchCards().slice(0, 3) },
     stats,
@@ -151,19 +190,22 @@ export function contentAbout() {
     { t: 'h', text: aboutPage.positioning.title },
     { t: 'quote', text: aboutPage.positioning.intro },
     { t: 'p', text: aboutPage.positioning.body },
+    { t: 'img', img: IMAGES.founderSpeaking, caption: 'Andy Wang · SAREC 创始人' },
     { t: 'h', text: '我们做什么' },
     ...aboutPage.functions.flatMap((f) => [{ t: 'list' as const, title: f.title, items: f.lines }]),
+    { t: 'img', img: IMAGES.featuredProject, caption: '4136 Rosewood Ave · 洛杉矶 ED1 经济适用房项目' },
     { t: 'h', text: '长期积累' },
     { t: 'p', text: aboutPage.statsIntro },
     { t: 'p', text: aboutPage.partners }
   ];
-  return { title: aboutPage.title, subtitle: aboutPage.subtitle, stats: aboutPage.stats, nodes };
+  return { title: aboutPage.title, subtitle: aboutPage.subtitle, logo: IMAGES.logo, hero: IMAGES.aboutHero, stats: aboutPage.stats, nodes };
 }
 
 export function contentServices() {
   return {
     title: servicesOverviewPage.title,
     subtitle: servicesOverviewPage.subtitle,
+    hero: IMAGES.servicesHero,
     intro: servicesOverviewPage.positioningIntro,
     points: servicesOverviewPage.positioningPoints,
     items: serviceCards(),
@@ -175,7 +217,8 @@ export function contentService(slug: string) {
   const card = serviceCards().find((c) => c.slug === slug);
   const page = servicePage(slug);
   if (!card || !page) return null;
-  if (card.restricted) return { slug, title: card.title, summary: card.summary, restricted: true, notice: RESTRICTED_NOTICE, nodes: [] as Node[] };
+  const hero = serviceImage(slug, 750);
+  if (card.restricted) return { slug, title: card.title, summary: card.summary, hero, restricted: true, notice: RESTRICTED_NOTICE, nodes: [] as Node[] };
   const nodes: Node[] = [];
   const intro = safe(page.problemIntro);
   if (intro) nodes.push({ t: 'p', text: intro });
@@ -193,11 +236,11 @@ export function contentService(slug: string) {
   if (judge) nodes.push({ t: 'quote', text: judge, by: 'SAREC 判断' });
   const fit = page.fit.map(safe).filter((x): x is string => !!x);
   if (fit.length) nodes.push({ t: 'h', text: '适合谁' }, { t: 'list', items: fit });
-  return { slug, title: page.title, summary: safeSummary(page.subtitle) || card.summary, restricted: false, nodes };
+  return { slug, title: page.title, summary: safeSummary(page.subtitle) || card.summary, hero, restricted: false, nodes };
 }
 
 export function contentResearchList() {
-  return { title: '研究中心', subtitle: '基于真实项目积累的政策与判断研究', items: researchCards() };
+  return { title: '研究中心', subtitle: '基于真实项目积累的政策与判断研究', hero: IMAGES.researchHero, items: researchCards() };
 }
 
 function geoNodes(a: Article): Node[] {
@@ -213,7 +256,9 @@ function geoNodes(a: Article): Node[] {
 export function contentResearch(slug: string) {
   const card = researchCards().find((c) => c.slug === slug);
   if (!card) return null;
-  const base = { slug, title: card.title, summary: card.summary, date: card.date ?? null };
+  const a0 = getArticle(slug);
+  const hero = (a0 && a0.status === 'published' ? articleCover(a0, 750) : null) ?? researchPoster(slug, card.title, 750);
+  const base = { slug, title: card.title, summary: card.summary, date: card.date ?? null, hero };
   if (card.restricted) return { ...base, restricted: true, notice: RESTRICTED_NOTICE, nodes: [] as Node[] };
   const a = getArticle(slug);
   if (a && a.status === 'published') return { ...base, author: a.author?.name ?? 'SAREC Research', restricted: false, nodes: geoNodes(a) };
@@ -240,12 +285,13 @@ export function contentResearch(slug: string) {
 }
 
 export function contentBenefits() {
-  return benefitsContent;
+  return { ...benefitsContent, hero: IMAGES.benefitsHero };
 }
 
 export function contentContact() {
   return {
     title: '联系商会',
+    logo: IMAGES.logo,
     body: aboutPage.contact.body,
     phone: site.phone,
     phoneDial: site.phone.replace(/[^\d+]/g, ''),

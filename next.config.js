@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    // 小程序内容图片统一走本站 /_next/image 压缩；视频封面放在 R2 媒体桶
+    remotePatterns: [{ protocol: 'https', hostname: 'pub-750866849946432cb842827f7414652c.r2.dev', pathname: '/**' }]
+  },
   async redirects() {
     return [
       // 首页语言跳转:裸首页 / → /zh 用永久 308(带 Location),取代 app/page.tsx 的 RSC redirect()
