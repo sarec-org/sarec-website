@@ -261,7 +261,11 @@ export function contentResearch(slug: string) {
   const base = { slug, title: card.title, summary: card.summary, date: card.date ?? null, hero };
   if (card.restricted) return { ...base, restricted: true, notice: RESTRICTED_NOTICE, nodes: [] as Node[] };
   const a = getArticle(slug);
-  if (a && a.status === 'published') return { ...base, author: a.author?.name ?? 'SAREC Research', restricted: false, nodes: geoNodes(a) };
+  if (a && a.status === 'published') {
+    // 封面已经放在页头，正文里同一张不再重复
+    const nodes = geoNodes(a).filter((n) => !(n.t === 'img' && hero && n.img.src === hero.src));
+    return { ...base, author: a.author?.name ?? 'SAREC Research', restricted: false, nodes };
+  }
   const r = researchPage(slug);
   if (r) {
     const nodes: Node[] = [];
