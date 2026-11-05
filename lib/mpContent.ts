@@ -44,6 +44,25 @@ const MP_COVERS: Record<string, [string, string]> = {
 /** 段落命中即去掉：收益数字、金额、百分比、募资 / 认购等推介字样 */
 const FIGURE_RE = /(IRR|ROE|ROI|NOI|回报|收益|年化|利润|分红|赚钱|盈利|收入|现金流|溢价|估值|买入|再融资|资本化率|租金测算|cap\s*rate|募资|募集|认购|最低投资|投资额|EB-?5|\$\s?\d|\d[\d,.]*\s*(%|％|万美元|亿美元|美元|万元|亿元|万(?![人套户名次件个平])|倍|一尺|每尺|\/尺|美元\/))/i;
 
+/**
+ * 1.2：每篇文章分别设网站版 / 小程序版显示范围（后台“增长与设置 → 内容显示范围”，存 crm_settings.content_visibility）。
+ * 小程序：full 全文（仍逐段过滤收益数字）/ brief 只给简介 / hide 不显示；没设置时按下面的默认规则。
+ * 为小程序删内容不影响网站。
+ */
+export type MpScope = 'full' | 'brief' | 'hide';
+export type Visibility = Record<string, { mp?: MpScope; site?: 'show' | 'hide' }>;
+let VIS: Visibility = {};
+export function setContentVisibility(v: Visibility | null | undefined) {
+  VIS = v && typeof v === 'object' ? v : {};
+}
+export function defaultMpScope(slug: string, title: string): MpScope {
+  return HIDDEN_RESEARCH.has(slug) ? 'hide' : RESTRICT_RE.test(title) || RESTRICT_RE.test(slug) ? 'brief' : 'full';
+}
+function mpScope(slug: string, title: string): MpScope {
+  const v = VIS[slug]?.mp;
+  return v === 'full' || v === 'brief' || v === 'hide' ? v : defaultMpScope(slug, title);
+}
+
 export const isRestricted = (...texts: (string | undefined | null)[]) => texts.some((t) => !!t && RESTRICT_RE.test(t));
 const clean = (s: string) =>
   s
@@ -156,9 +175,9 @@ function researchCards(): Card[] {
   const geo = listArticles({ status: 'published' })
     .slice()
     .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
-    .filter((a) => !HIDDEN_RESEARCH.has(a.slug))
+    .filter((a) => mpScope(a.slug, a.title) !== 'hide')
     .map((a) => {
-      const restricted = isRestricted(a.title, a.slug);
+      const restricted = mpScope(a.slug, a.title) === 'brief';
       return { slug: a.slug, title: MP_TITLES[a.slug] ?? a.title, summary: restricted ? '' : safeSummary(a.description), brief: firstSentence(safeSummary(a.description)), restricted, tag: '研究', date: a.publishedAt, image: articleCover(a) ?? mpCover(a.slug) };
     });
   const seen = new Set(geo.map((g) => g.slug));
@@ -166,9 +185,9 @@ function researchCards(): Card[] {
   for (const cat of indexCategories) {
     for (const art of cat.articles) {
       const slug = slugOf(art.href);
-      if (seen.has(slug) || HIDDEN_RESEARCH.has(slug)) continue;
+      if (seen.has(slug) || mpScope(slug, art.title) === 'hide') continue;
       seen.add(slug);
-      const restricted = isRestricted(art.title, slug);
+      const restricted = mpScope(slug, art.title) === 'brief';
       idx.push({ slug, title: MP_TITLES[slug] ?? art.title, summary: restricted ? '' : safeSummary(art.desc), brief: firstSentence(safeSummary(art.desc)), restricted, tag: cat.title, image: researchPoster(slug, art.title) });
     }
   }
@@ -320,6 +339,25 @@ export function contentService(slug: string) {
   const fit = page.fit.map(safe).filter((x): x is string => !!x);
   if (fit.length) nodes.push({ t: 'h', text: '适合谁' }, { t: 'list', items: fit });
   return { slug, title: card.title, summary: safeSummary(page.subtitle) || card.summary, hero, restricted: false, nodes };
+}
+
+/** 后台：全部研究文章及其小程序显示范围（默认值 / 当前值） */
+export function researchVisibilityList() {
+  const out: { slug: string; title: string; defaultMp: MpScope; mp: MpScope; site: 'show' | 'hide' }[] = [];
+  const seen = new Set<string>();
+  for (const a of listArticles({ status: 'published' })) {
+    seen.add(a.slug);
+    out.push({ slug: a.slug, title: a.title, defaultMp: defaultMpScope(a.slug, a.title), mp: mpScope(a.slug, a.title), site: VIS[a.slug]?.site === 'hide' ? 'hide' : 'show' });
+  }
+  for (const cat of indexCategories) {
+    for (const art of cat.articles) {
+      const slug = slugOf(art.href);
+      if (seen.has(slug)) continue;
+      seen.add(slug);
+      out.push({ slug, title: art.title, defaultMp: defaultMpScope(slug, art.title), mp: mpScope(slug, art.title), site: VIS[slug]?.site === 'hide' ? 'hide' : 'show' });
+    }
+  }
+  return out;
 }
 
 export function contentResearchList() {

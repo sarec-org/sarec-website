@@ -69,6 +69,9 @@ const INTENT_MAP: Record<string, string> = {
 export function ContactInquiryForm() {
   const [form, setForm] = useState<InquiryFormState>(initialState);
   const [generatedBody, setGeneratedBody] = useState('');
+  // 1.2：表单直接提交到商会后台（生成咨询记录 + 待跟进任务 + 邮件通知），不需要微信、不需要登录
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [errMsg, setErrMsg] = useState('');
 
   // Prefill 需求类型 from URL ?intent= query (set by CT02 intent cards)
   useEffect(() => {
@@ -105,13 +108,61 @@ export function ContactInquiryForm() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (state === 'sending') return;
+    setState('sending');
+    setErrMsg('');
+    const contact = form.contact.trim();
+    const phoneLike = /^[+\d][\d\s()-]{6,}$/.test(contact);
+    try {
+      const ref = new URLSearchParams(window.location.search).get('ref');
+      const res = await fetch('/api/v1/inquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          source: 'web_form',
+          intent: form.requestType,
+          name: form.name,
+          email: form.email,
+          phone: phoneLike ? contact : undefined,
+          wechat: phoneLike ? undefined : contact,
+          message: form.message,
+          ref,
+          fields: { identity: form.identity, location: form.location, source: form.source, contact }
+        })
+      });
+      const j = await res.json().catch(() => null);
+      if (j?.ok) {
+        setState('sent');
+        return;
+      }
+      setErrMsg(j?.error?.message ?? '提交没有成功');
+      setState('failed');
+    } catch {
+      setErrMsg('网络不稳定，提交没有成功');
+      setState('failed');
+    }
+    // 提交失败：生成邮件内容，方便手动发送
     setGeneratedBody(emailBody);
+  }
 
+  function sendByEmail() {
     const subject = encodeURIComponent('SAREC 项目或合作需求');
     const body = encodeURIComponent(emailBody);
     window.location.href = `mailto:info@sinoamericanrec.org?subject=${subject}&body=${body}`;
+  }
+
+  if (state === 'sent') {
+    return (
+      <div className={styles.formWrap}>
+        <div className={styles.formResult} role="status">
+          <h3>已收到，谢谢您</h3>
+          <p>工作人员会在 1 个工作日内（美国西部时间）通过您留下的联系方式联系您。如有急事，可直接发邮件到 info@sinoamericanrec.org。</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -245,16 +296,20 @@ export function ContactInquiryForm() {
         </label>
 
         <div>
-          <button type="submit" className={styles.submit}>
-            <span>提交并发送邮件</span>
+          <button type="submit" className={styles.submit} disabled={state === 'sending'}>
+            <span>{state === 'sending' ? '正在提交…' : '提交'}</span>
             <span className={styles.submitArrow} aria-hidden="true">
               →
             </span>
           </button>
           <p className={styles.formNote}>
-            提交后将通过本机邮箱发送给 SAREC。如邮箱客户端未自动打开,请复制下方生成的邮件内容,
-            手动发送至 <strong>info@sinoamericanrec.org</strong>。我们 1 个工作日内回复。
+            提交后直接送达 SAREC 工作人员，不需要微信。我们 1 个工作日内回复。
           </p>
+          {state === 'failed' && (
+            <p className={styles.formNote} role="alert">
+              {errMsg}。您可以稍后再点一次，或<button type="button" onClick={sendByEmail} style={{ background: 'none', border: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>改用邮件发送</button>。
+            </p>
+          )}
         </div>
       </form>
 

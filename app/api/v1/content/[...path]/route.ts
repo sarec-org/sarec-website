@@ -11,8 +11,21 @@ import {
   contentResearch,
   contentResearchList,
   contentService,
-  contentServices
+  contentServices,
+  setContentVisibility,
+  type Visibility
 } from '@/lib/mpContent';
+import { getPool } from '@/lib/db/client';
+import { getSetting } from '@/lib/crm/orders';
+
+/** 内容显示范围（后台可改）；数据库不可用时按默认规则 */
+async function loadVisibility() {
+  try {
+    setContentVisibility(await getSetting<Visibility>(getPool(), 'content_visibility', {}));
+  } catch {
+    setContentVisibility({});
+  }
+}
 
 export const runtime = 'nodejs';
 export const revalidate = 300;
@@ -25,6 +38,7 @@ const json = (data: unknown, status = 200) =>
 
 export async function GET(_req: Request, { params }: { params: { path: string[] } }) {
   const [a, b] = params.path ?? [];
+  if (a === 'research') await loadVisibility();
   let data: unknown = null;
   if (a === 'home' && !b) data = contentHome();
   else if (a === 'about' && !b) data = contentAbout();

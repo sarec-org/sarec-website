@@ -9,11 +9,14 @@ export const metadata: Metadata = {
 
 const NAV = [
   ['/zh/staff', '首页'],
+  ['/zh/staff/followups', '待跟进'],
   ['/zh/staff/checkin', '签到台'],
   ['/zh/staff/payments', '核款'],
   ['/zh/staff/events', '活动'],
   ['/zh/staff/contacts', '客户'],
+  ['/zh/staff/album', '相册'],
   ['/zh/staff/rooms', '会议室/电子屏'],
+  ['/zh/staff/growth', '增长与设置'],
   ['/zh/staff/display', '官网展示'],
   ['/zh/staff/settings', '设置']
 ];
