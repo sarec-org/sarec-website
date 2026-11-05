@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "geo:monthly": "node scripts/geo-monthly.mjs"
   },
   "dependencies": {
     "@keystatic/core": "^0.5.50",

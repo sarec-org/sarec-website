@@ -6,16 +6,42 @@ export default function ZhLayout({ children }: { children: React.ReactNode }) {
     '@graph': [
       {
         '@type': 'Organization',
+        '@id': 'https://sinoamericanrec.org/#organization',
         name: 'SAREC 中美房地产商会',
-        alternateName: 'Sino-American Real Estate Chamber',
+        alternateName: ['Sino-American Real Estate Chamber', 'SAREC', '中美房地产商会'],
         url: 'https://sinoamericanrec.org',
+        logo: 'https://sinoamericanrec.org/brand/sarec-logo.png',
         description:
           '跨境地产项目协作与资源整合平台，提供美国房地产项目判断、风险控制、结构设计、资源协同与合作推进服务。',
         email: site.email,
-        telephone: site.phone
+        telephone: site.phone,
+        // GEO · J：所在地（洛杉矶地区 · City of Industry, CA）。不写未在站内公开的街道地址。
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'City of Industry',
+          addressRegion: 'CA',
+          addressCountry: 'US'
+        },
+        areaServed: ['Los Angeles', 'United States', 'China'],
+        founder: {
+          '@type': 'Person',
+          name: 'Andy Wang',
+          alternateName: '东哥',
+          url: 'https://sinoamericanrec.org/zh/about/founder'
+        },
+        contactPoint: {
+          '@type': 'ContactPoint',
+          contactType: 'customer service',
+          email: site.email,
+          telephone: site.phone,
+          availableLanguage: ['zh', 'en']
+        }
       },
       {
         '@type': 'WebSite',
+        '@id': 'https://sinoamericanrec.org/#website',
+        publisher: { '@id': 'https://sinoamericanrec.org/#organization' },
+        inLanguage: 'zh-CN',
         name: 'SAREC 中美房地产商会',
         alternateName: 'Sino-American Real Estate Chamber',
         url: 'https://sinoamericanrec.org'

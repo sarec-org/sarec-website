@@ -3,8 +3,6 @@ import { SITE_URL } from '@/lib/seo';
 import { listArticles } from '@/lib/geo/content';
 import {
   listEvents,
-  listMemberProfiles,
-  listMemberUnits,
   listNews,
   listProjects
 } from '@/lib/cms/content';
@@ -110,26 +108,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7
   }));
 
-  const memberUnitEntries: MetadataRoute.Sitemap = listMemberUnits().map((u) => ({
-    url: `${SITE_URL}/zh/members/units/${u.slug}`,
-    ...(u.lastVerified ? { lastModified: new Date(u.lastVerified) } : {}),
-    changeFrequency: 'monthly' as const,
-    priority: 0.6
-  }));
-
-  const memberProfileEntries: MetadataRoute.Sitemap = listMemberProfiles().map((p) => ({
-    url: `${SITE_URL}/zh/members/profiles/${p.slug}`,
-    changeFrequency: 'monthly' as const,
-    priority: 0.6
-  }));
-
   return [
     ...staticEntries,
     ...geoEntries,
     ...newsEntries,
     ...eventEntries,
-    ...projectEntries,
-    ...memberUnitEntries,
-    ...memberProfileEntries
+    ...projectEntries
+    // GEO · J：会员档案（/zh/members/units/、/zh/members/profiles/）已在 robots.txt 隔离，
+    // 不再列入 sitemap，避免「sitemap 收录但 robots 禁止」的冲突。
   ];
 }

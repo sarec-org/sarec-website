@@ -160,7 +160,7 @@ export const sources: Source[] = [
     language: 'en',
     reliability: 'medium',
     quoteAllowed: false,
-    notes: "Public reporting: at least six subcontractors filed mechanic's liens ~$62.5M as of Feb 15, 2019. Upgrade if county recorder/court filings obtained."
+    notes: "Public reporting: at least six subcontractors filed mechanic's liens ~$62.5M as of Feb 15, 2019 (Webcor $52.8M). Same article reports Oceanwide was named in an FBI City Hall corruption probe — reported investigation only, not a finding of wrongdoing. URL re-verified 2026-11-05. Upgrade if county recorder/court filings obtained."
   },
   {
     id: 'src-china-oceanwide-disclosure-2026',

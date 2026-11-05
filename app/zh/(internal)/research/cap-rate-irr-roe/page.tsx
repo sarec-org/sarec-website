@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -173,11 +177,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/cap-rate-irr-roe.ts）。
+const geo = getLegacyResearch('cap-rate-irr-roe');
+
 export default function CapRateIrrRoePage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · 投资指标"
         title="Cap Rate / IRR / ROE 如何理解"
         summary="美国房地产项目中，很多投资人第一眼看的是收益指标。但真正专业的判断，不是记住一个 Cap Rate、IRR 或 ROE 数字，而是看清这些指标背后的收入、成本、融资、时间、退出和风险假设。"
@@ -191,6 +199,8 @@ export default function CapRateIrrRoePage() {
         anchors={heroAnchors}
         mediaCaption="VALUATION / RETURN METRICS / INVESTMENT JUDGMENT"
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="指标有用，但指标不是答案"
@@ -335,6 +345,8 @@ export default function CapRateIrrRoePage() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({
