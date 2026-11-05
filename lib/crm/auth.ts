@@ -241,8 +241,10 @@ export async function wechatLogin(code: string): Promise<{ token: string; contac
     if (!data.openid) throw new CrmError('wechat_failed', '微信登录失败，请稍后再试');
     openid = data.openid;
     unionid = data.unionid;
-  } else if (devEcho() && code.startsWith('dev-')) {
-    openid = `dev-openid-${code.slice(4)}`; // 本地测试用
+  } else if (devEcho() && code) {
+    // 预览 / 本地测试（没有 AppSecret）：1.2 测试版传 dev-<设备号>，同一台测试机始终是同一个人；
+    // 旧版 1.1.3 传真实 wx.login code（每次不同），按 code 生成一次性测试身份，会话照常保存。
+    openid = code.startsWith('dev-') ? `dev-openid-${code.slice(4, 68)}` : `dev-openid-x${sha256(code).slice(0, 24)}`;
   } else {
     throw new CrmError('wechat_unconfigured', '小程序登录暂未配置，请用邮箱验证码登录');
   }
