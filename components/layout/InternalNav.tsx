@@ -85,6 +85,9 @@ export function InternalNav() {
               <span />
               <span />
             </button>
+            <Link href="/zh/me" className={styles.meLink} onClick={close}>
+              我的
+            </Link>
             <Link href="/zh/join" className={styles.cta} onClick={close}>
               加入商会
             </Link>

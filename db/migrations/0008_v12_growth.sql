@@ -174,3 +174,6 @@ INSERT INTO crm_settings (key, value) VALUES
   ('content_visibility', '{}'),
   ('room_notice',        '"会员按等级享受会议室优惠，具体请联系商会工作人员。"')
 ON CONFLICT (key) DO NOTHING;
+
+-- 1.2 小程序会话标记（X-Sarec-Client: mp-1.2）：这类会话的“我的”不返回订单、金额；旧版 1.1.x 会话为空，保持原样
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS client text;

@@ -45,6 +45,7 @@ import {
   upcomingEvents,
   updateConversation,
   type Audience,
+  previousAnswer,
   type Conversation
 } from './store';
 import { clip, detectLang, extractEmail, extractPhone, isBotUserAgent, laDay, looksMeaningless, normalizeTight, sha256 } from './text';
@@ -254,7 +255,7 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
   const who = await audienceFor(contactId);
   const audience: Audience = who.audience;
   const trusted = audience !== 'visitor';
-  const overLimit = !trusted && Math.max(...counted.map((r) => r.count)) > LIMITS.visitorDaily;
+  const overLimit = !trusted && counted.some((r) => r.count > (r.key.startsWith('ip:') ? LIMITS.ipDaily : LIMITS.visitorDaily));
   const lang = detectLang(message);
   const ctx = parseContext(b.context);
   let conv: Conversation | null = convIdIn ? await getConversation(convIdIn, visitorId) : null;
@@ -270,11 +271,14 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
   // 线索状态
   const prevLead: LeadInfo & { _pending?: string | null } = conv.lead_info ?? {};
   const pending = (prevLead._pending ?? null) as LeadStep | null;
-  const leadNow = isLeadIntent(text);
+  // 明确说“报名 / 入会”时按报名、入会处理，不因为活动标题里有“开发、项目”被当成线索
+  const register = wantsRegister(text);
+  const join = !register && wantsJoin(text);
+  const leadNow = !register && !join && isLeadIntent(text);
   let inLead = conv.is_lead || leadNow;
   let lead: LeadInfo = { ...prevLead };
   delete (lead as { _pending?: unknown })._pending;
-  if (inLead || extractEmail(text) || extractPhone(text)) lead = mergeLead(lead, extractLeadSlots(text, inLead ? pending : null, lead));
+  if (!register && !join && (inLead || extractEmail(text) || extractPhone(text))) lead = mergeLead(lead, extractLeadSlots(text, inLead ? pending : null, lead));
   const leadSubmitted = !!conv.lead_at;
 
   // ── 4. 决定怎么答 ──
@@ -297,7 +301,7 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
     answer = { reply: boundaryReply('legal_tax', lang) + leadTail(), tier: 0, route: 'boundary', intent: 'boundary', actions: [] };
   } else if (asksInvestmentReturn(text)) {
     answer = { reply: boundaryReply('returns', lang) + leadTail(), tier: 0, route: 'boundary', intent: 'boundary', actions: [] };
-  } else if (wantsRegister(text) && !inLead) {
+  } else if (register) {
     const e = pickEvent(text, ctx, events);
     if (e === 'many') {
       answer = {
@@ -329,7 +333,7 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
         actions: []
       };
     }
-  } else if (wantsJoin(text) && !inLead) {
+  } else if (join) {
     const f = faqs.find((x) => x.intent === 'how_join');
     answer = { reply: f ? renderFaq(f, lang, events) : lang === 'en' ? 'You can apply online at /zh/join.' : '入会在线申请：/zh/join', tier: 0, route: 'faq', faqId: f?.id ?? null, intent: 'membership', actions: [joinAction(lang)] };
     if (f) await faqHit(f.id);
@@ -343,6 +347,11 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
 
   // 24 小时答案缓存：只缓存“对话第一句、非线索、无动作”的问题
   const cacheable = firstQuestion && !inLead && !answer;
+  // 同一对话第二次问同样的问题：复用上次回答
+  if (!answer && !firstQuestion && !inLead) {
+    const prev = await previousAnswer(conv.id, normalizeTight(text), normalizeTight).catch(() => null);
+    if (prev) answer = { reply: prev.reply, tier: (prev.tier as 0 | 1 | 2) ?? 1, route: 'conv_repeat', cached: true, actions: [] };
+  }
   const cacheKey = cacheable ? sha256(`${lang}|${audience === 'member' ? 'm' : 'v'}|${normalizeTight(text)}`) : null;
   if (!answer && cacheKey) {
     const c = await cacheGet(cacheKey).catch(() => null);

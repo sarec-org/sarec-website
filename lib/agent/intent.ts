@@ -8,6 +8,8 @@ export type Lang = 'zh' | 'en';
 
 export type LeadInfo = {
   need?: string | null;
+  /** 第一句只是笼统说“有个项目”：先记下来，追问具体需求后拼在一起 */
+  intro?: string | null;
   region?: string | null;
   timeline?: string | null;
   wantsCall?: boolean | null;
@@ -53,7 +55,7 @@ export function asksLegalTax(text: string): boolean {
 /** 要求代发邮件 / 代为联系某人。 */
 export function asksSendOnBehalf(text: string): boolean {
   const t = normalize(text);
-  return /(帮|替|代)我?(发|写)?.{0,4}(邮件|email|短信|消息)|(帮|替|代)我.{0,6}(联系|通知|转告|约)(他|她|某|一下|.{0,6}(先生|女士|总|老师))|转告|send (an )?email|email (him|her|them)|contact (him|her|them) for me|message (him|her) for me/i.test(t);
+  return /(帮|替|代)我?(发|写)?.{0,14}(邮件|email|短信|消息)|(帮|替|代)我.{0,6}(联系|通知|转告|约)(他|她|某|一下|.{0,6}(先生|女士|总|老师))|转告|send (an )?email|email (him|her|them)|contact (him|her|them) for me|message (him|her) for me/i.test(t);
 }
 
 export function wantsRegister(text: string): boolean {
@@ -84,6 +86,8 @@ const REGION_RE =
   /(洛杉矶|大洛杉矶|橙县|尔湾|圣盖博|圣地亚哥|旧金山|湾区|硅谷|加州|南加|北加|纽约|新泽西|德州|休斯顿|达拉斯|奥斯汀|佛州|迈阿密|西雅图|拉斯维加斯|亚利桑那|凤凰城|夏威夷|芝加哥|波士顿|美国|国内|中国|上海|北京|深圳|广州|香港|台湾|los angeles|\bla\b|orange county|irvine|san gabriel|san diego|san francisco|bay area|california|\bca\b|new york|\bny\b|texas|houston|dallas|austin|florida|miami|seattle|las vegas|arizona|phoenix|hawaii|chicago|boston)/i;
 const TIME_RE =
   /(\d{1,2}\s*月|\d{4}\s*年|今年|明年|后年|年底|年初|年中|上半年|下半年|季度|q[1-4]|\d+\s*(个)?(月|周|星期|天|年)内?|马上|尽快|立即|最近|近期|下个月|这个月|半年|一年|两年|不急|还没定|待定|asap|soon|next (month|year|quarter)|this (month|year|quarter)|within|\d+\s*(months?|weeks?|years?))/i;
+/** 说到了具体的东西（资产类型、规模、地区），不是笼统一句“有个项目” */
+const SPECIFIC_RE = /adu|ed1|sb ?9|公寓|酒店|商业|土地|地块|独栋|住宅|别墅|厂房|仓库|写字楼|零售|养老|学生公寓|共居|co-?living|套|单元|英亩|平方|sqft|acre|apartment|hotel|retail|office|warehouse|lot\b/i;
 const YES_RE = /^(好|好的|可以|行|要|没问题|当然|愿意|方便|ok|okay|yes|sure|yep|please|好啊|可以的|约吧|约一下|想约)|好的|可以约|约电话|想约|愿意聊|方便聊/i;
 const NO_RE = /^(不用|不要|暂时不|先不|不必|不需要|算了|no\b|not now|no thanks)|先不约|不用约|不想约/i;
 
@@ -106,12 +110,26 @@ export function extractLeadSlots(text: string, pending: LeadStep | null, current
   if (region && !current.region) out.region = region;
   const time = t.match(TIME_RE)?.[1];
   if (time && !current.timeline) out.timeline = time;
-  if (!current.need && isLeadIntent(t)) out.need = t.slice(0, 300);
-  if (pending === 'need' && !current.need && !out.need && t.length >= 4) out.need = t.slice(0, 300);
-  // 正在问这一项、回答又很短：整句就是答案（“明年上半年”比只取“明年”更完整）
+  const looksLead = LEAD_RE.test(normalize(t));
+  if (!current.need && isLeadIntent(t)) {
+    // 笼统一句（“有个开发项目想找资金”）先不当需求，追问具体情况
+    if (t.length >= 25 || /\d/.test(t) || SPECIFIC_RE.test(t) || REGION_RE.test(t)) out.need = t.slice(0, 300);
+    else if (!current.intro) out.intro = t.slice(0, 120);
+  }
+  if (pending === 'need' && !current.need && !out.need && t.length >= 4) {
+    out.need = ((current.intro ? current.intro + '；' : '') + t).slice(0, 300);
+  }
+  // 正在问这一项、回答又很短：整句就是答案（“明年上半年”比只取“明年”更完整）；
+  // 但答案明显是别的内容（问地区时说项目情况、问时间时说地点）就不硬塞
   const shortAnswer = t.length <= 30 && !email && !phone && !wechat;
-  if (pending === 'region' && !current.region && shortAnswer) out.region = t.slice(0, 60);
-  if (pending === 'timeline' && !current.timeline && shortAnswer) out.timeline = t.slice(0, 60);
+  const regionHit = !!region;
+  const timeHit = !!time;
+  if (pending === 'region' && !current.region && shortAnswer && !regionHit && !looksLead && !timeHit) out.region = t.slice(0, 60);
+  if (pending === 'timeline' && !current.timeline && shortAnswer && !timeHit && !regionHit && !looksLead) out.timeline = t.slice(0, 60);
+  // 补充的项目情况并进需求
+  if (current.need && looksLead && !out.need && pending !== 'need' && !current.need.includes(t)) {
+    out.need = (current.need + '；' + t).slice(0, 300);
+  }
   if (pending === 'call' || (current.wantsCall == null && /电话|call/i.test(t))) {
     if (NO_RE.test(t)) out.wantsCall = false;
     else if (YES_RE.test(t) || email || phone || wechat) out.wantsCall = true;

@@ -1,10 +1,11 @@
 /** GET /api/v1/orders/:no —— 订单与付款信息（Zelle 收款人、二维码、Stripe 是否可用）；?stripe=success 时主动核对 Stripe */
 import { getPool } from '@/lib/db/client';
 import { getOwnOrder, PURPOSE_LABEL, STATUS_LABEL, stripeAvailable, syncStripeOrder, zelleForPayPage } from '@/lib/crm/orders';
-import { handler, ok, requireContact } from '@/lib/crm/http';
+import { handler, ok, requireContact, denyMp12 } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request, { params }: { params: { no: string } }) => {
+  await denyMp12(req);
   const me = await requireContact(req);
   let o = await getOwnOrder(getPool(), params.no, me);
   if (new URL(req.url).searchParams.get('stripe') === 'success') o = await syncStripeOrder(o);

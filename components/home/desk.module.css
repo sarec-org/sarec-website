@@ -4,12 +4,12 @@
 
 /* ── 电脑版：大图右侧“最近一场 · 一键报名”卡 ── */
 .heroCard {
-  position: absolute; right: max(64px, calc((100vw - 1320px) / 2 + 64px)); top: 50%; transform: translateY(-46%);
-  z-index: 25; width: 400px; box-sizing: border-box; padding: 28px;
+  position: absolute; right: max(48px, calc((100vw - 1320px) / 2)); top: 56%; transform: translateY(-40%);
+  z-index: 25; width: 360px; box-sizing: border-box; padding: 28px;
   background: rgba(6, 17, 30, 0.86); border: 1px solid var(--gold-dim); backdrop-filter: blur(6px);
   display: flex; flex-direction: column; gap: 14px; color: var(--ivory);
 }
-@media (max-width: 1180px) { .heroCard { display: none; } }
+@media (max-width: 1280px) { .heroCard { display: none; } }
 .cardHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .eyebrow { font-size: 11px; letter-spacing: 2px; color: var(--gold); }
 .dim { font-size: 11px; color: var(--ivory-faint); }
@@ -52,10 +52,18 @@
 .evActions .primary, .evActions .ghost { height: 40px; padding: 0 22px; font-size: 13px; }
 .empty { color: var(--ivory-faint); font-size: 14px; }
 
+/* 活动页顶部的在线报名列表 */
+.openSection { padding-top: 48px; padding-bottom: 16px; scroll-margin-top: 80px; }
+.cardsResp { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .cardsResp { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .cardsResp { grid-template-columns: minmax(0, 1fr); } .openSection { padding-top: 28px; } }
+
 /* ── 手机版服务台（≤ 768px，和小程序一致）── */
 .mobile { display: none; }
+.mobileOnly { display: none; }
 @media (max-width: 768px) {
   .desktopOnly { display: none !important; }
+  .mobileOnly { display: block; }
   .mobile { display: block; padding: 0 0 100px; background: var(--ink); color: var(--ivory); }
   .wrap { padding: 0 20px; }
 }

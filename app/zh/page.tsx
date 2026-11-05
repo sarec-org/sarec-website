@@ -51,6 +51,10 @@ export default function HomePage() {
       {/* 1.2 手机版（≤ 768px）：状态卡 + 8 入口 + 信息流 + 底部三栏，和小程序一致 */}
       <MobileNav variant="overlay" />
       <MobileDesk feed={feed} />
+      {/* 手机版也能唤起 AI 助手（右下角，避开底部三栏） */}
+      <div className={desk.mobileOnly}>
+        <AgentChat variant="launcher" context={{ page: 'home' }} />
+      </div>
 
       {/* H01 — Hero v3-B Final (with embedded nav)；手机版由上面的服务台代替 */}
       <div className={desk.desktopOnly}>

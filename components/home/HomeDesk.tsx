@@ -253,7 +253,7 @@ export function HomeEventsAndAgent({ agent }: { agent?: ReactNode }) {
         <div className={s.splitMain}>
           <div className={s.sectionHead}>
             <h2 id="home-events" className={s.sectionTitle}>近期活动</h2>
-            <Link href="/zh/events" className={s.more}>全部活动</Link>
+            <Link href="/zh/events#open" className={s.more}>全部活动</Link>
           </div>
           {d && !list.length ? <p className={s.empty}>新的活动即将公布。</p> : (
             <div className={s.cards}>{list.slice(0, 2).map((e) => <EvCard key={e.slug} e={e} d={d} />)}</div>
@@ -266,7 +266,7 @@ export function HomeEventsAndAgent({ agent }: { agent?: ReactNode }) {
 }
 
 const ENTRIES: { key: string; label: string; href?: string; action?: 'invite' | 'checkin' }[] = [
-  { key: 'events', label: '活动报名', href: '/zh/events' },
+  { key: 'events', label: '活动报名', href: '/zh/events#open' },
   { key: 'mine', label: '我的报名', href: '/zh/me' },
   { key: 'checkin', label: '现场签到', action: 'checkin' },
   { key: 'invite', label: '邀请好友', action: 'invite' },
@@ -275,6 +275,22 @@ const ENTRIES: { key: string; label: string; href?: string; action?: 'invite' | 
   { key: 'rooms', label: '会议室', href: '/zh/rooms' },
   { key: 'contact', label: '联系商会', href: '/zh/contact' }
 ];
+
+/** 活动页顶部：数据库里可报名的近期活动（电脑、手机都显示） */
+export function OpenEventsSection() {
+  const d = useHome();
+  const list = d?.upcoming ?? [];
+  return (
+    <section id="open" className={`${s.wrap} ${s.section} ${s.openSection}`} aria-labelledby="open-events">
+      <div className={s.sectionHead}>
+        <h2 id="open-events" className={s.sectionTitle}>近期活动 · 在线报名</h2>
+      </div>
+      {!d ? <p className={s.empty}>正在加载…</p> : !list.length ? <p className={s.empty}>新的活动即将公布。也可以添加商会微信，第一时间收到通知。</p> : (
+        <div className={`${s.cards} ${s.cardsResp}`}>{list.map((e) => <EvCard key={e.slug} e={e} d={d} />)}</div>
+      )}
+    </section>
+  );
+}
 
 /** 手机版服务台（≤ 768px） */
 export function MobileDesk({ feed }: { feed: FeedItem[] }) {
@@ -334,7 +350,7 @@ export function MobileDesk({ feed }: { feed: FeedItem[] }) {
 
       {(d?.upcoming?.length ?? 0) > 0 && (
         <>
-          <div className={s.mHead}><h2>近期活动</h2><Link href="/zh/events">全部</Link></div>
+          <div className={s.mHead}><h2>近期活动</h2><Link href="/zh/events#open">全部</Link></div>
           {d!.upcoming.slice(0, 3).map((e) => (
             <div key={e.slug} className={s.mEv}>
               <Link href={`/zh/e/${encodeURIComponent(e.slug)}`} className={s.mEvImg}>
@@ -417,7 +433,7 @@ export function MobileTabBar() {
       <div className={s.tabSpacer} aria-hidden="true" />
       <nav className={s.tabbar} aria-label="底部导航">
         {tab('home', '/zh', '首页', <path d="M3 11l9-7 9 7v9H3z" />)}
-        {tab('events', '/zh/events', '活动', <><rect x="3" y="5" width="18" height="16" /><path d="M3 10h18" /></>)}
+        {tab('events', '/zh/events#open', '活动', <><rect x="3" y="5" width="18" height="16" /><path d="M3 10h18" /></>)}
         {tab('me', '/zh/me', '我的', <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7" /></>)}
       </nav>
     </>

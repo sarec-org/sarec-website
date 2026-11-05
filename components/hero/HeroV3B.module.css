@@ -901,3 +901,8 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* 1.2：“我的”入口 */
+.nav-me { color: var(--ivory-dim); font-size: 13px; letter-spacing: 0.08em; text-decoration: none; margin-right: 22px; }
+.nav-me:hover { color: var(--gold-bright); }
+@media (max-width: 1024px) { .nav-me { display: none; } }

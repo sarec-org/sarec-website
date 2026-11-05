@@ -57,9 +57,13 @@ export async function staffCreateBooking(
     if (!contactId) {
       const name = str(b.newName, 100);
       if (!name) throw new CrmError('bad_request', '请选择会员，或填写来访者姓名');
-      // 工作人员代录：没有身份的档案（不能登录，后续可合并）
-      const { rows } = await db.query<{ id: string }>(`INSERT INTO contacts (name, acquisition_source) VALUES ($1, 'staff_room_booking') RETURNING id`, [name]);
-      contactId = rows[0].id;
+      // 同名的人只有一位：直接用这份档案，不重复建人；同名多位或没有：新建一份代录档案（不能登录，后续可合并）
+      const { rows: same } = await db.query<{ id: string }>(`SELECT id FROM contacts WHERE lower(btrim(name)) = lower($1) LIMIT 2`, [name]);
+      if (same.length === 1) contactId = same[0].id;
+      else {
+        const { rows } = await db.query<{ id: string }>(`INSERT INTO contacts (name, acquisition_source) VALUES ($1, 'staff_room_booking') RETURNING id`, [name]);
+        contactId = rows[0].id;
+      }
     }
     let orderId: string | null = null;
     if (b.payment && Number(b.payment.amountCents) > 0) {

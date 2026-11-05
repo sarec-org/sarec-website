@@ -112,7 +112,7 @@ export function WebCardPublic({ token }: { token: string }) {
       <CardFace c={c} />
       <p className={s.small}>会员状态为实时查询结果。</p>
       <div className={s.btnRow}>
-        <Link className={s.btn} href="/zh/events">看看商会活动</Link>
+        <Link className={s.btn} href="/zh/events#open">看看商会活动</Link>
         <Link className={`${s.btn} ${s.btnGhost}`} href="/zh/about">了解 SAREC</Link>
       </div>
     </div>

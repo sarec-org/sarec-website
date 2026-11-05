@@ -96,6 +96,9 @@ export async function resolveException(dedupeKey: string, by: string): Promise<v
 // ── 邮件通知（线索 / 新咨询 → info@；只发一次）──────────────────────────────
 
 /** 线索通知收件人：LEAD_NOTIFY_EMAIL，默认 info@sinoamericanrec.org（预览环境只会发到测试白名单） */
+/** 邮件标题不能有换行：压成一行再截断 */
+const oneLine = (t: string, n: number) => t.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, n);
+
 export function leadNotifyEmail(): string {
   return (process.env.LEAD_NOTIFY_EMAIL || 'info@sinoamericanrec.org').trim();
 }
@@ -128,7 +131,7 @@ export async function notifyFollowup(id: string, base?: string): Promise<boolean
     const res = await getResend().emails.send({
       from: getFromAddress(),
       to: leadNotifyEmail(),
-      subject: `【SAREC ${SOURCE_LABEL[f.source]}】${f.name || '访客'}${f.need ? ' · ' + f.need.slice(0, 30) : ''}`,
+      subject: `【SAREC ${SOURCE_LABEL[f.source]}】${oneLine(f.name || '访客', 40)}${f.need ? ' · ' + oneLine(f.need, 30) : ''}`,
       text: lines.join('\n')
     });
     if (res.error) throw new Error(res.error.message);

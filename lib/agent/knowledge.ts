@@ -188,7 +188,7 @@ export function buildStaticChunks(): Chunk[] {
   try {
     for (const e of listCmsEvents()) {
       const text = [e.summary, e.startAt ? `时间：${e.startAt.replace('T', ' ')}（${e.timezone}）` : '', e.locationName ? `地点：${e.locationName}` : '', e.address ? `地址：${e.address}` : '', stripMd(e.body), stripMd(e.recapBody)].filter(Boolean).join('\n');
-      pushChunks(out, { source: 'event', title: `活动 · ${e.title}`, url: `/zh/events/${e.slug}` }, text, `ce:${e.slug}`);
+      pushChunks(out, { source: 'event', title: `活动 · ${e.title}`, url: `/zh/e/${e.slug}` }, text, `ce:${e.slug}`);
     }
     for (const n of listNews()) {
       const nn = n as unknown as { slug: string; title: string; summary?: string; body?: string };
@@ -204,8 +204,8 @@ export function buildStaticChunks(): Chunk[] {
 export function eventLine(e: UpcomingEvent, lang: 'zh' | 'en' = 'zh'): string {
   const when = fmtLaTime(e.startsAt, lang, e.timezone || undefined);
   const where = [e.locationName, e.address].filter(Boolean).join('，');
-  if (lang === 'en') return `「${e.title}」— ${when}${where ? `, ${where}` : ''}. Details: /zh/events/${e.slug}`;
-  return `「${e.title}」——${when}${where ? `，${where}` : ''}。详情：/zh/events/${e.slug}`;
+  if (lang === 'en') return `「${e.title}」— ${when}${where ? `, ${where}` : ''}. Details: /zh/e/${e.slug}`;
+  return `「${e.title}」——${when}${where ? `，${where}` : ''}。详情：/zh/e/${e.slug}`;
 }
 
 export function eventChunks(events: UpcomingEvent[]): Chunk[] {
@@ -213,7 +213,7 @@ export function eventChunks(events: UpcomingEvent[]): Chunk[] {
     id: `de:${e.slug}`,
     source: 'event' as const,
     title: `近期活动 · ${e.title}`,
-    url: `/zh/events/${e.slug}`,
+    url: `/zh/e/${e.slug}`,
     text: `近期活动 时间 地点：${eventLine(e)}\n${e.summary ?? ''}\n报名：${e.registrationOpen ? '开放中，可在活动页或让助手帮忙报名' : '暂未开放或已截止'}`
   }));
 }

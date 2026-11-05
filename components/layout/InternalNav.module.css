@@ -340,3 +340,8 @@
     opacity: 0.4;
   }
 }
+
+/* 1.2：“我的”入口（登录 / 我的报名 / 名片），手机版由底部三栏和菜单承担 */
+.meLink { color: var(--ivory-dim); font-size: 13px; letter-spacing: 0.08em; text-decoration: none; margin-right: 18px; }
+.meLink:hover { color: var(--gold-bright); }
+@media (max-width: 1024px) { .meLink { display: none; } }

@@ -93,6 +93,20 @@ t('线索收集顺序：需求 → 地区 → 时间 → 约电话 → 联系方
   assert.equal(l.name, '王磊');
   assert.equal(leadNextStep(l), 'ready');
 });
+t('1.2：笼统一句先追问需求；答非所问不硬塞；报名不当线索', () => {
+  let l = mergeLead({}, extractLeadSlots('我们手上有一个开发项目，想找资金合作', null, {}));
+  assert.equal(leadNextStep(l), 'need');
+  l = mergeLead(l, extractLeadSlots('是一个 20 套公寓的新建项目', 'need', l));
+  assert.ok(l.need?.includes('20 套公寓') && l.need.includes('开发项目'));
+  l = mergeLead(l, extractLeadSlots('还在看', 'region', l));
+  assert.equal(l.region, '还在看');
+  const l2 = mergeLead({ need: 'x' }, extractLeadSlots('在洛杉矶', 'timeline', { need: 'x', region: '加州' }));
+  assert.ok(!l2.timeline);
+  const l3 = mergeLead({ need: '开发项目' }, extractLeadSlots('是一个 20 套公寓的新建项目', 'region', { need: '开发项目' }));
+  assert.ok(!l3.region && l3.need?.includes('20 套公寓'));
+  assert.ok(wantsRegister('帮我报名洛杉矶小型开发项目那场'));
+  assert.ok(asksSendOnBehalf('帮我给你们创始人发个邮件说我想合作'));
+});
 t('不愿约电话也能留联系方式', () => {
   const l = mergeLead({ need: 'x', region: 'LA', timeline: '明年' }, extractLeadSlots('先不用', 'call', { need: 'x', region: 'LA', timeline: '明年' }));
   assert.equal(l.wantsCall, false);
@@ -134,7 +148,7 @@ t('意图匹配与活动占位符', () => {
   assert.equal(matchFaq('今天天气不错', FAQ), null);
   assert.equal(matchFaq('我想详细了解一下你们商会在洛杉矶的各种合作方式、会员的不同档位以及如何加入商会才能参与项目判断，另外我在国内也有一些资源想对接，想知道具体流程', FAQ), null, '长问题不走常见问题库');
   const ans = renderFaq(FAQ[0], 'zh', [{ slug: 'a', title: '十一月沙龙', summary: null, startsAt: '2026-11-20T02:00:00Z', timezone: 'America/Los_Angeles', locationName: '商会办公室', address: null, registrationOpen: true, status: 'scheduled' }]);
-  assert.ok(ans.includes('十一月沙龙') && ans.includes('/zh/events/a'));
+  assert.ok(ans.includes('十一月沙龙') && ans.includes('/zh/e/a'));
   assert.ok(renderFaq(FAQ[0], 'zh', []).includes('/zh/events'));
 });
 

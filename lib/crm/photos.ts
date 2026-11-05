@@ -26,7 +26,7 @@ export function blobConfigured(): boolean {
 
 let sealCache: Buffer | null = null;
 async function seal(): Promise<Buffer> {
-  if (!sealCache) sealCache = await readFile(path.join(process.cwd(), 'public', 'brand', 'sarec-seal.png'));
+  if (!sealCache) sealCache = await readFile(path.join(process.cwd(), 'public', 'brand', 'sarec-seal-wm.png')); // 透明底（白底版会在照片上留一块白方块）
   return sealCache;
 }
 

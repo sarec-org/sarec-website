@@ -178,7 +178,7 @@ function researchCards(): Card[] {
     .filter((a) => mpScope(a.slug, a.title) !== 'hide')
     .map((a) => {
       const restricted = mpScope(a.slug, a.title) === 'brief';
-      return { slug: a.slug, title: MP_TITLES[a.slug] ?? a.title, summary: restricted ? '' : safeSummary(a.description), brief: firstSentence(safeSummary(a.description)), restricted, tag: '研究', date: a.publishedAt, image: articleCover(a) ?? mpCover(a.slug) };
+      return { slug: a.slug, title: MP_TITLES[a.slug] ?? a.title, summary: restricted ? '' : safeSummary(a.description), brief: firstSentence(safeSummary(a.description)), restricted, tag: '研究', date: a.publishedAt, image: articleCover(a) ?? mpCover(a.slug) ?? researchPoster(a.slug, a.title) ?? IMAGES.researchHero };
     });
   const seen = new Set(geo.map((g) => g.slug));
   const idx: Card[] = [];

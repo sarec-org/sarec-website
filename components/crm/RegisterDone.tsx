@@ -62,6 +62,8 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
   const cancelled = reg.status === 'cancelled';
   const checkedIn = !cancelled && reg.arrival_status === 'checked_in';
   const payFirst = reg.order_no && reg.order_status === 'pending_payment';
+  const feePending = !cancelled && !checkedIn && !!reg.order_no && (reg.order_status === 'pending_payment' || reg.order_status === 'payment_submitted');
+  const waitlisted = !cancelled && reg.status === 'waitlisted';
   const where = [e.locationName, e.address].filter(Boolean).join(' ');
 
   async function cancel() {
@@ -76,8 +78,10 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
   return (
     <div className={s.page}>
       <Link href="/zh/me" className={s.back}>‹ 我的</Link>
-      <p className={s.eyebrow}>{cancelled ? 'CANCELLED · 已取消' : checkedIn ? 'CHECKED IN · 已签到' : reg.status === 'waitlisted' ? 'WAITLIST · 候补' : 'REGISTERED · 报名成功'}</p>
-      <h1 className={s.h1}>{cancelled ? '报名已取消' : checkedIn ? '已签到，欢迎光临' : reg.status === 'waitlisted' ? '已进入候补名单' : '报名成功'}</h1>
+      <p className={s.eyebrow}>{cancelled ? 'CANCELLED · 已取消' : checkedIn ? 'CHECKED IN · 已签到' : waitlisted ? 'WAITLIST · 候补' : feePending ? 'PENDING · 收费待确认' : 'REGISTERED · 报名成功'}</p>
+      <h1 className={s.h1}>{cancelled ? '报名已取消' : checkedIn ? '已签到，欢迎光临' : waitlisted ? '已进入候补名单' : feePending ? (reg.order_status === 'payment_submitted' ? '付款已提交，待核款' : '报名已提交，费用待确认') : '报名成功'}</h1>
+      {waitlisted && <p className={s.notice}>目前名额已满。有人取消时按报名顺序递补，递补成功后这里会变成“报名成功”。</p>}
+      {feePending && reg.order_status === 'pending_payment' && <p className={s.notice}>付款提交、工作人员核款后，名额才算确认。</p>}
 
       <div className={`${s.card} ${s.cardGold}`}>
         <p className={s.cardTitle}>{e.title}</p>
@@ -88,8 +92,12 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
         {reg.order_no && (
           <div className={s.row}><span className={s.rowLabel}>费用</span><span className={s.rowValue}>{money(reg.fee_cents)} · {reg.order_status === 'paid' ? '已付款' : reg.order_status === 'payment_submitted' ? '待核款' : '待付款'}</span></div>
         )}
-        <p className={s.small} style={{ marginTop: '0.5rem' }}>到场请用微信扫一扫，扫门口的活动码；或出示下面的个人签到码，由工作人员核验。</p>
-        {!cancelled && !checkedIn && <PersonalQr slug={slug} />}
+        {!cancelled && !checkedIn && !waitlisted && (
+          <>
+            <p className={s.small} style={{ marginTop: '0.5rem' }}>到场请用微信扫一扫，扫门口的活动码；或出示下面的个人签到码，由工作人员核验。</p>
+            <PersonalQr slug={slug} />
+          </>
+        )}
       </div>
 
       {!cancelled && me.contactInfo && (me.contactInfo.phone || me.contactInfo.email) && (
@@ -102,13 +110,13 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
 
       {!cancelled && (
         <div className={s.btnRow} style={{ marginBottom: '1rem' }}>
-          <a className={`${s.btn} ${s.btnGhost}`} href={`/api/v1/events/${encodeURIComponent(slug)}/ics`}>加入日历</a>
-          {where && <a className={`${s.btn} ${s.btnGhost}`} href={mapsUrl(where)} target="_blank" rel="noopener noreferrer">导航</a>}
+          {!waitlisted && <a className={`${s.btn} ${s.btnGhost}`} href={`/api/v1/events/${encodeURIComponent(slug)}/ics`}>加入日历</a>}
+          {where && !waitlisted && <a className={`${s.btn} ${s.btnGhost}`} href={mapsUrl(where)} target="_blank" rel="noopener noreferrer">导航</a>}
           {reg.arrival_status === 'none' &&
             (confirmCancel ? (
               <button className={`${s.btn} ${s.btnDanger}`} disabled={busy} onClick={cancel}>{busy ? '处理中…' : '确定取消'}</button>
             ) : (
-              <button className={`${s.btn} ${s.btnQuiet}`} onClick={() => setConfirmCancel(true)}>取消报名</button>
+              <button className={`${s.btn} ${s.btnQuiet}`} onClick={() => setConfirmCancel(true)}>{waitlisted ? '退出候补' : '取消报名'}</button>
             ))}
         </div>
       )}

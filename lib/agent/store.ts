@@ -112,6 +112,22 @@ export async function messagesAfter(conversationId: string, afterId: string): Pr
   return rows;
 }
 
+/** 同一对话里问过一模一样的问题：直接复用上次的回答（不再调模型）。 */
+export async function previousAnswer(conversationId: string, normalizedText: string, norm: (t: string) => string): Promise<{ reply: string; tier: number } | null> {
+  const { rows } = await getPool().query<{ role: string; content: string; tier: number | null; route: string | null }>(
+    `SELECT role, content, tier, route FROM agent_messages WHERE conversation_id = $1 AND role IN ('user','assistant') ORDER BY id DESC LIMIT 40`,
+    [conversationId]
+  );
+  rows.reverse();
+  // 最后一条是刚写入的这句，不算
+  for (let i = 0; i < rows.length - 2; i++) {
+    if (rows[i].role !== 'user' || norm(rows[i].content) !== normalizedText) continue;
+    const a = rows[i + 1];
+    if (a?.role === 'assistant' && a.content && a.route !== 'repeat' && a.route !== 'blocked') return { reply: a.content, tier: a.tier ?? 1 };
+  }
+  return null;
+}
+
 export type MessageRow = {
   conversationId: string;
   role: 'user' | 'assistant' | 'event';

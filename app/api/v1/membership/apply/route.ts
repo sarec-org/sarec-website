@@ -4,11 +4,12 @@ import type { NextResponse } from 'next/server';
 import { withTransaction } from '@/lib/db/client';
 import { createSession } from '@/lib/crm/auth';
 import { applyMembership } from '@/lib/crm/membership';
-import { body, handler, ok, optionalContact, withSessionCookie } from '@/lib/crm/http';
+import { body, handler, ok, optionalContact, withSessionCookie, denyMp12 } from '@/lib/crm/http';
 import type { CheckoutRequest } from '@/lib/membership/checkout';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const POST = handler(async (req: Request) => {
+  await denyMp12(req);
   const b = await body<CheckoutRequest & { usePoints?: boolean }>(req);
   const me = await optionalContact(req);
   const ctx = {

@@ -607,7 +607,7 @@ function RegisterCard({ action, conversationId, onNote }: { action: Extract<Acti
                   {busy ? '处理中…' : pv && !pv.loggedIn ? '获取邮箱验证码' : `确认报名`}
                 </button>
               )}
-              <a className={`${s.btn} ${s.btnQuiet}`} href={`/zh/events/${slug}`}>
+              <a className={`${s.btn} ${s.btnQuiet}`} href={`/zh/e/${slug}`}>
                 查看活动详情
               </a>
             </div>

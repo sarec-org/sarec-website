@@ -323,9 +323,14 @@ export function HeroV3B() {
             <Link href="/zh/members">会员风采</Link>
           </li>
         </ul>
-        <Link href="/zh/join" className={styles['nav-cta']}>
-          加入商会
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Link href="/zh/me" className={styles['nav-me']}>
+            我的
+          </Link>
+          <Link href="/zh/join" className={styles['nav-cta']}>
+            加入商会
+          </Link>
+        </div>
       </nav>
 
       {/* Side marks */}

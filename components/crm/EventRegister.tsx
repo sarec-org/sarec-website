@@ -144,12 +144,12 @@ export function EventRegister({ slug, refCode, channel }: { slug: string; refCod
           <Link className={`${s.btn} ${s.btnBlock}`} href={`/zh/e/${encodeURIComponent(slug)}/done`}>查看报名凭证</Link>
         </div>
       ) : closed ? (
-        <p className={s.notice}>{e.status === 'cancelled' ? '本场活动已取消' : e.status === 'completed' ? '本场活动已结束' : '本场报名已截止'}。可以看看<Link href="/zh/events">其他活动</Link>。</p>
+        <p className={s.notice}>{e.status === 'cancelled' ? '本场活动已取消' : e.status === 'completed' ? '本场活动已结束' : '本场报名已截止'}。可以看看<Link href="/zh/events#open">其他活动</Link>。</p>
       ) : !started ? (
         <div className={s.bottomBar}>
           <div className={s.bottomInner}>
             {p.loggedIn && !p.firstTime && p.oneStepReady ? (
-              <button className={s.btn} disabled={busy} onClick={submit}>{busy ? '处理中…' : '一键报名'}</button>
+              <button className={s.btn} disabled={busy} onClick={submit}>{busy ? '处理中…' : e.feeCents > 0 ? `一键报名（费用 ${money(e.feeCents)}，报名后付款）` : '一键报名'}</button>
             ) : (
               <button className={s.btn} onClick={() => setStarted(true)}>报名</button>
             )}
