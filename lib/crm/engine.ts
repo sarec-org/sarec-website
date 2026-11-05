@@ -96,8 +96,8 @@ export function itemBadge(
 export function afterRequiredMessage(task: { unrewarded_slots: number; new_items_count: number }): string {
   const left = task.unrewarded_slots - task.new_items_count;
   return left <= 0
-    ? '报名已完成！继续填写，每项奖励 10 积分'
-    : `报名已完成！再完成 ${left} 项，之后每项奖励 10 积分`;
+    ? '报名已完成！继续完善资料，每项 +10 积分'
+    : `报名已完成！再完成 ${left} 项资料，之后每项 +10 积分`;
 }
 
 /**
