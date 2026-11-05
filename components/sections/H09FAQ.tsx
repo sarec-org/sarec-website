@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import styles from './H09FAQ.module.css';
+import { homeCopy } from '@/lib/sitePagesCopy';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -11,45 +12,7 @@ type QA = {
   answer: string[];
 };
 
-const QAS: QA[] = [
-  {
-    question: 'SAREC 是商会还是投资机构？',
-    answer: [
-      '都是，但不只是。',
-      'SAREC 以商会为入口，以项目判断、结构设计和风险控制为核心。',
-      '我们提供长期学习与交流服务（研究、培训、活动、考察），',
-      '也提供项目咨询与结构设计（项目尽调、财务建模、项目判断与说明），',
-      '并在符合参与标准的项目中提供合作结构设计支持。'
-    ]
-  },
-  {
-    question: 'SAREC 服务的是哪类客户？',
-    answer: [
-      'SAREC 主要服务四类客户：',
-      '在美华人投资人、出海企业家、中国地产同行、美国项目方。',
-      '不在以上 4 类的客户，可以预约 30 分钟沟通讨论匹配度。'
-    ]
-  },
-  {
-    question: 'SAREC 和市场上其他地产服务机构有什么不同？',
-    answer: [
-      '我们做培训和展会，但围绕真实项目而非基础卖课；',
-      '项目判断只是第一步，把控才是核心；',
-      '我们提供合作结构设计，不直接作为施工开发主体，也不设资金池；',
-      '我们做跨境房地产合作，但只服务能看懂项目、能承担风险的客户。'
-    ]
-  },
-  {
-    question: '如何与 SAREC 开始合作？',
-    answer: [
-      '三种方式：',
-      '预约 30 分钟沟通（适合还在了解阶段）、',
-      '提交项目评估（适合已有具体项目）、',
-      '申请加入会员（适合长期培育型客户）。',
-      '提交后 1 个工作日内由 SAREC 团队回复。'
-    ]
-  }
-];
+const QAS: QA[] = homeCopy.faq;
 
 const headerContainer: Variants = {
   hidden: {},

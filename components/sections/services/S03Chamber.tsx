@@ -5,6 +5,7 @@ import { motion, type Variants } from 'framer-motion';
 import { SaImage } from '@/components/shared/SaImage';
 import { SaVideo } from '@/components/shared/SaVideo';
 import styles from './S03Chamber.module.css';
+import { servicesCopy } from '@/lib/sitePagesCopy';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -14,51 +15,7 @@ type Service = {
   body: string[];
 };
 
-const SERVICES: Service[] = [
-  {
-    code: '01',
-    title: '研究内容',
-    body: [
-      'SAREC 定期发布美国房地产研究内容，',
-      '关注政策动向、市场结构、项目机会和风险清单。',
-      '会员可优先访问。'
-    ]
-  },
-  {
-    code: '02',
-    title: '主题培训',
-    body: [
-      '不做泛泛而谈的基础培训。',
-      '围绕真实项目、市场判断、风险识别和资源协同 ——',
-      '包括项目结构、财务建模实操、风险识别清单。'
-    ]
-  },
-  {
-    code: '03',
-    title: '项目研讨与闭门分享',
-    body: [
-      '针对常务理事和副会长单位的小范围分享。',
-      '通常涉及具体项目或敏感话题。'
-    ]
-  },
-  {
-    code: '04',
-    title: '行业展会与论坛',
-    body: [
-      '跨境地产投资相关的行业活动。',
-      'SAREC 主办或联办，会员可优先参加。'
-    ]
-  },
-  {
-    code: '05',
-    title: '美国实地考察',
-    body: [
-      'SAREC 将根据项目进度和会员需求，',
-      '组织美国实地考察、项目走访和专题交流。',
-      '会员可优先参加考察活动。'
-    ]
-  }
-];
+const SERVICES: Service[] = servicesCopy.chamber.items;
 
 type Tier = {
   zh: string;
@@ -166,10 +123,10 @@ export function S03Chamber() {
             PLATFORM · 平台
           </motion.span>
           <motion.h2 className={styles.h2} variants={headerItem}>
-            平台信任与服务深度
+            {servicesCopy.chamber.title}
           </motion.h2>
           <motion.p className={styles.tagline} variants={headerItem}>
-            围绕真实项目的高含金量内容。
+            {servicesCopy.chamber.tagline}
           </motion.p>
         </motion.div>
 

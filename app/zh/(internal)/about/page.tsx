@@ -4,6 +4,7 @@ import { SaImage } from '@/components/shared/SaImage';
 import { createPageMetadata } from '@/lib/seo';
 import styles from './about.module.css';
 import { ManifestoSection } from './ManifestoSection';
+import { aboutCopy } from '@/lib/sitePagesCopy';
 
 export const metadata: Metadata = createPageMetadata({
   title: '关于 SAREC｜中美房地产商会',
@@ -12,85 +13,17 @@ export const metadata: Metadata = createPageMetadata({
   path: '/zh/about'
 });
 
-const whoLayers = [
-  {
-    code: '01',
-    title: '长期学习与交流入口',
-    body: '通过会员服务建立长期连接中美房地产相关客户的网络。'
-  },
-  {
-    code: '02',
-    title: '项目咨询与结构设计层',
-    body: '提供项目尽调、财务建模、结构设计、风险评估,用投资人视角帮助客户判断项目。'
-  },
-  {
-    code: '03',
-    title: '合作结构设计层',
-    body: '在符合 SAREC 服务标准的项目协作场景下,围绕合作结构与风险共担机制,推动合作稳健成立。'
-  }
-];
-
-const proofPoints = [
-  {
-    code: '01',
-    title: (
-      <>
-        信息多但<span className={styles.proofAccent}>判断</span>少
-      </>
-    ),
-    body: '培训供给充足,但具体项目的判断、风险识别、结构评估稀缺。'
-  },
-  {
-    code: '02',
-    title: (
-      <>
-        中介多但<span className={styles.proofAccent}>结构把控</span>少
-      </>
-    ),
-    body: '一次性服务多,但持续的尽调、风控、合作落地很少。'
-  },
-  {
-    code: '03',
-    title: (
-      <>
-        项目多但<span className={styles.proofAccent}>风险识别</span>少
-      </>
-    ),
-    body: '大量项目方等钱,但能从投资人视角识别真伪、风险的人少。'
-  },
-  {
-    code: '04',
-    title: (
-      <>
-        专业服务多但<span className={styles.proofAccent}>整合</span>缺失
-      </>
-    ),
-    body: '法律 / 税务 / 移民 / 保险各自为战,缺少地产为核心的整合协调。'
-  }
-];
-
-const differentiators = [
-  {
-    code: '01',
-    title: '先判断项目,再谈合作',
-    body: '培训与展会都围绕真实项目展开。'
-  },
-  {
-    code: '02',
-    title: '项目判断只是第一步',
-    body: '真正的价值在于尽调、结构设计、风险评估、过程监督。'
-  },
-  {
-    code: '03',
-    title: '项目协作支持,不作为施工开发主体',
-    body: 'SAREC 不作为施工主体,不设资金池,只设计法律结构和对齐投资人利益。'
-  },
-  {
-    code: '04',
-    title: '只服务能承担风险的客户',
-    body: 'SAREC 不服务"想短期套利"的客户,寻找能看懂项目、能承担风险、想长期合作的投资人。'
-  }
-];
+const { whoLayers, differentiators } = aboutCopy;
+const proofPoints = aboutCopy.proofPoints.map((p) => ({
+  ...p,
+  title: (
+    <>
+      {p.title[0]}
+      <span className={styles.proofAccent}>{p.title[1]}</span>
+      {p.title[2]}
+    </>
+  )
+}));
 
 export default function AboutPage() {
   return (
@@ -114,13 +47,13 @@ export default function AboutPage() {
           <span className={`${styles.eyebrow} ${styles.heroEyebrow}`}>ABOUT · 关于</span>
           <h1
             className={styles.heroH1}
-            aria-label="从投资人视角做中美房地产项目判断"
+            aria-label={aboutCopy.hero.title}
           >
-            <span className={styles.heroRevealLine}>从投资人视角做</span>
-            <span className={styles.heroRevealLine}>中美房地产项目判断</span>
+            <span className={styles.heroRevealLine}>{aboutCopy.hero.lines[0]}</span>
+            <span className={styles.heroRevealLine}>{aboutCopy.hero.lines[1]}</span>
           </h1>
           <p className={styles.heroLead}>
-            SAREC 由实操背景出身的跨境地产团队推动,围绕真实项目、长期合作和投资人视角,连接中美房地产资本与项目资源。
+            {aboutCopy.hero.lead}
           </p>
           <div className={styles.ctaGroup}>
             <Link href="/zh/contact" className={styles.ctaPrimary}>
@@ -145,7 +78,7 @@ export default function AboutPage() {
           <div className={`${styles.splitGrid} ${styles.whoGrid}`}>
             <div className={styles.whoTextCol}>
               <span className={styles.eyebrow}>WHO WE ARE · 我们是谁</span>
-              <h2 className={styles.h2}>SAREC 是中美房地产项目判断与服务平台</h2>
+              <h2 className={styles.h2}>{aboutCopy.whoTitle}</h2>
             </div>
             <ol className={styles.whoList}>
               {whoLayers.map((layer) => (
@@ -165,7 +98,7 @@ export default function AboutPage() {
         <div className={styles.container}>
           <div className={styles.proofHead}>
             <span className={styles.eyebrow}>WHY SAREC · 为什么需要 SAREC</span>
-            <h2 className={styles.h2}>客户为什么需要我们</h2>
+            <h2 className={styles.h2}>{aboutCopy.proofTitle}</h2>
           </div>
           <div className={styles.proofGrid}>
             {proofPoints.map((p) => (
@@ -198,7 +131,7 @@ export default function AboutPage() {
             <span className={styles.eyebrow}>
               WHAT MAKES SAREC DIFFERENT · 我们的不同
             </span>
-            <h2 className={styles.h2}>4 件让 SAREC 不一样的事</h2>
+            <h2 className={styles.h2}>{aboutCopy.diffTitle}</h2>
             <ol className={styles.diffList}>
               {differentiators.map((d) => (
                 <li key={d.code} className={styles.diffItem}>
@@ -224,9 +157,9 @@ export default function AboutPage() {
             <div className={styles.founderText}>
               <span className={styles.eyebrow}>FOUNDER · 创始人</span>
               <h3 className={styles.founderName}>Andy Wang</h3>
-              <p className={styles.founderRole}>SAREC 创始人 · 跨境地产投资人</p>
+              <p className={styles.founderRole}>{aboutCopy.founder.role}</p>
               <p className={styles.founderBody}>
-                SAREC 由长期房地产投资、项目操盘与跨境合作实践者推动。
+                {aboutCopy.founder.body}
               </p>
             </div>
             <Link href="/zh/about/founder" className={styles.ctaSecondary}>

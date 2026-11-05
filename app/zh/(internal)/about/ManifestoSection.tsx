@@ -1,4 +1,5 @@
 import styles from './about.module.css';
+import { aboutCopy } from '@/lib/sitePagesCopy';
 
 /**
  * A05 Manifesto Screen — Blackstone 巨型文字横向无限循环 marquee
@@ -9,8 +10,7 @@ import styles from './about.module.css';
  *
  * Server component(纯 CSS 动画,不需要 IntersectionObserver)。
  */
-const MANIFESTO_TEXT =
-  '跨境房地产合作的核心,不是信息差,而是判断力、结构能力和长期信任。';
+const MANIFESTO_TEXT = aboutCopy.manifesto;
 
 export function ManifestoSection() {
   return (

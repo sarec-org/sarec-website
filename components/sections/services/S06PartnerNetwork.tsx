@@ -9,6 +9,7 @@ import {
   InsuranceIcon
 } from './icons';
 import styles from './S06PartnerNetwork.module.css';
+import { partnerCopy, partnerNetwork } from '@/lib/sitePagesCopy';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -21,38 +22,8 @@ type Partner = {
   Icon: IconComponent;
 };
 
-const PARTNERS: Partner[] = [
-  {
-    code: '01',
-    title: '移民服务',
-    body: 'EB-5 / L1 / E2 / 投资移民相关法律服务',
-    Icon: ImmigrationIcon
-  },
-  {
-    code: '02',
-    title: '法律服务',
-    body: '公司法 / 合同法 / 跨境合规 / 税务结构',
-    Icon: LegalIcon
-  },
-  {
-    code: '03',
-    title: '财富管理',
-    body: '家族办公室 / 信托 / 资产配置',
-    Icon: WealthIcon
-  },
-  {
-    code: '04',
-    title: '税务服务',
-    body: '跨境税务 / 公司税 / 个人税',
-    Icon: TaxIcon
-  },
-  {
-    code: '05',
-    title: '保险服务',
-    body: '人寿 / 商业保险 / 跨境保险',
-    Icon: InsuranceIcon
-  }
-];
+const ICONS: IconComponent[] = [ImmigrationIcon, LegalIcon, WealthIcon, TaxIcon, InsuranceIcon];
+const PARTNERS: Partner[] = partnerNetwork.map((p, i) => ({ ...p, Icon: ICONS[i] }));
 
 const headerContainer: Variants = {
   hidden: {},
@@ -98,10 +69,10 @@ export function S06PartnerNetwork() {
             PARTNER NETWORK · 伙伴网络
           </motion.span>
           <motion.h2 className={styles.h2} variants={headerItem}>
-            主叙事之外
+            {partnerCopy.title}
           </motion.h2>
           <motion.p className={styles.lead} variants={headerItem}>
-            SAREC 主叙事聚焦地产。其他业务由专业服务伙伴分工提供。
+            {partnerCopy.lead}
           </motion.p>
         </motion.div>
 

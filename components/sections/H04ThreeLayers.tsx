@@ -5,6 +5,7 @@ import { motion, type Variants } from 'framer-motion';
 import { CTA_REGISTRY } from '@/lib/cta/registry';
 import { localize } from '@/lib/i18n/types';
 import styles from './H04ThreeLayers.module.css';
+import { homeCopy } from '@/lib/sitePagesCopy';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -20,29 +21,7 @@ type Entry = {
 
 // V2.0 三入口轻量预览;标题与 /zh/services hub 一致,预览句为锁定版,
 // CTA 链向真实子页。H04 不再含 membership 入口、不再做 sticky 滚动叙事。
-const ENTRIES: Entry[] = [
-  {
-    code: '01',
-    title: '投资人 & 开发者',
-    preview: '为跨境投资人与开发者提供项目风险判断、可行性评估与开发全程顾问。',
-    linkHref: '/zh/services/investors',
-    weight: 'primary'
-  },
-  {
-    code: '02',
-    title: '项目方',
-    preview: '为项目方提供市场定位、内容资产与投资人教育，建立 AI 搜索可见度与品牌信任。',
-    linkHref: '/zh/services/project-owners',
-    weight: 'secondary'
-  },
-  {
-    code: '03',
-    title: '专业服务机构',
-    preview: '面向律师、会计、顾问等专业服务机构的协作入口。',
-    linkHref: '/zh/services/professional-firms',
-    weight: 'muted'
-  }
-];
+const ENTRIES: Entry[] = homeCopy.entries;
 
 const WEIGHT_CLASS: Record<Weight, string> = {
   primary: styles.cardLg,

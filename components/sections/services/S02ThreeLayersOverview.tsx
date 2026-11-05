@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
 import { SaImage } from '@/components/shared/SaImage';
 import styles from './S02ThreeLayersOverview.module.css';
+import { servicesCopy } from '@/lib/sitePagesCopy';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -20,40 +21,7 @@ type Entry = {
   image?: { src: string; alt: string };
 };
 
-// V2.0 三入口(权重 1>2≫3);文案为 Andy 定版,CTA 链向真实解决方案页。
-const ENTRIES: Entry[] = [
-  {
-    eyebrow: 'FOR INVESTORS & DEVELOPERS · 入口 01',
-    title: '投资人 & 开发者',
-    description:
-      '围绕美国房地产项目,帮助投资人和开发者先判断风险、结构、可行性与下一步路径。',
-    points: ['项目风险初诊', '可行性评估', '开发全程顾问', '跨境架构设计'],
-    linkLabel: '查看投资人与开发者服务',
-    linkHref: '/zh/services/investors',
-    weight: 'primary',
-    image: { src: '/images/projects/1340-glendale-triangle.webp', alt: '美国房地产开发项目' }
-  },
-  {
-    eyebrow: 'FOR PROJECT TEAMS · 入口 02',
-    title: '项目方',
-    description:
-      '帮助美国房地产项目建立面向华人市场的表达体系、内容资产、投资人教育材料与 AI 搜索可见度。',
-    points: ['市场定位', '内容资产', '投资人教育', 'AI 搜索可见度', '品牌信任建设'],
-    linkLabel: '查看项目方增长服务',
-    linkHref: '/zh/services/project-owners',
-    weight: 'secondary'
-  },
-  {
-    eyebrow: 'FOR PROFESSIONAL FIRMS · 入口 03',
-    title: '专业服务机构',
-    description:
-      '为律师、CPA、贷款、保险、移民等专业服务机构,提供官网内容底座与 AI 搜索可见度诊断。',
-    points: ['官网内容底座', 'AI 搜索可见度', '服务表达优化'],
-    linkLabel: '查看专业机构服务',
-    linkHref: '/zh/services/professional-firms',
-    weight: 'muted'
-  }
-];
+const ENTRIES: Entry[] = servicesCopy.entries;
 
 const WEIGHT_CLASS: Record<Weight, string> = {
   primary: styles.cardPrimary,
