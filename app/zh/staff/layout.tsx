@@ -18,6 +18,7 @@ const NAV = [
   ['/zh/staff/rooms', '会议室/电子屏'],
   ['/zh/staff/growth', '增长与设置'],
   ['/zh/staff/display', '官网展示'],
+  ['/zh/staff/agent', 'AI 助手'],
   ['/zh/staff/settings', '设置']
 ];
 
