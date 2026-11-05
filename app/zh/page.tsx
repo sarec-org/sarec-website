@@ -14,6 +14,7 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { HomeEventsAndAgent, MobileDesk, MobileTabBar, type FeedItem } from '@/components/home/HomeDesk';
 import desk from '@/components/home/desk.module.css';
 import { contentResearchList } from '@/lib/mpContent';
+import { AgentChat } from '@/components/agent/AgentChat';
 import { listArticles } from '@/lib/geo/content';
 import { columnLabel } from '@/lib/geo/labels';
 
@@ -57,7 +58,7 @@ export default function HomePage() {
       </div>
 
       {/* 1.2 近期活动 + 商会 AI 助手（电脑版） */}
-      <HomeEventsAndAgent />
+      <HomeEventsAndAgent agent={<AgentChat variant="panel" context={{ page: 'home' }} />} />
 
       {/* H02–H10 — Placeholders for Phase 1 visual implementation.
           Each is a 100vh dark section with a section ID and copy stub.

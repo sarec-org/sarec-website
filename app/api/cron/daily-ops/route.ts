@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { recordException, scanFollowups } from '@/lib/crm/followups';
+import { runAgentDigest } from '@/lib/agent/digest';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,10 +17,8 @@ function matches(provided: string, expected: string | undefined): boolean {
   return timingSafeEqual(a, b);
 }
 
-// AI 助手昨日汇总（lib/agent/digest.ts 合入后接上）
-async function agentDigest(_now: Date): Promise<unknown> {
-  return 'not_configured';
-}
+// AI 助手昨日汇总：只查数据库，不调 AI；每天最多发一次
+const agentDigest = (now: Date) => runAgentDigest(now);
 
 async function run(req: Request) {
   const m = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i);
