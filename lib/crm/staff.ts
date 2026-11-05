@@ -184,13 +184,18 @@ export async function searchPeople(q: string, eventId?: string | null) {
   const email = normalizeEmail(t);
   const digits = t.replace(/\D/g, '');
   const { rows } = await getPool().query(
-    `SELECT c.id, c.member_no::int, c.name, c.name_alt, c.email, c.phone_e164, c.role_sub,
+    // 小程序报名填的手机号 / 邮箱只存在 contact_methods（当前值），签到台也要能按它们查到人。
+    `SELECT c.id, c.member_no::int, c.name, c.name_alt,
+            COALESCE(c.email, me.value) AS email, COALESCE(c.phone_e164, mp.value) AS phone_e164, c.role_sub,
             r.status AS reg_status, r.arrival_status, r.checked_in_at
        FROM contacts c
        LEFT JOIN registrations r ON r.contact_id = c.id AND r.event_id = $5
-      WHERE c.name ILIKE $1 OR c.name_alt ILIKE $1 OR ($2::text IS NOT NULL AND c.phone_e164 = $2)
-         OR ($3::text IS NOT NULL AND c.email = $3) OR c.email ILIKE $1
-         OR (length($4) >= 4 AND c.phone_e164 LIKE '%' || $4) OR c.member_no::text = $6
+       LEFT JOIN contact_methods me ON me.contact_id = c.id AND me.kind = 'email' AND me.is_current
+       LEFT JOIN contact_methods mp ON mp.contact_id = c.id AND mp.kind = 'phone' AND mp.is_current
+      WHERE c.name ILIKE $1 OR c.name_alt ILIKE $1
+         OR ($2::text IS NOT NULL AND (c.phone_e164 = $2 OR mp.value = $2))
+         OR ($3::text IS NOT NULL AND (c.email = $3 OR lower(me.value) = $3)) OR c.email ILIKE $1 OR me.value ILIKE $1
+         OR (length($4) >= 4 AND (c.phone_e164 LIKE '%' || $4 OR mp.value LIKE '%' || $4)) OR c.member_no::text = $6
       ORDER BY (r.status IS NOT NULL) DESC, c.name LIMIT 30`,
     [`%${t}%`, phone, email, digits, eventId || null, t]
   );

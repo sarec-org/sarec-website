@@ -144,6 +144,8 @@ export type RegisterPreview = {
   firstTime: boolean;
   alreadyRegistered: boolean;
   registrationStatus: string | null;
+  /** 到场状态：none / checked_in / arrived_pending_payment（已签到的人不显示“取消报名”） */
+  arrivalStatus: string | null;
   required: QuestionDTO[];
   name: string | null;
   identity: { email: string | null; phone: string | null };
@@ -155,13 +157,16 @@ export async function previewRegistration(slug: string, contactId: string | null
   const pool = getPool();
   const ev = await requireEvent(pool, slug);
   if (!contactId) {
-    return { event: publicEvent(ev), loggedIn: false, firstTime: true, alreadyRegistered: false, registrationStatus: null, required: [], name: null, identity: { email: null, phone: null }, contactInfo: null };
+    return { event: publicEvent(ev), loggedIn: false, firstTime: true, alreadyRegistered: false, registrationStatus: null, arrivalStatus: null, required: [], name: null, identity: { email: null, phone: null }, contactInfo: null };
   }
   const { rows: c } = await pool.query<{ name: string; email: string | null; phone_e164: string | null; role_sub: string | null }>(
     `SELECT name, email, phone_e164, role_sub FROM contacts WHERE id = $1`,
     [contactId]
   );
-  const { rows: reg } = await pool.query<{ status: string }>(`SELECT status FROM registrations WHERE event_id = $1 AND contact_id = $2`, [ev.id, contactId]);
+  const { rows: reg } = await pool.query<{ status: string; arrival_status: string }>(
+    `SELECT status, arrival_status FROM registrations WHERE event_id = $1 AND contact_id = $2`,
+    [ev.id, contactId]
+  );
   const alreadyRegistered = !!reg[0] && reg[0].status !== 'cancelled';
   let required: QuestionDTO[] = [];
   let firstTime = true;
@@ -184,6 +189,7 @@ export async function previewRegistration(slug: string, contactId: string | null
     firstTime,
     alreadyRegistered,
     registrationStatus: reg[0]?.status ?? null,
+    arrivalStatus: reg[0] && reg[0].status !== 'cancelled' ? reg[0].arrival_status : null,
     required,
     name: c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null,
     identity: { email: c[0]?.email ?? null, phone: c[0]?.phone_e164 ?? null },
@@ -219,7 +225,11 @@ export async function register(slug: string, contactId: string, input: RegisterI
       const { rows } = await db.query<{ id: string }>(`SELECT id FROM contacts WHERE member_no = $1`, [Number(input.ref)]);
       refContactId = rows[0]?.id && rows[0].id !== contactId ? rows[0].id : null;
     }
-    const out = await startRegistration(db, ev, contactId, { refContactId, channelCode: input.channel ?? null });
+    const out = await startRegistration(db, ev, contactId, {
+      refContactId,
+      channelCode: input.channel ?? null,
+      source: input.channel === 'onsite' ? 'onsite' : 'online'
+    });
     let pointsAwarded = 0;
     if (firstTime) {
       const name = (input.name ?? '').trim();

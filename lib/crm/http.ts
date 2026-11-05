@@ -26,6 +26,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   wechat_unconfigured: 503,
   wx_error: 502,
   merge_needed: 409,
+  already_checked_in: 409,
   conflict: 409
 };
 

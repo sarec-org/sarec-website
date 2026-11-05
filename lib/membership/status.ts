@@ -4,7 +4,7 @@
  * 只信任 DB 中 webhook 回写的 paid 状态，绝不凭 URL 里的 session_id 判定已付。
  * 缺 DATABASE_URL 或查询失败时，安全降级为「处理中」，不谎称已确认。
  */
-import { query } from '@/lib/db/client';
+import { query, databaseUrl } from '@/lib/db/client';
 
 export type CheckoutStatus = {
   found: boolean;
@@ -25,7 +25,7 @@ const FALLBACK: CheckoutStatus = {
 };
 
 export async function getCheckoutStatusBySession(sessionId: string): Promise<CheckoutStatus> {
-  if (!sessionId || !process.env.DATABASE_URL) {
+  if (!sessionId || !databaseUrl()) {
     return FALLBACK;
   }
   try {

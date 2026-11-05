@@ -8,7 +8,7 @@
  * 入场判断全部由服务端 checkIn() 决定（收费未核款不显示签到成功；满员/取消/扫错场次显示实际状态）。
  */
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, money } from './client';
 import { ContactCodeFields, useContactInput, useMeta, verifyCode } from './LoginBox';
 import { ProfileFlow } from './ProfileFlow';
@@ -32,6 +32,8 @@ export function Checkin({ slug, k }: { slug: string; k: string }) {
   const c = useContactInput();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
+  // 连点保护：state 还没更新时第二次点击也要挡住
+  const inFlight = useRef(false);
 
   const doCheckin = useCallback(async (extra: { name?: string; roleSub?: string } = {}) => {
     setErr(null);
@@ -53,22 +55,27 @@ export function Checkin({ slug, k }: { slug: string; k: string }) {
   // 未登录：只验证手机号 / 邮箱，先按已有报名签到；是新人才进入补填姓名和行业
   async function submitLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     const v = await verifyCode(c, code);
     if (!v.ok) {
       setBusy(false);
+      inFlight.current = false;
       return setErr(v.message);
     }
     await doCheckin();
     setBusy(false);
+    inFlight.current = false;
   }
   async function submitProfile(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     await doCheckin({ name, roleSub: role });
     setBusy(false);
+    inFlight.current = false;
   }
 
   if (phase === 'checking') return <div className={s.page}><div className={s.bigResult}><p className={s.bigText}>正在签到…</p></div></div>;

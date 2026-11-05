@@ -1,7 +1,7 @@
 /**
  * 定时任务：活动提醒（微信订阅消息，开课前 1 天 / 前 2 小时）。
  * 鉴权：Authorization: Bearer <REMINDER_CRON_SECRET 或 CRON_SECRET>，常量时间比对；不入 URL、不打日志。
- * 触发：GitHub Actions 每 15 分钟一次（.github/workflows/event-reminders.yml）。重复触发不会重复推送。
+ * 触发：外部定时服务每 5 分钟一次；GitHub Actions 每 15 分钟、Vercel Cron 每天 20:00/22:00 UTC 兜底。重复触发不会重复推送。
  */
 import { NextResponse } from 'next/server';
 import { createHash, timingSafeEqual } from 'node:crypto';

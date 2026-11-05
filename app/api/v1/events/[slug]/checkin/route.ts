@@ -16,7 +16,7 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
     [ev.id]
   );
   if (!checkinKeyOk(b.k, rows[0]?.checkin_secret)) {
-    throw new CrmError('wrong_code', '这不是本场活动的签到码，请扫描现场屏幕右上角的二维码');
+    throw new CrmError('wrong_code', '这不是本场活动的签到码，请扫门口的签到码');
   }
   // 现场新客：先最少登记三项（姓名、联系方式=已验证身份、主要角色）
   const { answered } = await loadProfile((await import('@/lib/db/client')).getPool(), me);

@@ -6,7 +6,7 @@
  * 金额只从 tiers.ts 解析（见 checkout.ts），客户端传价一律忽略。
  */
 import type { PoolClient } from 'pg';
-import { query, withTransaction } from '@/lib/db/client';
+import { query, withTransaction, databaseUrl } from '@/lib/db/client';
 import { getStripe } from '@/lib/stripe/client';
 import { getAgreementMeta, AGREEMENT_LANGUAGE_MODE } from './agreements';
 import { validateCheckout, type CheckoutRequest, type NormalizedCheckout } from './checkout';
@@ -28,7 +28,7 @@ export async function createCheckoutSession(
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!process.env.DATABASE_URL || !process.env.STRIPE_SECRET_KEY || !siteUrl) {
+  if (!databaseUrl() || !process.env.STRIPE_SECRET_KEY || !siteUrl) {
     return {
       ok: false,
       error: '付款功能尚未配置，请稍后再试或直接联系我们。',

@@ -44,6 +44,7 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
   if (!reg) return <div className={s.page}><Link href={`/zh/e/${slug}`} className={s.back}>‹ 返回活动</Link><p className={s.notice}>还没有报名这场活动。</p><Link className={s.btn} href={`/zh/e/${slug}`}>去报名</Link></div>;
 
   const cancelled = reg.status === 'cancelled';
+  const checkedIn = !cancelled && reg.arrival_status === 'checked_in';
   const payFirst = reg.order_no && reg.order_status === 'pending_payment';
   const where = [e.locationName, e.address].filter(Boolean).join(' ');
 
@@ -59,8 +60,8 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
   return (
     <div className={s.page}>
       <Link href="/zh/me" className={s.back}>‹ 我的</Link>
-      <p className={s.eyebrow}>{cancelled ? 'CANCELLED · 已取消' : reg.status === 'waitlisted' ? 'WAITLIST · 候补' : 'REGISTERED · 报名成功'}</p>
-      <h1 className={s.h1}>{cancelled ? '报名已取消' : reg.status === 'waitlisted' ? '已进入候补名单' : '报名成功'}</h1>
+      <p className={s.eyebrow}>{cancelled ? 'CANCELLED · 已取消' : checkedIn ? 'CHECKED IN · 已签到' : reg.status === 'waitlisted' ? 'WAITLIST · 候补' : 'REGISTERED · 报名成功'}</p>
+      <h1 className={s.h1}>{cancelled ? '报名已取消' : checkedIn ? '已签到，欢迎光临' : reg.status === 'waitlisted' ? '已进入候补名单' : '报名成功'}</h1>
 
       <div className={`${s.card} ${s.cardGold}`}>
         <p className={s.cardTitle}>{e.title}</p>
@@ -71,7 +72,7 @@ export function RegisterDone({ slug, taskId, msg }: { slug: string; taskId: stri
         {reg.order_no && (
           <div className={s.row}><span className={s.rowLabel}>费用</span><span className={s.rowValue}>{money(reg.fee_cents)} · {reg.order_status === 'paid' ? '已付款' : reg.order_status === 'payment_submitted' ? '待核款' : '待付款'}</span></div>
         )}
-        <p className={s.small} style={{ marginTop: '0.5rem' }}>到场请扫现场屏幕右上角的二维码签到。</p>
+        <p className={s.small} style={{ marginTop: '0.5rem' }}>到场请用微信扫一扫，扫门口的签到码。</p>
       </div>
 
       {!cancelled && me.contactInfo && (me.contactInfo.phone || me.contactInfo.email) && (

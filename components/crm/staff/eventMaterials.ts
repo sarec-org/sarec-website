@@ -260,9 +260,17 @@ export async function checkinA4(e: MaterialEvent, src: { codeSrc?: string; url?:
     : await QRCode.toDataURL(src.url || '', { width: qrSize, margin: 0, errorCorrectionLevel: 'M', color: { dark: C.ink, light: '#FFFFFF' } });
   g.drawImage(await loadImg(img), bx + 6 * mm, by + 6 * mm, qrSize, qrSize);
 
+  // 小程序里的“扫码”按钮旧版本认不出签到码，现场统一引导用微信【扫一扫】
+  const cta = '请用微信【扫一扫】扫码签到';
+  const n = Array.from(cta).length;
+  let cs = 15 * mm;
+  g.font = `700 ${cs}px ${FONT}`;
+  while (g.measureText(cta).width + (n - 1) * 0.08 * cs > W - 24 * mm && cs > 8 * mm) {
+    cs -= mm / 2;
+    g.font = `700 ${cs}px ${FONT}`;
+  }
   g.fillStyle = C.navy;
-  g.font = `700 ${15 * mm}px ${FONT}`;
-  spaced(g, '微信扫码签到', W / 2, by + box + 26 * mm, 2 * mm);
+  spaced(g, cta, W / 2, by + box + 26 * mm, 0.08 * cs);
 
   const when = eventWhen(e);
   g.fillStyle = C.carbon;
