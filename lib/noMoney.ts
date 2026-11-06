@@ -11,8 +11,9 @@ const MONEY_RE = new RegExp(
     '(?:usd|rmb)\\s*\\d',
     `(?:会费|票价|门票|入场费|报名费|收费标准|价格|费用)\\s*[:：为是]?\\s*${NUM}`, // 入场费 30、费用：200
     '会费|票价|收费标准',
-    `${NUM}\\s*(?:/|每)\\s*(?:小时|天|人|位|h\\b)`, // 50/小时、30 每人
-    '(?:每小时|每天|每人)\\s*' + NUM
+    `${NUM}\\s*/\\s*(?:小时|天|人|位|h\\b)`, // 50/小时、30/人
+    // 每小时 50、每人 30（后面不是“点 / 小时 / 人”等计量词，避免“每天 6 小时”“每天 9 点”）
+    `(?:每小时|每人|每位)\\s*${NUM}(?!\\s*(?:点|小时|分钟|人|位|场|次|个|天))`
   ].join('|'),
   'i'
 );
@@ -29,9 +30,13 @@ export function noMoney(text: string | null | undefined): string | null {
     .split(/(?<=[。！？；;!?\n]|\.\s)/)
     .map((sentence) => {
       if (!MONEY_RE.test(sentence)) return sentence;
-      // 句子里只有一小段带金额（“会员免费，非会员 $30。”）：按逗号再切，留下不带金额的部分
-      const parts = sentence.split(/(?<=[，,、])/).filter((p) => !MONEY_RE.test(p));
-      return parts.join('');
+      // 句子后半段才带金额（“会员免费，非会员 $30。”）：留前半段并补回句末标点；
+      // 金额在句首（“门票 $30，含晚餐。”）：剩下的半句读不通，整句去掉
+      const parts = sentence.split(/(?<=[，,、])/);
+      const firstBad = parts.findIndex((p) => MONEY_RE.test(p));
+      if (firstBad <= 0) return '';
+      const end = (sentence.match(/[。！？；;!?.]\s*$/) ?? ['。'])[0].trim();
+      return parts.slice(0, firstBad).join('').replace(/[，,、\s]+$/, '') + end;
     })
     .join('')
     .replace(/[，,、；;\s]+([。！？!?])/g, '$1')
