@@ -239,13 +239,13 @@ export function contentHome() {
     site: { name: site.name, fullName: site.fullName, positioning: site.positioning },
     logo: IMAGES.logo,
     hero: { eyebrow: 'SAREC · 中美房地产商会', title: homeCopy.hero.title, subtitle: homeCopy.hero.sub, image: IMAGES.homeHero },
-    // 与网站首页“代表性项目”“创始人”两块同源（去掉收益、资金结构相关文字）
+    // 与网站首页“创始人参与项目”“创始人”两块同源（去掉收益、资金结构相关文字）；Rosewood 是创始人个人参与，不是商会项目
     featured: {
-      eyebrow: 'FEATURED PROJECT · 代表性项目',
+      eyebrow: 'FOUNDER PROJECT · 创始人参与项目',
       title: '4136 Rosewood Ave',
       subtitle: 'East Hollywood, Los Angeles · ED1 经济适用房',
       image: IMAGES.featuredProject,
-      role: '项目合作',
+      role: '创始人参与项目，不属于商会项目',
       text: '与本地有 15 年美国经验的合作开发商共同推进。'
     },
     founder: {
@@ -275,7 +275,7 @@ export function contentAbout() {
     { t: 'list', items: listOf(aboutCopy.whoLayers) },
     { t: 'h', text: aboutCopy.proofTitle },
     { t: 'list', items: listOf(aboutCopy.proofPoints.map((p) => ({ title: p.title.join(''), body: p.body }))) },
-    { t: 'img', img: IMAGES.featuredProject, caption: '4136 Rosewood Ave · 洛杉矶 ED1 经济适用房项目' },
+    { t: 'img', img: IMAGES.featuredProject, caption: '4136 Rosewood Ave · 洛杉矶 ED1 经济适用房项目 · 创始人参与项目（不属于商会项目）' },
     { t: 'h', text: aboutCopy.diffTitle },
     { t: 'list', items: listOf(aboutCopy.differentiators) },
     { t: 'quote', text: aboutCopy.manifesto, by: 'Andy Wang · SAREC 创始人' },

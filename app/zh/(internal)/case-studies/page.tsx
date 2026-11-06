@@ -9,7 +9,7 @@ import { CaseStudiesHero } from './CaseStudiesHero';
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 项目案例｜中美房地产商会',
   description:
-    'SAREC 已公开的代表性项目案例。Rosewood ED1 经济适用房 + 三类项目经验 + 案例公开 3 原则。',
+    'SAREC 公开项目案例：创始人参与的 Rosewood ED1 经济适用房项目 + 三类项目经验 + 案例公开 3 原则。',
   path: '/zh/case-studies'
 });
 
@@ -21,6 +21,8 @@ type ProjectCard = {
   type: string;
   stats: { units: string; floors: string; stage: string };
   role: string;
+  /** 不是商会项目时显示“性质”而不是“SAREC 角色” */
+  roleLabel?: string;
   href?: string;
   hasDetail: boolean;
 };
@@ -33,7 +35,8 @@ const projects: ProjectCard[] = [
     location: '洛杉矶 East Hollywood',
     type: 'ED1 经济适用房',
     stats: { units: '69', floors: '6', stage: '在管' },
-    role: '项目合作 / 投资人沟通',
+    role: '创始人参与项目,不属于商会项目',
+    roleLabel: '性质:',
     href: '/zh/case-studies/4136-rosewood',
     hasDetail: true
   },
@@ -166,7 +169,7 @@ export default function CaseStudiesPage() {
                   </div>
                   <p className={styles.projectRole}>
                     <span className={styles.projectRoleLabel}>
-                      SAREC 角色:
+                      {p.roleLabel ?? 'SAREC 角色:'}
                     </span>{' '}
                     {p.role}
                   </p>

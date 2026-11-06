@@ -72,7 +72,7 @@ export type ProjectStage =
   | 'construction'
   | 'operating'
   | 'completed';
-export type ProjectTag = 'sarec-involved' | 'member-submitted' | 'case-study';
+export type ProjectTag = 'sarec-involved' | 'member-submitted' | 'case-study' | 'founder-project';
 export type MemberRole =
   | 'development'
   | 'lending'

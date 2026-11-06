@@ -6,9 +6,9 @@ import styles from './rosewood.module.css';
 import { RosewoodHero } from './RosewoodHero';
 
 export const metadata: Metadata = createPageMetadata({
-  title: '4136 Rosewood Ave｜SAREC 项目案例',
+  title: '4136 Rosewood Ave｜创始人参与项目案例',
   description:
-    '4136 Rosewood Ave — 洛杉矶 East Hollywood ED1 经济适用房开发项目。69 单元、6 层、在管。SAREC 角色:项目合作 / 投资人沟通。',
+    '4136 Rosewood Ave — 洛杉矶 East Hollywood ED1 经济适用房开发项目。69 单元、6 层、在管。创始人参与项目,不属于商会项目。',
   path: '/zh/case-studies/4136-rosewood'
 });
 
@@ -18,7 +18,8 @@ const overview = [
   ['项目类型', '经济适用房开发(ED1)'],
   ['规模', '69 单元'],
   ['层数', '6 层'],
-  ['当前阶段', '在管']
+  ['当前阶段', '在管'],
+  ['项目性质', '创始人参与项目(不属于商会项目)']
 ] as const;
 
 type RoleCard = {
@@ -208,15 +209,15 @@ export default function Rosewood4136Page() {
         </div>
       </section>
 
-      {/* R04 — SAREC 在项目中的角色(3 卡横排)*/}
+      {/* R04 — 创始人在项目中的角色(3 卡横排;这是创始人个人参与的项目,不是商会项目)*/}
       <section className={styles.rolesSection}>
         <div className={styles.rolesInner}>
-          <span className={styles.eyebrow}>OUR ROLE · 我们的角色</span>
+          <span className={styles.eyebrow}>FOUNDER ROLE · 创始人的角色</span>
           <RevealOnView as="h2" className={styles.sectionH2}>
-            SAREC 在 4136 Rosewood 项目中
+            创始人在 4136 Rosewood 项目中
           </RevealOnView>
           <p className={styles.sectionLead}>
-            SAREC 在 4136 Rosewood 项目中承担的具体工作。
+            这是商会创始人个人参与的项目,不属于商会项目。以下是创始人在项目中承担的具体工作。
           </p>
           <div className={styles.rolesGrid}>
             {roles.map((r) => (
