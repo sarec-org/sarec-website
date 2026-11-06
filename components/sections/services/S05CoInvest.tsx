@@ -189,14 +189,14 @@ export function S05CoInvest() {
             <div className={styles.typesPrefixFrame}>
               <SaImage
                 src="/images/projects/2215-wellesley-ed1.webp"
-                alt="2215 Wellesley ED1 项目外观渲染"
+                alt="2215 Wellesley ED1 项目外观渲染(创始人参与项目,不属于商会项目)"
                 fill
                 sizes="(max-width: 1023px) 100vw, 540px"
                 filterIntensity="none"
               />
             </div>
             <figcaption className={styles.typesPrefixCaption}>
-              2215 Wellesley · ED1 单体住宅
+              2215 Wellesley · ED1 单体住宅 · 创始人参与项目(不属于商会项目)
             </figcaption>
           </figure>
         </div>

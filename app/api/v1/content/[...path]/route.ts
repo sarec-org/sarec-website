@@ -12,6 +12,7 @@ import {
   contentResearchList,
   contentService,
   contentServices,
+  scrubMp,
   setContentVisibility,
   type Visibility
 } from '@/lib/mpContent';
@@ -48,5 +49,5 @@ export async function GET(_req: Request, { params }: { params: { path: string[] 
   else if (a === 'research' && b) data = contentResearch(b);
   else if (a === 'benefits' && !b) data = contentBenefits();
   else if (a === 'contact' && !b) data = contentContact();
-  return data ? json(data) : json(null, 404);
+  return data ? json(scrubMp(data)) : json(null, 404);
 }

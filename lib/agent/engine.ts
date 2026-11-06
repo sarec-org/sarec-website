@@ -483,6 +483,11 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
         } else if (out.action === 'join') actions.push(joinAction(out.lang));
       }
       if (inLead && !leadSubmitted && hasContact(lead) && leadNextStep(lead) === 'ready' && !actions.some((a) => a.type === 'lead')) actions.push(leadAction(lead));
+      // 模型偶尔原样复述上一条回答（访客已经回答了追问）：线索里改问下一项，否则给兜底
+      const lastAssistant = [...prior].reverse().find((m) => m.role === 'assistant')?.content ?? '';
+      if (out && lastAssistant && normalizeTight(reply) === normalizeTight(lastAssistant)) {
+        reply = inLead && !leadSubmitted ? leadQuestion(leadNextStep(lead), lang) : fallbackText(lang);
+      }
       answer = {
         reply: finalizeReply(reply, out?.lang ?? lang),
         tier: out ? tier : 0,

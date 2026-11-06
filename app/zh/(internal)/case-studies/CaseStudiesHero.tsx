@@ -45,7 +45,7 @@ export function CaseStudiesHero() {
       <div className={styles.heroImageWrap}>
         <SaImage
           src="/images/projects/2219-wellesley-v2.webp"
-          alt="SAREC 项目案例 — 2219 Wellesley"
+          alt="项目案例 — 2219 Wellesley(创始人参与项目,不属于商会项目)"
           fill
           priority
           sizes="100vw"
@@ -60,7 +60,7 @@ export function CaseStudiesHero() {
           <span className={revealClass}>项目案例</span>
         </h1>
         <p className={styles.heroLead}>
-          以下为 SAREC 已公开的代表性项目案例。
+          以下为已公开的代表性项目案例；标注“创始人参与项目”的，是创始人个人参与，不属于商会项目。
         </p>
         <p className={styles.heroNote}>
           更多项目细节、投资材料和具体合作条款 —— 仅在合格沟通后提供。

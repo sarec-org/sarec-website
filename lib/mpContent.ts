@@ -440,3 +440,45 @@ export function contentContact() {
     note: '工作人员会在 1 个工作日内回复（美国西部时间）。'
   };
 }
+
+// ── 小程序版本统一去掉投资分成 / 合作结构类说法（网站保留）──────────────────
+// “项目卖出后才有 Carry”“后端激励”“风险共担”等：先把能删短语的删掉，整句只讲这些的直接不输出。
+const MP_INVEST_PHRASES: [RegExp, string][] = [
+  [/[与和及]风险共担(机制)?/g, ''],
+  [/、?风险共担(机制)?、?/g, ''],
+  [/、?后端激励(的)?/g, '']
+];
+const MP_INVEST_RE = /carry|后端激励|风险共担|项目卖出|卖出后|利益一致|分成|收益分配|promote\b/i;
+
+function scrubText(s: string): string | null {
+  let t = s;
+  for (const [re, to] of MP_INVEST_PHRASES) t = t.replace(re, to);
+  t = t.replace(/，，|,,|、，|，、/g, '，').replace(/的合作结构结构/g, '的合作结构');
+  if (MP_INVEST_RE.test(t)) {
+    // 逐句去掉，剩下的还能读就保留
+    const kept = t.split(/(?<=[。！？；;])/).filter((x) => x.trim() && !MP_INVEST_RE.test(x)).join('').trim();
+    return kept || null;
+  }
+  return t;
+}
+
+/** 递归清理内容接口的返回：字符串逐句过滤；数组里被清空的条目去掉 */
+export function scrubMp<T>(v: T): T {
+  const walk = (x: unknown): unknown => {
+    if (typeof x === 'string') return scrubText(x);
+    if (Array.isArray(x)) return x.map(walk).filter((y) => y !== null && y !== '');
+    if (x && typeof x === 'object') {
+      const o = x as Record<string, unknown>;
+      // 文本节点（段落 / 引用）正文被整段删掉时，整个节点不输出
+      if ((o.t === 'p' || o.t === 'quote') && typeof o.text === 'string' && scrubText(o.text) === null) return null;
+      const out: Record<string, unknown> = {};
+      for (const [k, val] of Object.entries(o)) {
+        // 图片地址、链接、slug 不动
+        out[k] = val === null || (/^(src|href|url|slug|image|img|logo|hero|id)$/i.test(k) && typeof val === 'string') ? val : walk(val) ?? '';
+      }
+      return out;
+    }
+    return x;
+  };
+  return walk(v) as T;
+}
