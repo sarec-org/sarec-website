@@ -108,8 +108,10 @@ export function extractLeadSlots(text: string, pending: LeadStep | null, current
   if (name) out.name = name;
   const region = t.match(REGION_RE)?.[1];
   if (region && !current.region) out.region = region;
-  const time = t.match(TIME_RE)?.[1];
-  if (time && !current.timeline) out.timeline = time;
+  const tm = t.match(TIME_RE);
+  const time = tm?.[1];
+  // 记关键词所在的那一小句（“明年上半年开工”，不只记“明年”）
+  if (time && !current.timeline) out.timeline = t.slice(tm!.index ?? 0).split(/[，。,;；!！?？\n]/)[0].trim().slice(0, 40) || time;
   const looksLead = LEAD_RE.test(normalize(t));
   if (!current.need && isLeadIntent(t)) {
     // 笼统一句（“有个开发项目想找资金”）先不当需求，追问具体情况

@@ -35,16 +35,22 @@ export async function watermark(input: Buffer): Promise<{ full: Buffer; thumb: B
   const base = sharp(input, { failOn: 'none' }).rotate();
   const { data: big, info } = await base.resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
   const markW = Math.max(90, Math.round(Math.min(info.width, info.height) * 0.16));
-  const mark = await sharp(await seal())
-    .resize({ width: markW })
-    .ensureAlpha()
-    .linear([1, 1, 1, 0.72], [0, 0, 0, 0])
-    .png()
-    .toBuffer();
-  const markMeta = await sharp(mark).metadata();
+  const sized = await sharp(await seal()).resize({ width: markW }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const markH = sized.info.height;
   const pad = Math.round(markW * 0.18);
+  const left = Math.max(0, info.width - markW - pad);
+  const top = Math.max(0, info.height - markH - pad);
+  // 看右下角这块照片的亮度：偏暗（晚上活动照片常见）用象牙白印章，否则用深蓝印章
+  const corner = await sharp(big).extract({ left, top, width: Math.min(markW, info.width - left), height: Math.min(markH, info.height - top) }).greyscale().stats();
+  const dark = (corner.channels[0]?.mean ?? 255) < 120;
+  const px = Buffer.from(sized.data);
+  for (let i = 0; i < px.length; i += 4) {
+    if (dark) { px[i] = 245; px[i + 1] = 238; px[i + 2] = 222; }
+    px[i + 3] = Math.round(px[i + 3] * (dark ? 0.8 : 0.72));
+  }
+  const mark = await sharp(px, { raw: { width: markW, height: markH, channels: 4 } }).png().toBuffer();
   const full = await sharp(big)
-    .composite([{ input: mark, left: info.width - markW - pad, top: info.height - (markMeta.height ?? markW) - pad }])
+    .composite([{ input: mark, left, top }])
     .jpeg({ quality: 82, mozjpeg: true })
     .toBuffer();
   const thumb = await sharp(full).resize({ width: 640, height: 640, fit: 'inside' }).jpeg({ quality: 76, mozjpeg: true }).toBuffer();

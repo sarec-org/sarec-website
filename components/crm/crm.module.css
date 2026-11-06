@@ -88,8 +88,10 @@
 .input:focus,
 .textarea:focus,
 .select:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
-.inputRow { display: flex; gap: 0.6rem; }
-.inputRow .input { flex: 1; }
+.inputRow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: stretch; }
+.inputRow .input { flex: 1 1 220px; min-width: 200px; width: auto; }
+.inputRow .select { flex: 0 0 auto; width: auto; min-width: 160px; }
+.inputRow .btn { flex: 0 0 auto; white-space: nowrap; }
 
 /* 选项按钮（点选题） */
 .chips { display: flex; flex-wrap: wrap; gap: 0.55rem; }

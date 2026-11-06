@@ -9,7 +9,16 @@
   background: rgba(6, 17, 30, 0.86); border: 1px solid var(--gold-dim); backdrop-filter: blur(6px);
   display: flex; flex-direction: column; gap: 14px; color: var(--ivory);
 }
-@media (max-width: 1280px) { .heroCard { display: none; } }
+/* 769–1280（iPad 横屏、小笔记本）：缩小版卡片，放在大图右下、底部数据条上方，首屏仍能“一键报名 / 我的报名” */
+@media (min-width: 769px) and (max-width: 1280px) {
+  .heroCard { width: 300px; right: 28px; top: auto; bottom: 150px; transform: none; padding: 18px 20px; gap: 10px; }
+  .heroCard .title { font-size: 18px; }
+  .heroCard .meta { font-size: 12px; }
+  .heroCard .hint { display: none; }
+  .heroCard .qr { width: 72px; height: 72px; }
+  .heroCard .primary { height: 42px; }
+}
+@media (max-width: 768px) { .heroCard { display: none; } }
 .cardHead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .eyebrow { font-size: 11px; letter-spacing: 2px; color: var(--gold); }
 .dim { font-size: 11px; color: var(--ivory-faint); }

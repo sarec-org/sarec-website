@@ -7,6 +7,8 @@ export const LIMITS = {
   visitorDaily: 30,
   /** 同一 IP 每天总条数（活动现场 WiFi、公司网络多人共用一个 IP，单独放宽） */
   ipDaily: 200,
+  /** 降速惩罚：安静这么多分钟后清零；正常发一条减一次 */
+  strikeDecayMinutes: 10,
   /** 单条消息最长字符；超过 longPaste 视为可疑，超过 hardMax 直接拒收 */
   longPaste: 1500,
   hardMax: 4000,

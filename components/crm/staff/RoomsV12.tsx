@@ -126,6 +126,7 @@ export function RoomsV12({ onBooked }: { onBooked: () => void }) {
             <div className={styles.field}>
               <label className={styles.label} htmlFor="bk-name">来访者姓名（不是会员时填）</label>
               <input id="bk-name" className={styles.input} value={f.newName} onChange={(e) => setF({ ...f, newName: e.target.value })} />
+              <span className={styles.small}>只记成线下来访者，不会挂到同名会员名下；会员请在上面搜索后选中</span>
             </div>
           )}
           <div className={styles.field}>

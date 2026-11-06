@@ -58,7 +58,7 @@ function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
             {f.notified_at ? ' · 已邮件通知' : ''}
           </p>
         </div>
-        <span className={styles.small}>{open ? '收起' : '处理'}</span>
+        <span className={styles.small} style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{open ? '收起' : '处理'}</span>
       </div>
       {open && (
         <div style={{ marginTop: '0.8rem' }}>

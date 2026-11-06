@@ -57,8 +57,15 @@ export async function staffCreateBooking(
     if (!contactId) {
       const name = str(b.newName, 100);
       if (!name) throw new CrmError('bad_request', '请选择会员，或填写来访者姓名');
-      // 同名的人只有一位：直接用这份档案，不重复建人；同名多位或没有：新建一份代录档案（不能登录，后续可合并）
-      const { rows: same } = await db.query<{ id: string }>(`SELECT id FROM contacts WHERE lower(btrim(name)) = lower($1) LIMIT 2`, [name]);
+      // 只复用“之前线下代录、从没登录过”的同名档案（避免同一来访者重复建人）；
+      // 不会自动挂到已登录的会员 / 访客名下——那种情况工作人员要在上面“选择会员”里明确选人
+      const { rows: same } = await db.query<{ id: string }>(
+        `SELECT id FROM contacts
+          WHERE lower(btrim(name)) = lower(btrim($1)) AND acquisition_source = 'staff_room_booking'
+            AND wechat_openid IS NULL AND email IS NULL AND phone_e164 IS NULL
+          LIMIT 2`,
+        [name]
+      );
       if (same.length === 1) contactId = same[0].id;
       else {
         const { rows } = await db.query<{ id: string }>(`INSERT INTO contacts (name, acquisition_source) VALUES ($1, 'staff_room_booking') RETURNING id`, [name]);

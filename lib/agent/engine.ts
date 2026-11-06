@@ -116,7 +116,9 @@ export function finalizeReply(reply: string, lang: 'zh' | 'en'): string {
 function pickEvent(message: string, ctx: PageContext | null, events: UpcomingEvent[]): UpcomingEvent | 'many' | null {
   const open = events.filter((e) => e.registrationOpen);
   const t = normalizeTight(message);
-  const byTitle = open.find((e) => t.includes(normalizeTight(e.title).slice(0, 6)) || t.includes(e.slug.toLowerCase()));
+  // 标题开头的【测试】【11 月沙龙】[预告] 这类标签不参与匹配
+  const core = (title: string) => normalizeTight(title.replace(/^\s*(?:[【\[［（(][^】\]］）)]{0,20}[】\]］）)]\s*)+/, '')).slice(0, 6);
+  const byTitle = open.find((e) => { const k = core(e.title); return (k.length >= 3 && t.includes(k)) || t.includes(e.slug.toLowerCase()); });
   if (ctx?.page === 'event' && ctx.slug) {
     const e = open.find((x) => x.slug === ctx.slug) ?? (ctx.title ? open.find((x) => normalizeTight(x.title) === normalizeTight(ctx.title as string)) : undefined);
     // 在某场活动页上说“帮我报名”：只报这一场；这一场不能在线报名时不替换成别的活动
@@ -204,6 +206,8 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
     await bumpDaily({ blocked: 1 });
     return res(403, { ok: false, error: { code: 'blocked', message: '请求被拦截' } });
   }
+  // 降速惩罚会回落：安静 10 分钟后清零（同一网络下后来的正常访客不受影响）
+  rows = rows.map((r) => (r.strikes > 0 && r.last_at && now.getTime() - new Date(r.last_at).getTime() > LIMITS.strikeDecayMinutes * 60_000 ? { ...r, strikes: 0 } : r));
   const tsOn = turnstileConfigured();
   if (typeof b.turnstileToken === 'string' && b.turnstileToken) {
     const passed = await verifyTurnstile(b.turnstileToken, ip);
@@ -236,7 +240,9 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
     for (const a of assessed) await saveRow({ ...a.row, strikes }, day);
     await bumpDaily({ slowed: 1 });
     const needTurnstile = tsOn && !verified;
-    const retryAfter = hard ? Math.min(60, 3 + strikes * 3) : 0;
+    // 等待时间按这位访客自己的记录算，不按同一网络（IP）累计
+    const own = assessed.find((a) => a.row.key.startsWith('v:'))?.row.strikes ?? 0;
+    const retryAfter = hard ? Math.min(60, 3 + (own + 1) * 3) : 0;
     return res(429, {
       ok: true,
       reply: needTurnstile ? '为了确认您不是机器人，请先完成下面的人机验证，再继续提问。' : `您发得有点快，请 ${retryAfter} 秒后再试。`,
@@ -247,7 +253,7 @@ export async function handleChat(req: Request, b: ChatRequest, cookieVisitor: st
       conversationId: convIdIn ?? undefined
     });
   }
-  const counted = assessed.map((a) => ({ ...a.row, count: a.row.count + 1, strikes: soft ? a.row.strikes + 1 : a.row.strikes }));
+  const counted = assessed.map((a) => ({ ...a.row, count: a.row.count + 1, strikes: soft ? a.row.strikes + 1 : Math.max(0, a.row.strikes - 1) }));
   for (const r of counted) await saveRow(r, day);
 
   // ── 3. 身份与对话 ──
