@@ -6,7 +6,12 @@ import { roomsInfo } from '@/lib/crm/staff12';
 import { aboutPage, site } from '@/lib/content';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// 工作人员写的介绍 / 设备里带金额的句子不对外显示（这个接口给小程序和网站展示用，“不含任何价格”）
+const MONEY = /[$＄￥¥]\s*\d|\d[\d,.]*\s*(美元|美金|元|块|刀|usd|rmb)|(usd|rmb)\s*\d|价格|收费标准|\/\s*(小时|天|h)\b/i;
+const noMoney = (t: string | null) => (t ? t.split(/(?<=[。！？；;!?\n])/).filter((s) => !MONEY.test(s)).join('').trim() || null : t);
+
 export const GET = handler(async () => {
-  const info = await roomsInfo();
+  const raw = await roomsInfo();
+  const info = { ...raw, rooms: raw.rooms.map((r) => ({ ...r, intro: noMoney(r.intro), equipment: noMoney(r.equipment) })) };
   return ok({ ...info, address: (await getSetting<string>(getPool(), 'room_address', '')) || `${aboutPage.contact.address}（${site.location}）`, phone: site.phone, phoneDial: site.phone.replace(/[^\d+]/g, ''), wechatQr: (await getSetting<string>(getPool(), 'wechat_qr_url', '')) || null });
 });

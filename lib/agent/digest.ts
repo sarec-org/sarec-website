@@ -96,12 +96,22 @@ export async function buildAgentDigest(day: string): Promise<{ subject: string; 
     lines.push('【高频问题】');
     top.forEach((t, i) => lines.push(`${i + 1}. ${t.text}（${t.n} 次）`));
   }
+  // 名片审核（用户生成内容）：只查库计数，不调 AI
+  const { rows: cardRows } = await pool.query<{ pending: number; hidden: number }>(
+    `SELECT count(*) FILTER (WHERE hidden_at IS NULL AND content_updated_at IS NOT NULL AND (reviewed_at IS NULL OR reviewed_at < content_updated_at))::int AS pending,
+            count(*) FILTER (WHERE hidden_at IS NOT NULL)::int AS hidden
+       FROM member_cards`
+  );
+  const cardsPending = cardRows[0]?.pending ?? 0;
+  lines.push('');
+  lines.push(`【名片审核】待审核名片 ${cardsPending} 张${cardRows[0]?.hidden ? `（已下架 ${cardRows[0].hidden} 张）` : ''}`);
   lines.push('');
   const base = (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
+  if (cardsPending) lines.push(`名片审核：${base}/zh/staff/cards`);
   lines.push(`后台：${base}/zh/staff/agent　待跟进：${base}/zh/staff/followups`);
   lines.push('（本邮件由数据库直接生成，未调用 AI。）');
   return {
-    subject: `【SAREC AI 助手日报】${day} · ${convs.length} 段对话 · ${submitted.length} 条线索`,
+    subject: `【SAREC AI 助手日报】${day} · ${convs.length} 段对话 · ${submitted.length} 条线索${cardsPending ? ` · 待审核名片 ${cardsPending} 张` : ''}`,
     text: lines.join('\n'),
     conversations: convs.length,
     leads: submitted.length

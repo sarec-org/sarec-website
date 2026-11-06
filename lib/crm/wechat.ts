@@ -73,7 +73,9 @@ export function inviteCode(slug: string, memberNo: number, envVersion: 'release'
 
 /** 1.2 电子名片码：扫码打开名片页（scene = “c|名片编号”），页面实时显示当前会员状态 */
 export function cardCode(token: string, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
-  return miniProgramCode({ page: 'pages/card/card', scene: `c|${token}`, tag: 'card', envVersion });
+  // “|” 不在 scene 允许的字符里（微信返回 40129），改用带完整 path 的 wxacode.get；名片页读 ?t=
+  // 名片码按 token 缓存在 Blob，每张名片只生成一次，wxacode.get 的总量上限够用
+  return miniProgramCode({ page: 'pages/card/card', path: `pages/card/card?t=${encodeURIComponent(token)}`, tag: 'card', envVersion });
 }
 
 /** 签到码里最少带几位签到密钥（密钥是 32 位十六进制） */

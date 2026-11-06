@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
+import { laWallToIso } from '@/lib/laDate';
 
 export const TOPICS: Record<string, string> = {
   adu: 'ADU、加建、小型开发',
@@ -28,11 +29,10 @@ export function toLocalInput(iso: unknown): string {
 }
 export function fromLocalInput(v: string): string | null {
   if (!v) return null;
-  // 以洛杉矶时区解释：先当 UTC，再按该时刻的时差修正
-  const guess = new Date(`${v}:00Z`);
-  const local = new Date(guess.toLocaleString('en-US', { timeZone: TZ }));
-  const offset = guess.getTime() - local.getTime();
-  return new Date(guess.getTime() + offset).toISOString();
+  // 以洛杉矶时区解释（和浏览器所在时区无关；原写法在非洛杉矶时区的电脑上会差出时差）
+  const [d, t] = v.split('T');
+  if (!d || !t) return null;
+  return laWallToIso(d, t.slice(0, 5));
 }
 
 export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { id: string }) => void }) {
