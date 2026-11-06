@@ -13,6 +13,7 @@ const SECTIONS: { href: string; title: string; desc: string; role: string }[] = 
   { href: '/zh/staff/album', title: '活动相册', desc: '上传现场照片（自动加水印）、活动封面、发布并通知到场的人', role: 'ops' },
   { href: '/zh/staff/rooms', title: '会议室与电子屏', desc: '线下预约登记（防撞期）、收款登记、会议室展示信息、电子屏审核', role: 'ops' },
   { href: '/zh/staff/growth', title: '增长与设置', desc: '点击统计、推荐排行、商会微信二维码、视频号、专委会、内容显示范围', role: 'ops' },
+  { href: '/zh/staff/cards', title: '名片审核', desc: '会员自己填写的电子名片：逐条查看，可下架、恢复、清除头像', role: 'ops' },
   { href: '/zh/staff/display', title: '官网展示审核', desc: '会员资料能否在官网展示（不影响会员身份）', role: 'ops' },
   { href: '/zh/staff/settings', title: '设置', desc: '会员价、屏幕费、积分比例、商家优惠、工作人员', role: 'admin' }
 ];

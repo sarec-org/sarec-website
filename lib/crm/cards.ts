@@ -17,6 +17,7 @@ import { getContactInfo } from './contactInfo';
 import { findRoleSub } from './questionBank';
 import { BLOB_PREFIX, blobConfigured } from './photos';
 import { cardCode, inviteCode, wxConfigured } from './wechat';
+import { msgSecCheck } from './contentSec';
 import type { Db } from './profile';
 
 export type CardStatus = { label: string; isMember: boolean; tierName: string | null; endDate: string | null; expired: boolean };
@@ -32,8 +33,8 @@ async function ensureCard(db: Db, contactId: string) {
   await db.query(`INSERT INTO member_cards (contact_id) VALUES ($1) ON CONFLICT (contact_id) DO NOTHING`, [contactId]);
   const { rows } = await db.query<{
     token: string; company: string | null; title: string | null; intro: string | null; wechat_id: string | null;
-    show_phone: boolean; show_email: boolean; show_wechat: boolean;
-  }>(`SELECT token, company, title, intro, wechat_id, show_phone, show_email, show_wechat FROM member_cards WHERE contact_id = $1`, [contactId]);
+    show_phone: boolean; show_email: boolean; show_wechat: boolean; hidden_at: Date | null; hidden_reason: string | null;
+  }>(`SELECT token, company, title, intro, wechat_id, show_phone, show_email, show_wechat, hidden_at, hidden_reason FROM member_cards WHERE contact_id = $1`, [contactId]);
   return rows[0];
 }
 
@@ -70,8 +71,17 @@ export async function myCard(contactId: string) {
     showWechat: card.show_wechat,
     phone: info.phone?.value ?? null,
     email: info.email?.value ?? null,
+    // 被工作人员下架时：本人仍可修改，别人打开显示“已下架”
+    hidden: card.hidden_at ? { at: card.hidden_at, reason: card.hidden_reason } : null,
     status: await statusOf(pool, contactId)
   };
+}
+
+/** 头像换了：名片重新进入待审核 */
+export async function markCardContentChanged(contactId: string) {
+  const pool = getPool();
+  await ensureCard(pool, contactId);
+  await pool.query(`UPDATE member_cards SET content_updated_at = now() WHERE contact_id = $1`, [contactId]);
 }
 
 const clip = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : undefined);
@@ -83,8 +93,31 @@ export async function updateMyCard(contactId: string, b: Record<string, unknown>
   if (wechat && !/^[A-Za-z][-_A-Za-z0-9]{5,19}$|^1\d{10}$|^\+?\d{8,15}$/.test(wechat)) {
     throw new CrmError('bad_wechat', '微信号格式不对（6–20 位字母、数字、下划线或减号，以字母开头；也可以填手机号）');
   }
+  // 内容审核：姓名、公司、职位、业务介绍、微信号有变化时，先过微信内容安全，再记“待审核”
+  const { rows: cur } = await pool.query<{ company: string | null; title: string | null; intro: string | null; wechat_id: string | null; name: string; openid: string | null }>(
+    `SELECT m.company, m.title, m.intro, m.wechat_id, c.name, c.wechat_openid AS openid FROM member_cards m JOIN contacts c ON c.id = m.contact_id WHERE m.contact_id = $1`,
+    [contactId]
+  );
+  const before = cur[0];
+  const next = {
+    company: b.company !== undefined ? clip(b.company, 80) || null : before?.company ?? null,
+    title: b.title !== undefined ? clip(b.title, 60) || null : before?.title ?? null,
+    intro: b.intro !== undefined ? clip(b.intro, 200) || null : before?.intro ?? null,
+    wechat: b.wechatId !== undefined ? wechat || null : before?.wechat_id ?? null,
+    name: typeof b.name === 'string' && b.name.trim() ? b.name.trim().slice(0, 100) : before?.name ?? ''
+  };
+  const changed =
+    !before || next.company !== before.company || next.title !== before.title || next.intro !== before.intro || next.wechat !== before.wechat_id || next.name !== before.name;
+  let sec: string | null = null;
+  if (changed) {
+    const r = await msgSecCheck([next.name, next.company, next.title, next.intro, next.wechat].filter(Boolean).join('\n'), before?.openid ?? null, 1);
+    if (r === 'risky') throw new CrmError('content_risky', '名片内容未通过内容安全检查，请修改后再保存');
+    sec = r;
+  }
   await pool.query(
     `UPDATE member_cards SET
+       content_updated_at = CASE WHEN $13::boolean THEN now() ELSE content_updated_at END,
+       sec_check = CASE WHEN $13::boolean THEN $14 ELSE sec_check END,
        company = CASE WHEN $2::boolean THEN $3 ELSE company END,
        title = CASE WHEN $4::boolean THEN $5 ELSE title END,
        intro = CASE WHEN $6::boolean THEN $7 ELSE intro END,
@@ -100,7 +133,9 @@ export async function updateMyCard(contactId: string, b: Record<string, unknown>
       b.wechatId !== undefined, wechat || null,
       typeof b.showPhone === 'boolean' ? b.showPhone : null,
       typeof b.showEmail === 'boolean' ? b.showEmail : null,
-      typeof b.showWechat === 'boolean' ? b.showWechat : null
+      typeof b.showWechat === 'boolean' ? b.showWechat : null,
+      changed,
+      sec
     ]
   );
   if (typeof b.name === 'string' && b.name.trim()) {
@@ -115,15 +150,17 @@ export async function publicCard(token: string) {
   const pool = getPool();
   const { rows } = await pool.query<{
     contact_id: string; company: string | null; title: string | null; intro: string | null; wechat_id: string | null;
-    show_phone: boolean; show_email: boolean; show_wechat: boolean; name: string; avatar_url: string | null; role_sub: string | null; member_no: number;
+    show_phone: boolean; show_email: boolean; show_wechat: boolean; name: string; avatar_url: string | null; role_sub: string | null; member_no: number; hidden_at: Date | null;
   }>(
     `SELECT m.contact_id, m.company, m.title, m.intro, m.wechat_id, m.show_phone, m.show_email, m.show_wechat,
-            c.name, c.avatar_url, c.role_sub, c.member_no::int AS member_no
+            c.name, c.avatar_url, c.role_sub, c.member_no::int AS member_no, m.hidden_at
        FROM member_cards m JOIN contacts c ON c.id = m.contact_id WHERE m.token = $1`,
     [token]
   );
   const r = rows[0];
   if (!r) throw new CrmError('not_found', '名片不存在或已停用');
+  // 工作人员下架后，别人打开只显示“已下架”，不展示任何名片内容
+  if (r.hidden_at) throw new CrmError('not_found', '这张名片已下架');
   const info = await getContactInfo(pool, r.contact_id);
   return {
     token,
