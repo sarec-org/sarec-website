@@ -10,17 +10,28 @@ export function wxConfigured(): boolean {
   return !!(process.env.WX_APPID && process.env.WX_SECRET);
 }
 
-export async function wxAccessToken(): Promise<string> {
-  if (cachedToken && cachedToken.exp > Date.now() + 60_000) return cachedToken.token;
+export async function wxAccessToken(forceRefresh = false): Promise<string> {
+  if (!forceRefresh && cachedToken && cachedToken.exp > Date.now() + 60_000) return cachedToken.token;
+  if (forceRefresh) cachedToken = null;
   const res = await fetch('https://api.weixin.qq.com/cgi-bin/stable_token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ grant_type: 'client_credential', appid: process.env.WX_APPID, secret: process.env.WX_SECRET })
+    body: JSON.stringify({ grant_type: 'client_credential', appid: process.env.WX_APPID, secret: process.env.WX_SECRET, force_refresh: forceRefresh })
   });
   const d = (await res.json()) as { access_token?: string; expires_in?: number; errcode?: number };
   if (!d.access_token) throw new Error(`wechat token error ${d.errcode ?? ''}`);
   cachedToken = { token: d.access_token, exp: Date.now() + (d.expires_in ?? 7200) * 1000 };
   return d.access_token;
+}
+
+/** 微信说凭证无效 / 过期（40001、42001、40014）：强制刷新凭证后重试一次 */
+export const WX_TOKEN_EXPIRED = new Set([40001, 40014, 42001]);
+export async function withWxToken<T>(run: (token: string) => Promise<T>, errcodeOf: (r: T) => number | undefined): Promise<T> {
+  const first = await run(await wxAccessToken());
+  const code = errcodeOf(first);
+  if (code === undefined || !WX_TOKEN_EXPIRED.has(code)) return first;
+  console.log(`[wx] token errcode=${code}, force refresh and retry once`);
+  return run(await wxAccessToken(true));
 }
 
 /** scene 只能 32 个可见字符，且限 [0-9a-zA-Z!#$&'()*+,/:;=?@-._~] */
@@ -31,16 +42,22 @@ type CodeReq = { page: string; scene?: string; path?: string; tag: string; envVe
 /** 调微信生成正式版小程序码：有 scene 用 wxacode.getUnlimited（数量不限），否则 wxacode.get（带完整 path，总量有限） */
 async function miniProgramCode(r: CodeReq): Promise<Buffer> {
   if (!wxConfigured()) throw new CrmError('wechat_unconfigured', '后台还没有配置小程序 AppID / AppSecret');
-  const token = await wxAccessToken();
   const env = r.envVersion ?? 'release';
   const common = { width: 1280, auto_color: false, line_color: { r: 4, g: 20, b: 33 }, is_hyaline: false, env_version: env };
-  const [url, payload] = r.scene
-    ? [`https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`, { ...common, scene: r.scene, page: r.page, check_path: env === 'release' }]
-    : [`https://api.weixin.qq.com/wxa/getwxacode?access_token=${token}`, { ...common, path: r.path }];
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  const buf = Buffer.from(await res.arrayBuffer());
+  const jsonCode = (b: { buf: Buffer; json: boolean }) => {
+    if (!b.json) return undefined;
+    try { return (JSON.parse(b.buf.toString('utf8')) as { errcode?: number }).errcode; } catch { return undefined; }
+  };
+  const { buf, json } = await withWxToken(async (token) => {
+    const [url, payload] = r.scene
+      ? [`https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`, { ...common, scene: r.scene, page: r.page, check_path: env === 'release' }]
+      : [`https://api.weixin.qq.com/wxa/getwxacode?access_token=${token}`, { ...common, path: r.path }];
+    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const b = Buffer.from(await res.arrayBuffer());
+    return { buf: b, json: (res.headers.get('content-type') || '').includes('json') || b[0] === 0x7b };
+  }, jsonCode);
   // 出错时微信返回 JSON；成功是图片
-  if ((res.headers.get('content-type') || '').includes('json') || buf[0] === 0x7b) {
+  if (json) {
     let code: number | string = 'unknown';
     try { code = (JSON.parse(buf.toString('utf8')) as { errcode?: number }).errcode ?? 'unknown'; } catch { /* ignore */ }
     console.log(`[wxacode] ${r.tag} errcode=${code}`);

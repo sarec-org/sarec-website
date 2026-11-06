@@ -13,7 +13,7 @@
  */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
-import { wxAccessToken, wxConfigured } from './wechat';
+import { withWxToken, wxConfigured } from './wechat';
 
 export type ReminderKind = 'day_before' | 'two_hours';
 export type SubKind = 'confirm' | ReminderKind;
@@ -164,12 +164,14 @@ async function pushOne(tm: Tmpl, openid: string, ev: EvInfo, kind: SubKind): Pro
   };
   const data: Record<string, { value: string }> = {};
   for (const [k, key] of Object.entries(tm.fields)) if (key) data[key] = { value: values[k] };
-  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${await wxAccessToken()}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/event/event?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
-  });
-  const j = (await res.json()) as { errcode?: number };
+  const j = await withWxToken(async (token) => {
+    const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/event/event?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
+    });
+    return (await res.json()) as { errcode?: number };
+  }, (r) => r.errcode);
   if (j.errcode) throw new Error(`errcode ${j.errcode}`);
 }
 
@@ -183,12 +185,14 @@ export async function pushPhotosNotice(tm: Tmpl, openid: string, ev: EvInfo): Pr
   };
   const data: Record<string, { value: string }> = {};
   for (const [k, key] of Object.entries(tm.fields)) if (key) data[key] = { value: values[k] };
-  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${await wxAccessToken()}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/album/album?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
-  });
-  const j = (await res.json()) as { errcode?: number };
+  const j = await withWxToken(async (token) => {
+    const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/album/album?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
+    });
+    return (await res.json()) as { errcode?: number };
+  }, (r) => r.errcode);
   if (j.errcode) throw new Error(`errcode ${j.errcode}`);
 }
 
