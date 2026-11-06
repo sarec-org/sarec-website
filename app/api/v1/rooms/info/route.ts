@@ -3,13 +3,11 @@ import { handler, ok } from '@/lib/crm/http';
 import { getPool } from '@/lib/db/client';
 import { getSetting } from '@/lib/crm/orders';
 import { roomsInfo } from '@/lib/crm/staff12';
+import { noMoney } from '@/lib/noMoney';
 import { aboutPage, site } from '@/lib/content';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // 工作人员写的介绍 / 设备里带金额的句子不对外显示（这个接口给小程序和网站展示用，“不含任何价格”）
-const MONEY = /[$＄￥¥]\s*\d|\d[\d,.]*\s*(美元|美金|元|块|刀|usd|rmb)|(usd|rmb)\s*\d|价格|收费标准|\/\s*(小时|天|h)\b/i;
-const noMoney = (t: string | null) => (t ? t.split(/(?<=[。！？；;!?\n])/).filter((s) => !MONEY.test(s)).join('').trim() || null : t);
-
 export const GET = handler(async () => {
   const raw = await roomsInfo();
   const info = { ...raw, rooms: raw.rooms.map((r) => ({ ...r, intro: noMoney(r.intro), equipment: noMoney(r.equipment) })) };

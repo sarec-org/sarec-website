@@ -1,6 +1,7 @@
 /** GET /api/v1/home —— 1.2 首页服务台（小程序首页、网站手机版共用）：状态卡、近期活动、上一场回顾、研究与动态、相册通知 */
 import { homeData } from '@/lib/crm/growth';
-import { handler, ok, optionalContact, siteUrl } from '@/lib/crm/http';
+import { handler, isMp12, ok, optionalContact, siteUrl } from '@/lib/crm/http';
+import { noMoneySummaries } from '@/lib/noMoney';
 import { contentResearchList, setContentVisibility, type Visibility } from '@/lib/mpContent';
 import { getSetting } from '@/lib/crm/orders';
 import { getPool } from '@/lib/db/client';
@@ -13,5 +14,7 @@ export const GET = handler(async (req: Request) => {
   // 研究与动态：小程序版显示范围（与 /api/v1/content/research 同一套过滤）
   setContentVisibility(await getSetting<Visibility>(getPool(), 'content_visibility', {}).catch(() => ({})));
   const research = sp.get('client') === 'web' ? [] : contentResearchList().items.slice(0, 6);
-  return ok({ ...data, research });
+  // 小程序 1.2：状态卡、近期活动、上一场回顾的简介里不带金额
+  const out = { ...data, research };
+  return ok((await isMp12(req)) ? noMoneySummaries(out) : out);
 });

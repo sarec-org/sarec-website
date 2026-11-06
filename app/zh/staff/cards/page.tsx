@@ -14,7 +14,7 @@ type C = {
   content_updated_at: string | null; reviewed_at: string | null; reviewed_by: string | null; sec_check: string | null;
   hidden_at: string | null; hidden_reason: string | null; hidden_by: string | null; pending: boolean;
 };
-const SEC: Record<string, string> = { pass: '内容安全：通过', review: '内容安全：建议人工复核', skipped: '内容安全：未检测（网站端修改）', error: '内容安全：检测失败' };
+const SEC: Record<string, string> = { pass: '内容安全：通过', review: '内容安全：建议人工复核', skipped: '内容安全：未检测（转人工审核）', error: '内容安全：检测失败' };
 const FILTERS: [string, string][] = [['pending', '待审核'], ['hidden', '已下架'], ['all', '全部']];
 
 function Card({ c, onDone }: { c: C; onDone: (m: { ok: boolean; text: string }) => void }) {
@@ -29,7 +29,7 @@ function Card({ c, onDone }: { c: C; onDone: (m: { ok: boolean; text: string }) 
       <div className={styles.row} style={{ alignItems: 'flex-start', gap: 14 }}>
         {c.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={c.avatar_url} alt="头像" width={64} height={64} style={{ objectFit: 'cover', flexShrink: 0 }} />
+          <img src={c.avatar_url} alt="头像" width={64} height={64} style={{ width: 64, height: 64, minWidth: 64, maxWidth: 64, objectFit: 'cover', flexShrink: 0, display: 'block' }} />
         ) : (
           <div style={{ width: 64, height: 64, background: '#e8e4da', flexShrink: 0 }} />
         )}
