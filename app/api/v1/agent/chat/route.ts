@@ -3,12 +3,13 @@
  *  商会 AI 助手：只有访客发消息时才可能调用模型（见 lib/agent/engine.ts）。 */
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { body, handler } from '@/lib/crm/http';
+import { body, denyMiniProgram, handler } from '@/lib/crm/http';
 import { VISITOR_COOKIE, handleChat, type ChatRequest } from '@/lib/agent/engine';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 export const POST = handler(async (req: Request) => {
+  await denyMiniProgram(req); // 小程序不提供 AI 功能
   const b = await body<ChatRequest>(req);
   const r = await handleChat(req, b, cookies().get(VISITOR_COOKIE)?.value);
   const headers: Record<string, string> = { 'Cache-Control': 'no-store' };
