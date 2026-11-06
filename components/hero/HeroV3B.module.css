@@ -906,3 +906,4 @@
 .nav-me { color: var(--ivory-dim); font-size: 13px; letter-spacing: 0.08em; text-decoration: none; margin-right: 22px; }
 .nav-me:hover { color: var(--gold-bright); }
 @media (max-width: 1024px) { .nav-me { display: none; } }
+@media (min-width: 769px) and (max-width: 1280px) { .sub { max-width: min(700px, calc(100vw - 420px)); } }
