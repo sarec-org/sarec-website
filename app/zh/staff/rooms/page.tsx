@@ -4,6 +4,7 @@ import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime, money } from '@/components/crm/client';
 import { RoomsV12 } from '@/components/crm/staff/RoomsV12';
+import { laToday } from '@/lib/laDate';
 
 type B = { id: string; room: string; starts_at: string; ends_at: string; status: string; via_pass: boolean; contact_id: string; name: string; phone_e164: string | null; email: string | null; order_no: string | null; order_status: string | null; amount_cents: number | null };
 type Ad = { id: string; org_name: string; intro: string; service_area: string | null; qr_url: string | null; asset_url: string | null; months: number; start_month: string | null; status: string; tier_at_apply: string | null; amount_cents: number; staff_note: string | null; name: string; contact_id: string; order_no: string | null; order_status: string | null };
@@ -12,7 +13,7 @@ type Pay = { amount: string; provider: string };
 const ASTATUS: Record<string, string> = { submitted: '待审核', approved: '已通过', scheduled: '已排期', rejected: '未通过', cancelled: '已取消' };
 
 export default function StaffRooms() {
-  const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
+  const [day, setDay] = useState(() => laToday());
   const [bookings, setBookings] = useState<B[] | null>(null);
   const [ads, setAds] = useState<Ad[] | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});

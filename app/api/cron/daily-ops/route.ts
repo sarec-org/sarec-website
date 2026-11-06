@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { recordException, scanFollowups } from '@/lib/crm/followups';
 import { runAgentDigest } from '@/lib/agent/digest';
+import { laToday } from '@/lib/laDate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,13 +30,13 @@ async function run(req: Request) {
   try {
     out.followups = await scanFollowups();
   } catch (e) {
-    await recordException('followup_scan', `followup_scan:${new Date().toISOString().slice(0, 10)}`, null, e instanceof Error ? e.message : 'error');
+    await recordException('followup_scan', `followup_scan:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.followups = 'error';
   }
   try {
     out.agentDigest = await agentDigest(new Date());
   } catch (e) {
-    await recordException('agent_digest', `agent_digest:${new Date().toISOString().slice(0, 10)}`, null, e instanceof Error ? e.message : 'error');
+    await recordException('agent_digest', `agent_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.agentDigest = 'error';
   }
   return NextResponse.json({ ok: true, ...out });

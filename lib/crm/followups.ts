@@ -12,6 +12,7 @@ import { getPool } from '@/lib/db/client';
 import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
 import { CrmError } from './events';
 import type { Db } from './profile';
+import { laToday } from '@/lib/laDate';
 
 export type FollowupSource = 'agent_lead' | 'post_event_interest' | 'inquiry' | 'expiring_member' | 'manual';
 export type FollowupStatus = 'todo' | 'contacted' | 'meeting' | 'won' | 'dropped';
@@ -245,7 +246,7 @@ export async function ignoreException(actor: string, id: string) {
 
 // ── 定时扫描（每天一次；只查库 + 模板草稿，不调 AI）───────────────────────────
 
-const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
+const fmtDate = (d: Date) => laToday(d); // 洛杉矶日期
 
 /** 活动后 24 小时内：报名时选了“近期需求”（Q09）的人；30 天内到期的会员。重复扫描不重复生成。 */
 export async function scanFollowups(now = new Date()): Promise<{ postEvent: number; expiring: number }> {

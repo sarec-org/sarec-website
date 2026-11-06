@@ -344,4 +344,18 @@
 /* 1.2：“我的”入口（登录 / 我的报名 / 名片），手机版由底部三栏和菜单承担 */
 .meLink { color: var(--ivory-dim); font-size: 13px; letter-spacing: 0.08em; text-decoration: none; margin-right: 18px; }
 .meLink:hover { color: var(--gold-bright); }
-@media (max-width: 1024px) { .meLink { display: none; } }
+
+
+/* 769–1100：导航收紧成一行，不折字；“我的”保留 */
+.brand, .navMenu a, .cta, .meLink { white-space: nowrap; }
+@media (min-width: 769px) and (max-width: 1100px) {
+  .nav { padding: 16px 28px; gap: 16px; }
+  .brandMark { font-size: 22px; letter-spacing: 0.16em; }
+  .navMenu { gap: 22px; font-size: 13px; }
+  .cta { padding: 9px 14px; font-size: 12.5px; }
+  .meLink { margin-right: 14px; font-size: 12.5px; }
+}
+@media (min-width: 769px) and (max-width: 940px) {
+  .brandSub { display: none; }
+  .navMenu { gap: 14px; font-size: 12.5px; }
+}

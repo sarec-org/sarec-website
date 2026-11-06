@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
+import { laToday } from '@/lib/laDate';
 
 type Room = { id: number; name: string; capacity: number | null; equipment: string | null; intro: string | null; photos: string[] };
 type Person = { id: string; member_no: number; name: string; phone_e164: string | null; email: string | null };
@@ -59,7 +60,7 @@ export function RoomsV12({ onBooked }: { onBooked: () => void }) {
   const [q, setQ] = useState('');
   const [people, setPeople] = useState<Person[] | null>(null);
   const [pick, setPick] = useState<Person | null>(null);
-  const [f, setF] = useState({ roomId: '', newName: '', date: new Date().toISOString().slice(0, 10), start: '10:00', end: '12:00', note: '', amount: '', provider: 'zelle', reference: '' });
+  const [f, setF] = useState({ roomId: '', newName: '', date: laToday(), start: '10:00', end: '12:00', note: '', amount: '', provider: 'zelle', reference: '' });
 
   const load = useCallback(async () => {
     const r = await api<{ rooms: Room[]; notice: string }>('/api/v1/staff/room-info');

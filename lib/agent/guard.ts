@@ -33,17 +33,19 @@ export function assess(row: RateRow, now: Date, msgHash: string, flags: { meanin
   const r = { ...row };
   const reasons: Suspicion[] = [];
   const t = now.getTime();
-  if (r.last_at && t - new Date(r.last_at).getTime() < LIMITS.minIntervalMs) reasons.push('interval');
+  // 同一网络（IP）可能有好几位访客：连发间隔、重复内容只按浏览器算，IP 只设一个宽松的连发上限
+  const isIp = r.key.startsWith('ip:');
+  if (!isIp && r.last_at && t - new Date(r.last_at).getTime() < LIMITS.minIntervalMs) reasons.push('interval');
   if (!r.burst_start || t - new Date(r.burst_start).getTime() > LIMITS.burstWindowSec * 1000) {
     r.burst_start = now;
     r.burst_count = 1;
   } else {
     r.burst_count += 1;
-    if (r.burst_count > LIMITS.burstMax) reasons.push('burst');
+    if (r.burst_count > (isIp ? LIMITS.ipBurstMax : LIMITS.burstMax)) reasons.push('burst');
   }
   if (r.last_hash === msgHash) {
     r.repeat_count += 1;
-    if (r.repeat_count >= 2) reasons.push('repeat');
+    if (!isIp && r.repeat_count >= 2) reasons.push('repeat');
   } else r.repeat_count = 0;
   r.last_hash = msgHash;
   r.last_at = now;

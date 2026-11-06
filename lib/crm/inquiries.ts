@@ -5,6 +5,7 @@
 import { getPool, withTransaction } from '@/lib/db/client';
 import { CrmError, normalizeEmail, normalizePhone } from './events';
 import { notifyFollowup, upsertFollowup } from './followups';
+import { laToday } from '@/lib/laDate';
 
 export type InquiryInput = {
   source: 'web_form' | 'agent' | 'mp';
@@ -63,7 +64,7 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
       draft: input.draft ?? (name ? `${name}您好，我是 SAREC 中美房地产商会的工作人员，收到您在${input.source === 'mp' ? '小程序' : '网站'}上的咨询，想跟您确认一下具体需求，方便的时候我们通个电话？` : null),
       draftBy: input.draft ? 'ai' : 'template',
       inquiryId,
-      nextDate: new Date().toISOString().slice(0, 10)
+      nextDate: laToday()
     });
     return { inquiryId, followupId: f.id, created: f.created };
   });

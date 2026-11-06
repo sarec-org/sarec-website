@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
+import { laToday } from '@/lib/laDate';
 
 type F = {
   id: string; source: string; name: string | null; contact_text: string | null; need: string | null; draft: string | null; draft_by: string;
@@ -18,7 +19,7 @@ type Log = { actor: string; from_status: string | null; to_status: string | null
 const SOURCE: Record<string, string> = { agent_lead: 'AI 助手线索', post_event_interest: '活动后希望了解', inquiry: '新咨询', expiring_member: '会员 30 天内到期', manual: '手动添加' };
 const STATUS: Record<string, string> = { todo: '待联系', contacted: '已联系', meeting: '已约谈', won: '已成交', dropped: '暂不跟进' };
 const KIND: Record<string, string> = { followup_email: '线索 / 咨询邮件通知', photo_notice: '“照片已上传”通知', photo_upload: '照片上传', followup_scan: '每日扫描', agent_digest: 'AI 助手日报', agent_lead_email: 'AI 线索邮件' };
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => laToday();
 
 function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
   const [open, setOpen] = useState(false);

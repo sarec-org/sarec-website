@@ -24,6 +24,8 @@ export const LIMITS = {
   /** 连发：多少秒内超过几条算可疑 */
   burstWindowSec: 10,
   burstMax: 4,
+  /** 同一 IP 10 秒内最多条数（多人共用网络，放宽） */
+  ipBurstMax: 20,
   minIntervalMs: 1500,
   /** 人机验证通过后免检分钟数；验证失败几次算机器人 */
   verifiedMinutes: 30,
