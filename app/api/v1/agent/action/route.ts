@@ -3,13 +3,14 @@
  *  { kind: 'registered', conversationId, slug } → 记录通过助手报名成功（报名本身调用现有 /api/v1/events/:slug/register） */
 import { cookies } from 'next/headers';
 import { CrmError } from '@/lib/crm/events';
-import { body, handler, ok, optionalContact, siteUrl } from '@/lib/crm/http';
+import { body, denyMiniProgram, handler, ok, optionalContact, siteUrl } from '@/lib/crm/http';
 import { VISITOR_COOKIE } from '@/lib/agent/engine';
 import { recordRegistered, submitLead } from '@/lib/agent/actions';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 export const POST = handler(async (req: Request) => {
+  await denyMiniProgram(req); // 小程序不提供 AI 功能
   const visitor = cookies().get(VISITOR_COOKIE)?.value;
   if (!visitor) throw new CrmError('not_found', '找不到这段对话，请刷新页面后再试');
   const b = await body<Record<string, unknown>>(req);

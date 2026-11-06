@@ -86,6 +86,13 @@ export async function isMp12(req: Request): Promise<boolean> {
 }
 
 /** 付款、订单、会议室下单、月卡、入会报价：1.2 小程序不提供（请到网站办理） */
+/** 商会 AI 助手只在网站上提供：任何小程序来源（1.2 版本头 / 1.2 会话 / 微信小程序请求的 servicewechat.com Referer）一律拒绝 */
+export async function denyMiniProgram(req: Request): Promise<void> {
+  const referer = (req.headers.get('referer') ?? '').toLowerCase();
+  const fromMp = referer.startsWith('https://servicewechat.com/') || (await isMp12(req));
+  if (fromMp) throw new CrmError('forbidden', '小程序不提供 AI 助手功能');
+}
+
 export async function denyMp12(req: Request): Promise<void> {
   if (await isMp12(req)) throw new CrmError('forbidden', '这项服务请在商会网站办理，或联系商会工作人员');
 }

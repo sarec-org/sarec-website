@@ -467,7 +467,8 @@ export function scrubMp<T>(v: T): T {
   const walk = (x: unknown): unknown => {
     if (typeof x === 'string') return scrubText(x);
     if (Array.isArray(x)) return x.map(walk).filter((y) => y !== null && y !== '');
-    if (x && typeof x === 'object') {
+    // 只处理普通对象；Date 等原样返回
+    if (x && typeof x === 'object' && Object.getPrototypeOf(x) === Object.prototype) {
       const o = x as Record<string, unknown>;
       // 文本节点（段落 / 引用）正文被整段删掉时，整个节点不输出
       if ((o.t === 'p' || o.t === 'quote') && typeof o.text === 'string' && scrubText(o.text) === null) return null;

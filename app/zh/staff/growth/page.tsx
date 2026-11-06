@@ -108,7 +108,7 @@ function Growth() {
           <input className={styles.input} value={channels} onChange={(e) => setChannels(e.target.value)} placeholder="视频号 ID，sph 开头；留空 = 小程序不显示视频号入口" aria-label="视频号 ID" />
           <button className={styles.btn} onClick={() => save('channels_finder_id', channels.trim())}>保存</button>
         </div>
-        <p className={styles.small}>视频号要和小程序同一主体或已关联，才能从小程序跳转。</p>
+        <p className={styles.small}>视频号要和小程序同一主体，或已在视频号助手里关联本小程序，才能从小程序跳转；还没关联时请留空（留空时小程序不显示入口，避免审核员点了打不开）。</p>
       </div>
 
       <h2 className={styles.h2}>专委会与俱乐部</h2>
