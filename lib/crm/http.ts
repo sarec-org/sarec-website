@@ -5,7 +5,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { CrmError } from './events';
-import { SESSION_COOKIE, SESSION_DAYS, sessionContact, staffCan, staffFor, type Staff, type StaffRole } from './auth';
+import { SESSION_COOKIE, SESSION_DAYS, sessionContact, sha256, staffCan, staffFor, type Staff, type StaffRole } from './auth';
+import { getPool } from '@/lib/db/client';
 
 export function ok(data: Record<string, unknown> = {}, status = 200) {
   return NextResponse.json({ ok: true, ...data }, { status, headers: { 'Cache-Control': 'no-store' } });
@@ -60,6 +61,33 @@ export function tokenFrom(req: Request): string | null {
 
 export async function optionalContact(req: Request): Promise<string | null> {
   return sessionContact(tokenFrom(req));
+}
+
+/**
+ * 是不是 1.2 小程序的请求：带 X-Sarec-Client: mp-1.2 头，或这个会话曾经被 1.2 用过（标记会话，之后不带头也算）。
+ * 1.2 的会话一律不返回订单、金额、付款方式（合规：小程序不出现付费引导）。
+ */
+export async function isMp12(req: Request): Promise<boolean> {
+  const token = tokenFrom(req);
+  const header = (req.headers.get('x-sarec-client') ?? '').toLowerCase();
+  if (!token) return header.startsWith('mp-1.2');
+  const hash = sha256(token);
+  try {
+    if (header.startsWith('mp-1.2')) {
+      await getPool().query(`UPDATE sessions SET client = 'mp-1.2' WHERE token_hash = $1 AND client IS DISTINCT FROM 'mp-1.2'`, [hash]);
+      return true;
+    }
+    const { rows } = await getPool().query<{ client: string | null }>(`SELECT client FROM sessions WHERE token_hash = $1`, [hash]);
+    return rows[0]?.client === 'mp-1.2';
+  } catch {
+    // 迁移还没跑（没有 client 列）：只看请求头
+    return header.startsWith('mp-1.2');
+  }
+}
+
+/** 付款、订单、会议室下单、月卡、入会报价：1.2 小程序不提供（请到网站办理） */
+export async function denyMp12(req: Request): Promise<void> {
+  if (await isMp12(req)) throw new CrmError('forbidden', '这项服务请在商会网站办理，或联系商会工作人员');
 }
 
 export async function requireContact(req: Request): Promise<string> {

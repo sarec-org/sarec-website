@@ -18,6 +18,8 @@ import {
   type RelatedArticleCard
 } from '@/components/sections/research/geo/ArticleEndSections';
 import type { SourceItem } from '@/lib/geo/types';
+import { EnglishSummary } from '@/components/sections/research/geo/GeoAnswerSections';
+import { englishByline, RESEARCH_DISCLAIMER, RESEARCH_DISCLAIMER_EN } from '@/lib/geo/author';
 
 /**
  * GEO 旗舰文章动态路由 —— /zh/research/<slug>。
@@ -52,8 +54,8 @@ export function generateMetadata({ params }: { params: Params }): Metadata {
   return meta;
 }
 
-const DISCLAIMER =
-  '本文为公开信息的研究与风险教育,不构成法律、税务、移民或证券建议;具体事项请咨询持牌专业人士。';
+// 非投资建议声明（GEO · J 合规红线）：统一取 lib/geo/author.ts。
+const DISCLAIMER = RESEARCH_DISCLAIMER;
 
 export default function GeoResearchArticlePage({ params }: { params: Params }) {
   const article = getArticle(params.slug);
@@ -96,7 +98,7 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
             if (b.data.riskNote) parts.push(`风险提示:${b.data.riskNote}`);
             return { question: b.data.question, answer: parts.join(' ') };
           });
-  const faqJsonLd = buildFAQPageJsonLd(faqItems);
+  const faqJsonLd = buildFAQPageJsonLd(faqItems, article.en?.faq);
 
   // 相关阅读（M3.3）—— 只收录已发布的相关文章，缺失 / 草稿静默跳过。
   const relatedItems: RelatedArticleCard[] = (article.relatedSlugs ?? [])
@@ -137,6 +139,11 @@ export default function GeoResearchArticlePage({ params }: { params: Params }) {
 
       <FaqSection items={faqItems} />
       <SourcesSection items={sourceItems} />
+      <EnglishSummary
+        data={article.en}
+        byline={englishByline(article.author)}
+        disclaimer={RESEARCH_DISCLAIMER_EN}
+      />
       <RelatedReading items={relatedItems} />
 
       <ShareButton title={article.title} url={`${SITE_URL}${pathname}`} />

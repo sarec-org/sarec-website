@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -199,11 +203,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '订阅研究简报', href: '/zh/contact?intent=newsletter' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/los-angeles-ed1-affordable-housing.ts）。
+const geo = getLegacyResearch('los-angeles-ed1-affordable-housing');
+
 export default function LosAngelesEd1AffordableHousingPage() {
   return (
     <main className={styles.page}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="ED1 · 政策深度 · LA"
         title="洛杉矶 ED1 与经济适用房开发观察"
         summary="ED1 改变了洛杉矶部分 100% 经济适用房项目的审批节奏，也吸引了大量开发商和投资人关注。但政策红利并不等于项目安全，真正的判断仍然要回到土地、分区、审批、融资、建设、运营和退出。"
@@ -216,6 +224,8 @@ export default function LosAngelesEd1AffordableHousingPage() {
         secondaryCta={{ label: '提交项目初筛', href: '/zh/services/strategy/' }}
         anchors={heroAnchors}
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="政策机会越明显，越需要冷静判断"
@@ -338,6 +348,8 @@ export default function LosAngelesEd1AffordableHousingPage() {
           <p>{noticeBody}</p>
         </div>
       </section>
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({

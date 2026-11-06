@@ -17,6 +17,7 @@ import { formatCents, getTierSeed } from '@/lib/membership/tiers';
 import { CrmError, normalizeEmail, normalizePhone } from './events';
 import { getSetting, newOrderNo, redeemPoints, type OrderRow } from './orders';
 import { pointsBalance, type Db } from './profile';
+import { laToday } from '@/lib/laDate';
 
 const ACTIVE_APP_STATUSES = ['approved', 'paid', 'second_payment_due'];
 
@@ -56,7 +57,7 @@ export async function memberStatus(db: Db, contactId: string): Promise<MemberSta
     [contactId, ACTIVE_APP_STATUSES]
   );
   const r = rows[0];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = laToday();
   const expired = !!r && !!r.end && r.end < today;
   return {
     isMember: !!r && !expired,

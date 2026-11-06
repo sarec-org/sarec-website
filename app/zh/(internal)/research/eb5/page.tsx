@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -27,31 +31,31 @@ const section01Paragraphs = [
 ];
 
 const section02Table = [
-  { label: '普通投资额', value: '$1,050,000' },
-  { label: 'TEA区域投资额', value: '$800,000' },
+  { label: '普通投资额', value: '$1,050,000（以 USCIS 最新公告为准）' },
+  { label: 'TEA区域投资额', value: '$800,000（以 USCIS 最新公告为准）' },
   { label: '每年签证配额', value: '约10,000个（含家属）' },
-  { label: '中国大陆排期', value: '当前约2-3年（视政策）' },
+  { label: '中国大陆排期', value: '以美国国务院每月 Visa Bulletin 为准' },
   { label: '投资结构', value: '通过区域中心（Regional Center）' }
 ];
 
 const section03OrderedItems = [
   '选择项目与区域中心：核查区域中心合法性（USCIS注册），审查项目可行性报告和财务结构，律师审查认购协议',
   '资金准备与合规：证明资金合法来源（Source of Funds），完成跨境资金转移合规安排',
-  '提交I-526申请：由移民律师准备申请材料，审批周期约12-24个月，批准后进入排期等待',
-  '获得有条件绿卡：中国大陆申请人等排期，通常1-3年，排期到后签证面谈，入境获2年有条件绿卡',
+  '提交I-526申请：由移民律师准备申请材料，审批周期以 USCIS 官网公布的处理时间（Processing Times）为准，批准后进入排期等待',
+  '获得有条件绿卡：中国大陆申请人需等待排期（以美国国务院 Visa Bulletin 为准），排期到后签证面谈，入境获2年有条件绿卡',
   '申请I-829移除条件：项目完工 + 就业创造证明，移除绿卡条件，获永久绿卡'
 ];
 
 const section04OrderedItems = [
   '项目失败：如开发商破产，投资本金可能无法收回。',
-  '排期延长：中国大陆申请人排期历史上最长达10年以上，存在政策变动风险。',
+  '排期延长：中国大陆申请人排期历史上曾出现长期积压，且存在政策变动风险。',
   '就业创造未达标：如项目未能创造足够就业，I-829可能被拒，绿卡条件无法移除。',
-  '区域中心合规问题：历史上有区域中心因欺诈被SEC调查，投资人损失全部本金。'
+  '区域中心合规问题：历史上有区域中心及其关联方被 SEC 指控涉嫌欺诈，投资人可能面临本金损失（参见 SEC 与 USCIS 联合发布的 EB-5 投资者警示）。'
 ];
 
 const section05Bullets = [
   '有移民美国需求，愿意以投资换绿卡路径的高净值人群',
-  '投资预算在$80万以上，可接受5-7年锁定期',
+  '投资预算在$80万以上，可接受较长的资金锁定期',
   '希望合法合规完成资产美元化配置'
 ];
 
@@ -115,11 +119,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/eb5.ts）。
+const geo = getLegacyResearch('eb5');
+
 export default function Eb5Page() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · EB-5 解析"
         title="EB-5投资移民：2026年还值不值得投？"
         summary="从政策现状、投资金额、排期、流程和风险出发，理解 EB-5 的投资属性与尽调重点。"
@@ -133,6 +141,8 @@ export default function Eb5Page() {
         anchors={heroAnchors}
         mediaCaption="EB-5 / DUE DILIGENCE / INVESTMENT SCRUTINY"
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="把 EB-5 当投资来做尽调，而不是当移民工具来走流程"
@@ -204,6 +214,8 @@ export default function Eb5Page() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({

@@ -105,7 +105,10 @@ export function publicEvent(e: EventRow & Record<string, unknown>) {
     feeCents: e.fee_cents,
     topicTags: e.topic_tags,
     registrationOpen: e.registration_open,
-    status: e.event_status
+    status: e.event_status,
+    coverUrl: (e.cover_url as string | null) ?? null,
+    recap: (e.recap as string | null) ?? null,
+    albumPublished: !!e.album_published_at
   };
 }
 
@@ -151,20 +154,26 @@ export type RegisterPreview = {
   identity: { email: string | null; phone: string | null };
   /** 当前联系方式（报名表预填；未登录为 null） */
   contactInfo: ContactInfo | null;
+  /** 1.2 一步报名：老用户资料已齐（姓名、手机、行业），点报名直接成功 */
+  oneStepReady: boolean;
+  /** 1.2 新用户只填三项：姓名、手机、行业 */
+  profile: { name: string | null; phoneMasked: string | null; roleLabel: string | null } | null;
+  photoConsent: boolean;
+  registrationId: string | null;
 };
 
 export async function previewRegistration(slug: string, contactId: string | null): Promise<RegisterPreview> {
   const pool = getPool();
   const ev = await requireEvent(pool, slug);
   if (!contactId) {
-    return { event: publicEvent(ev), loggedIn: false, firstTime: true, alreadyRegistered: false, registrationStatus: null, arrivalStatus: null, required: [], name: null, identity: { email: null, phone: null }, contactInfo: null };
+    return { event: publicEvent(ev), loggedIn: false, firstTime: true, alreadyRegistered: false, registrationStatus: null, arrivalStatus: null, required: [], name: null, identity: { email: null, phone: null }, contactInfo: null, oneStepReady: false, profile: null, photoConsent: false, registrationId: null };
   }
   const { rows: c } = await pool.query<{ name: string; email: string | null; phone_e164: string | null; role_sub: string | null }>(
     `SELECT name, email, phone_e164, role_sub FROM contacts WHERE id = $1`,
     [contactId]
   );
-  const { rows: reg } = await pool.query<{ status: string; arrival_status: string }>(
-    `SELECT status, arrival_status FROM registrations WHERE event_id = $1 AND contact_id = $2`,
+  const { rows: reg } = await pool.query<{ id: string; status: string; arrival_status: string; photo_consent: boolean }>(
+    `SELECT id, status, arrival_status, photo_consent FROM registrations WHERE event_id = $1 AND contact_id = $2`,
     [ev.id, contactId]
   );
   const alreadyRegistered = !!reg[0] && reg[0].status !== 'cancelled';
@@ -183,6 +192,10 @@ export async function previewRegistration(slug: string, contactId: string | null
     firstTime = out.first;
     required = out.req.map((q) => toDTO(q, null));
   }
+  const contactInfo = await getContactInfo(pool, contactId);
+  const name = c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null;
+  const phoneKnown = !!(contactInfo.phone?.value || c[0]?.phone_e164);
+  const role = findRoleSub(c[0]?.role_sub);
   return {
     event: publicEvent(ev),
     loggedIn: true,
@@ -191,9 +204,13 @@ export async function previewRegistration(slug: string, contactId: string | null
     registrationStatus: reg[0]?.status ?? null,
     arrivalStatus: reg[0] && reg[0].status !== 'cancelled' ? reg[0].arrival_status : null,
     required,
-    name: c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null,
+    name,
     identity: { email: c[0]?.email ?? null, phone: c[0]?.phone_e164 ?? null },
-    contactInfo: await getContactInfo(pool, contactId)
+    contactInfo,
+    oneStepReady: !firstTime && !!name && phoneKnown,
+    profile: { name, phoneMasked: contactInfo.phone?.masked ?? null, roleLabel: role?.label ?? null },
+    photoConsent: !!reg[0]?.photo_consent,
+    registrationId: reg[0] && reg[0].status !== 'cancelled' ? reg[0].id : null
   };
 }
 
@@ -210,11 +227,14 @@ export type RegisterInput = {
   /** 联系方式（2026-11 起报名必填；只检查格式，不发验证码）。旧版小程序不传时不强制。 */
   phone?: string;
   email?: string;
+  /** 1.2：一步报名。老用户不再答必答题（改为事后渐进补）；新用户只要姓名、手机、行业（邮箱选填）。 */
+  oneStep?: boolean;
 };
 
 export async function register(slug: string, contactId: string, input: RegisterInput, opts: { base?: string } = {}) {
-  const wantsContact = input.phone !== undefined || input.email !== undefined;
-  const given = wantsContact ? parseContactInput(input, { phone: true, email: true }) : null;
+  const wantsContact = (input.phone !== undefined && input.phone !== '') || (input.email !== undefined && input.email !== '');
+  // 旧版（1.1.x）：手机号、邮箱都必填；1.2 一步报名：新用户手机必填、邮箱选填，老用户不必再填
+  const given = wantsContact ? parseContactInput(input, input.oneStep ? { phone: false, email: false } : { phone: true, email: true }) : null;
   const out = await withTransaction(async (db) => {
     const ev = await requireEvent(db, slug);
     if (given) await saveContactInput(db, contactId, given, 'registration');
@@ -223,13 +243,32 @@ export async function register(slug: string, contactId: string, input: RegisterI
     let refContactId: string | null = null;
     if (input.ref && /^\d+$/.test(input.ref)) {
       const { rows } = await db.query<{ id: string }>(`SELECT id FROM contacts WHERE member_no = $1`, [Number(input.ref)]);
+      // 自己推荐自己不算
       refContactId = rows[0]?.id && rows[0].id !== contactId ? rows[0].id : null;
+    }
+    if (firstTime && input.oneStep) {
+      if (!given?.phone) {
+        const { rows: ph } = await db.query<{ p: string | null }>(
+          `SELECT COALESCE(phone_e164, (SELECT value FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current)) AS p FROM contacts c WHERE id = $1`,
+          [contactId]
+        );
+        if (!ph[0]?.p) throw new CrmError('bad_phone', '请填写手机号');
+      }
     }
     const out = await startRegistration(db, ev, contactId, {
       refContactId,
       channelCode: input.channel ?? null,
       source: input.channel === 'onsite' ? 'onsite' : 'online'
     });
+    // 首次推荐人：第一次报名时记下，之后不再改（本次活动来源另存在报名记录里）
+    if (refContactId && !out.alreadyRegistered) {
+      await db.query(
+        `UPDATE contacts SET referred_by = $2, referred_channel = $3, referred_at = now(), updated_at = now()
+          WHERE id = $1 AND referred_by IS NULL
+            AND NOT EXISTS (SELECT 1 FROM registrations r WHERE r.contact_id = $1 AND r.event_id <> $4 AND r.status <> 'cancelled')`,
+        [contactId, refContactId, input.channel ?? null, ev.id]
+      );
+    }
     let pointsAwarded = 0;
     if (firstTime) {
       const name = (input.name ?? '').trim();
@@ -255,16 +294,20 @@ export async function register(slug: string, contactId: string, input: RegisterI
       pointsAwarded += r.pointsAwarded;
     } else {
       const given = new Map((input.answers ?? []).map((a) => [a.code, a.value]));
-      const missing = out.required.filter((q) => !given.has(q.code));
+      // 1.2 一步报名：不在报名时答题，报名后在成功页按渐进式规则补
+      const required = input.oneStep ? [] : out.required;
+      const missing = required.filter((q) => !given.has(q.code));
       if (missing.length) {
         throw new CrmError('answers_required', `还需回答 ${missing.length} 题即可完成报名`);
       }
-      const answers = out.required.map((q) => ({ code: q.code, value: validateAnswer(q.code, given.get(q.code)) }));
+      const answers = required.map((q) => ({ code: q.code, value: validateAnswer(q.code, given.get(q.code)) }));
       pointsAwarded += (await submitAnswers(db, contactId, out.task, answers)).pointsAwarded;
     }
     const { rows: t } = await db.query<Task>(`SELECT * FROM profile_tasks WHERE id = $1`, [out.task.id]);
     return {
       eventId: ev.id,
+      registrationId: out.registration.id,
+      feeCents: ev.fee_cents,
       status: out.registration.status,
       alreadyRegistered: out.alreadyRegistered,
       orderNo: out.orderNo,
@@ -349,6 +392,30 @@ export async function skipQuestion(contactId: string, taskId: string | null, cod
     await db.query(`INSERT INTO profile_skips (contact_id, item_code, task_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [contactId, code, task.id]);
     return { taskId: task.id };
   });
+}
+
+/**
+ * 1.2 小程序“我的”：不含订单、金额、付款信息（小程序合规红线），只读会议室预约记录；加我的推荐、名片状态。
+ */
+export async function myOverviewMp(contactId: string) {
+  const full = await myOverview(contactId);
+  const pool = getPool();
+  const { myReferralStats } = await import('./growth');
+  const { rows: card } = await pool.query<{ company: string | null; title: string | null }>(`SELECT company, title FROM member_cards WHERE contact_id = $1`, [contactId]);
+  const { rows: av } = await pool.query<{ avatar_url: string | null }>(`SELECT avatar_url FROM contacts WHERE id = $1`, [contactId]);
+  return {
+    contact: { ...full.contact, avatar_url: av[0]?.avatar_url ?? null, company: card[0]?.company ?? null, title: card[0]?.title ?? null },
+    contactInfo: full.contactInfo,
+    member: { isMember: full.member.isMember, tierName: full.member.isMember ? full.member.tierName : null, endDate: full.member.isMember ? full.member.endDate : null, expired: full.member.expired, memberNo: full.member.memberNo },
+    points: { balance: full.points.balance, ledger: full.points.ledger.slice(0, 30) },
+    profile: full.profile,
+    registrations: full.registrations.map((r: Record<string, unknown>) => ({
+      slug: r.slug, title: r.title, starts_at: r.starts_at, location_name: r.location_name, status: r.status,
+      arrival_status: r.arrival_status, checked_in_at: r.checked_in_at, paid_event: Number(r.fee_cents) > 0
+    })),
+    bookings: full.bookings.map((b: Record<string, unknown>) => ({ id: b.id, room: b.room, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status })),
+    referrals: await myReferralStats(pool, contactId)
+  };
 }
 
 /** 我的：一次返回全部（数据量小，减少请求，弱网更稳）。 */

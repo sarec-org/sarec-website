@@ -26,7 +26,24 @@ export function getPool(): Pool {
   }
   if (!pool) {
     // max 保守：Serverless 环境避免连接爆炸；sslmode 由连接串自带（Neon 需 require）。
-    pool = new Pool({ connectionString, max: 3 });
+    // 偶发 500 的常见原因：函数实例空闲后，数据库那头已断开的旧连接被再次取用（Connection terminated）。
+    // 空闲 10 秒就释放、开 keepAlive，池子出错时不让进程崩；读查询遇到断线自动重试一次。
+    const p = new Pool({ connectionString, max: 3, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 10_000, keepAlive: true });
+    p.on('error', (e) => console.error('[db] idle client error', e.message));
+    const raw = p.query.bind(p) as (...a: unknown[]) => Promise<unknown>;
+    (p as unknown as { query: (...a: unknown[]) => Promise<unknown> }).query = async (...a: unknown[]) => {
+      try {
+        return await raw(...a);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : '';
+        const text = typeof a[0] === 'string' ? a[0] : (a[0] as { text?: string } | undefined)?.text ?? '';
+        // 只重试纯读查询，写操作不重试（避免重复写入）
+        if (!/^\s*select\b/i.test(text) || typeof a[a.length - 1] === 'function' || !/terminated|ECONNRESET|Connection ended|timeout exceeded when trying to connect/i.test(msg)) throw e;
+        console.error('[db] retry after', msg);
+        return raw(...a);
+      }
+    };
+    pool = p;
   }
   return pool;
 }

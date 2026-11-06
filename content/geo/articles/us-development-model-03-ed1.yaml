@@ -33,6 +33,38 @@ summary:
   - 截至 2026 年 5 月，ED1 规划获批约 3.4 万套，拿到施工许可的 8,058 套，占 23%，快批解决的是"批不批"，不是"建不建"
   - ED1 项目的合同租金受住房局年度收入与租金表约束，实际可收租金取法定上限与市场租金中的较低者；市场租金上涨不会自动变成项目租金增长
   - 同一份测算，地税是否豁免让债前收益率差一百多个基点，而豁免不是 ED1 自带的，取决于项目用途、所有权、融资、监管契约和主管机关核定
+directAnswer: >-
+  因为 ED1 加快的只是规划局环节的审批,没有解决融资、成本和开工。截至 2026 年 5 月,ED1 规划获批约 3.4 万套,取得建筑许可的 8,058 套,约占 23%(市长办公室数据,Bisnow 报道;这是横截面比例,不是最终转化率)。
+  拿到批准函之后,项目还要经过建筑图审、水电与消防等清关、可负担契约备案和施工许可,每一环都不在 60 天目标之内。
+  利率、建安成本,以及部分项目所在街区的可负担租金上限并不低于市场租金,让不少项目卡在融资阶段,一部分甚至在开工前挂牌出售批文。
+en:
+  title: "LA's ED1 affordable housing: why have three-quarters of 34,000 approved units not been permitted?"
+  directAnswer: >-
+    Because ED1 speeds up only the City Planning approval step; it does not solve financing, costs or getting to construction.
+    As of May 2026, about 34,000 units had ED1 planning approval and 8,058, roughly 23%, had building permits (Mayor's Office data reported by Bisnow; a point-in-time ratio, not a final conversion rate).
+    After the approval letter a project still needs plan check, utility and fire clearances, recording of the affordability covenant and the building permit, none of which fall under the 60-day target.
+    High interest rates, construction costs, and sites where the affordable rent cap is not below market rent have stalled many projects at the financing stage, and some owners have listed their entitled sites for sale before breaking ground.
+  faq:
+    - question: What is ED1 in Los Angeles?
+      answer: >-
+        ED1 is Executive Directive 1, signed by Mayor Karen Bass on December 16, 2022. For eligible 100% affordable housing projects it set a 60-day planning approval target after a complete application,
+        with ministerial (non-discretionary) review, no project-level CEQA review and no hearings. In December 2025 the City Council wrote it into the municipal code as the Affordable Housing Streamlining Ordinance.
+    - question: Does ED1 approval really take only 60 days?
+      answer: >-
+        The 60 days covers only City Planning, from the date an application is deemed complete to the approval letter. Pre-application review, plan check, utility and fire clearances,
+        covenant recording and the building permit all fall outside it. One publicly reported project considered fast in Los Angeles still took about 12 months from the start of pre-development to groundbreaking.
+    - question: Why do many ED1 projects get approved but not start construction?
+      answer: >-
+        As of May 2026, about 23% of roughly 34,000 approved units had building permits. The main reasons cited are interest rates, construction costs and site selection:
+        where the affordable rent cap is not below local market rents, the covenant adds compliance cost without supporting rents, which weakens the financing case.
+    - question: How are rents set in an ED1 project?
+      answer: >-
+        Rents follow the income and rent schedules the Los Angeles Housing Department publishes each year, for households at or below 80% of area median income, or up to 20% of units at or below 120% AMI,
+        under an affordability covenant that is usually at least 99 years under the permanent ordinance. The rent actually collected is the lower of the schedule cap and market rent, and the schedule can go down as well as up.
+    - question: Can an ED1 project be sold as condos?
+      answer: >-
+        The rental model discussed here is not built for unit-by-unit sales: subdivision applications do not get streamlined review, and the covenant runs with the land.
+        For a rental project held as a whole, the true asset exit is selling the entire building, typically to affordable housing owners, nonprofits or public agencies; refinancing recovers capital but keeps ownership.
 blocks:
   - discriminant: assetBreak
     value:

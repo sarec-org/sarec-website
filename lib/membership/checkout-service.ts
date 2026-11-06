@@ -11,6 +11,7 @@ import { getStripe } from '@/lib/stripe/client';
 import { getAgreementMeta, AGREEMENT_LANGUAGE_MODE } from './agreements';
 import { validateCheckout, type CheckoutRequest, type NormalizedCheckout } from './checkout';
 import { SECOND_PAYMENT_DEFAULT_INTERVAL_MONTHS, type AgreementType } from './types';
+import { laToday } from '@/lib/laDate';
 
 export type CheckoutContext = { ip: string | null; userAgent: string | null };
 
@@ -118,8 +119,9 @@ export async function insertApplicationRecords(
   let secondDue: string | null = null;
   let secondDueSource: 'auto_calculated' | null = null;
   if (applicationType === 'strategic_partner' && paymentPlan === 'semiAnnual') {
-    const d = new Date();
-    d.setMonth(d.getMonth() + SECOND_PAYMENT_DEFAULT_INTERVAL_MONTHS);
+    // 按洛杉矶当天日期往后推，再按日历月加（不受服务器 UTC 影响）
+    const [y, m, dd] = laToday().split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + SECOND_PAYMENT_DEFAULT_INTERVAL_MONTHS, dd));
     secondDue = d.toISOString().slice(0, 10);
     secondDueSource = 'auto_calculated';
   }

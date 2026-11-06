@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -35,7 +39,7 @@ const dimensions = [
   },
   {
     title: '维度3：财务结构合理性',
-    question: '要查的问题：项目总投资的资金来源构成（自有资金/银行贷款/EB-5/其他）？GP的资金投入比例？（低于10%需警惕）优先回报给谁？回报率假设是否现实？',
+    question: '要查的问题：项目总投资的资金来源构成（自有资金/银行贷款/EB-5/其他）？GP的资金投入比例？（比例过低需警惕）优先回报给谁？回报率假设是否现实？',
     redFlag: '红旗信号：GP几乎无自有资金投入，全靠LP承担风险。'
   },
   {
@@ -58,7 +62,7 @@ const conclusionBullets = [
 ];
 
 const sarecJudgment =
-  '这个框架是初筛工具，不是最终决策依据。通过初筛的项目，还需要专业律师和财务顾问做完整尽调。但用这5个维度做第一轮筛选，至少能淘汰掉70%的问题项目。';
+  '这个框架是初筛工具，不是最终决策依据。通过初筛的项目，还需要专业律师和财务顾问做完整尽调。但用这5个维度做第一轮筛选，能先淘汰掉相当一部分问题项目。';
 
 const andyObservation =
   '最容易被忽视的是维度3（财务结构）。很多投资人看了区域、看了渲染图，就被吸引了。但真正决定你能不能拿到回报的，是合同条款里的分配结构。把协议发给一个不认识项目方的独立律师，让他用5分钟告诉你“这个结构对LP公平吗”。';
@@ -104,11 +108,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/framework.ts）。
+const geo = getLegacyResearch('framework');
+
 export default function FrameworkPage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · 判断框架"
         title="拿到一个美国房产项目，你应该问哪5个问题？"
         summary="SAREC整理的实战初判框架。用公开信息完成第一轮筛选，再决定是否值得深入尽调。"
@@ -122,6 +130,8 @@ export default function FrameworkPage() {
         anchors={heroAnchors}
         mediaCaption="JUDGMENT FRAMEWORK / 5 DIMENSIONS / INITIAL SCREENING"
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="先做结构化初筛，再决定是否进入深度尽调"
@@ -198,6 +208,8 @@ export default function FrameworkPage() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({

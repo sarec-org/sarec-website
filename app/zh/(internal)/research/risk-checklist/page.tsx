@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -170,11 +174,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact#inquiry-form' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/risk-checklist.ts）。
+const geo = getLegacyResearch('risk-checklist');
+
 export default function RiskChecklistPage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · 项目初筛清单"
         title="美国房地产项目投资风险清单"
         summary="美国房地产项目不是只看位置、租金和收益测算。真正的项目初筛，需要从土地、审批、融资、建设、运营、退出和合作结构等多个维度逐项验证。"
@@ -188,6 +196,8 @@ export default function RiskChecklistPage() {
         anchors={heroAnchors}
         mediaCaption="DUE DILIGENCE / PROJECT REVIEW / RISK CHECKLIST"
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment={"风险清单的意义，\n是把关键问题提前问清楚"}
@@ -239,6 +249,8 @@ export default function RiskChecklistPage() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedEntries.map((r) => ({

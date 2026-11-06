@@ -3,19 +3,23 @@ import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime, money } from '@/components/crm/client';
+import { RoomsV12 } from '@/components/crm/staff/RoomsV12';
+import { laToday } from '@/lib/laDate';
 
 type B = { id: string; room: string; starts_at: string; ends_at: string; status: string; via_pass: boolean; contact_id: string; name: string; phone_e164: string | null; email: string | null; order_no: string | null; order_status: string | null; amount_cents: number | null };
 type Ad = { id: string; org_name: string; intro: string; service_area: string | null; qr_url: string | null; asset_url: string | null; months: number; start_month: string | null; status: string; tier_at_apply: string | null; amount_cents: number; staff_note: string | null; name: string; contact_id: string; order_no: string | null; order_status: string | null };
 const BSTATUS: Record<string, string> = { held: '待付款', confirmed: '已确认', cancelled: '已取消' };
+type Pay = { amount: string; provider: string };
 const ASTATUS: Record<string, string> = { submitted: '待审核', approved: '已通过', scheduled: '已排期', rejected: '未通过', cancelled: '已取消' };
 
 export default function StaffRooms() {
-  const [day, setDay] = useState(() => new Date().toISOString().slice(0, 10));
+  const [day, setDay] = useState(() => laToday());
   const [bookings, setBookings] = useState<B[] | null>(null);
   const [ads, setAds] = useState<Ad[] | null>(null);
   const [note, setNote] = useState<Record<string, string>>({});
   const [month, setMonth] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pay, setPay] = useState<Record<string, Pay>>({});
 
   const load = useCallback(async () => {
     const from = new Date(`${day}T00:00:00-08:00`).toISOString();
@@ -34,6 +38,14 @@ export default function StaffRooms() {
     setMsg(r.ok ? { ok: true, text: '预约已取消' } : { ok: false, text: r.message });
     load();
   }
+  async function recordPay(id: string) {
+    const p = pay[id];
+    const cents = Math.round(Number(p?.amount) * 100);
+    if (!(cents > 0)) return setMsg({ ok: false, text: '请填写已收金额' });
+    const r = await api('/api/v1/staff/bookings', { method: 'PATCH', body: { bookingId: id, payment: { amountCents: cents, provider: p.provider || 'zelle' } } });
+    setMsg(r.ok ? { ok: true, text: '已登记收款' } : { ok: false, text: r.message });
+    load();
+  }
   async function review(id: string, action: string) {
     const r = await api<{ orderNo: string | null; amountCents?: number }>('/api/v1/staff/screen-ads', { body: { id, action, startMonth: month[id], note: note[id] } });
     setMsg(r.ok ? { ok: true, text: action === 'approve' ? (r.data.orderNo ? `已通过，已生成订单 ${r.data.orderNo}（${money(r.data.amountCents ?? 0)}）` : '已通过（免费）') : '已更新' } : { ok: false, text: r.message });
@@ -45,7 +57,8 @@ export default function StaffRooms() {
       {() => (
         <>
           <Msg m={msg} />
-          <h2 className={styles.h2}>会议室预约（7 天）</h2>
+          <RoomsV12 onBooked={load} />
+          <h2 className={styles.h2}>会议室预约日历（7 天）</h2>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="day">起始日期</label>
             <input id="day" type="date" className={styles.input} value={day} onChange={(e) => setDay(e.target.value)} />
@@ -61,7 +74,20 @@ export default function StaffRooms() {
                       {b.via_pass ? ' · 月卡' : b.order_no ? ` · ${b.order_no} ${b.amount_cents != null ? money(b.amount_cents) : ''}` : ''}
                     </div>
                   </div>
-                  {b.status !== 'cancelled' && <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => cancel(b.id)}>取消</button>}
+                  {b.status !== 'cancelled' && (
+                    <div className={styles.btnRow}>
+                      {b.order_status !== 'paid' && !b.via_pass && (
+                        <>
+                          <input className={styles.input} style={{ width: 110 }} inputMode="decimal" placeholder="已收 $" aria-label="已收金额" value={pay[b.id]?.amount ?? ''} onChange={(e) => setPay({ ...pay, [b.id]: { provider: pay[b.id]?.provider ?? 'zelle', amount: e.target.value } })} />
+                          <select className={styles.select} style={{ width: 100 }} aria-label="收款方式" value={pay[b.id]?.provider ?? 'zelle'} onChange={(e) => setPay({ ...pay, [b.id]: { amount: pay[b.id]?.amount ?? '', provider: e.target.value } })}>
+                            <option value="zelle">Zelle</option><option value="cash">现金</option><option value="check">支票</option>
+                          </select>
+                          <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => recordPay(b.id)}>登记收款</button>
+                        </>
+                      )}
+                      <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => cancel(b.id)}>取消</button>
+                    </div>
+                  )}
                 </div>
               </li>
             ))}

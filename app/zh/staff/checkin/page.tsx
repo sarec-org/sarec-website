@@ -22,6 +22,8 @@ export default function StaffCheckin() {
   const [onsite, setOnsite] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', roleSub: '' });
   const [roles, setRoles] = useState<Role[]>([]);
+  // 1.2 个人签到码：工作人员用手机扫会员的签到码 → 打开本页并定位到这条报名，核对后一键签到
+  const [regCard, setRegCard] = useState<(Person & { event_id: string; title: string; starts_at: string; status: string }) | null>(null);
 
   useEffect(() => {
     api<{ events: Ev[] }>('/api/v1/staff/events').then((r) => {
@@ -34,6 +36,15 @@ export default function StaffCheckin() {
       if (list[0]) setEventId(list[0].id);
     });
     api<{ quickRoles: Role[] }>('/api/v1/meta').then((r) => r.ok && setRoles([...r.data.quickRoles, { key: 'other', label: '其他' }]));
+    const reg = new URLSearchParams(location.search).get('reg');
+    if (reg) {
+      api<{ registration: Record<string, unknown> }>(`/api/v1/staff/checkin/reg/${reg}`).then((r) => {
+        if (!r.ok) return setErr(r.message);
+        const x = r.data.registration as Record<string, string & number>;
+        setEventId(x.event_id);
+        setRegCard({ id: x.contact_id, member_no: x.member_no, name: x.name, email: x.email, phone_e164: x.phone_e164, role_label: x.role_label, reg_status: x.status, arrival_status: x.arrival_status, event_id: x.event_id, title: x.title, starts_at: x.starts_at, status: x.status });
+      });
+    }
   }, []);
 
   async function search() {
@@ -89,6 +100,20 @@ export default function StaffCheckin() {
             </div>
           )}
           {err && <div className={styles.error}>{err}</div>}
+          {regCard && (
+            <div className={`${styles.card} ${styles.cardGold}`}>
+              <p className={styles.small} style={{ margin: 0 }}>个人签到码 · {regCard.title}（{fmtDateTime(regCard.starts_at)}）</p>
+              <p className={styles.bigText} style={{ margin: '0.4rem 0' }}>{regCard.name} <span className={styles.small}>#{regCard.member_no}</span></p>
+              <p className={styles.small}>{[regCard.phone_e164, regCard.email, regCard.role_label].filter(Boolean).join(' · ')}</p>
+              <p className={styles.small}>
+                {regCard.arrival_status === 'checked_in' ? '已签到' : regCard.status === 'cancelled' ? '报名已取消' : regCard.status === 'waitlisted' ? '候补（到场可直接签到）' : '已报名，未签到'}
+              </p>
+              <div className={styles.btnRow}>
+                <button className={styles.btn} disabled={busy || regCard.arrival_status === 'checked_in'} onClick={async () => { await checkin(regCard); setRegCard({ ...regCard, arrival_status: 'checked_in' }); }}>核对无误，签到</button>
+                <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setRegCard(null)}>关闭</button>
+              </div>
+            </div>
+          )}
 
           {!onsite && (
             <>

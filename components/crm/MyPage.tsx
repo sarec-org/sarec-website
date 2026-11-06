@@ -25,6 +25,25 @@ type Me = {
 const TABS = ['报名', '订单', '积分', '会议室'] as const;
 const CAT: Record<string, string> = { profile: '资料完善', signup: '注册', checkin: '活动签到', referral: '推荐', feedback: '反馈', redeem: '积分抵扣', adjust: '调整' };
 
+/** 我的推荐：只显示三个数字（不含被邀请人信息、不含任何奖励规则） */
+function MyReferrals() {
+  const [r, setR] = useState<{ invited: number; arrived: number; joined: number } | null>(null);
+  useEffect(() => {
+    api<{ invited: number; arrived: number; joined: number }>('/api/v1/me/referrals').then((x) => x.ok && setR(x.data));
+  }, []);
+  if (!r) return null;
+  return (
+    <div className={s.card}>
+      <p className={s.small} style={{ margin: '0 0 0.5rem' }}>我的推荐</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, textAlign: 'center' }}>
+        {([['已邀请', r.invited], ['已到场', r.arrived], ['已入会', r.joined]] as const).map(([l, n]) => (
+          <div key={l}><p className={s.cardTitle} style={{ margin: 0, color: 'var(--gold)' }}>{n}</p><p className={s.small} style={{ margin: 0 }}>{l}</p></div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function MyPage() {
   const [d, setD] = useState<Me | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
@@ -117,7 +136,9 @@ export function MyPage() {
         </button>
       </div>
 
+      <MyReferrals />
       <div className={s.btnRow} style={{ margin: '0 0 1rem' }}>
+        <Link className={`${s.btn} ${s.btnGhost}`} href="/zh/me/card">我的名片</Link>
         <Link className={`${s.btn} ${s.btnQuiet}`} href="/zh/events">找活动</Link>
         <Link className={`${s.btn} ${s.btnQuiet}`} href="/zh/rooms">预约会议室</Link>
         <Link className={`${s.btn} ${s.btnQuiet}`} href="/zh/benefits">会员权益</Link>

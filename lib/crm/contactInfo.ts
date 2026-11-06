@@ -354,6 +354,8 @@ export async function markEmailBounced(rawEmail: string, reason: string): Promis
 
 // ── 手机：Twilio Verify ────────────────────────────────────────────────
 export function twilioVerifyConfigured(): boolean {
+  // 只有正式站发真实短信；预览 / 本地走测试验证码回显
+  if (process.env.VERCEL_ENV !== 'production') return false;
   return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID);
 }
 
@@ -361,6 +363,8 @@ export function twilioVerifyConfigured(): boolean {
 export const SMS_FALLBACK = '短信暂时发不出，请改用邮箱验证';
 
 export async function twilioVerify(path: 'Verifications' | 'VerificationCheck', params: Record<string, string>): Promise<{ ok: boolean; status?: string; code?: number }> {
+  // 预览 / 本地不发真实短信（测试用验证码回显 CRM_DEV_ECHO_CODES），避免给真实号码发消息
+  if (process.env.VERCEL_ENV !== 'production') return { ok: false, code: -2 };
   const sid = process.env.TWILIO_ACCOUNT_SID!;
   let res: Response;
   try {

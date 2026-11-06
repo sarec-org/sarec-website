@@ -11,6 +11,8 @@ import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend
 import { CrmError, findOrCreateContact, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
 import { SMS_FALLBACK, noteVerified, phoneSendLimits, twilioVerify, twilioVerifyConfigured } from './contactInfo';
+import { hasMoneyRecords, mergeContactInto } from './merge';
+import { recordException } from './followups';
 
 export const SESSION_COOKIE = 'sarec_session';
 export const SESSION_DAYS = 90;
@@ -179,31 +181,22 @@ async function bindVerifiedIdentity(db: Db, wechatContactId: string, channel: Ch
     await db.query(`UPDATE contacts SET ${col} = $2, ${vcol} = now(), updated_at = now() WHERE id = $1`, [wechatContactId, target]);
     return wechatContactId;
   }
-  // 已有网站账号：微信身份移到原档案，不新建、不产生第二个会员编号
-  const { rows: w } = await db.query<{ wechat_openid: string | null; wechat_unionid: string | null }>(
-    `SELECT wechat_openid, wechat_unionid FROM contacts WHERE id = $1`,
-    [wechatContactId]
-  );
-  const { rows: hasData } = await db.query(
-    `SELECT 1 FROM registrations WHERE contact_id = $1 UNION ALL SELECT 1 FROM orders WHERE contact_id = $1 UNION ALL SELECT 1 FROM profile_answers WHERE contact_id = $1 LIMIT 1`,
-    [wechatContactId]
-  );
-  if (hasData[0]) {
-    // 微信临时档案已有业务数据：不自动合并，留给工作人员核验后合并
+  // 已有网站账号：并到原档案，不新建、不产生第二个会员编号
+  if (await hasMoneyRecords(db, wechatContactId)) {
+    // 微信档案有付款相关记录（只可能来自旧版）：不自动合并，进“待处理”由工作人员核验
     await db.query(
       `INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value, reason)
        VALUES ('system', 'merge_needed', 'contact', $1, $2, '微信档案与已有网站档案需人工核验合并')`,
       [wechatContactId, JSON.stringify({ other: other[0].id })]
     );
-    throw new CrmError('merge_needed', '这个联系方式已经有账号，请联系工作人员帮您合并，不会丢资料');
+    await recordException('contact_merge', `merge:${wechatContactId}:${other[0].id}`, wechatContactId, '小程序档案有付款记录，需要人工核验后合并到已有网站档案', {
+      wechatContactId, otherContactId: other[0].id
+    }).catch(() => undefined);
+    throw new CrmError('merge_needed', '这个联系方式已经有账号，工作人员会在 1 个工作日内帮您合并，不会丢资料');
   }
-  await db.query(`UPDATE contacts SET wechat_openid = NULL, wechat_unionid = NULL WHERE id = $1`, [wechatContactId]);
-  await db.query(
-    `UPDATE contacts SET wechat_openid = COALESCE(wechat_openid, $2), wechat_unionid = COALESCE(wechat_unionid, $3), ${vcol} = COALESCE(${vcol}, now()), updated_at = now() WHERE id = $1`,
-    [other[0].id, w[0]?.wechat_openid ?? null, w[0]?.wechat_unionid ?? null]
-  );
-  await db.query(`DELETE FROM sessions WHERE contact_id = $1`, [wechatContactId]);
-  await db.query(`DELETE FROM contacts WHERE id = $1`, [wechatContactId]);
+  // 小程序档案只有报名、资料、积分这类数据：验证通过后自动并入网站档案
+  await mergeContactInto(db, wechatContactId, other[0].id);
+  await db.query(`UPDATE contacts SET ${vcol} = COALESCE(${vcol}, now()) WHERE id = $1`, [other[0].id]);
   return other[0].id;
 }
 
@@ -241,8 +234,10 @@ export async function wechatLogin(code: string): Promise<{ token: string; contac
     if (!data.openid) throw new CrmError('wechat_failed', '微信登录失败，请稍后再试');
     openid = data.openid;
     unionid = data.unionid;
-  } else if (devEcho() && code.startsWith('dev-')) {
-    openid = `dev-openid-${code.slice(4)}`; // 本地测试用
+  } else if (devEcho() && code) {
+    // 预览 / 本地测试（没有 AppSecret）：1.2 测试版传 dev-<设备号>，同一台测试机始终是同一个人；
+    // 旧版 1.1.3 传真实 wx.login code（每次不同），按 code 生成一次性测试身份，会话照常保存。
+    openid = code.startsWith('dev-') ? `dev-openid-${code.slice(4, 68)}` : `dev-openid-x${sha256(code).slice(0, 24)}`;
   } else {
     throw new CrmError('wechat_unconfigured', '小程序登录暂未配置，请用邮箱验证码登录');
   }

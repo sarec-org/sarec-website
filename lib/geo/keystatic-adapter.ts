@@ -20,6 +20,7 @@ import type {
   FAQItem,
   Author,
   SourceItem,
+  EnglishSummary,
   MetricCard,
   ChartTableRow,
   ChartPoint,
@@ -131,6 +132,16 @@ function mapMedia(raw: any): Media {
   const media: Media = { kind, src: resolveMediaSrc(raw), alt: String(raw?.alt ?? '') };
   if (isFilled(raw?.poster)) media.poster = raw.poster;
   return media;
+}
+
+// GEO · J 英文对照：title + directAnswer 必填才算有效；faq 过滤空问答。
+function mapEnglish(raw: any): EnglishSummary | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  if (!isFilled(raw.title) || !isFilled(raw.directAnswer)) return undefined;
+  const faq = Array.isArray(raw.faq)
+    ? raw.faq.map(mapFaq).filter((f: FAQItem) => f.question.trim() && f.answer.trim())
+    : [];
+  return { title: String(raw.title).trim(), directAnswer: String(raw.directAnswer).trim(), faq };
 }
 
 function mapFaq(raw: any): FAQItem {
@@ -287,6 +298,9 @@ export function fromKeystaticArticle(raw: any): Article {
   if (isFilled(raw.audience)) article.audience = raw.audience;
   if (isFilled(raw.intent)) article.intent = raw.intent;
   if (isFilled(raw.updatedAt)) article.updatedAt = raw.updatedAt;
+  if (isFilled(raw.directAnswer)) article.directAnswer = String(raw.directAnswer).trim();
+  const en = mapEnglish(raw.en);
+  if (en) article.en = en;
   const sourceList = mapSourceList(raw.sourceList);
   if (sourceList.length > 0) article.sourceList = sourceList;
   if (Array.isArray(raw.faq) && raw.faq.length > 0) article.faq = raw.faq.map(mapFaq);

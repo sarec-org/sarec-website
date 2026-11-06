@@ -901,3 +901,22 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* 1.2：“我的”入口 */
+.nav-me { color: var(--ivory-dim); font-size: 13px; letter-spacing: 0.08em; text-decoration: none; margin-right: 22px; }
+.nav-me:hover { color: var(--gold-bright); }
+@media (min-width: 769px) and (max-width: 1280px) { .sub { max-width: min(700px, calc(100vw - 420px)); } }
+
+/* 769–1100（iPad 竖屏 / 小笔记本）：顶部导航收紧成一行，不折字；“我的”保留 */
+.brand, .nav-menu a, .nav-cta, .nav-me { white-space: nowrap; }
+@media (min-width: 769px) and (max-width: 1100px) {
+  .nav { padding: 18px 28px; gap: 16px; }
+  .brand .mark { font-size: 24px; letter-spacing: 0.16em; }
+  .nav-menu { gap: 22px; font-size: 13px; }
+  .nav-cta { padding: 10px 14px; font-size: 12.5px; }
+  .nav-me { margin-right: 14px; font-size: 12.5px; }
+}
+@media (min-width: 769px) and (max-width: 940px) {
+  .brand .sub { display: none; }
+  .nav-menu { gap: 14px; font-size: 12.5px; }
+}

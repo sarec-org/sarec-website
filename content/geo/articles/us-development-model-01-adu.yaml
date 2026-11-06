@@ -27,6 +27,42 @@ summary:
   - 平均总投入约153万美元，合约370美元/完工尺，落在自述350—400区间
   - 出售路径税前成本利润率约52%（情景测算）
   - 整周期约10个月，不超过12个月
+directAnswer: >-
+  做法是收购"房小地大"的老旧独栋，把约1,200平方尺的主屋扩建到约3,000—3,500平方尺，再加建一个约800—1,000平方尺的ADU，按4单元型或5单元型两种标准产品，形成4—5个相对独立的居住及出租模块。
+  面积增长的主体是主屋扩建，ADU只是最后一个模块；两者分别受地方分区审查和州ADU法规约束，分别申报。
+  这套模式的竞争力来自地块筛选、户型、图纸、审批流程和施工的标准化，加上自有施工企业和部分中国供应链，把一次性工程变成可重复交付的产品。
+  需要注意，经营上的"模块"不等于法定住宅单元：按 Fannie Mae 口径，主住宅加一个ADU通常仍按一户住宅认定，最终以批准图纸、许可证和当地法规为准。
+en:
+  title: How can an old single-family house be rebuilt into 4–5 standardized rental units?
+  directAnswer: >-
+    The approach is to buy an older house that sits on a large lot, expand the main house from roughly 1,200 sq ft to about 3,000–3,500 sq ft,
+    and add one ADU of about 800–1,000 sq ft, producing 4 or 5 semi-independent living and rental modules from two standard product templates.
+    Most of the added space comes from the main-house expansion; the ADU is only the last module, and the two are permitted separately under local zoning review and state ADU law.
+    What makes it repeatable is standardization of site selection, floor plans, drawings, permitting checklists and construction, supported by an in-house general contractor and partial sourcing from China.
+    Operating "modules" are not the same as legal dwelling units: under Fannie Mae guidelines a primary home plus one ADU is generally still treated as a one-unit property, and the approved plans, permits and local code control.
+  faq:
+    - question: What is the main-house expansion plus ADU development model?
+      answer: >-
+        It is a way of redeveloping an existing single-family lot by substantially enlarging the main house and building one accessory dwelling unit (ADU),
+        adding floor area, living space and rental capacity. SAREC (Sino-American Real Estate Chamber) describes it as small-scale, productized infill development,
+        based on an interview with a Southern California developer who has run this model for over two years.
+    - question: Is the main-house expansion limited by the ADU size cap?
+      answer: >-
+        No. The main-house expansion is reviewed on its own under local zoning, lot coverage, setbacks, height, parking, fire, structural and building rules.
+        The ADU size limit applies only to the ADU. Under California law, local ADU size caps must allow at least 850 sq ft, or 1,000 sq ft for an ADU with more than one bedroom.
+    - question: Can one single-family house legally become 4–5 units?
+      answer: >-
+        Operationally, it can be laid out as several semi-independent living modules. Whether each module is a legal dwelling unit depends on the approved plans and permits.
+        In conventional residential lending, a primary home plus one ADU is generally still a one-unit property, so lenders and appraisers may not value it as a 4–5 unit building.
+    - question: Does permitting really take only 3–4 months?
+      answer: >-
+        The 3–4 months is the interviewed developer's experience on mature, well-prepared projects, not a government guarantee.
+        California requires agencies to approve or deny a complete ADU application within 60 days, but the main-house expansion has its own planning and building review,
+        so the whole project usually takes longer, depending on the city, the lot and how complete the application is.
+    - question: Are building materials sourced from China always cheaper?
+      answer: >-
+        Not necessarily. Certification, shipping, tariffs, warehousing, breakage, restocking and installation all add cost.
+        Cross-border sourcing tends to pay off only when product specifications are standardized and purchase volumes are steady.
 blocks:
   - discriminant: assetBreak
     value:
@@ -113,7 +149,7 @@ blocks:
 
         在经营表达中，人们会把具有相对独立使用功能的居住空间统称为"Unit"。但在城市规划、建筑许可、估值、保险和交易文件中，"Dwelling Unit"具有严格的法律含义。因此，"4—5个标准化居住或出租模块"与"4—5个经政府批准的独立住宅单元"，这两个概念不能自动画等号。
 
-        一个直接影响钱袋子的例子：Fannie Mae《Selling Guide》（B2-3-04）明确，"一户住宅＋一个ADU"仍按一户住宅（one-unit property）认定，且每宗地仅允许一个ADU——无论经营上分成几个模块，常规住宅贷款体系不会自动把它当作4—5户公寓来估值放贷。
+        一个直接影响钱袋子的例子：Fannie Mae《Selling Guide》（B2-3-04）规定，ADU须位于一户主住宅所在宗地，且每宗地仅允许一个ADU；符合条件的物业按"一户住宅附带ADU"（one-unit property with an ADU）认定，是否改按两至四户物业认定，由估价师结合独立电表、独立门牌、能否合法出租等因素判断——无论经营上分成几个模块，常规住宅贷款体系不会自动把它当作4—5户公寓来估值放贷。
 
         因此，以下四个数字可能完全不同：实际可以使用的空间数量、依法可以出租的空间数量、估价师认可的住宅单元数量、银行愿意计入贷款测算的租金数量。每个项目最终以批准图纸、许可证、Certificate of Occupancy及当地法规为准。
 
@@ -663,11 +699,17 @@ faq:
 sourceList:
   - name: California Department of Housing and Community Development,《Accessory
       Dwelling Unit Handbook》, 2026年3月版
+    url: https://www.hcd.ca.gov/building-standards/adu/handbook
+    accessedAt: 2026-11-05
   - name: California Department of Housing and Community Development, ADU Fact
       Sheet, 2026年4月
   - name: City of Walnut,《Accessory Dwelling Unit Handout/Worksheet》, 2025年11月
+    url: https://www.walnutca.gov/For-Residents/Departments/Community-Development/Planning-Zoning/Accessory-Dwelling-Unit-Information
+    accessedAt: 2026-11-05
   - name: Fannie Mae,《Selling Guide》B2-3-04, Special Property Eligibility
       Considerations（现行版，2026年7月查阅）
+    url: https://selling-guide.fanniemae.com/sel/b2-3-04/special-property-eligibility-considerations
+    accessedAt: 2026-11-05
   - name: SAREC开发商访谈（受访者匿名，南加州，2026年7月，数据为自述、取整脱敏、未经审计）
   - name: SAREC模式01基准测算模型（价格锚——买入约$600/尺、全建设成本约$240/尺、完工售价$600—650/尺、整周期≤12个月：受访者经验值。模型假设——空置及坏账5%、运营费用率27%、出售成本6%、资本化率5.0%基准、贷款利率7.0%、30年摊还、DSCR
       1.25）

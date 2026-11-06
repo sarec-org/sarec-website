@@ -28,6 +28,51 @@ summary:
   - 芝加哥 +6.5% 与佛州 Cape Coral −9% 同时为真
   - 主流机构基准情景:2026 年全国 0% 增长,重置或延续至 2027-2028
   - 本轮不具备 2008 式崩盘的传导结构
+directAnswer: >-
+  2026 年年中的美国房地产处于“重置”而非“崩盘”:截至 2026 年 4 月,S&P Cotality Case-Shiller 全国房价指数同比仅
+  +0.8%,低于同期 3.8% 的通胀,扣除通胀后的房价已连续 11 个月下跌,且区域分化明显(芝加哥 +6.5%,佛州 Cape Coral
+  −9%)。主流机构的基准情景是 2026 年全国名义房价零增长附近,重置可能延续到 2027–2028 年。由于业主净值充裕、危机后贷款标准收紧,本轮不具备
+  2008 年那种由杠杆和劣质信贷引发的崩盘传导结构。
+en:
+  title: Is the US housing market crashing in 2026, or going through a reset?
+  directAnswer: >-
+    As of mid-2026, US housing is in a multi-year reset, not a crash. The S&P Cotality Case-Shiller US National
+    Home Price Index rose only 0.8% year over year in April 2026, below 3.8% inflation, so inflation-adjusted home
+    values have fallen for 11 straight months, and regional markets are diverging sharply (Chicago +6.5%, Cape
+    Coral-Fort Myers, Florida −9%). Major forecasters' base case is roughly flat national prices in 2026, with the
+    reset possibly lasting into 2027–2028. With strong homeowner equity and post-2008 lending standards, the
+    leverage-and-bad-credit chain that drove the 2008 collapse is not in place this time.
+  faq:
+    - question: Will US home prices crash in 2026?
+      answer: >-
+        Mainstream forecasts do not point to a 2008-style crash. The base case is near-zero nominal growth over a
+        multi-year reset; the most bearish path cited (AEI Housing Center) is about −5% cumulatively over
+        2026–2028. Most existing mortgages carry rates well below today's market rates, owners hold substantial
+        equity, and Qualified Mortgage rules limit the bad credit that forced sales in 2008. This is based on
+        public data and forecasts, which are uncertain, and is not investment advice.
+    - question: Why are some US markets rising while others fall?
+      answer: >-
+        The cycle is local. In April 2026 Chicago led the Case-Shiller 20-city index at +6.5% while Seattle fell
+        2.3%, and Cape Coral-Fort Myers saw the largest median-price drop in ATTOM's Q1 2026 data. Sun Belt
+        markets that built heavily during the pandemic now face high inventory and rising insurance costs, while
+        Midwest and Northeast markets with little new supply are still rising.
+    - question: What should buyers watch for signs of a bottom?
+      answer: >-
+        Three leading indicators: whether the pullback in new construction persists (May 2026 housing starts fell
+        15.4% month over month per the Census Bureau), whether Sun Belt months of inventory peak and decline, and
+        whether 30-year mortgage rates (Freddie Mac PMMS) move meaningfully lower. Many forecasters see 2027 as the
+        key year for supply to clear. These are forecasts, not guarantees.
+    - question: What are the main risks for Chinese buyers of US property right now?
+      answer: >-
+        In rough order: rising holding costs (insurance, property tax, HOA dues), buying in a market that is still
+        declining, financing availability (NAR reports some international buyers abandon deals because they cannot
+        get a loan), and changing state laws on foreign buyers. Due diligence should start with an executable
+        insurance quote, not with the price. This is not investment, legal or tax advice.
+    - question: Is institutional buying (for example, Blackstone) a sign the market has bottomed?
+      answer: >-
+        Not for owner-occupied prices. Institutional capital is backing a multifamily thesis of shrinking new supply
+        and steady rental demand, which is a different market from the question of when home prices stop falling.
+        The useful takeaway is the direction (cash-flow assets, supply-constrained markets), not the timing.
 blocks:
   - discriminant: prose
     value:
@@ -68,13 +113,12 @@ blocks:
 
 
         **+6.5% 对 −9.0%。** 同一时点,芝加哥房价同比涨 6.5%,领跑 20 大都会区;佛罗里达 Cape Coral-Fort
-        Myers 的中位售价同比跌 9.0%(ATTOM,2026Q1)。全美 53 个最大都会区,28
-        个在跌——佛州、加州、德州的主要城市全部在列;而整个锈带在涨。谁还在用"全美房价"做投资叙事,谁的尽调就不及格。
+        Myers 的中位售价同比跌 9.0%(ATTOM,2026Q1)。全美最大的一批都会区中有相当一部分在跌——
+        多集中在佛州、加州、德州及西南部;而锈带多数市场在涨。谁还在用"全美房价"做投资叙事,谁的尽调就不及格。
 
 
         **−15.4%。** 2026 年 6 月中旬发布的数据显示,美国住宅新开工(5 月读数)环比暴跌 15.4%;6 月 24
-        日发布的新房销售(5 月读数)再降 7.3%,月底待售新房约 49.6 万套,按当前销售速度相当于 10.3 个月供应量——2009
-        年以来最高。建商在用脚投票,主动收缩产能;历史经验里,这通常是筑底的前奏,虽然离底还有距离。
+        日发布的新房销售(5 月读数)再降 7.3%,月底待售新房约 49.6 万套,按当前销售速度相当于 10.3 个月供应量,处于历史较高水平。建商在用脚投票,主动收缩产能;历史经验里,这通常是筑底的前奏,虽然离底还有距离。
   - discriminant: sectionHeading
     value:
       text: 记分板(截至 2026 年 7 月 6 日)
@@ -135,13 +179,13 @@ blocks:
 
         火柴在 2020 年 3 月划着。
 
-        疫情牛市是四股力量的共振,缺一不可。美联储降息至零并重启量化宽松,30 年期房贷利率跌破 3%,创现代抵押贷款史最低,同样的月供,购买力被放大约四成;远程办公解除通勤半径的约束,知识工作者大规模南迁,佛州、德州、亚利桑那以阳光、低税、新供给通吃;千禧世代购房高峰撞上历史性低库存,2021 年二手房成交量创 2006 年以来新高。
+        疫情牛市是四股力量的共振,缺一不可。美联储降息至零并重启量化宽松,30 年期房贷利率跌破 3%,创现代抵押贷款史最低,同样的月供,购买力被明显放大;远程办公解除通勤半径的约束,知识工作者大规模南迁,佛州、德州、亚利桑那以阳光、低税、新供给通吃;千禧世代购房高峰撞上历史性低库存,2021 年二手房成交量升至多年高位。
 
         涨幅的量级,AEI Housing Center 的数据说得最清楚(2019Q4 → 2022Q2):拉斯维加斯均价 30.8 万美元涨到 44.8 万(+45%),迈阿密 +50%,凤凰城 +60%,达拉斯 +64%,奥斯汀从 29.7 万到 59.3 万,整整翻倍。同期克利夫兰、圣路易斯、明尼阿波利斯只涨了 25%–33%。记住这组对比——阳光地带涨得有多超额,后来就跌得有多超额。
 
-        然后是 2022 年 3 月,美联储以四十年最快速度加息,房贷利率从 3% 以下冲到 7% 以上。教科书说房价该跌。市场的回答反直觉:**成交量崩了,价格没崩。** 新房与二手房销量坍塌到近三十年低位,价格却在 2023-2024 继续阴涨。原因叫利率锁定效应(rate lock-in):约 80% 的存量房贷利率锁在 4% 以下,卖房等于亲手撕掉一张低息期权,于是卖家比买家更快退出市场,库存被人为压死,价格反而被托住。这个机制托了三年,把总清算推迟到 2024 年秋天。
+        然后是 2022 年 3 月,美联储以四十年最快速度加息,房贷利率从 3% 以下冲到 7% 以上。教科书说房价该跌。市场的回答反直觉:**成交量崩了,价格没崩。** 新房与二手房销量坍塌到多年低位,价格却在 2023-2024 继续阴涨。原因叫利率锁定效应(rate lock-in):大部分存量房贷的利率远低于当前市场利率,卖房等于亲手撕掉一张低息期权,于是卖家比买家更快退出市场,库存被人为压死,价格反而被托住。这个机制托了三年,把总清算推迟到 2024 年秋天。
 
-        2024 年秋天之后发生的事,可以用一条传导链讲完。疫情期间建商在南部和西部疯狂开工的产能,2023-2025 年陆续竣工入市,恰好撞上人口流入放缓、部分远程工作者被叫回原籍——全美 53 个最大都会区中 43 个库存超过 7 个月(买方市场的教科书门槛),迈阿密逼近 12 个月,奥斯汀卖家比买家多 112%,迈阿密多 148%。与此同时,持有成本在重构定价公式:佛州年均房屋保险保费 8,292 美元,高出全国平均约 181%(Insurify);Surfside 大楼倒塌后的强制结构检查法规,让南佛州公寓业主背上巨额特别摊派;地税与 HOA 同步上行——**在 2026 年的美国,杀死一个资产的往往不是房价,是保单。** 再叠加 6%–7% 区间纹丝不动的房贷利率、走弱的消费者信心、2026 年上半年中东战事的避险情绪,德州四大都会区春季房价同比全线转负。到 2026 年 3 月,Case-Shiller 20 城指数经季调环比连续第二个月下跌,三个月年化动能从 +2.3% 骤降到 −0.2%,洛杉矶年度跌幅 1.6%,华盛顿特区转负。用 Fortune 的标题说:这已不再只是阳光地带的故事。
+        2024 年秋天之后发生的事,可以用一条传导链讲完。疫情期间建商在南部和西部疯狂开工的产能,2023-2025 年陆续竣工入市,恰好撞上人口流入放缓、部分远程工作者被叫回原籍——全美 53 个最大都会区中 43 个库存超过 7 个月(买方市场的教科书门槛),迈阿密逼近 12 个月,奥斯汀卖家比买家多 112%,迈阿密多 148%。与此同时,持有成本在重构定价公式:佛州年均房屋保险保费 8,292 美元,高出全国平均约 181%(Insurify);Surfside 大楼倒塌后的强制结构检查法规,让南佛州公寓业主背上巨额特别摊派;地税与 HOA 同步上行——**在 2026 年的美国,杀死一个资产的往往不是房价,是保单。** 再叠加 6%–7% 区间纹丝不动的房贷利率、走弱的消费者信心、2026 年上半年中东战事的避险情绪,德州主要都会区春季房价同比多数转负。到 2026 年 3 月,Case-Shiller 全国指数与 20 城指数经季调环比均下跌 0.2%,洛杉矶年度跌幅 1.6%,华盛顿特区转负(−0.1%)。用 Fortune 的标题说:这已不再只是阳光地带的故事。
 
         一句话收拢:供给洪峰、持有成本、融资成本、宏观逆风,四件事叠加,而且短期内没有一件会消失。
   - discriminant: sectionHeading
@@ -196,7 +240,7 @@ blocks:
         **基准情景(概率最高):延长版重置。** JPMorgan 预测 2026 年全国房价 0% 增长——可调利率下行、建商利率买断(rate
         buydown)、财富效应带来的需求边际改善,恰好被供给增量抵消。Redfin 把 2026 命名为"大住房重置"(The Great
         Housing Reset);Bright MLS
-        的定性是"重置年,不是反弹年"。名义价格全国零附近,实际价格继续缩水,成交量从三十年低位缓慢爬升。
+        的定性是"重置年,不是反弹年"。名义价格全国零附近,实际价格继续缩水,成交量从多年低位缓慢爬升。
 
 
         **偏空情景:AEI 的三年阴跌。** 2026 年 −1%、2027-2028 年各
@@ -224,11 +268,11 @@ blocks:
       md: |-
         数据看完、认知对齐、情景摆好,最后回答真正的问题。下面这个框架按资金性质展开,不是按动作编号——因为不同的钱,该做的事完全不同。**先立边界:本框架用于尽调排序与风险暴露比较,不构成对任何主体的买入、卖出或配置建议。**
 
-        **进攻型资金,盯多户住宅的 2027 窗口。** 约 180 万美国租户家庭已买不起所在市场的中位价住房(CBRE),自住市场的可负担性危机在持续向租赁市场输送需求;而多户新开工较峰值已降超 60%(Blackstone),供给洪峰将在 2026-2027 年被吸收。CBRE 预计多户 cap rate 2026 年企稳、随后数年渐进压缩,机构调研视多户为未来十年表现最优的商业地产类别。当前值得重点研究的区间在 5–50 单元的中小型多户资产:以 6.5%–7.5% 的 cap rate 成交,处在机构买家射程之外、又超出散户能力圈,叠加未来 18 个月桥贷到期潮制造的卖方压力——这是本周期定价效率最低的角落之一。黑石 2024 年百亿私有化 AIR Communities,做的就是同一方向的机构版本——而且两年过去,其 2026 年展望对这个方向的信心没有减弱。当然,风险同样明确:若就业恶化超预期,租金增长可能继续低于历史均值,高供给市场的空置消化会更慢。
+        **进攻型资金,盯多户住宅的 2027 窗口。** 约 180 万美国租户家庭已买不起所在市场的中位价住房(CBRE),自住市场的可负担性危机在持续向租赁市场输送需求;而多户新开工较峰值已降超 60%(Blackstone),供给洪峰将在 2026-2027 年被吸收。CBRE 预计多户 cap rate 2026 年企稳、随后数年渐进压缩,机构调研视多户为未来十年表现最优的商业地产类别。当前值得重点研究的区间在 5–50 单元的中小型多户资产:成交定价(cap rate)通常高于机构级资产,处在机构买家射程之外、又超出散户能力圈,叠加未来一段时间可能出现的桥贷到期潮带来的卖方压力——这是本周期定价效率最低的角落之一。黑石 2024 年百亿私有化 AIR Communities,做的就是同一方向的机构版本——而且两年过去,其 2026 年展望对这个方向的信心没有减弱。当然,风险同样明确:若就业恶化超预期,租金增长可能继续低于历史均值,高供给市场的空置消化会更慢。
 
         **耐心资金,在阳光地带用"折扣+现金流"逻辑替换"升值"逻辑。** 佛州、德州、亚利桑那处于买方市场深处,建商正用降价和利率买断清库存,新房折扣是本轮最确定的让利来源。但 AEI 的路径意味着跌势可能延续到 2027-2028——进场的资金前提是"再跌 5%–10% 仍拿得住",分批建仓,收益锚定租金现金流与长期均值回归。做不到这个前提的,不碰。沿海资产加一条铁规矩:先保单,后估值——出价前拿到可执行保险报价、HOA 财务与待摊派清单、结构检查状态,三样缺一不看。
 
-        **防守型资金,配置中西部/东北部现金流市场。** 中西部疫情期间没有建设潮,供给紧、价格仍在涨,且相对免疫气候灾害与保险成本螺旋,Realtor.com 称之为"理性替代选项"。克利夫兰中位价约 15 万美元,不足迈阿密(62.5 万)的四分之一。目标是租售比和低波动,不是升值弹性;按出租资产的标准做管理预算。
+        **防守型资金,配置中西部/东北部现金流市场。** 中西部疫情期间没有建设潮,供给紧、价格仍在涨,且相对免疫气候灾害与保险成本螺旋,Realtor.com 称之为"理性替代选项"。克利夫兰等中西部城市的中位房价,仅为迈阿密等阳光地带热门市场的一小部分。目标是租售比和低波动,不是升值弹性;按出租资产的标准做管理预算。
 
         **跨境资金,承认自己的比较优势是现金,并把它用对地方。** NAR 数据:2024 年 4 月–2025 年 3 月,外国买家购入 78,100 套美国存量住宅、总额 561 亿美元,金额同比 +33.2%、套数 +44%,为 2017 年以来首次回升;中国买家以 137 亿美元、11,700 套重回第一大来源国,平均购价 116.9 万美元为各国最高,36% 集中于加州;外国买家 47% 全现金成交,全美平均只有 28%。在一个卖家多于买家、建商急于去化的市场里,现金买家的相对议价优势处于十年高位。把优势用在谈判桌上(价格、卖方信贷、维修让步),不是用在扫货速度上;融资可得性(19% 的国际买家因贷不到款放弃交易)与持有结构(LLC/税务/遗产规划)在出价前解决,不在过户时补课。
 
@@ -256,7 +300,7 @@ faq:
   - question: 2026 年美国房价会崩盘吗?
     answer: >-
       多家主流机构的基准情景并不支持 2008 式崩盘判断。基准情景为名义价格零增长附近的多年重置;最悲观的机构路径(AEI)为 2026–2028
-      累计约 −5%。本轮不具备 2008 年的杠杆与劣质信贷传导结构:约 80% 存量房贷利率低于 4%、业主净值充裕、QM 规则约束下无强制抛售机制。
+      累计约 −5%。本轮不具备 2008 年的杠杆与劣质信贷传导结构:大部分存量房贷利率远低于当前市场利率、业主净值充裕、QM 规则约束下无强制抛售机制。
 
       来源:JPMorgan Global Research《The Outlook for the US Housing Market in
       2026》;AEI Housing Center 房价预测(2026 年 4 月);S&P Cotality Case-Shiller 全国指数
@@ -311,20 +355,52 @@ faq:
       非投资建议。
 sourceList:
   - name: S&P Cotality Case-Shiller Home Price Indices(2026 年 6 月 30 日发布之 4 月数据)
+    url: https://press.spglobal.com/2026-06-30-S-P-Cotality-Case-Shiller-Index-Reports-Annual-Gain-in-April-2026
+    accessedAt: 2026-11-05
+  - name: S&P Cotality Case-Shiller Home Price Indices(2026 年 5 月 26 日发布之 3 月数据)
+    url: https://press.spglobal.com/2026-05-26-S-P-Cotality-Case-Shiller-Index-Reports-Annual-Gain-in-March-2026
+    accessedAt: 2026-11-05
   - name: 美国劳工统计局 CPI
+    url: https://www.bls.gov/cpi/
+    accessedAt: 2026-11-05
   - name: Zillow Home Value Index(2026 年 5 月)
+    url: https://www.zillow.com/research/data/
+    accessedAt: 2026-11-05
   - name: AEI Housing Center 高频房价数据与预测(2026 年 4 月)
+    url: https://www.aei.org/housing/
+    accessedAt: 2026-11-05
   - name: JPMorgan Global Research《The Outlook for the US Housing Market in 2026》
+    url: https://www.jpmorgan.com/insights/global-research/real-estate/us-housing-market-outlook
+    accessedAt: 2026-11-05
   - name: Redfin / Realtor.com / Bright MLS 2026 年度预测
   - name: ResiClub 库存月报(2026 年 3 月)
   - name: ATTOM 2026Q1 都会区房价报告
+    url: https://www.attomdata.com/news/market-trends/home-sales-prices/q1-2026-home-sales-report/
+    accessedAt: 2026-11-05
   - name: NAR《2025 International Transactions in U.S. Residential Real Estate》
-  - name: Insurify 州别保费数据
+    url: https://www.nar.realtor/newsroom/international-buyers-purchased-56-billion-worth-of-u-s-homes-from-april-24-to-march-25
+    accessedAt: 2026-11-05
+  - name: Insurify 州别保费数据(Florida 2026 Home Insurance Report)
+    url: https://insurify.com/homeowners-insurance/news/florida-2026-home-insurance-report/
+    accessedAt: 2026-11-05
   - name: "CBRE《U.S. Real Estate Market Outlook 2026: Multifamily》"
+    url: https://www.cbre.com/insights/books/us-real-estate-market-outlook-2026
+    accessedAt: 2026-11-05
   - name: Blackstone《2026 Investment Perspectives》
+    url: https://www.blackstone.com/office-of-the-cio-2026-investment-perspectives-pdf
+    accessedAt: 2026-11-05
+  - name: Blackstone:Blackstone Real Estate Completes Privatization of AIR Communities for Approximately $10 Billion(2024 年 6 月 28 日)
+    url: https://www.blackstone.com/news/press/blackstone-real-estate-completes-privatization-of-air-communities-for-approximately-10-billion/
+    accessedAt: 2026-11-05
   - name: 美国人口普查局/HUD《New Residential Construction》2026 年 5 月数据(2026 年 6 月 16 日发布)
+    url: https://www.census.gov/construction/nrc/pdf/newresconst_202605.pdf
+    accessedAt: 2026-11-05
   - name: 美国人口普查局/HUD《New Residential Sales》2026 年 5 月数据(2026 年 6 月 24 日发布)
+    url: https://www.census.gov/construction/nrs/pdf/newressales_202605.pdf
+    accessedAt: 2026-11-05
   - name: Freddie Mac PMMS
+    url: https://www.freddiemac.com/pmms
+    accessedAt: 2026-11-05
 sources: []
 relatedSlugs: []
 cta:

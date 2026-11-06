@@ -27,12 +27,16 @@ export const NOTES: Record<SubKind, string> = {
   two_hours: '2 小时后开始'
 };
 
-export function subscribeTemplates(): Partial<Record<SubKind, Tmpl>> {
+export type Tmpl0 = Tmpl;
+export function subscribeTemplates(): Partial<Record<SubKind | 'photos', Tmpl>> {
   try {
     const raw = JSON.parse(process.env.WX_SUBSCRIBE_TEMPLATES || '{}') as Record<string, Tmpl>;
     const valid = (x?: Tmpl) => (x?.id && x.fields ? x : undefined);
-    const out: Partial<Record<SubKind, Tmpl>> = {};
+    const out: Partial<Record<SubKind | 'photos', Tmpl>> = {};
     const confirm = valid(raw.confirm);
+    // 1.2：“照片已上传”通知（需在公众平台另申请模板；没配置就不推，只在首页显示）
+    const photos = valid(raw.photos);
+    if (photos) out.photos = photos;
     const day = valid(raw.day_before) ?? valid(raw.reminder);
     const two = valid(raw.two_hours) ?? valid(raw.reminder);
     if (confirm) out.confirm = confirm;
@@ -55,7 +59,8 @@ export function publicTemplateIds() {
     confirm,
     reminder,
     day_before: shared || !t.day_before ? confirm : t.day_before.id,
-    two_hours: t.two_hours?.id ?? null
+    two_hours: t.two_hours?.id ?? null,
+    photos: t.photos?.id ?? null
   };
 }
 
@@ -166,6 +171,46 @@ async function pushOne(tm: Tmpl, openid: string, ev: EvInfo, kind: SubKind): Pro
   });
   const j = (await res.json()) as { errcode?: number };
   if (j.errcode) throw new Error(`errcode ${j.errcode}`);
+}
+
+/** “照片已上传”通知：活动名 + 时间 + 备注 */
+export async function pushPhotosNotice(tm: Tmpl, openid: string, ev: EvInfo): Promise<void> {
+  const values: Record<string, string> = {
+    title: cut(ev.title, 20),
+    time: fmtTime(ev.starts_at, ev.timezone || 'America/Los_Angeles'),
+    place: cut(ev.location_name || ev.address || 'SAREC', 20),
+    note: '现场照片已上传，点击查看相册'
+  };
+  const data: Record<string, { value: string }> = {};
+  for (const [k, key] of Object.entries(tm.fields)) if (key) data[key] = { value: values[k] };
+  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${await wxAccessToken()}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/album/album?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
+  });
+  const j = (await res.json()) as { errcode?: number };
+  if (j.errcode) throw new Error(`errcode ${j.errcode}`);
+}
+
+/** 签到成功页：用户允许了“照片已上传”通知（模板 ID 或 'photos'） */
+export async function savePhotoSubscription(contactId: string, slug: string, accepted: string[]) {
+  const t = subscribeTemplates();
+  if (!t.photos || !(accepted.includes('photos') || accepted.includes(t.photos.id))) return { saved: false };
+  const pool = getPool();
+  const { rows } = await pool.query<{ event_id: string; openid: string | null }>(
+    `SELECT e.id AS event_id, c.wechat_openid AS openid FROM events e
+       JOIN registrations r ON r.event_id = e.id AND r.contact_id = $2 AND r.status <> 'cancelled' JOIN contacts c ON c.id = $2
+      WHERE e.slug = $1`,
+    [slug, contactId]
+  );
+  if (!rows[0]?.openid) return { saved: false };
+  await pool.query(
+    `INSERT INTO event_reminder_subs (event_id, contact_id, kind, openid) VALUES ($1, $2, 'photos', $3)
+     ON CONFLICT (event_id, contact_id, kind) DO UPDATE SET openid = EXCLUDED.openid, accepted_at = now(),
+       status = CASE WHEN event_reminder_subs.status = 'sent' THEN 'sent' ELSE 'pending' END`,
+    [rows[0].event_id, contactId, rows[0].openid]
+  );
+  return { saved: true };
 }
 
 type Due = { id: string; kind: ReminderKind; openid: string; slug: string; title: string; starts_at: Date; timezone: string; location_name: string | null; address: string | null };

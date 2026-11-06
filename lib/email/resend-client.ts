@@ -22,8 +22,35 @@ export function getResend(): Resend {
   }
   if (!client) {
     client = new Resend(key);
+    if (!isProduction()) guardNonProduction(client);
   }
   return client;
+}
+
+/** 正式站才真正对外发信；预览 / 本地只发给测试白名单（东哥 Gmail 及其 + 别名），其余拦下不发。 */
+export function isProduction(): boolean {
+  return process.env.VERCEL_ENV === 'production';
+}
+
+/** PREVIEW_EMAIL_ALLOW：逗号分隔的测试收件人；a@b.com 同时放行 a+任意@b.com。未配置时全部拦截。 */
+export function testRecipientAllowed(addr: string): boolean {
+  const allow = (process.env.PREVIEW_EMAIL_ALLOW || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+  const a = addr.trim().toLowerCase().replace(/^.*<([^>]+)>.*$/, '$1');
+  const base = a.replace(/\+[^@]*@/, '@');
+  return allow.some((x) => x === a || x === base);
+}
+
+function guardNonProduction(c: Resend) {
+  const send = c.emails.send.bind(c.emails);
+  (c.emails as { send: typeof send }).send = (async (payload: Parameters<typeof send>[0], options?: Parameters<typeof send>[1]) => {
+    const list = (Array.isArray(payload.to) ? payload.to : [payload.to]).filter((x): x is string => typeof x === 'string');
+    const kept = list.filter(testRecipientAllowed);
+    if (!kept.length) {
+      console.log('[email] non-production: blocked recipient (not in test allowlist)');
+      return { data: { id: 'blocked-non-production' }, error: null };
+    }
+    return send({ ...payload, to: kept, cc: undefined, bcc: undefined } as Parameters<typeof send>[0], options);
+  }) as typeof send;
 }
 
 /** 发件地址；未配置时回退 Resend 测试发件（仅本地）。 */

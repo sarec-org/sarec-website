@@ -1,0 +1,118 @@
+/**
+ * GEO · J：直接回答 / English summary —— 对齐 GEO 阅读列（与 ArticleEndSections .block 同宽同 padding）。
+ */
+.directAnswer {
+  max-width: 1120px;
+  margin: clamp(1.75rem, 4vh, 2.75rem) auto 0 auto;
+  margin: clamp(1.75rem, 4svh, 2.75rem) auto 0 auto;
+  padding: 0 clamp(1.5rem, 5vw, 3rem);
+  box-sizing: border-box;
+}
+
+.directAnswer > * {
+  border-left: 2px solid var(--gold, #c6a865);
+  padding-left: clamp(1rem, 2vw, 1.4rem);
+}
+
+.directLabel {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  color: var(--gold, #c6a865);
+  margin: 0;
+  padding-top: 0.2rem;
+  padding-bottom: 0.5rem;
+}
+
+.directText {
+  font-family: var(--serif-zh);
+  font-size: clamp(1.05rem, 1rem + 0.35vw, 1.2rem);
+  line-height: 1.85;
+  color: var(--ivory, #f4efe4);
+  margin: 0;
+  padding-bottom: 0.6rem;
+}
+
+.directByline {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ivory-mute, #b7ad97);
+  margin: 0;
+  padding-bottom: 0.2rem;
+}
+
+.english {
+  max-width: 1120px;
+  margin: clamp(2.5rem, 6vh, 4rem) auto 0 auto;
+  margin: clamp(2.5rem, 6svh, 4rem) auto 0 auto;
+  padding: clamp(1.5rem, 4vh, 2.25rem) clamp(1.5rem, 5vw, 3rem) 0;
+  padding: clamp(1.5rem, 4svh, 2.25rem) clamp(1.5rem, 5vw, 3rem) 0;
+  border-top: 1px solid var(--gold-dim, rgba(198, 168, 101, 0.3));
+  box-sizing: border-box;
+  font-family: var(--sans);
+  color: var(--ivory-warm, #e9e1d0);
+}
+
+.englishLabel,
+.englishAnswerLabel {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold, #c6a865);
+  margin: 0 0 0.6rem 0;
+}
+
+.englishAnswerLabel {
+  margin-top: 1.25rem;
+}
+
+.englishTitle {
+  font-family: var(--serif-en, var(--sans));
+  font-size: clamp(1.3rem, 1.1rem + 0.9vw, 1.7rem);
+  line-height: 1.35;
+  color: var(--ivory, #f4efe4);
+  margin: 0 0 0.5rem 0;
+}
+
+.englishByline {
+  font-size: 0.85rem;
+  color: var(--ivory-mute, #b7ad97);
+  margin: 0;
+}
+
+.englishAnswer {
+  font-size: clamp(1rem, 0.98rem + 0.2vw, 1.1rem);
+  line-height: 1.75;
+  margin: 0;
+}
+
+.englishFaqTitle {
+  font-size: 1.05rem;
+  color: var(--ivory, #f4efe4);
+  margin: 1.75rem 0 0.75rem 0;
+}
+
+.englishFaq {
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.englishFaqItem dt {
+  font-weight: 600;
+  color: var(--ivory, #f4efe4);
+  line-height: 1.5;
+}
+
+.englishFaqItem dd {
+  margin: 0.3rem 0 0 0;
+  line-height: 1.7;
+}
+
+.englishDisclaimer {
+  margin: 1.5rem 0 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ivory-mute, #b7ad97);
+}

@@ -17,6 +17,53 @@ summary:
   - 加州 Entitlement 审批通常 18–36 个月,不是中国的 3–6 个月
   - EB-5 不宜作主轴资金,主轴须为 Senior Construction Loan
   - 中国总部往往救不了美国子公司
+directAnswer: >-
+  中国资本在美国做房地产开发,最致命的陷阱是用中国打法做美国项目:资金没安排好就动工(未落实 Senior Construction Loan)、低估审批周期与地方政策差异(加州
+  Entitlement 通常 18–36 个月)、选错产品类型、误判关税成本,以及把 EB-5 当主轴资金、拖欠工程款引发 Mechanic's
+  Lien、走捷径行贿或逃税、指望中国总部输血。泛海洛杉矶项目(Oceanwide Plaza)至少踩了其中 7
+  个,停工后进入破产处置程序。避坑的核心是先把所有资金安排好再动工,拿地前做审批与产品可行性研究,并按美国合规规则搭建结构。
+en:
+  title: What are the 10 deadliest traps for Chinese capital developing real estate in the US?
+  directAnswer: >-
+    The deadliest trap is running a US project on a China playbook. The ten traps are: breaking ground before a
+    construction loan is signed, underestimating entitlement timelines (typically 18–36 months in California),
+    ignoring city-by-city rules, choosing the wrong product type, misjudging tariff costs, relying on EB-5 as core
+    funding, letting mechanic's liens pile up, paying bribes, evading rather than planning taxes, and expecting the
+    Chinese parent to bail out the US subsidiary. Oceanwide Plaza in downtown Los Angeles fell into at least seven of
+    them before stalling and entering bankruptcy proceedings. The fix is to fully fund the capital stack before
+    construction, study entitlement and product feasibility before buying land, and build a US-compliant structure.
+  faq:
+    - question: Why do Chinese developers most often fail in US real estate development?
+      answer: >-
+        Three causes dominate: starting construction with an incomplete capital stack (no senior construction loan),
+        underestimating entitlement (treating 18–36 months as 3–6), and assuming the parent company can keep
+        funding the project. Oceanwide Plaza made all three mistakes, and its proposed sale price in bankruptcy is
+        far below the reported amount invested. Final losses depend on bankruptcy court documents. This is not
+        investment, legal, immigration or tax advice.
+    - question: Can EB-5 money be the main funding source for a US development?
+      answer: >-
+        No. EB-5 investors' main goal is a green card, not a return, so their exit timelines are rigid and project
+        delays can quickly lead to default notices and lawsuits. EB-5 should be supplemental capital, with a senior
+        construction loan as the core; the right proportion is a case-by-case judgment for securities and
+        immigration counsel.
+    - question: Is Form I-526E a green card?
+      answer: >-
+        No. Form I-526E is an immigrant petition filed by a regional center investor. If approved, the investor
+        still needs consular processing or adjustment of status to obtain two-year conditional residence, then files
+        Form I-829 to remove the conditions. Timing varies with visa availability and project progress; check USCIS
+        for current rules.
+    - question: Does a 1031 exchange work for homes built to sell?
+      answer: >-
+        Generally not. Section 1031 covers real property held for business or investment; property held primarily
+        for sale, such as a developer's spec homes or inventory, does not qualify. It also requires identifying
+        replacement property within 45 days, closing within 180 days, and using a qualified intermediary. Whether you
+        are a dealer or an investor is a fact-specific IRS question for your CPA or tax attorney.
+    - question: Can Chinese building materials be routed through Southeast Asia to avoid US tariffs?
+      answer: >-
+        Not by relabeling. Transshipment to misstate country of origin is a federal crime. A legitimate supply-chain
+        shift requires substantial transformation, meaning a real change in the product's name, character or use, as
+        determined by CBP case by case. In the Uni-Tile & Marble case, the defendants are alleged to have used such a
+        scheme; the case is pending and they are presumed innocent.
 blocks:
   - discriminant: prose
     value:
@@ -96,7 +143,7 @@ blocks:
 
         翻译成大白话——泛海当初的资金结构是"自有资金 + EB-5 投资 + 计划中的 Senior Construction Loan",其中自有资金和 EB-5 先到位,Senior Construction Loan 是边干边谈的。结果谈了几年一直没拿下来,同时项目支出已超过 12 亿美元(仅完成 60%),原计划完工还需再投入 12-23 亿美元。
 
-        更糟的是——根据 California Construction News 2019 年 2 月报道,仅 2019 年 2 月之前,就已至少有 6 家分包商对项目挂了 Mechanic's Lien,总金额 6,250 万美元,其中总包商 Webcor Builders 一家就挂了 5,280 万美元。这是典型的"边干边筹钱":在美国,Mechanic's Lien 一挂,Senior Construction Loan 的最后一线希望基本断了。接下来的剧本就是必然:FBI 调查、Lendlease 停工、停摆、涂鸦、破产、处置。
+        更糟的是——根据 California Construction News 2019 年 2 月报道,仅 2019 年 2 月之前,就已至少有 6 家分包商对项目挂了 Mechanic's Lien,总金额 6,250 万美元,其中总包商 Webcor Builders 一家就挂了 5,280 万美元。这是典型的"边干边筹钱":在美国,Mechanic's Lien 一挂,Senior Construction Loan 的最后一线希望基本断了。接下来的剧本就是必然:Lendlease 停工、停摆、涂鸦、破产、处置。(同篇报道还提到,泛海被点名卷入 FBI 一项涉及洛杉矶市政厅的腐败调查;这只是媒体报道的调查事项,不代表泛海被认定有任何违法行为。)
 
         启示:美国的项目融资逻辑是"先把所有钱安排好再动工",不是"动工了再筹钱"。Construction Loan 一旦发放,银行会监管 Draw Schedule(拨款时间表),项目可以独立完成。中国开发商最大的认知误区,是以为"自有资金+EB-5+边谈贷款"是灵活安排,实际上是项目还没开始就埋下了崩盘引信。
   - discriminant: caseRef
@@ -337,7 +384,7 @@ blocks:
       md: |-
         Mechanic's Lien(机械师留置权,又译工程留置权)是美国房地产领域最强的债权人保护工具之一,但在中国房地产行业完全没有对应概念。简单说:任何为项目提供过劳务或材料的人(总包、分包、供应商、甚至个体工人),如果开发商拖欠工程款,可以单方面在县记录处(County Recorder's Office)提交一份 Mechanic's Lien,这个 Lien 立刻成为项目的法定债务,附着在土地和建筑物上;直到 Lien 被清偿,项目不能转让、不能再融资、不能交付。
 
-        致命之处有四:一、单方申请、门槛极低——不需法院裁定、不需开发商同意,分包商觉得你欠钱就能挂,反诉"虚假 Lien"需数月到数年,期间 Lien 一直挂着。二、Title Insurance 必查 Lien——任何交易、再融资、Permit 申请,Title 公司都必须检查是否有 Lien,一旦有,所有交易冻结。三、一个 Lien 引发连锁——第一个分包商挂 Lien 后,其他分包商立刻跟进,这就是泛海洛杉矶项目 6 家分包商 1 个月内挂 6,250 万美元 Lien 的原因,这是雪崩。四、Lien 会触发贷款协议违约——绝大多数 Construction Loan 协议明确"项目出现 Mechanic's Lien 即构成违约事件",泛海 EB-5 违约通知中专门提到"允许 Mechanic's Lien 被挂在项目上,违反了贷款协议"。
+        致命之处有四:一、单方申请、门槛极低——不需法院裁定、不需开发商同意,分包商觉得你欠钱就能挂,反诉"虚假 Lien"需数月到数年,期间 Lien 一直挂着。二、Title Insurance 必查 Lien——任何交易、再融资、Permit 申请,Title 公司都必须检查是否有 Lien,一旦有,所有交易冻结。三、一个 Lien 引发连锁——第一个分包商挂 Lien 后,其他分包商立刻跟进,这就是截至 2019 年 2 月中旬泛海洛杉矶项目已有至少 6 家分包商挂了合计 6,250 万美元 Lien 的原因,这是雪崩。四、Lien 会触发贷款协议违约——绝大多数 Construction Loan 协议明确"项目出现 Mechanic's Lien 即构成违约事件",泛海 EB-5 违约通知中专门提到"允许 Mechanic's Lien 被挂在项目上,违反了贷款协议"。
 
         中国开发商的本能是"工程款先拖一拖,回头一起结",在中国分包商不敢撕破脸,在美国分包商第二天就来挂 Lien。
   - discriminant: caseRef
@@ -360,7 +407,7 @@ blocks:
       md: |-
         中国房地产行业的运作中,"打点关系"是一种常见甚至必要的能力:给政府官员送礼、安排吃饭、提供方便。很多中国开发商进入美国后本能地试图用同样方式打开局面——加快审批、争取容积率、协调反对意见。这是最致命的赌博:在美国,这叫 Bribery of a Public Official(贿赂公职人员),是联邦重罪。
 
-        真实案例:富力地产张力案。张力是广州富力地产联合创始人、联席董事长,曾任广州市政府官员,1993 年下海,1994 年与香港富商李思廉创办富力地产。以下事件均为公开报道事实(来源包括彭博社、南华早报、SF Standard、Mingtiandi、SCMP 及美国司法部公开文书)。
+        真实案例:富力地产张力案。张力是广州富力地产联合创始人、联席董事长,曾任广州市政府官员,1993 年下海,1994 年与香港富商李思廉创办富力地产。以下事件来自公开报道及美国司法部公开文书(来源包括彭博社、南华早报、SF Standard、Mingtiandi、SCMP 及美国司法部公开文书)。需要区分:张力本人以 DPA 方式结案,在协议中承认了构成指控基础的行为,但未被定罪;认罪的是其公司 Z&L Properties。
   - discriminant: dataTable
     value:
       caption: 富力张力案时间线
@@ -368,7 +415,7 @@ blocks:
         - label: 2014-2015 年
           value: 张力个人控股的加州公司 Z&L Properties Inc.(与上市公司富力地产无股权关系)启动旧金山 555 Fulton Street 住宅+商业综合开发项目
         - label: 2018 年
-          value: 旧金山公共工程局局长 Mohammed Nuru 应邀访问中国,张力为其支付五星级酒店住宿,在私宅接待时赠送约 2,070 美元的酒及一些可疑钻石原石;Nuru 未按美国法律要求申报这些礼物
+          value: 据美国司法部文书所述(张力在 DPA 中承认相关行为):旧金山公共工程局局长 Mohammed Nuru 应邀访问中国,张力为其支付五星级酒店住宿,在私宅接待时赠送约 2,070 美元的酒及一些可疑钻石原石;Nuru 未按美国法律要求申报这些礼物
         - label: 2020 年 1 月
           value: FBI 对 Mohammed Nuru 启动调查并逮捕 Nuru
         - label: 2021 年 12 月
@@ -394,9 +441,9 @@ blocks:
   - discriminant: prose
     value:
       md: |-
-        这个案例的核心教训有四。教训 1:美国司法的"长臂管辖"远超想象——行贿行为发生在中国,但因对方是美国公职人员、动机是为美国项目利益,美国仍有管辖权。教训 2:美国通过引渡条约的全球追索能力——美国对张力提起刑事指控后向英国提出引渡请求,张力 2022 年 11 月从新加坡飞抵伦敦时被英国警方依据美英引渡条约逮捕,这是双边引渡的执行,不是 Interpol 国际通缉,但效果一样。美国与全球 100+ 个国家有引渡条约,包括五眼联盟(英、加、澳、新)、欧盟主要国家、日韩菲、墨西哥巴西阿根廷等。张力的最大失误是以为"不进入美国"就安全,事实上任何与美国有引渡条约的国家都是风险区。
+        这个案例的核心教训有四。教训 1:美国司法的"长臂管辖"远超想象——行贿行为发生在中国,但因对方是美国公职人员、动机是为美国项目利益,美国仍有管辖权。教训 2:美国通过引渡条约的全球追索能力——美国对张力提起刑事指控后向英国提出引渡请求,张力 2022 年 11 月从新加坡飞抵伦敦时被英国警方依据美英引渡条约逮捕,这是双边引渡的执行,不是 Interpol 国际通缉,但效果一样。美国与全球 100+ 个国家有引渡条约,包括五眼联盟(英、加、澳、新)、欧盟主要国家、日韩菲、墨西哥巴西阿根廷等。这说明以为"不进入美国"就安全是错误的,事实上任何与美国有引渡条约的国家都是风险区。
 
-        教训 3:行贿金额低不等于事情小——张力涉案直接行贿金额(含酒、礼物估值约 2,000+ 美元加酒店住宿等)初步估算不超过几万美元,但后果是被美国提起刑事指控、伦敦机场被捕、1,500 万英镑保释、伦敦监视居住 7 个月、引渡羁押、Z&L 被罚 100 万美元、数百万美元法律费用、富力地产股价当日深跌 14%、个人声誉永久受损。美国 FCPA 和相关反贿赂法律对金额不敏感、对行为本身极敏感。教训 4:DPA 也不是"赢"——DPA 条件包括承认相关行为(不是无罪释放)、3 年观察期、配合调查、未来 3 年内违反任何美国法律则 DPA 自动失效原起诉恢复、公司缴 100 万美元罚款、建立合规计划;而被贿赂官员 Nuru 被判 7 年监禁,两边代价都不轻。
+        教训 3:行贿金额低不等于事情小——张力被指控(并在 DPA 中承认)的直接行贿金额(含酒、礼物估值约 2,000+ 美元加酒店住宿等)初步估算不超过几万美元,但后果是被美国提起刑事指控、伦敦机场被捕、1,500 万英镑保释、伦敦监视居住 7 个月、引渡羁押、Z&L 被罚 100 万美元、数百万美元法律费用、富力地产股价大跌、个人声誉永久受损。美国 FCPA 和相关反贿赂法律对金额不敏感、对行为本身极敏感。教训 4:DPA 也不是"赢"——DPA 条件包括承认相关行为(不是无罪释放)、3 年观察期、配合调查、未来 3 年内违反任何美国法律则 DPA 自动失效原起诉恢复、公司缴 100 万美元罚款、建立合规计划;而被贿赂官员 Nuru 被判 7 年监禁,两边代价都不轻。
   - discriminant: keyPoints
     value:
       title: 教训

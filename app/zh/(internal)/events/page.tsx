@@ -18,6 +18,7 @@ import { formatEventTime } from '@/components/cms/EventMeta';
 import type { EventItem, NewsCategory, NewsItem } from '@/lib/cms/types';
 import styles from './events.module.css';
 import { EventsHero } from './EventsHero';
+import { OpenEventsSection } from '@/components/home/HomeDesk';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 新闻与活动｜中美房地产商会',
@@ -191,6 +192,9 @@ export default function EventsPage() {
 
       {/* E01 — Cinematic Hero(LA skyline 全屏 + 文字 overlay)*/}
       <EventsHero />
+
+      {/* 1.2：数据库里可在线报名的活动（和小程序同一份） */}
+      <OpenEventsSection />
 
       {/* 页内锚点条(无强制 Tab) */}
       {anchors.length > 0 ? (

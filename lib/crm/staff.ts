@@ -13,6 +13,7 @@ import { CrmError, checkIn, normalizeEmail, normalizePhone, startRegistration, s
 import { cancelOrder, getSetting, markOrderPaid, newOrderNo, setSetting, PURPOSE_LABEL, STATUS_LABEL } from './orders';
 import { loadProfile, type Db } from './profile';
 import { QUESTION_BY_CODE, TOPIC_LABELS, findRoleSub } from './questionBank';
+import { laToday } from '@/lib/laDate';
 
 export const actor = (s: Staff) => `staff:${s.name}`;
 
@@ -60,7 +61,7 @@ export type EventInput = {
 };
 
 function slugify(title: string, startsAt: Date): string {
-  const d = startsAt.toISOString().slice(0, 10);
+  const d = laToday(startsAt); // 洛杉矶日期
   const ascii = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')

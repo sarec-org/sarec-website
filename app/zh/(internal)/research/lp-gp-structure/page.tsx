@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import { createPageMetadata, SITE_URL } from '@/lib/seo';
+import { getLegacyResearch } from '@/lib/geo/content';
+import { FOUNDER_AUTHOR } from '@/lib/geo/author';
+import { DirectAnswer } from '@/components/sections/research/geo/GeoAnswerSections';
+import { ResearchGeoTail } from '@/components/sections/research/geo/ResearchGeoTail';
 import { ShareButton } from '@/components/sections/research/ShareButton';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import { ArticleHero } from '@/components/sections/research/ArticleHero';
@@ -185,11 +189,15 @@ const conversionIntents = [
   { label: '你想保持联系', ctaText: '联系我们', href: '/zh/contact/' }
 ];
 
+// GEO · J：直接回答 / 问答 / 公开来源 / English summary / JSON-LD（数据见 content/geo/legacy/lp-gp-structure.ts）。
+const geo = getLegacyResearch('lp-gp-structure');
+
 export default function LpGpStructurePage() {
   return (
     <main style={{ background: 'var(--ink-deepest)', color: 'var(--ivory)' }}>
       <ViewportLockScript />
       <ArticleHero
+        author={{ name: FOUNDER_AUTHOR.name, title: FOUNDER_AUTHOR.title }}
         eyebrow="SAREC INSIGHTS · 合作结构"
         title="LP / GP 合作结构详解"
         summary="美国房地产项目中，投资人真正需要看懂的不只是项目本身，还包括谁管理项目、资金如何进入、信息如何披露、重大事项如何决策、收益如何分配，以及风险发生时由谁承担责任。"
@@ -203,6 +211,8 @@ export default function LpGpStructurePage() {
         anchors={heroAnchors}
         mediaCaption="LP / GP STRUCTURE / CAPITAL ALIGNMENT / GOVERNANCE"
       />
+
+      <DirectAnswer text={geo?.directAnswer} />
 
       <OpeningJudgment
         judgment="项目本身只是一部分，合作结构决定利益边界"
@@ -354,6 +364,8 @@ export default function LpGpStructurePage() {
         body={noticeBody}
         width="default"
       />
+
+      <ResearchGeoTail geo={geo} />
 
       <RelatedResearch
         items={relatedLinks.map((r) => ({

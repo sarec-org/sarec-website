@@ -24,17 +24,18 @@ export async function wxAccessToken(): Promise<string> {
 }
 
 /** scene 只能 32 个可见字符，且限 [0-9a-zA-Z!#$&'()*+,/:;=?@-._~] */
-const SCENE_OK = /^[0-9A-Za-z!#$&'()*+,/:;=?@\-._~]{1,32}$/;
+export const SCENE_OK = /^[0-9A-Za-z!#$&'()*+,/:;=?@\-._~]{1,32}$/;
 
-type CodeReq = { page: string; scene?: string; path?: string; tag: string };
+type CodeReq = { page: string; scene?: string; path?: string; tag: string; envVersion?: 'release' | 'trial' | 'develop' };
 
 /** 调微信生成正式版小程序码：有 scene 用 wxacode.getUnlimited（数量不限），否则 wxacode.get（带完整 path，总量有限） */
 async function miniProgramCode(r: CodeReq): Promise<Buffer> {
   if (!wxConfigured()) throw new CrmError('wechat_unconfigured', '后台还没有配置小程序 AppID / AppSecret');
   const token = await wxAccessToken();
-  const common = { width: 1280, auto_color: false, line_color: { r: 4, g: 20, b: 33 }, is_hyaline: false, env_version: 'release' };
+  const env = r.envVersion ?? 'release';
+  const common = { width: 1280, auto_color: false, line_color: { r: 4, g: 20, b: 33 }, is_hyaline: false, env_version: env };
   const [url, payload] = r.scene
-    ? [`https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`, { ...common, scene: r.scene, page: r.page, check_path: true }]
+    ? [`https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`, { ...common, scene: r.scene, page: r.page, check_path: env === 'release' }]
     : [`https://api.weixin.qq.com/wxa/getwxacode?access_token=${token}`, { ...common, path: r.path }];
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
   const buf = Buffer.from(await res.arrayBuffer());
@@ -55,6 +56,24 @@ export function eventRegisterCode(slug: string): Promise<Buffer> {
       ? { page: 'pages/event/event', scene: slug, tag: `register slug=${slug}` }
       : { page: 'pages/event/event', path: `pages/event/event?slug=${encodeURIComponent(slug)}`, tag: `register slug=${slug}` }
   );
+}
+
+/**
+ * 1.2 邀请海报码：扫码进活动页并带上推荐人（scene = “slug|r会员编号”，活动页解析 r 开头的第二段为推荐码）。
+ * 新页面上线前（体验版 / 开发版测试）可用 envVersion 生成对应版本的码。
+ */
+export function inviteCode(slug: string, memberNo: number, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
+  const scene = `${slug}|r${memberNo}`;
+  return miniProgramCode(
+    SCENE_OK.test(scene)
+      ? { page: 'pages/event/event', scene, tag: `invite slug=${slug}`, envVersion }
+      : { page: 'pages/event/event', path: `pages/event/event?slug=${encodeURIComponent(slug)}&ref=${memberNo}&channel=poster`, tag: `invite slug=${slug}`, envVersion }
+  );
+}
+
+/** 1.2 电子名片码：扫码打开名片页（scene = “c|名片编号”），页面实时显示当前会员状态 */
+export function cardCode(token: string, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
+  return miniProgramCode({ page: 'pages/card/card', scene: `c|${token}`, tag: 'card', envVersion });
 }
 
 /** 签到码里最少带几位签到密钥（密钥是 32 位十六进制） */
