@@ -1,16 +1,15 @@
 title: 3434 Chesapeake Ave
-summary: 洛杉矶 3434 Chesapeake Ave 的 ED1 经济适用房开发项目,目前处于审批阶段。
+summary: 创始人参与项目(不属于商会项目)。洛杉矶 3434 Chesapeake Ave 的 ED1 经济适用房开发项目,目前处于审批阶段。
 projectType: ed1-affordable
 region: los-angeles
 stage: entitlement
-sarecRole:
-  - project-partnership
+sarecRole: []
 linkedMembers:
   - unit: terra-capital
     roles:
       - development
 tags:
-  - member-submitted
+  - founder-project
 lastVerified: 2026-08-31
 sortWeight: 90
 coverImage: /images/projects/3434-chesapeake/cover.webp
@@ -21,6 +20,8 @@ body: |-
   - 项目类型:经济适用房开发(ED1)
 
   - 当前阶段:审批中
+
+  - 性质:创始人参与项目,不属于商会项目
 
   项目由会员单位 Terra Capital Development Group LLC 开发。
 

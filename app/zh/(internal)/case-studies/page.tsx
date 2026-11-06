@@ -9,7 +9,7 @@ import { CaseStudiesHero } from './CaseStudiesHero';
 export const metadata: Metadata = createPageMetadata({
   title: 'SAREC 项目案例｜中美房地产商会',
   description:
-    'SAREC 公开项目案例：创始人参与的 Rosewood ED1 经济适用房项目 + 三类项目经验 + 案例公开 3 原则。',
+    'SAREC 公开项目案例：创始人参与的 Rosewood、Chesapeake、Wellesley 等 ED1 项目 + 三类项目经验 + 案例公开 3 原则。',
   path: '/zh/case-studies'
 });
 
@@ -47,7 +47,8 @@ const projects: ProjectCard[] = [
     location: 'Los Angeles, CA 90016',
     type: 'ED1 经济适用房 · 精品公寓',
     stats: { units: '66', floors: '6', stage: '审批中' },
-    role: '项目合作',
+    role: '创始人参与项目,不属于商会项目',
+    roleLabel: '性质:',
     hasDetail: false
   },
   {
@@ -57,7 +58,8 @@ const projects: ProjectCard[] = [
     location: 'Los Angeles, CA 90064',
     type: 'ED1 经济适用房 · 精品公寓',
     stats: { units: '84', floors: '8', stage: '建设中' },
-    role: '项目合作',
+    role: '创始人参与项目,不属于商会项目',
+    roleLabel: '性质:',
     hasDetail: false
   },
   {

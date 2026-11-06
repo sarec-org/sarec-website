@@ -36,7 +36,7 @@ const projectTypes = [
     fitLabel: '适合特点:',
     fit: ['审批通道快', '政策红利明确', '市场刚需稳定', '中型规模'],
     image: '/images/projects/3434-chesapeake-ed1.webp',
-    alt: 'SAREC ED1 项目实景 — 3434 Chesapeake'
+    alt: 'ED1 项目实景 — 3434 Chesapeake(创始人参与项目,不属于商会项目)'
   },
   {
     code: '02',
