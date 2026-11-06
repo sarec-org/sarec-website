@@ -41,7 +41,7 @@ const MECHANISMS: Mechanism[] = [
     title: '后端激励',
     body: [
       'SAREC 优先采用利益一致、风险共担、后端激励的合作结构。',
-      '项目卖出后才有 Carry。项目赚，我们才赚。'
+      '项目卖出后才有 Carry。'
     ],
     compliance: '具体合作条款以项目阶段和服务边界为准。'
   },

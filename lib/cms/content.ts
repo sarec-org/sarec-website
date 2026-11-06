@@ -237,7 +237,7 @@ const PROJECT_STAGES: ProjectStage[] = [
   'operating',
   'completed',
 ];
-const PROJECT_TAGS: ProjectTag[] = ['sarec-involved', 'member-submitted', 'case-study'];
+const PROJECT_TAGS: ProjectTag[] = ['sarec-involved', 'member-submitted', 'case-study', 'founder-project'];
 const MEMBER_ROLES: MemberRole[] = [
   'development',
   'lending',

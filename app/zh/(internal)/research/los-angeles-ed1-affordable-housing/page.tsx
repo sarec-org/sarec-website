@@ -140,13 +140,13 @@ const frameworkIntroBody =
   'ED1 后续政策和执行口径可能变化，洛杉矶也在持续推进更广泛的 permitting reform。本文只做一般观察，不构成任何政策承诺。涉及 zoning、entitlement、permit、affordable housing covenant、贷款、税务、法律、证券、EB-5 等事项，应咨询相应专业人士。';
 
 const caseLensParagraphs = [
-  '4136 Rosewood 用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。',
+  '4136 Rosewood(创始人参与项目,不属于商会项目)用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。',
   '3434 Chesapeake 适合说明 ED1 政策下的 RTI Ready、审批效率、土地利用提升和项目推进能力。',
   '2215 Wellesley 适合说明复杂规划区、Plan Check、公用事业协调、LADWP / LAFD 技术问题和跨部门推进能力。'
 ];
 
 const caseLensCases = [
-  { name: '4136 Rosewood', body: '用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。' },
+  { name: '4136 Rosewood(创始人参与项目)', body: '用于说明 ED1 经济适用房开发项目如何从土地、审批、成本、融资、租赁和退出进行系统判断。' },
   { name: '3434 Chesapeake', body: '适合说明 ED1 政策下的 RTI Ready、审批效率、土地利用提升和项目推进能力。' },
   { name: '2215 Wellesley', body: '适合说明复杂规划区、Plan Check、公用事业协调、LADWP / LAFD 技术问题和跨部门推进能力。' }
 ];
@@ -192,7 +192,7 @@ const heroAnchors = researchMapKeywords.slice(0, 3).map((k, i) => ({
 }));
 
 const projectEvidenceCases = [
-  { name: '4136 Rosewood', tag: 'ED1 / Development', body: caseLensCases[0].body, href: '/zh/case-studies/' },
+  { name: '4136 Rosewood', tag: 'ED1 / Development · 创始人参与项目', body: caseLensCases[0].body, href: '/zh/case-studies/' },
   { name: '3434 Chesapeake', tag: 'RTI / Entitlement', body: caseLensCases[1].body, href: '/zh/case-studies/' },
   { name: '2215 Wellesley', tag: 'Utilities / Coordination', body: caseLensCases[2].body, href: '/zh/case-studies/' }
 ];

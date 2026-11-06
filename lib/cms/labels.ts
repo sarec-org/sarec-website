@@ -69,6 +69,7 @@ export const PROJECT_TAG_LABEL: Record<ProjectTag, string> = {
   'sarec-involved': 'SAREC参与',
   'member-submitted': '会员提交',
   'case-study': '案例研究',
+  'founder-project': '创始人参与项目',
 };
 
 export const SAREC_ROLE_LABEL: Record<string, string> = {

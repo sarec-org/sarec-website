@@ -895,11 +895,12 @@ export default config({
         tags: fields.multiselect({
           label: '标签',
           description:
-            '仅这三个手工标签。「副会长单位项目」「战略伙伴项目」等徽章由上方关联的会员单位自动生成,不在此处手填。',
+            '仅这几个手工标签。「副会长单位项目」「战略伙伴项目」等徽章由上方关联的会员单位自动生成,不在此处手填。',
           options: [
             { label: 'SAREC参与', value: 'sarec-involved' },
             { label: '会员提交', value: 'member-submitted' },
             { label: '案例研究', value: 'case-study' },
+            { label: '创始人参与项目（不算商会项目）', value: 'founder-project' },
           ],
           defaultValue: [],
         }),

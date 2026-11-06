@@ -55,7 +55,7 @@ export function RosewoodHero() {
         <div className={styles.heroOverlay} aria-hidden="true" />
       </div>
       <div className={styles.heroContent}>
-        <span className={styles.heroEyebrow}>FEATURED CASE · 代表性案例</span>
+        <span className={styles.heroEyebrow}>FOUNDER PROJECT · 创始人参与项目</span>
         <h1 className={styles.heroH1}>
           <span className={revealClass}>4136 Rosewood Ave</span>
         </h1>

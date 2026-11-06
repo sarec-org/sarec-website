@@ -119,7 +119,7 @@ export default function AboutPage() {
             <div className={styles.diffImageMotion}>
               <SaImage
                 src="/images/projects/4136-rosewood-rendering.png"
-                alt="4136 Rosewood 项目实物 — SAREC 差异化"
+                alt="4136 Rosewood 项目效果图 — 创始人参与项目（不属于商会项目）"
                 fill
                 sizes="(max-width: 768px) 100vw, 55vw"
                 filterIntensity="none"

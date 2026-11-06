@@ -101,7 +101,7 @@ export function H06ProjectsFeatured() {
             SAREC 参与的项目
           </motion.h2>
           <motion.p className={styles.lead} variants={headerItem}>
-            三类项目经验 + 一个已公开的代表性案例。
+            三类项目经验 + 一个创始人参与的公开案例。
           </motion.p>
         </motion.div>
 
@@ -144,7 +144,7 @@ export function H06ProjectsFeatured() {
               viewport={{ once: true, amount: 0.15 }}
             >
               <span className={styles.featuredLabel}>
-                FEATURED PROJECT · 代表性项目
+                FOUNDER PROJECT · 创始人参与项目
               </span>
               <h3 className={styles.featuredTitle}>4136 Rosewood Ave</h3>
               <p className={styles.featuredSubtitle}>
@@ -186,8 +186,8 @@ export function H06ProjectsFeatured() {
 
               <div className={styles.description}>
                 <p className={styles.featuredRole}>
-                  <span className={styles.roleLabel}>SAREC 角色：</span>
-                  项目合作 · 投资人沟通
+                  <span className={styles.roleLabel}>性质：</span>
+                  创始人参与项目，不属于商会项目
                 </p>
                 <p className={styles.descriptionText}>
                   与本地有 15 年美国经验的合作开发商共同推进。
