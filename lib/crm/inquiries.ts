@@ -60,7 +60,12 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
       contactId: input.contactId ?? null,
       name,
       contactText: [phone, email, wechat ? `微信 ${wechat}` : null].filter(Boolean).join(' / '),
-      need: [clip(input.intent, 60), message].filter(Boolean).join('：').slice(0, 2000) || null,
+      // AI 线索：来源已经在“来源”栏里，消息本身以“需求：”开头，不再拼“AI 助手线索：需求：”（邮件标题和正文会重复）
+      need:
+        (input.source === 'agent'
+          ? (message ?? '').replace(/^\s*需求：/, '').trim()
+          : [clip(input.intent, 60), message].filter(Boolean).join('：')
+        ).slice(0, 2000) || null,
       draft: input.draft ?? (name ? `${name}您好，我是 SAREC 中美房地产商会的工作人员，收到您在${input.source === 'mp' ? '小程序' : '网站'}上的咨询，想跟您确认一下具体需求，方便的时候我们通个电话？` : null),
       draftBy: input.draft ? 'ai' : 'template',
       inquiryId,
