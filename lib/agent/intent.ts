@@ -106,7 +106,9 @@ export function extractLeadSlots(text: string, pending: LeadStep | null, current
   if (phone) out.phone = phone;
   if (wechat) out.wechat = wechat;
   if (name) out.name = name;
-  const region = t.match(REGION_RE)?.[1];
+  // 说了多个地名（“洛杉矶橙县”）都记下，按出现顺序去重
+  const regionAll = Array.from(new Set(Array.from(t.matchAll(new RegExp(REGION_RE.source, 'gi'))).map((m) => m[1])));
+  const region = regionAll.length ? regionAll.join(' ') : undefined;
   if (region && !current.region) out.region = region;
   const tm = t.match(TIME_RE);
   const time = tm?.[1];
