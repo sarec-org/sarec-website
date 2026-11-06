@@ -192,7 +192,7 @@ const heroAnchors = researchMapKeywords.slice(0, 3).map((k, i) => ({
 }));
 
 const projectEvidenceCases = [
-  { name: '4136 Rosewood', tag: 'ED1 / Development', body: caseLensCases[0].body, href: '/zh/case-studies/' },
+  { name: '4136 Rosewood', tag: 'ED1 / Development · 创始人参与项目', body: caseLensCases[0].body, href: '/zh/case-studies/' },
   { name: '3434 Chesapeake', tag: 'RTI / Entitlement', body: caseLensCases[1].body, href: '/zh/case-studies/' },
   { name: '2215 Wellesley', tag: 'Utilities / Coordination', body: caseLensCases[2].body, href: '/zh/case-studies/' }
 ];
