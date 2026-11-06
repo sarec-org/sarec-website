@@ -44,7 +44,8 @@ export function noMoney(text: string | null | undefined): string | null {
 export function noMoneySummaries<T>(v: T): T {
   const walk = (x: unknown): unknown => {
     if (Array.isArray(x)) return x.map(walk);
-    if (x && typeof x === 'object') {
+    // 只处理普通对象；Date（pg 返回的时间）、Buffer 等原样返回，否则会被重建成 {}
+    if (x && typeof x === 'object' && Object.getPrototypeOf(x) === Object.prototype) {
       const o: Record<string, unknown> = {};
       for (const [k, val] of Object.entries(x as Record<string, unknown>)) {
         o[k] = k === 'summary' && (typeof val === 'string' || val === null) ? noMoney(val as string | null) : walk(val);
