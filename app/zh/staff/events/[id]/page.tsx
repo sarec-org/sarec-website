@@ -8,7 +8,7 @@ import { EventForm } from '../EventForm';
 import { checkinA4, registerPoster, saveBlob, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
-type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; added_by_name?: string | null; is_placeholder?: boolean };
+type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; pay_link?: string | null; added_by_name?: string | null; is_placeholder?: boolean };
 
 export default function StaffEventDetail({ params }: { params: { id: string } }) {
   const [data, setData] = useState<{ event: Ev; registrations: Reg[] } | null>(null);
@@ -240,7 +240,13 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                       <td className={styles.small}>{r.phone_e164 ?? r.email}</td>
                       <td>{({ registered: '已报名', waitlisted: '候补', cancelled: '已取消' } as Record<string, string>)[r.status]}{r.source === 'companion' ? `（由 ${r.added_by_name ?? '朋友'} 代报名${r.is_placeholder ? '，本人还没登录过' : ''}）` : r.source !== 'online' ? `（${r.source === 'onsite' ? '现场' : '工作人员'}）` : ''}</td>
                       <td>{({ none: '—', checked_in: '已签到', arrived_pending_payment: '到场待核款' } as Record<string, string>)[r.arrival_status]}</td>
-                      <td>{r.order_status ? (r.order_status === 'paid' ? (r.paid_when === 'onsite' ? '现场付' : '已付') : ({ pending_payment: '未付', payment_submitted: '已提交，待核款' } as Record<string, string>)[r.order_status] ?? r.order_status) : '—'}</td>
+                      <td>{r.order_status ? (r.order_status === 'paid' ? (r.paid_when === 'onsite' ? '现场付' : '已付') : ({ pending_payment: '未付', payment_submitted: '已提交，待核款' } as Record<string, string>)[r.order_status] ?? r.order_status) : '—'}
+                        {r.pay_link && (
+                          <button className={`${styles.btn} ${styles.btnQuiet}`} style={{ marginLeft: 6, padding: '2px 8px' }} onClick={async () => setMsg({ ok: await copyText(r.pay_link!), text: `${r.name} 的付款链接已复制，可以直接发给本人` })}>
+                            复制付款链接
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

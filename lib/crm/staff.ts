@@ -14,6 +14,7 @@ import { cancelOrder, getSetting, markOrderPaid, newOrderNo, setSetting, PURPOSE
 import { loadProfile, type Db } from './profile';
 import { QUESTION_BY_CODE, TOPIC_LABELS, findRoleSub } from './questionBank';
 import { laToday } from '@/lib/laDate';
+import { payLink } from './payLinks';
 
 export const actor = (s: Staff) => `staff:${s.name}`;
 
@@ -125,6 +126,7 @@ export async function getStaffEvent(id: string) {
             c.email, c.phone_e164, c.is_placeholder,
             (SELECT ab.name FROM contacts ab WHERE ab.id = r.added_by) AS added_by_name,
             (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status,
+            (SELECT o.order_no FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_no,
             -- 1.3 M：现场付 = 活动当天（洛杉矶时间）才确认到账的
             (SELECT CASE WHEN o.status <> 'paid' THEN NULL
                          WHEN (o.paid_at AT TIME ZONE 'America/Los_Angeles')::date = ((SELECT starts_at FROM events WHERE id = r.event_id) AT TIME ZONE 'America/Los_Angeles')::date THEN 'onsite'
@@ -133,7 +135,17 @@ export async function getStaffEvent(id: string) {
        FROM registrations r JOIN contacts c ON c.id = r.contact_id WHERE r.event_id = $1 ORDER BY r.created_at`,
     [id]
   );
-  return { event: rows[0], registrations: regs };
+  // 1.3 M：没付的给工作人员一条本人的付款链接（可复制发给本人）
+  const withLink = regs.map((r) => ({ ...r, pay_link: r.order_no && r.order_status !== 'paid' ? safeLink(r.order_no) : null }));
+  return { event: rows[0], registrations: withLink };
+}
+
+function safeLink(orderNo: string): string | null {
+  try {
+    return payLink(orderNo);
+  } catch {
+    return null;
+  }
 }
 
 export async function createEvent(s: Staff, b: EventInput) {
@@ -314,7 +326,8 @@ export async function listOrders(f: { status?: string | null; purpose?: string |
   return rows.map((o) => ({
     ...o,
     purpose_label: PURPOSE_LABEL[o.purpose as keyof typeof PURPOSE_LABEL],
-    status_label: STATUS_LABEL[o.status as keyof typeof STATUS_LABEL]
+    status_label: STATUS_LABEL[o.status as keyof typeof STATUS_LABEL],
+    pay_link: o.status === 'pending_payment' || o.status === 'payment_submitted' ? safeLink(o.order_no) : null
   }));
 }
 

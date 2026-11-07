@@ -89,10 +89,13 @@ export async function sendPayLinkOnce(regId: string) {
   if (!rows[0]) return { sent: false, reason: 'already' };
   const r = await rowFor(regId);
   if (!r) return { sent: false, reason: 'no_unpaid_order' };
-  const d = await deliver(r, 'link');
+  const d = await deliver(r, 'link').catch(() => ({ email: false, sms: false }));
   if (!d.email && !d.sms) {
+    // 没送到：清掉“已发”标记（以后可以重发），异常里写清楚原因；工作人员在活动详情页可以复制付款链接发给本人
+    await pool.query(`UPDATE registrations SET pay_link_sent_at = NULL WHERE id = $1`, [regId]);
+    const why = !r.email && !r.phone ? '本人没有留邮箱和手机' : r.email ? '付款链接邮件发送失败' : '本人只留了手机，短信没有发出（未配置短信发送号码或发送失败）';
     const { recordException } = await import('./followups');
-    await recordException('pay_link', `pay_link:${regId}`, regId, '没有邮箱 / 短信发不出，付款链接没有送到本人，请工作人员联系').catch(() => undefined);
+    await recordException('pay_link', `pay_link:${regId}`, regId, `${why}，付款链接没有送到本人。请在后台活动详情页点“复制付款链接”发给本人`).catch(() => undefined);
   }
   return { sent: d.email || d.sms, ...d };
 }

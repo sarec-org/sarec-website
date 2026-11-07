@@ -15,6 +15,9 @@ export const POST = handler(async (req: Request, { params }: { params: { eventId
   const s = await requireStaffAny(req, ['ops', 'checkin']);
   const b = await body<Record<string, unknown>>(req);
   const id = Number(b.itemId);
+  // 现场签到账号只能打勾、写备注、传照片；改字、加删、分配、复盘只给运营（测试 P2）
+  const isOps = s.roles.includes('ops') || s.roles.includes('admin');
+  if (!isOps && !['toggle', 'note', 'photo'].includes(String(b.action))) throw new CrmError('forbidden', '这一步需要运营权限');
   switch (b.action) {
     case 'toggle': return ok(await updatePrepItem(params.eventId, id, s.name, { done: b.done === true }));
     case 'note': return ok(await updatePrepItem(params.eventId, id, s.name, { note: String(b.note ?? '') }));

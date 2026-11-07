@@ -2,10 +2,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
-import { api, fmtDateTime, money } from '@/components/crm/client';
+import { api, copyText, fmtDateTime, money } from '@/components/crm/client';
 
 type O = {
-  order_no: string; purpose_label: string; description: string | null; amount_cents: number; points_redeemed: number; status: string; status_label: string;
+  order_no: string; purpose_label: string; description: string | null; amount_cents: number; points_redeemed: number; status: string; status_label: string; pay_link?: string | null;
   provider: string; payer_name: string | null; payer_note: string | null; submitted_at: string | null; created_at: string; paid_at: string | null;
   verified_by: string | null; reject_reason: string | null; contact_id: string; name: string; email: string | null; phone_e164: string | null;
 };
@@ -78,6 +78,11 @@ export default function StaffPayments() {
                 {o.paid_at ? ` · 到账 ${fmtDateTime(o.paid_at)}（${o.verified_by ?? o.provider}）` : ''}
                 {o.reject_reason ? ` · 原因：${o.reject_reason}` : ''}
               </p>
+              {o.pay_link && (
+                <button className={`${styles.btn} ${styles.btnQuiet}`} style={{ marginTop: 6 }} onClick={async () => setMsg({ ok: await copyText(o.pay_link!), text: '付款链接已复制，可以直接发给本人' })}>
+                  复制本人付款链接
+                </button>
+              )}
               {(o.status === 'payment_submitted' || o.status === 'pending_payment') && (
                 <div style={{ marginTop: '0.75rem' }}>
                   <input className={styles.input} placeholder="银行流水号（选填）" value={ref[o.order_no] ?? ''} onChange={(e) => setRef({ ...ref, [o.order_no]: e.target.value })} style={{ marginBottom: '0.5rem' }} />
