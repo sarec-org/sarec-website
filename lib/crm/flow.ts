@@ -268,6 +268,10 @@ export async function register(slug: string, contactId: string, input: RegisterI
       channelCode: input.channel ?? null,
       source: input.channel === 'onsite' ? 'onsite' : 'online'
     });
+    // 1.3：首次来源（渠道 / 功能）只写一次；本次（最后一次）来源在报名记录的 channel_code 上
+    if (input.channel && input.channel !== 'onsite') {
+      await db.query(`UPDATE contacts SET first_channel = $2 WHERE id = $1 AND first_channel IS NULL`, [contactId, String(input.channel).slice(0, 40)]);
+    }
     // 首次推荐人：第一次报名时记下，之后不再改（本次活动来源另存在报名记录里）
     if (refContactId && !out.alreadyRegistered) {
       await db.query(

@@ -7,6 +7,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { recordException, scanFollowups } from '@/lib/crm/followups';
 import { runAgentDigest } from '@/lib/agent/digest';
 import { laToday } from '@/lib/laDate';
+import { runFeatureReport } from '@/lib/crm/features';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,6 +39,13 @@ async function run(req: Request) {
   } catch (e) {
     await recordException('agent_digest', `agent_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.agentDigest = 'error';
+  }
+  // 1.3 L：每月 1 号的功能月报（只查数据库，不调 AI；同月只发一次）
+  try {
+    out.featureReport = await runFeatureReport(new Date());
+  } catch (e) {
+    await recordException('feature_report', `feature_report:${laToday().slice(0, 7)}`, null, e instanceof Error ? e.message : 'error');
+    out.featureReport = 'error';
   }
   return NextResponse.json({ ok: true, ...out });
 }

@@ -66,6 +66,11 @@ async function miniProgramCode(r: CodeReq): Promise<Buffer> {
   return buf;
 }
 
+/** 1.3：任意页面 + 参数的小程序码（wxacode.get，带完整 path；渠道码等用） */
+export function miniProgramPathCode(path: string, tag: string): Promise<Buffer> {
+  return miniProgramCode({ page: path.split('?')[0], path, tag });
+}
+
 /** 活动报名小程序码（正式版），扫码进 pages/event/event（scene = slug） */
 export function eventRegisterCode(slug: string): Promise<Buffer> {
   return miniProgramCode(

@@ -13,6 +13,7 @@ import { getSetting } from './orders';
 import { memberStatus } from './membership';
 import type { Db } from './profile';
 import { unseenAlbums } from './photos';
+import { CHANNEL_RE } from './channels';
 
 // ── 点击统计 ───────────────────────────────────────────────────────────
 
@@ -38,12 +39,16 @@ export async function track(client: 'mp' | 'web' | 'agent' | 'server', contactId
     const refId = await refToContact(pool, it.ref, contactId);
     // 带来源的访问：同一人 / 同一访客对同一目标、同一推荐人，一天只记一次
     if (it.name === 'visit') {
-      if (!refId) continue;
+      // 1.3：渠道码（c-xxxx）没有推荐人，也算带来源的访问
+      const ch = clip(it.channel, 40);
+      const chanOk = !!ch && CHANNEL_RE.test(ch);
+      if (!refId && !chanOk) continue;
       const { rows } = await pool.query(
-        `SELECT 1 FROM track_events WHERE name = 'visit' AND ref_contact_id = $1 AND coalesce(target,'') = coalesce($2,'')
+        `SELECT 1 FROM track_events WHERE name = 'visit' AND coalesce(ref_contact_id::text,'') = coalesce($1::text,'')
+            AND coalesce(channel,'') = coalesce($5,'') AND coalesce(target,'') = coalesce($2,'')
             AND (($3::uuid IS NOT NULL AND contact_id = $3) OR ($3::uuid IS NULL AND $4::text IS NOT NULL AND visitor = $4))
             AND created_at > now() - interval '1 day' LIMIT 1`,
-        [refId, clip(it.target, 120), contactId, visitor]
+        [refId, clip(it.target, 120), contactId, visitor, chanOk ? ch : null]
       );
       if (rows[0]) continue;
     }
