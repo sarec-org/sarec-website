@@ -212,6 +212,11 @@ export async function registerPoster(e: MaterialEvent, codeSrc: string): Promise
 }
 
 /** A4 打印版签到码（300dpi）：优先放签到小程序码（codeSrc，微信扫一扫直接进小程序）；没有时用签到链接画普通二维码 */
+/**
+ * 1.3 门口 A4 签到码（零指导）：码要大；旁边三步“① 打开微信 ② 点右上角 ＋ 扫一扫 ③ 对准这个码”，配一张示意图；
+ * 底部一句话告诉对方扫完会怎样（已报名直接签到；没报名填姓名、手机两项）。
+ * src.url 只在工作人员明确选择“网页版签到码”时使用（小程序码生成不了的应急情况）。
+ */
 export async function checkinA4(e: MaterialEvent, src: { codeSrc?: string; url?: string }): Promise<Blob> {
   await document.fonts?.ready;
   const W = 2480, H = 3508;
@@ -220,38 +225,36 @@ export async function checkinA4(e: MaterialEvent, src: { codeSrc?: string; url?:
   g.fillStyle = '#fff';
   g.fillRect(0, 0, W, H);
 
-  const bandH = 62 * mm;
-  const band = g.createLinearGradient(0, 0, 0, bandH);
-  band.addColorStop(0, C.navy);
-  band.addColorStop(1, C.ink);
-  g.fillStyle = band;
+  // 顶部：活动名 + 时间（窄条，留出最大空间给码）
+  const bandH = 44 * mm;
+  g.fillStyle = C.navy;
   g.fillRect(0, 0, W, bandH);
-  const gl = g.createLinearGradient(0, 0, W, 0);
-  gl.addColorStop(0, C.goldMuted);
-  gl.addColorStop(0.5, C.goldMid);
-  gl.addColorStop(1, C.goldMuted);
-  g.fillStyle = gl;
-  g.fillRect(0, bandH, W, 2.2 * mm);
-
+  g.fillStyle = C.gold;
+  g.fillRect(0, bandH, W, 1.6 * mm);
   g.textAlign = 'center';
-  g.fillStyle = C.goldSoft;
-  g.font = `400 ${5 * mm}px ${FONT}`;
-  spaced(g, '中美房地产商会 · SAREC', W / 2, 21 * mm, 2.4 * mm);
-
-  const head = `${e.title} · 现场签到`;
-  let size = 19 * mm;
+  const when = eventWhen(e);
+  const head = e.title;
+  let size = 15 * mm;
   g.font = `700 ${size}px ${FONT}`;
-  while (g.measureText(head).width > W - 24 * mm && size > 9 * mm) {
+  while (g.measureText(head).width > W - 24 * mm && size > 8 * mm) {
     size -= mm / 2;
     g.font = `700 ${size}px ${FONT}`;
   }
   g.fillStyle = C.goldPale;
-  g.fillText(head, W / 2, 48 * mm);
+  g.fillText(head, W / 2, 22 * mm);
+  g.fillStyle = C.goldSoft;
+  g.font = `400 ${6 * mm}px ${FONT}`;
+  g.fillText(`${when.date} ${when.time} · 中美房地产商会`, W / 2, 35 * mm);
 
-  // 二维码 + 金框
-  const box = 140 * mm, bx = (W - box) / 2, by = bandH + 2.2 * mm + 20 * mm;
+  // 大标题
+  g.fillStyle = C.navy;
+  g.font = `800 ${21 * mm}px ${FONT}`;
+  g.fillText('扫码签到', W / 2, bandH + 30 * mm);
+
+  // 大码（约 150mm）
+  const box = 152 * mm, bx = (W - box) / 2, by = bandH + 40 * mm;
   g.strokeStyle = C.gold;
-  g.lineWidth = 1.2 * mm;
+  g.lineWidth = 1.6 * mm;
   roundRect(g, bx, by, box, box, 6 * mm);
   g.stroke();
   const qrSize = Math.round(box - 12 * mm);
@@ -260,27 +263,103 @@ export async function checkinA4(e: MaterialEvent, src: { codeSrc?: string; url?:
     : await QRCode.toDataURL(src.url || '', { width: qrSize, margin: 0, errorCorrectionLevel: 'M', color: { dark: C.ink, light: '#FFFFFF' } });
   g.drawImage(await loadImg(img), bx + 6 * mm, by + 6 * mm, qrSize, qrSize);
 
-  // 小程序里的“扫码”按钮旧版本认不出签到码，现场统一引导用微信【扫一扫】
-  const cta = '请用微信【扫一扫】扫码签到';
-  const n = Array.from(cta).length;
-  let cs = 15 * mm;
-  g.font = `700 ${cs}px ${FONT}`;
-  while (g.measureText(cta).width + (n - 1) * 0.08 * cs > W - 24 * mm && cs > 8 * mm) {
-    cs -= mm / 2;
-    g.font = `700 ${cs}px ${FONT}`;
-  }
-  g.fillStyle = C.navy;
-  spaced(g, cta, W / 2, by + box + 26 * mm, 0.08 * cs);
+  // 三步 + 示意图
+  const top = by + box + 14 * mm;
+  const illoW = 52 * mm, illoH = 82 * mm, illoX = 18 * mm;
+  drawScanIllustration(g, illoX, top, illoW, illoH, mm);
+  const tx = illoX + illoW + 12 * mm;
+  g.textAlign = 'left';
+  const steps: [string, string][] = [
+    ['①', '打开微信'],
+    ['②', '点右上角 ＋，再点「扫一扫」'],
+    ['③', '对准上面这个码']
+  ];
+  steps.forEach(([n, t], i) => {
+    const y = top + 14 * mm + i * 25 * mm;
+    g.fillStyle = C.gold;
+    g.font = `800 ${13 * mm}px ${FONT}`;
+    g.fillText(n, tx, y);
+    g.fillStyle = C.navy;
+    let fs = 11 * mm;
+    g.font = `700 ${fs}px ${FONT}`;
+    while (g.measureText(t).width > W - tx - 30 * mm && fs > 7 * mm) {
+      fs -= mm / 2;
+      g.font = `700 ${fs}px ${FONT}`;
+    }
+    g.fillText(t, tx + 16 * mm, y);
+  });
 
-  const when = eventWhen(e);
-  g.fillStyle = C.carbon;
-  g.font = `400 ${5.2 * mm}px ${FONT}`;
-  g.fillText(`${when.date} ${when.time} · 未报名可现场扫码报名并签到`, W / 2, by + box + 40 * mm);
+  // 扫完会怎样
+  g.textAlign = 'center';
+  const noteY = top + illoH + 14 * mm;
+  g.fillStyle = '#EAF6EE';
+  roundRect(g, 14 * mm, noteY - 11 * mm, W - 28 * mm, 30 * mm, 4 * mm);
+  g.fill();
+  g.fillStyle = '#1F6B3A';
+  g.font = `700 ${8.2 * mm}px ${FONT}`;
+  g.fillText('已报名：扫完自动签到，不用再点', W / 2, noteY);
+  g.font = `400 ${7 * mm}px ${FONT}`;
+  g.fillText('没报名：填姓名、手机两项，马上签到', W / 2, noteY + 12 * mm);
 
   g.fillStyle = C.goldMuted;
-  g.font = `400 ${4 * mm}px ${FONT}`;
-  spaced(g, 'SINO-AMERICAN REAL ESTATE CHAMBER', W / 2, H - 12 * mm, 1.2 * mm);
+  g.font = `400 ${5 * mm}px ${FONT}`;
+  g.fillText(src.codeSrc ? '扫不了？请找门口工作人员' : '网页版签到码 · 扫不了请找门口工作人员', W / 2, H - 12 * mm);
   return toBlob(c);
+}
+
+/** 示意图：一只手机，右上角“＋”菜单里的「扫一扫」，屏幕上对准一个码 */
+function drawScanIllustration(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, mm: number) {
+  g.save();
+  // 机身
+  g.fillStyle = C.navy;
+  roundRect(g, x, y, w, h, 7 * mm);
+  g.fill();
+  g.fillStyle = '#FFFFFF';
+  roundRect(g, x + 3 * mm, y + 7 * mm, w - 6 * mm, h - 14 * mm, 3 * mm);
+  g.fill();
+  // 顶栏：右上角的 ＋
+  const sx = x + 3 * mm, sy = y + 7 * mm, sw = w - 6 * mm;
+  g.fillStyle = '#EDEDED';
+  g.fillRect(sx, sy, sw, 10 * mm);
+  g.strokeStyle = C.navy;
+  g.lineWidth = 1.1 * mm;
+  const px = sx + sw - 6 * mm, py = sy + 5 * mm;
+  g.beginPath();
+  g.arc(px, py, 3.4 * mm, 0, Math.PI * 2);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(px - 2 * mm, py); g.lineTo(px + 2 * mm, py);
+  g.moveTo(px, py - 2 * mm); g.lineTo(px, py + 2 * mm);
+  g.stroke();
+  // 下拉菜单：「扫一扫」
+  const mx = sx + sw - 30 * mm, my = sy + 11 * mm;
+  g.fillStyle = '#4C4C4C';
+  roundRect(g, mx, my, 28 * mm, 11 * mm, 1.5 * mm);
+  g.fill();
+  g.fillStyle = '#FFFFFF';
+  g.font = `600 ${4.6 * mm}px ${FONT}`;
+  g.textAlign = 'center';
+  g.fillText('扫一扫', mx + 14 * mm, my + 7.6 * mm);
+  // 屏幕中间：取景框 + 小码
+  const fx = sx + sw / 2 - 15 * mm, fy = sy + 30 * mm, fs = 30 * mm;
+  g.strokeStyle = '#19B35A';
+  g.lineWidth = 1.2 * mm;
+  const k = 7 * mm;
+  [[fx, fy, 1, 1], [fx + fs, fy, -1, 1], [fx, fy + fs, 1, -1], [fx + fs, fy + fs, -1, -1]].forEach(([cx, cy, dx, dy]) => {
+    g.beginPath();
+    g.moveTo(cx, cy + dy * k); g.lineTo(cx, cy); g.lineTo(cx + dx * k, cy);
+    g.stroke();
+  });
+  g.fillStyle = C.navy;
+  const cell = 3 * mm;
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) if ((i * 7 + j * 3 + i * j) % 3 !== 0) g.fillRect(fx + 6 * mm + i * cell, fy + 6 * mm + j * cell, cell * 0.9, cell * 0.9);
+  // 扫描线
+  g.strokeStyle = 'rgba(25,179,90,0.8)';
+  g.lineWidth = 0.8 * mm;
+  g.beginPath();
+  g.moveTo(fx + 2 * mm, fy + fs / 2); g.lineTo(fx + fs - 2 * mm, fy + fs / 2);
+  g.stroke();
+  g.restore();
 }
 
 export function saveBlob(blob: Blob, name: string) {

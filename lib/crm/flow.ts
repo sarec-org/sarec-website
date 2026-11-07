@@ -229,6 +229,8 @@ export type RegisterInput = {
   email?: string;
   /** 1.2：一步报名。老用户不再答必答题（改为事后渐进补）；新用户只要姓名、手机、行业（邮箱选填）。 */
   oneStep?: boolean;
+  /** 1.3 门口签到：没报名的人只填姓名、手机两项，行业以后再补（不在门口问） */
+  allowNoRole?: boolean;
 };
 
 export async function register(slug: string, contactId: string, input: RegisterInput, opts: { base?: string } = {}) {
@@ -274,7 +276,7 @@ export async function register(slug: string, contactId: string, input: RegisterI
       const name = (input.name ?? '').trim();
       const role = findRoleSub(input.roleSub);
       if (!name) throw new CrmError('answers_required', '请填写怎么称呼您');
-      if (!role) throw new CrmError('answers_required', '请选择您的主要行业');
+      if (!role && !input.allowNoRole) throw new CrmError('answers_required', '请选择您的主要行业');
       const { rows: c } = await db.query<{ email: string | null; phone_e164: string | null }>(`SELECT email, phone_e164 FROM contacts WHERE id = $1`, [contactId]);
       const ph = c[0]?.phone_e164 ?? given?.phone ?? null;
       const contact = ph ? { phone: ph } : { email: c[0]?.email ?? given?.email ?? '' };
@@ -282,9 +284,9 @@ export async function register(slug: string, contactId: string, input: RegisterI
       const r = await submitAnswers(db, contactId, out.task, [
         { code: 'Q01', value: { text: name.slice(0, 100) } },
         { code: 'Q02', value: contact },
-        { code: 'Q03', value: { category: role.category, sub: role.key } }
+        ...(role ? [{ code: 'Q03', value: { category: role.category, sub: role.key } }] : [])
       ]);
-      if (role.key === 'other' && input.roleOther?.trim()) {
+      if (role && role.key === 'other' && input.roleOther?.trim()) {
         await db.query(`UPDATE profile_answers SET note = $3 WHERE contact_id = $1 AND item_code = 'Q03' AND status = 'current' AND task_id = $2`, [
           contactId,
           out.task.id,
