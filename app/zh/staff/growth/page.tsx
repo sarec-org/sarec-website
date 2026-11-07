@@ -13,7 +13,7 @@ type Stat = { name: string; target: string | null; client: string; n: number; pe
 type Ref = { id: string; member_no: number; name: string; visits: number; registered: number; arrived: number; first_referred: number; joined: number; inquiries: number };
 type Committee = { key: string; name: string; status: 'active' | 'preparing' };
 type Vis = { slug: string; title: string; defaultMp: string; mp: string; site: string };
-type Data = { track: { byName: Stat[] }; referrals: Ref[]; committees: { committee: string; n: number; names: string[] }[]; settings: Record<string, unknown> };
+type Data = { track: { byName: Stat[] }; referrals: Ref[]; committees: { committee: string; n: number; names: string[] }[]; settings: Record<string, unknown>; wecom?: { configured: boolean; callback: boolean; working: boolean; byPlacement: { placement: string | null; label: string; adds: number; matched: number }[] } };
 
 const NAME: Record<string, string> = {
   home_entry: '首页入口', share: '分享', share_timeline: '分享到朋友圈', poster: '生成海报', poster_save: '保存海报', card_open: '名片打开', card_share: '名片分享',
@@ -34,6 +34,9 @@ function Growth() {
   const [phoneQuick, setPhoneQuick] = useState(false);
   const [prompts, setPrompts] = useState<Record<string, boolean>>({ enabled: true, afterRegister: true, afterPhoto: true, nextEvent: true });
   const [comms, setComms] = useState<Committee[]>([]);
+  const [wecomUsers, setWecomUsers] = useState('');
+  const [recapDays, setRecapDays] = useState('7');
+  const [inviteText, setInviteText] = useState<Record<string, string>>({ title: '', intro: '' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -47,6 +50,9 @@ function Growth() {
       setPhoneQuick(r.data.settings.phone_quick === true);
       if (r.data.settings.invite_prompts) setPrompts(r.data.settings.invite_prompts as Record<string, boolean>);
       setComms((r.data.settings.committees as Committee[]) ?? []);
+      setWecomUsers(String(r.data.settings.wecom_userids ?? ''));
+      setRecapDays(String(r.data.settings.home_recap_days ?? 7));
+      setInviteText({ title: '', intro: '', ...((r.data.settings.invite_card_text as Record<string, string>) ?? {}) });
     } else setMsg({ ok: false, text: r.message });
     const v = await api<{ items: Vis[]; raw: Record<string, { mp?: string; site?: string }> }>('/api/v1/staff/content-visibility');
     if (v.ok) { setVis(v.data.items); setRaw(v.data.raw ?? {}); }
@@ -111,6 +117,43 @@ function Growth() {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {qr ? <img src={qr} alt="商会微信二维码" style={{ width: 160, height: 160, objectFit: 'contain', background: '#fff' }} /> : <p className={styles.notice}>还没有上传。没上传时，小程序只显示“联系商会”和电话。</p>}
         <div><input type="file" accept="image/*" aria-label="上传商会微信二维码" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadQr(f); e.target.value = ''; }} /></div>
+      </div>
+
+      <h2 className={styles.h2}>企业微信“联系我”码</h2>
+      <div className={styles.card}>
+        <p className={styles.small}>
+          配好后，小程序和网站里所有“加商会微信”的码自动换成企业微信码：报名成功页、签到成功页、相册、会议室、联系商会、首页各用一个，登录的人每人一个，加好友后自动关联到会员档案。
+          企业微信不可用（认证没过、权限不够、调用失败）或下面关掉时，自动显示上面上传的个人微信二维码。
+        </p>
+        <p className={styles.small}>
+          状态：{d?.wecom?.configured ? (d.wecom.working ? '✓ 企业微信接口可用' : '已填密钥，但接口暂时调不通（显示个人微信二维码）') : '还没配置企业微信密钥（显示个人微信二维码）'}
+          {d?.wecom?.configured ? (d.wecom.callback ? ' · 加好友回调已配置' : ' · 加好友回调还没配置（加了好友也关联不到会员档案）') : ''}
+        </p>
+        <label className={styles.label}>接待的企业微信成员账号（userid，多个用逗号分开）</label>
+        <div className={styles.inputRow}>
+          <input className={styles.input} value={wecomUsers} onChange={(e) => setWecomUsers(e.target.value)} placeholder="例如 DongGe" aria-label="企业微信成员账号" />
+          <button className={styles.btn} onClick={() => save('wecom_userids', wecomUsers.trim())}>保存</button>
+          <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => save('wecom_enabled', d?.settings.wecom_enabled === false)}>{d?.settings.wecom_enabled === false ? '打开企业微信码' : '先关掉，用个人微信码'}</button>
+        </div>
+        {!!d?.wecom?.byPlacement.length && (
+          <table className={styles.table}>
+            <thead><tr><th>入口</th><th>加好友</th><th>已关联会员档案</th></tr></thead>
+            <tbody>{d.wecom.byPlacement.map((r) => <tr key={String(r.placement)}><td>{r.label}</td><td>{r.adds}</td><td>{r.matched}</td></tr>)}</tbody>
+          </table>
+        )}
+      </div>
+
+      <h2 className={styles.h2}>首页与邀请</h2>
+      <div className={styles.card}>
+        <label className={styles.label}>活动结束后，首页显示“上一场回顾”多少天（之后显示品牌大图）</label>
+        <div className={styles.inputRow}>
+          <input className={styles.input} type="number" min={0} max={60} value={recapDays} onChange={(e) => setRecapDays(e.target.value)} style={{ maxWidth: 100 }} aria-label="回顾天数" />
+          <button className={styles.btn} onClick={() => save('home_recap_days', Math.round(Number(recapDays) || 0))}>保存</button>
+        </div>
+        <label className={styles.label}>“认识商会”邀请卡文案（小程序里显示，不能写金额）</label>
+        <input className={styles.input} value={inviteText.title} onChange={(e) => setInviteText({ ...inviteText, title: e.target.value })} placeholder="标题，默认：邀请你认识中美房地产商会" aria-label="邀请卡标题" />
+        <textarea className={styles.input} style={{ minHeight: 80, marginTop: 6 }} value={inviteText.intro} onChange={(e) => setInviteText({ ...inviteText, intro: e.target.value })} placeholder="一段介绍，默认用商会简介" aria-label="邀请卡介绍" />
+        <button className={styles.btn} style={{ marginTop: 6 }} onClick={() => save('invite_card_text', inviteText)}>保存</button>
       </div>
 
       <h2 className={styles.h2}>视频号</h2>

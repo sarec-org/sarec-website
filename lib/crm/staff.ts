@@ -638,7 +638,7 @@ export async function getSettings() {
   );
   const { rows: rooms } = await pool.query(`SELECT id, name, hourly_cents, is_active FROM rooms ORDER BY id`);
   const { rows: offers } = await pool.query(`SELECT *, valid_until::text AS valid_until FROM merchant_offers ORDER BY sort_order, merchant`);
-  const { rows: staff } = await pool.query(`SELECT email, name, roles, is_active, updated_at FROM staff_roles ORDER BY name`);
+  const { rows: staff } = await pool.query(`SELECT email, name, roles, is_active, updated_at, (mp_contact_id IS NOT NULL) AS mp_bound, mp_bound_at FROM staff_roles ORDER BY name`).catch(() => pool.query(`SELECT email, name, roles, is_active, updated_at FROM staff_roles ORDER BY name`));
   return { settings: rows, rooms, offers, staff };
 }
 

@@ -133,7 +133,19 @@ export async function listEvents(includePast = false) {
       ORDER BY e.starts_at ${includePast ? 'DESC' : 'ASC'} LIMIT 100`,
     [includePast]
   );
-  return rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number }));
+  const out = rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number }));
+  if (!includePast || !rows.length) return out;
+  // 1.3 P-4：往期每场一张卡——到场人数、照片数
+  const ids = rows.map((e) => e.id as string);
+  const { rows: st } = await getPool().query<{ event_id: string; attended: number; photos: number }>(
+    `SELECT e.id AS event_id,
+            (SELECT count(*)::int FROM registrations r WHERE r.event_id = e.id AND r.arrival_status = 'checked_in') AS attended,
+            (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL) AS photos
+       FROM events e WHERE e.id = ANY($1::uuid[])`,
+    [ids]
+  );
+  const by = new Map(st.map((x) => [x.event_id, x]));
+  return out.map((e, i) => ({ ...e, attended: by.get(ids[i])?.attended ?? 0, photoCount: by.get(ids[i])?.photos ?? 0 }));
 }
 
 export async function requireEvent(db: Db, slug: string): Promise<EventRow> {

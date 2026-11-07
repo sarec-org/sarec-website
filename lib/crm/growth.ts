@@ -240,13 +240,23 @@ export async function homeData(contactId: string | null, opts: { base: string; w
     albums = await unseenAlbums(contactId);
   }
 
+  // 1.3 P-4：首页最上面的大卡片——有未结束的活动 → 最近一场；没有、上一场结束不到 N 天 → 上一场回顾；都没有 → 品牌大图
+  const recapDays = Number(await getSetting<number>(pool, 'home_recap_days', 7));
+  const lastEnd = past[0] ? (past[0].ends_at ?? new Date(new Date(past[0].starts_at).getTime() + 3 * 3600_000)) : null;
+  const st0 = status as { phase?: string; event?: unknown };
+  const homeCard = upcoming.length || (st0.phase && st0.phase !== 'none' && st0.phase !== 'ended')
+    ? { kind: 'event' as const }
+    : lastEvent && lastEnd && Date.now() - new Date(lastEnd).getTime() <= recapDays * 86400_000
+      ? { kind: 'recap' as const, summary: String(lastEvent.recap ?? '').split(/\n+/).map((x) => x.trim()).filter(Boolean)[0]?.slice(0, 80) ?? null }
+      : { kind: 'brand' as const };
   return {
     me,
     status,
+    homeCard,
     upcoming: upcoming.map(evCard),
     lastEvent,
     albums,
-    wechatQr: (await getSetting<string>(pool, 'wechat_qr_url', '')) || null,
+    wechatQr: (await (await import('@/lib/wecom')).wechatQrFor('home', contactId))?.url ?? null,
     channelsId: (await getSetting<string>(pool, 'channels_finder_id', '')) || null
   };
 }

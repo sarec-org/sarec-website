@@ -16,7 +16,8 @@ import { memberStatus } from './membership';
 import { getContactInfo } from './contactInfo';
 import { findRoleSub } from './questionBank';
 import { BLOB_PREFIX, blobConfigured } from './photos';
-import { cardCode, inviteCode, wxConfigured } from './wechat';
+import { getSetting } from './orders';
+import { cardCode, chamberInviteCode, inviteCode, wxConfigured } from './wechat';
 import { msgSecCheck } from './contentSec';
 import type { Db } from './profile';
 
@@ -206,6 +207,35 @@ function testCode(text: string): Promise<Buffer> {
 export async function inviteCodePng(slug: string, memberNo: number): Promise<Buffer> {
   if (!wxConfigured()) return testCode(`pages/event/event?slug=${slug}&ref=${memberNo}&channel=poster`);
   return cached(`invite:${ENV_VERSION}:${slug}:${memberNo}`, () => inviteCode(slug, memberNo, ENV_VERSION));
+}
+
+export async function chamberCodePng(memberNo: number): Promise<Buffer> {
+  if (!wxConfigured()) return testCode(`pages/intro/intro?ref=${memberNo}&channel=invite_card`);
+  return cached(`chamber:${ENV_VERSION}:${memberNo}`, () => chamberInviteCode(memberNo, ENV_VERSION));
+}
+
+/** 1.3 P-2 “认识商会”邀请卡素材：邀请人姓名、公司（名片里公开的）、专属码、文案（后台可改，不含金额） */
+export async function chamberInviteData(contactId: string, base: string) {
+  const pool = getPool();
+  const { rows: c } = await pool.query<{ name: string; member_no: number; avatar_url: string | null }>(`SELECT name, member_no::int AS member_no, avatar_url FROM contacts WHERE id = $1`, [contactId]);
+  const card = await ensureCard(pool, contactId);
+  const st = await statusOf(pool, contactId);
+  const texts = await getSetting<Record<string, string>>(pool, 'invite_card_text', {});
+  const b = base.replace(/\/$/, '');
+  const proxied = (u: string | null) => (u ? `${b}/_next/image?url=${encodeURIComponent(u)}&w=1080&q=80` : null);
+  return {
+    inviter: {
+      name: c[0]?.name && c[0].name !== '微信用户' ? c[0].name : '',
+      memberNo: c[0]?.member_no,
+      avatarUrl: proxied(c[0]?.avatar_url ?? null),
+      company: card.company ?? null,
+      label: `${st.isMember ? 'SAREC 会员' : 'SAREC 注册用户'}${card.company ? ' · ' + card.company : ''}${card.title ? ' · ' + card.title : ''}`
+    },
+    title: texts.title?.trim() || '邀请你认识中美房地产商会',
+    intro: texts.intro?.trim() || '连接中美资本，重构房地产项目协作。商会定期举办讲座、私企面对面交流，扫码了解商会和近期活动。',
+    codeUrl: `${b}/api/v1/codes/chamber/${c[0]?.member_no}.png`,
+    isTestCode: !wxConfigured()
+  };
 }
 
 export async function cardCodePng(token: string): Promise<Buffer> {

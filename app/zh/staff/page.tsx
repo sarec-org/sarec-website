@@ -58,6 +58,27 @@ function Today() {
   );
 }
 
+/** 1.3 N：在小程序里用手机工作台——生成一次性绑定码，用自己的微信扫一下 */
+function MpBind() {
+  const [b, setB] = useState<{ code: string; qr: string | null; expiresAt: string } | null>(null);
+  const [err, setErr] = useState('');
+  return (
+    <div className={styles.card}>
+      <p className={styles.cardTitle}>在手机上管：小程序工作台</p>
+      <p className={styles.small}>用自己的微信扫一下下面的码，就能在商会小程序“我的”里打开工作台：拍照传相册、看实时报名签到、现场代签到、待办和筹备清单。收款和会费只在这个网站后台看。</p>
+      {!b && <button className={styles.btn} onClick={async () => { const r = await api<{ code: string; qr: string | null; expiresAt: string }>('/api/v1/staff/mp-bind', { body: {} }); if (r.ok) setB(r.data); else setErr(r.message); }}>生成绑定码</button>}
+      {err && <p className={styles.error}>{err}</p>}
+      {b && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {b.qr ? <img src={b.qr} alt="工作台绑定码" style={{ width: 200, height: 200, background: '#fff' }} /> : <p className={styles.notice}>小程序码暂时生成不了。请在小程序“我的 → 关于商会”页面连续点 5 下标题，输入绑定码：<b className={styles.mono}>{b.code}</b></p>}
+          <p className={styles.small}>10 分钟内有效，只能用一次。绑定码：<span className={styles.mono}>{b.code}</span></p>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function StaffHome() {
   return (
     <StaffGate title="工作人员后台">
@@ -75,6 +96,7 @@ export default function StaffHome() {
               </Link>
             ))}
           </div>
+          <MpBind />
           <button
             className={`${styles.btn} ${styles.btnQuiet}`}
             onClick={async () => {

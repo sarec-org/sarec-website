@@ -5,12 +5,13 @@ import { body, handler, ok, requireStaff } from '@/lib/crm/http';
 import { referralLeaderboard, trackStats } from '@/lib/crm/growth';
 import { uploadImage } from '@/lib/crm/photos';
 import { committeeInterestStats, growthSettings, updateGrowthSetting } from '@/lib/crm/staff12';
+import { wecomStatus } from '@/lib/wecom';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   await requireStaff(req, 'ops');
   const days = Math.min(365, Math.max(1, Number(new URL(req.url).searchParams.get('days')) || 30));
-  return ok({ track: await trackStats(days), referrals: await referralLeaderboard(days), committees: await committeeInterestStats(), settings: await growthSettings() });
+  return ok({ track: await trackStats(days), referrals: await referralLeaderboard(days), committees: await committeeInterestStats(), settings: await growthSettings(), wecom: await wecomStatus() });
 });
 export const POST = handler(async (req: Request) => {
   const s = await requireStaff(req, 'ops');

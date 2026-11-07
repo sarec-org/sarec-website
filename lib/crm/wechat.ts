@@ -93,6 +93,16 @@ export function inviteCode(slug: string, memberNo: number, envVersion: 'release'
   );
 }
 
+/** 1.3 P-2 商会邀请卡专属码：扫码打开“商会介绍页”，带邀请人推荐码 */
+export function chamberInviteCode(memberNo: number, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
+  return miniProgramCode({ page: 'pages/intro/intro', scene: `r${memberNo}`, tag: 'chamber_invite', envVersion });
+}
+
+/** 1.3 N 工作人员绑定小程序码：工作人员在网站后台点“在小程序里用工作台”生成，用自己的微信扫一次（scene = “sb=绑定码”） */
+export function staffBindCode(code: string, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
+  return miniProgramCode({ page: 'pages/staff/bind', scene: `sb=${code}`, tag: 'staff_bind', envVersion });
+}
+
 /** 1.2 电子名片码：扫码打开名片页（scene = “c|名片编号”），页面实时显示当前会员状态 */
 export function cardCode(token: string, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
   // “|” 不在 scene 允许的字符里（微信返回 40129），改用带完整 path 的 wxacode.get；名片页读 ?t=

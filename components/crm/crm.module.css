@@ -200,3 +200,27 @@
 @media (prefers-reduced-motion: no-preference) {
   .chip, .btn, .slot { transition: background 0.15s ease, border-color 0.15s ease; }
 }
+
+/* 1.3 N：网站后台手机版——东哥在现场用手机浏览器打开后台：字大、按钮大、表格能横滑，不出现整页横向滚动 */
+@media (max-width: 760px) {
+  .page { padding-left: 16px; padding-right: 16px; overflow-x: hidden; }
+  .pageWide { max-width: 100%; }
+  .table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    font-size: 1rem;
+  }
+  .table th, .table td { white-space: nowrap; padding: 0.65rem 0.6rem; }
+  .table td .btn, .table td .copyBtn { min-height: 44px; }
+  .small { font-size: 0.95rem; }
+  .muted { font-size: 1rem; }
+  .inputRow .input { min-width: 0; flex-basis: 100%; }
+  .inputRow .btn { flex: 1 1 auto; }
+  .btnRow .btn { flex: 1 1 auto; }
+  .tab { font-size: 1rem; min-height: 46px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .card { overflow-wrap: anywhere; }
+  .card img { max-width: 100%; height: auto; }
+}

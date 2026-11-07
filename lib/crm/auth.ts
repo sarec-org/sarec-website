@@ -306,10 +306,20 @@ export type StaffRole = 'checkin' | 'finance' | 'ops' | 'admin';
 export type Staff = { contactId: string; email: string; name: string; roles: StaffRole[] };
 
 export async function staffFor(contactId: string): Promise<Staff | null> {
+  // 网站：已验证的邮箱和工作人员表一致；1.3 N 小程序：工作人员扫后台绑定码绑定过的微信账号
   const { rows } = await getPool().query<{ email: string; name: string; roles: StaffRole[] }>(
     `SELECT s.email, s.name, s.roles FROM contacts c JOIN staff_roles s ON s.email = c.email
-      WHERE c.id = $1 AND c.email_verified_at IS NOT NULL AND s.is_active`,
+      WHERE c.id = $1 AND c.email_verified_at IS NOT NULL AND s.is_active
+     UNION ALL
+     SELECT s.email, s.name, s.roles FROM staff_roles s WHERE s.mp_contact_id = $1 AND s.is_active
+     LIMIT 1`,
     [contactId]
+  ).catch(async () =>
+    // 迁移 0013 还没跑（没有 mp_contact_id 列）：只按邮箱
+    getPool().query<{ email: string; name: string; roles: StaffRole[] }>(
+      `SELECT s.email, s.name, s.roles FROM contacts c JOIN staff_roles s ON s.email = c.email WHERE c.id = $1 AND c.email_verified_at IS NOT NULL AND s.is_active`,
+      [contactId]
+    )
   );
   if (!rows[0] || rows[0].email.toLowerCase() === reviewEmail()) return null; // 审核账号永远不是工作人员
   return { contactId, ...rows[0] };
