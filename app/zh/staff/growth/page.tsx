@@ -31,6 +31,7 @@ function Growth() {
   const [topic, setTopic] = useState('');
   const [oa, setOa] = useState('');
   const [compMax, setCompMax] = useState('2');
+  const [phoneQuick, setPhoneQuick] = useState(false);
   const [prompts, setPrompts] = useState<Record<string, boolean>>({ enabled: true, afterRegister: true, afterPhoto: true, nextEvent: true });
   const [comms, setComms] = useState<Committee[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -43,6 +44,7 @@ function Growth() {
       setTopic(String(r.data.settings.photo_topic ?? ''));
       setOa(String(r.data.settings.oa_username ?? ''));
       setCompMax(String(r.data.settings.companions_max ?? 2));
+      setPhoneQuick(r.data.settings.phone_quick === true);
       if (r.data.settings.invite_prompts) setPrompts(r.data.settings.invite_prompts as Record<string, boolean>);
       setComms((r.data.settings.committees as Committee[]) ?? []);
     } else setMsg({ ok: false, text: r.message });
@@ -139,6 +141,16 @@ function Growth() {
           <button className={styles.btn} onClick={() => save('companions_max', Number(compMax))}>保存</button>
         </div>
         <p className={styles.small}>每份报名最多替几位朋友报名（0 = 关闭这个功能）。</p>
+      </div>
+
+      <h2 className={styles.h2}>一键填入微信手机号（1.3）</h2>
+      <div className={styles.card}>
+        <label className={styles.row} style={{ cursor: 'pointer' }}>
+          <span className={styles.rowValue}>报名、签到时显示“一键填入微信手机号”</span>
+          <input type="checkbox" checked={phoneQuick} onChange={(e) => setPhoneQuick(e.target.checked)} />
+        </label>
+        <button className={styles.btn} onClick={() => save('phone_quick', phoneQuick)}>保存</button>
+        <p className={styles.small}>按次计费（每次几分钱）。先在微信公众平台“付费管理”开通“手机号快速验证”，再打开这里。用户拒绝时自动回到手填。</p>
       </div>
 
       <h2 className={styles.h2}>贴图话题、服务号（1.3）</h2>

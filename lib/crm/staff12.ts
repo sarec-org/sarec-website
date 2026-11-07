@@ -127,7 +127,7 @@ export async function staffRecordBookingPayment(s: Staff, bookingId: string, p: 
 
 // ── 1.2 配置项（ops 可改）───────────────────────────────────────────────
 
-export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address', 'photo_topic', 'companions_max', 'invite_prompts', 'oa_username', 'channels_live'] as const;
+export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address', 'photo_topic', 'companions_max', 'invite_prompts', 'oa_username', 'channels_live', 'phone_quick'] as const;
 export type GrowthKey = (typeof GROWTH_KEYS)[number];
 
 export async function growthSettings() {
@@ -156,6 +156,7 @@ export async function updateGrowthSetting(s: Staff, key: string, value: unknown)
   if (key === 'companions_max' && !(Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 5)) throw new CrmError('bad_request', '每人最多带几位朋友：0–5');
   if (key === 'invite_prompts' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
   if (key === 'oa_username' && !(typeof value === 'string' && /^(|gh_[a-f0-9]{12})$/.test(value.trim()))) throw new CrmError('bad_request', '服务号原始 ID 以 gh_ 开头（公众平台 → 设置 → 账号信息）；留空 = 不显示');
+  if (key === 'phone_quick' && typeof value !== 'boolean') throw new CrmError('bad_request', '格式不对');
   if (key === 'channels_live' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
   return withTransaction(async (db) => {
     const before = await getSetting(db, key, null);

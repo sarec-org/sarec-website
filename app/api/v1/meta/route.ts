@@ -24,6 +24,8 @@ export const GET = handler(async () => {
     /** 1.3：贴图话题名（没配置 = 隐藏“发到贴图话题”）、服务号原始 ID（关注服务号组件不显示时的替代入口）、邀请提醒开关 */
     photoTopic: (await getSetting<string>(pool, 'photo_topic', '')) || null,
     oaUsername: (await getSetting<string>(pool, 'oa_username', '')) || null,
+    /** 1.3 H：一键填入微信手机号（后台开了、并在公众平台开通付费后才显示） */
+    phoneQuick: !!(await getSetting<boolean>(pool, 'phone_quick', false)),
     invitePrompts: await getSetting<Record<string, unknown>>(pool, 'invite_prompts', { enabled: true, afterRegister: true, afterPhoto: true, nextEvent: true })
   });
 });
