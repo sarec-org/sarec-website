@@ -36,9 +36,19 @@ async function main() {
   const lecture = (await listTemplates()).find((t) => t.key === 'lecture')!;
   assert.equal(lecture.items.length, 16);
   ok('内置模板：讲座 16 项');
+  assert.equal(face.name, 'SAREC 企业家圆桌', '私企面对面已改名');
+  assert.deepEqual([face.default_capacity, face.default_fee_cents], [20, 5000], '企业家圆桌默认 20 人、50 美元');
+  assert.deepEqual([lecture.default_capacity, lecture.default_fee_cents], [100, 0]);
+  assert.ok(!face.items.some((i) => /名额 20/.test(i.title)), '模板事项里不写死名额');
+  ok('活动类型：企业家圆桌默认 20 人 / $50、讲座默认 100 人 / 免费，名称和默认值都存在后台');
 
   const tpl = await saveTemplate({ key: `dev13-${sfx}`, name: `DEV13-模板-${sfx}`, roles: ['总负责 / 主持', '签到接待', '摄影摄像'], shootingList: '拍正面', settings: { pitchMinutes: 3, collectIntro: true } });
   made.templates.push(tpl.id);
+  await saveTemplate({ id: tpl.id, name: `DEV13-模板改名-${sfx}`, roles: ['总负责 / 主持', '签到接待', '摄影摄像'], shootingList: '拍正面', settings: { pitchMinutes: 3, collectIntro: true }, defaultCapacity: 30, defaultFeeCents: 6500 });
+  const t0 = (await listTemplates()).find((t) => t.id === tpl.id)!;
+  assert.deepEqual([t0.name, t0.default_capacity, t0.default_fee_cents], [`DEV13-模板改名-${sfx}`, 30, 6500]);
+  await assert.rejects(saveTemplate({ id: tpl.id, name: 'x', defaultCapacity: -1 }), /默认人数/);
+  ok('后台改活动类型的名称、默认人数、默认费用');
   const a = await saveTemplateItem(tpl.id, { title: '后台建活动', role: '总负责 / 主持', anchor: 'start', offsetMinutes: -14 * 1440 });
   const b = await saveTemplateItem(tpl.id, { title: '贴签到码', role: '签到接待、摄影摄像', anchor: 'start', offsetMinutes: -60 });
   await saveTemplateItem(tpl.id, { title: '大合影', role: '摄影摄像', anchor: 'end', offsetMinutes: -10 });

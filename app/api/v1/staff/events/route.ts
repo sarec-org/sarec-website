@@ -14,6 +14,15 @@ export const GET = handler(async (req: Request) => {
 export const POST = handler(async (req: Request) => {
   const s = await requireStaff(req, 'ops');
   const b = await body<EventInput & { prepTemplate?: string }>(req);
+  // 1.3 M：选了活动类型、本场没填名额 / 费用时，用这个类型在后台设的默认值（本场仍可再改）
+  if (b.prepTemplate && typeof b.prepTemplate === 'string' && (b.capacity === undefined || b.feeCents === undefined)) {
+    const { listTemplates } = await import('@/lib/crm/prep');
+    const t = (await listTemplates()).find((x) => x.key === b.prepTemplate);
+    if (t) {
+      if (b.capacity === undefined && t.default_capacity != null) b.capacity = t.default_capacity;
+      if (b.feeCents === undefined && t.default_fee_cents != null) b.feeCents = t.default_fee_cents;
+    }
+  }
   const event = await createEvent(s, b);
   // 1.3 M：建活动时选了活动类型 → 自动生成筹备清单（按活动日期倒推截止日）
   if (b.prepTemplate && typeof b.prepTemplate === 'string') {

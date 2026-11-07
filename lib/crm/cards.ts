@@ -232,7 +232,7 @@ export async function chamberInviteData(contactId: string, base: string) {
       label: `${st.isMember ? 'SAREC 会员' : 'SAREC 注册用户'}${card.company ? ' · ' + card.company : ''}${card.title ? ' · ' + card.title : ''}`
     },
     title: texts.title?.trim() || '邀请你认识中美房地产商会',
-    intro: texts.intro?.trim() || '连接中美资本，重构房地产项目协作。商会定期举办讲座、私企面对面交流，扫码了解商会和近期活动。',
+    intro: texts.intro?.trim() || '连接中美资本，重构房地产项目协作。商会定期举办讲座和企业家交流活动，扫码了解商会和近期活动。',
     codeUrl: `${b}/api/v1/codes/chamber/${c[0]?.member_no}.png`,
     isTestCode: !wxConfigured()
   };

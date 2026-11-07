@@ -10,7 +10,7 @@ import { api, fmtDateTime } from '@/components/crm/client';
 
 type Row = { event_id: string; title: string; starts_at: string; template_key: string | null; total: number; done: number; overdue: number };
 type TItem = { id: number; sort_order: number; anchor: 'start' | 'end'; offset_minutes: number; when_label: string; title: string; role: string };
-type Tpl = { id: number; key: string; name: string; roles: string[]; shooting_list: string | null; settings: Record<string, unknown>; items: TItem[] };
+type Tpl = { id: number; key: string; name: string; roles: string[]; shooting_list: string | null; settings: Record<string, unknown>; default_capacity: number | null; default_fee_cents: number | null; items: TItem[] };
 type Ev = { id: string; title: string; starts_at: string };
 
 export default function PrepIndex() {
@@ -109,11 +109,13 @@ function TemplateEditor({ t, onMsg, reload }: { t: Tpl; onMsg: (m: { ok: boolean
   const [shoot, setShoot] = useState(t.shooting_list ?? '');
   const [pitch, setPitch] = useState(String(t.settings.pitchMinutes ?? ''));
   const [collect, setCollect] = useState(!!t.settings.collectIntro);
+  const [cap, setCap] = useState(t.default_capacity == null ? '' : String(t.default_capacity));
+  const [fee, setFee] = useState(t.default_fee_cents == null ? '' : String(t.default_fee_cents / 100));
   const saveTpl = async () => {
     const settings: Record<string, unknown> = { ...t.settings, collectIntro: collect };
     if (pitch) settings.pitchMinutes = Number(pitch);
     else delete settings.pitchMinutes;
-    const r = await api('/api/v1/staff/prep/templates', { body: { id: t.id, name, roles: roles.split('\n').map((x) => x.trim()).filter(Boolean), shootingList: shoot, settings } });
+    const r = await api('/api/v1/staff/prep/templates', { body: { id: t.id, name, roles: roles.split('\n').map((x) => x.trim()).filter(Boolean), shootingList: shoot, settings, defaultCapacity: cap === '' ? null : Number(cap), defaultFeeCents: fee === '' ? null : Math.round(Number(fee) * 100) } });
     onMsg(r.ok ? { ok: true, text: `已保存：${name}` } : { ok: false, text: r.message });
     reload();
   };
@@ -128,12 +130,20 @@ function TemplateEditor({ t, onMsg, reload }: { t: Tpl; onMsg: (m: { ok: boolean
   return (
     <div className={styles.card}>
       <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setOpen(!open)} style={{ width: '100%', textAlign: 'left' }}>
-        {open ? '▾' : '▸'} {t.name}（{t.items.length} 项）
+        {open ? '▾' : '▸'} {t.name}（{t.items.length} 项{t.default_capacity != null ? ` · 默认 ${t.default_capacity} 人` : ''}{t.default_fee_cents != null ? (t.default_fee_cents ? ` · $${(t.default_fee_cents / 100).toFixed(t.default_fee_cents % 100 ? 2 : 0)}/人` : ' · 免费') : ''}）
       </button>
       {open && (
         <>
           <label className={styles.label}>名称</label>
           <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} />
+          <div className={styles.inputRow} style={{ marginTop: 8 }}>
+            <label className={styles.small}>默认名额（人，可空）
+              <input className={styles.input} type="number" min={0} value={cap} onChange={(e) => setCap(e.target.value)} aria-label="默认名额" />
+            </label>
+            <label className={styles.small}>默认费用（美元 / 人，0 = 免费）
+              <input className={styles.input} type="number" min={0} step="0.01" value={fee} onChange={(e) => setFee(e.target.value)} aria-label="默认费用" />
+            </label>
+          </div>
           <label className={styles.label}>负责角色（每行一个）</label>
           <textarea className={styles.input} style={{ minHeight: 100 }} value={roles} onChange={(e) => setRoles(e.target.value)} />
           <label className={styles.label}>拍摄清单</label>
@@ -245,7 +255,7 @@ function NewTemplate({ onMsg, reload }: { onMsg: (m: { ok: boolean; text: string
     <div className={styles.card}>
       <p className={styles.cardTitle}>新建一种活动类型</p>
       <div className={styles.inputRow}>
-        <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="名称，如“晚宴（40 人）”" aria-label="名称" />
+        <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="名称，如“晚宴”" aria-label="名称" />
         <input className={styles.input} value={key} onChange={(e) => setKey(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="英文代号，如 dinner" aria-label="代号" />
         <button
           className={styles.btn}

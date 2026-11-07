@@ -24,7 +24,7 @@ export const GET = handler(async (req: Request) => {
     tagline: '连接中美资本，重构房地产项目协作',
     about: [
       '中美房地产商会（SAREC）位于洛杉矶地区，服务关注美国房地产的投资人、项目方和从业者。',
-      '商会定期举办地产讲座、私企面对面交流，组织会员之间的项目对接和资源协作。'
+      '商会定期举办地产讲座和企业家交流活动，组织会员之间的项目对接和资源协作。'
     ],
     stats: { events: past[0]?.n ?? 0, people: past[0]?.people ?? 0 },
     photos: photos.map((p) => ({ thumb: p.thumb_url, url: p.url, slug: p.slug })),

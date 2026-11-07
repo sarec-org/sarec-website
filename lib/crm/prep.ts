@@ -12,7 +12,7 @@ import { CrmError } from './events';
 import type { Db } from './profile';
 
 export type TemplateItem = { id: number; sort_order: number; anchor: 'start' | 'end'; offset_minutes: number; when_label: string; title: string; role: string };
-export type Template = { id: number; key: string; name: string; roles: string[]; shooting_list: string | null; settings: Record<string, unknown>; items: TemplateItem[] };
+export type Template = { id: number; key: string; name: string; roles: string[]; shooting_list: string | null; settings: Record<string, unknown>; default_capacity: number | null; default_fee_cents: number | null; items: TemplateItem[] };
 export type PrepItem = { id: number; sort_order: number; when_label: string; title: string; role: string; due_at: string; done_at: string | null; done_by: string | null; note: string | null; photo_url: string | null; from_template_item: number | null };
 
 const str = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
@@ -21,30 +21,42 @@ export const rolesOf = (role: string) => role.split('、').map((r) => r.trim()).
 // ── 模板 ───────────────────────────────────────────────────────────────
 
 export async function listTemplates(db: Db = getPool()): Promise<Template[]> {
-  const { rows } = await db.query<Omit<Template, 'items'>>(`SELECT id, key, name, roles, shooting_list, settings FROM prep_templates ORDER BY sort_order, id`);
+  // 1.3 M：活动类型的默认人数、默认费用（0014 之前没有这两列时按空处理）
+  const { rows } = await db
+    .query<Omit<Template, 'items'>>(`SELECT id, key, name, roles, shooting_list, settings, default_capacity, default_fee_cents FROM prep_templates ORDER BY sort_order, id`)
+    .catch(() => db.query<Omit<Template, 'items'>>(`SELECT id, key, name, roles, shooting_list, settings, NULL::int AS default_capacity, NULL::int AS default_fee_cents FROM prep_templates ORDER BY sort_order, id`));
   const { rows: items } = await db.query<TemplateItem & { template_id: number }>(
     `SELECT id, template_id, sort_order, anchor, offset_minutes, when_label, title, role FROM prep_template_items ORDER BY template_id, sort_order, id`
   );
   return rows.map((t) => ({ ...t, items: items.filter((i) => i.template_id === t.id) }));
 }
 
-export async function saveTemplate(b: { id?: unknown; key?: unknown; name?: unknown; roles?: unknown; shootingList?: unknown; settings?: unknown }) {
+function intOrNull(v: unknown, max: number, label: string): number | null {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Math.round(Number(v));
+  if (!Number.isFinite(n) || n < 0 || n > max) throw new CrmError('bad_request', `${label}请填 0–${max} 之间的数字`);
+  return n;
+}
+
+export async function saveTemplate(b: { id?: unknown; key?: unknown; name?: unknown; roles?: unknown; shootingList?: unknown; settings?: unknown; defaultCapacity?: unknown; defaultFeeCents?: unknown }) {
+  const cap = intOrNull(b.defaultCapacity, 5000, '默认人数');
+  const fee = intOrNull(b.defaultFeeCents, 1000000, '默认费用（分）');
   const name = str(b.name, 60);
   if (!name) throw new CrmError('bad_request', '请填写模板名称');
   const roles = Array.isArray(b.roles) ? b.roles.map((r) => str(r, 30)).filter(Boolean).slice(0, 20) : [];
   const settings = b.settings && typeof b.settings === 'object' && !Array.isArray(b.settings) ? b.settings : {};
   if (b.id) {
     const { rows } = await getPool().query(
-      `UPDATE prep_templates SET name = $2, roles = $3, shooting_list = $4, settings = $5, updated_at = now() WHERE id = $1 RETURNING id`,
-      [Number(b.id), name, JSON.stringify(roles), str(b.shootingList, 4000) || null, JSON.stringify(settings)]
+      `UPDATE prep_templates SET name = $2, roles = $3, shooting_list = $4, settings = $5, default_capacity = $6, default_fee_cents = $7, updated_at = now() WHERE id = $1 RETURNING id`,
+      [Number(b.id), name, JSON.stringify(roles), str(b.shootingList, 4000) || null, JSON.stringify(settings), cap, fee]
     );
     if (!rows[0]) throw new CrmError('not_found', '找不到这个模板');
     return { id: Number(b.id) };
   }
   const key = (str(b.key, 30) || `t${Date.now().toString(36)}`).toLowerCase().replace(/[^a-z0-9_-]/g, '');
   const { rows } = await getPool().query<{ id: number }>(
-    `INSERT INTO prep_templates (key, name, roles, shooting_list, settings, sort_order) VALUES ($1, $2, $3, $4, $5, 100) RETURNING id`,
-    [key, name, JSON.stringify(roles), str(b.shootingList, 4000) || null, JSON.stringify(settings)]
+    `INSERT INTO prep_templates (key, name, roles, shooting_list, settings, sort_order, default_capacity, default_fee_cents) VALUES ($1, $2, $3, $4, $5, 100, $6, $7) RETURNING id`,
+    [key, name, JSON.stringify(roles), str(b.shootingList, 4000) || null, JSON.stringify(settings), cap, fee]
   );
   return { id: rows[0].id };
 }
