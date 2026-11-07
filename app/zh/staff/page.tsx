@@ -15,7 +15,7 @@ const SECTIONS: { href: string; title: string; desc: string; role: string }[] = 
   { href: '/zh/staff/growth', title: '增长与设置', desc: '点击统计、推荐排行、商会微信二维码、视频号、专委会、内容显示范围', role: 'ops' },
   { href: '/zh/staff/features', title: '功能排行', desc: '每个功能用了多少、带来多少报名到场入会；调首页入口顺序', role: 'ops' },
   { href: '/zh/staff/channels', title: '渠道码', desc: '合作商家 / 机构 / 副会长单位专属码，按渠道看报名到场', role: 'ops' },
-  { href: '/zh/staff/cards', title: '名片审核', desc: '会员自己填写的电子名片：逐条查看，可下架、恢复、清除头像', role: 'ops' },
+  { href: '/zh/staff/cards', title: '内容审核', desc: '会员自己填写的电子名片、客户上传的照片：逐条查看，可下架、退回、删除', role: 'ops' },
   { href: '/zh/staff/display', title: '官网展示审核', desc: '会员资料能否在官网展示（不影响会员身份）', role: 'ops' },
   { href: '/zh/staff/settings', title: '设置', desc: '会员价、屏幕费、积分比例、商家优惠、工作人员', role: 'admin' }
 ];

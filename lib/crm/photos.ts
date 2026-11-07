@@ -102,8 +102,12 @@ export async function uploadEventPhotos(actor: string, eventId: string, files: {
 
 export async function listEventPhotos(eventId: string, includeHidden = false) {
   const { rows } = await getPool().query(
-    `SELECT id, url, thumb_url, width, height, caption, sort_order, is_hidden, created_at FROM event_photos
-      WHERE event_id = $1 AND ($2 OR NOT is_hidden) ORDER BY sort_order, created_at`,
+    // 1.3：客户上传的照片默认不公开；只有“放进活动相册”且审核通过的才进相册；美颜版永远不进相册
+    `SELECT id, url, thumb_url, width, height, caption, sort_order, is_hidden, created_at,
+            uploader_contact_id IS NOT NULL AS by_customer, visibility, review_status
+       FROM event_photos
+      WHERE event_id = $1 AND variant_of IS NULL AND ($2 OR (NOT is_hidden AND visibility = 'album' AND review_status = 'ok'))
+      ORDER BY sort_order, created_at`,
     [eventId, includeHidden]
   );
   return rows;

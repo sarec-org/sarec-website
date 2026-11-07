@@ -20,6 +20,10 @@ export const GET = handler(async () => {
     subscribeTemplates: publicTemplateIds(),
     /** 1.2：商会微信二维码（后台可换图）、视频号 ID（没配置则小程序隐藏入口） */
     wechatQr: (await getSetting<string>(pool, 'wechat_qr_url', '')) || null,
-    channelsId: (await getSetting<string>(pool, 'channels_finder_id', '')) || null
+    channelsId: (await getSetting<string>(pool, 'channels_finder_id', '')) || null,
+    /** 1.3：贴图话题名（没配置 = 隐藏“发到贴图话题”）、服务号原始 ID（关注服务号组件不显示时的替代入口）、邀请提醒开关 */
+    photoTopic: (await getSetting<string>(pool, 'photo_topic', '')) || null,
+    oaUsername: (await getSetting<string>(pool, 'oa_username', '')) || null,
+    invitePrompts: await getSetting<Record<string, unknown>>(pool, 'invite_prompts', { enabled: true, afterRegister: true, afterPhoto: true, nextEvent: true })
   });
 });

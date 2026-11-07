@@ -27,6 +27,11 @@ function Growth() {
   const [vis, setVis] = useState<Vis[]>([]);
   const [raw, setRaw] = useState<Record<string, { mp?: string; site?: string }>>({});
   const [channels, setChannels] = useState('');
+  // 1.3
+  const [topic, setTopic] = useState('');
+  const [oa, setOa] = useState('');
+  const [compMax, setCompMax] = useState('2');
+  const [prompts, setPrompts] = useState<Record<string, boolean>>({ enabled: true, afterRegister: true, afterPhoto: true, nextEvent: true });
   const [comms, setComms] = useState<Committee[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -35,6 +40,10 @@ function Growth() {
     if (r.ok) {
       setD(r.data);
       setChannels(String(r.data.settings.channels_finder_id ?? ''));
+      setTopic(String(r.data.settings.photo_topic ?? ''));
+      setOa(String(r.data.settings.oa_username ?? ''));
+      setCompMax(String(r.data.settings.companions_max ?? 2));
+      if (r.data.settings.invite_prompts) setPrompts(r.data.settings.invite_prompts as Record<string, boolean>);
       setComms((r.data.settings.committees as Committee[]) ?? []);
     } else setMsg({ ok: false, text: r.message });
     const v = await api<{ items: Vis[]; raw: Record<string, { mp?: string; site?: string }> }>('/api/v1/staff/content-visibility');
@@ -109,6 +118,41 @@ function Growth() {
           <button className={styles.btn} onClick={() => save('channels_finder_id', channels.trim())}>保存</button>
         </div>
         <p className={styles.small}>视频号要和小程序同一主体，或已在视频号助手里关联本小程序，才能从小程序跳转；还没关联时请留空（留空时小程序不显示入口，避免审核员点了打不开）。</p>
+      </div>
+
+      <h2 className={styles.h2}>邀请提醒（1.3）</h2>
+      <div className={styles.card}>
+        <p className={styles.small}>只在这三处提醒，每场活动最多一次，关掉后不再追；签到、填资料、出错时绝不弹。改完小程序立即生效。</p>
+        {([['enabled', '总开关'], ['afterRegister', '报名成功页一行“带位朋友一起来？”'], ['afterPhoto', '第一次保存合影 / 看照片时轻提示“把这张发给朋友”'], ['nextEvent', '看下一场相关活动时提示“邀请朋友同行”']] as [string, string][]).map(([k, label]) => (
+          <label key={k} className={styles.row} style={{ cursor: 'pointer' }}>
+            <span className={styles.rowValue}>{label}</span>
+            <input type="checkbox" checked={prompts[k] !== false} onChange={(e) => setPrompts({ ...prompts, [k]: e.target.checked })} />
+          </label>
+        ))}
+        <button className={styles.btn} onClick={() => save('invite_prompts', prompts)}>保存</button>
+      </div>
+
+      <h2 className={styles.h2}>带一位朋友（1.3）</h2>
+      <div className={styles.card}>
+        <div className={styles.inputRow}>
+          <input className={styles.input} type="number" min={0} max={5} value={compMax} onChange={(e) => setCompMax(e.target.value)} aria-label="每人最多带几位朋友" />
+          <button className={styles.btn} onClick={() => save('companions_max', Number(compMax))}>保存</button>
+        </div>
+        <p className={styles.small}>每份报名最多替几位朋友报名（0 = 关闭这个功能）。</p>
+      </div>
+
+      <h2 className={styles.h2}>贴图话题、服务号（1.3）</h2>
+      <div className={styles.card}>
+        <div className={styles.inputRow}>
+          <input className={styles.input} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="贴图话题名，例如 SAREC活动现场；留空 = 不显示入口" aria-label="贴图话题" />
+          <button className={styles.btn} onClick={() => save('photo_topic', topic.trim())}>保存</button>
+        </div>
+        <p className={styles.small}>照片分享页“发到微信贴图话题”用这个话题。不承诺微信推荐，话题里的照片也不会自动回到商会相册。</p>
+        <div className={styles.inputRow}>
+          <input className={styles.input} value={oa} onChange={(e) => setOa(e.target.value)} placeholder="服务号原始 ID，gh_ 开头；留空 = 不显示" aria-label="服务号原始 ID" />
+          <button className={styles.btn} onClick={() => save('oa_username', oa.trim())}>保存</button>
+        </div>
+        <p className={styles.small}>签到成功页、相册页的“关注服务号”组件在部分进入方式（群卡片、朋友圈、搜索）不显示时，改显示去服务号主页的入口。</p>
       </div>
 
       <h2 className={styles.h2}>专委会与俱乐部</h2>

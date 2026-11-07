@@ -31,3 +31,24 @@ ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS channel_code text;
 ALTER TABLE contacts ADD COLUMN IF NOT EXISTS first_channel text;
 CREATE INDEX IF NOT EXISTS registrations_channel_code_idx ON registrations (channel_code) WHERE channel_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS track_events_channel_idx ON track_events (channel, created_at) WHERE channel IS NOT NULL;
+
+-- C. 客户上传照片 + 美颜 ---------------------------------------------
+-- 客户上传的照片属于用户生成内容：默认只有上传者和工作人员可见（visibility = private）；
+-- 上传者勾选“放进活动相册”后公开：自动检查通过（本场已报名的人）直接进相册，否则进后台“内容审核”待办。
+-- content_hash：完全相同的照片秒级识别、不重复存；phash：相似照片分组（后台做，不挡分享）。
+-- 美颜版：variant_of 指向原照片（只生成本人的分享版，不覆盖相册原图；去重时不当成两张）。
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS uploader_contact_id uuid REFERENCES contacts(id) ON DELETE SET NULL;
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS visibility text NOT NULL DEFAULT 'album';
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS review_status text NOT NULL DEFAULT 'ok';
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS content_hash text;
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS phash text;
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS original_url text;
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS variant_of uuid REFERENCES event_photos(id) ON DELETE CASCADE;
+ALTER TABLE event_photos ADD COLUMN IF NOT EXISTS variant text;
+ALTER TABLE event_photos DROP CONSTRAINT IF EXISTS event_photos_visibility_check;
+ALTER TABLE event_photos ADD CONSTRAINT event_photos_visibility_check CHECK (visibility IN ('private', 'album'));
+ALTER TABLE event_photos DROP CONSTRAINT IF EXISTS event_photos_review_status_check;
+ALTER TABLE event_photos ADD CONSTRAINT event_photos_review_status_check CHECK (review_status IN ('ok', 'review', 'rejected'));
+CREATE UNIQUE INDEX IF NOT EXISTS event_photos_hash_uniq ON event_photos (event_id, content_hash) WHERE content_hash IS NOT NULL AND variant_of IS NULL;
+CREATE INDEX IF NOT EXISTS event_photos_uploader_idx ON event_photos (uploader_contact_id, event_id) WHERE uploader_contact_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS event_photos_review_idx ON event_photos (review_status) WHERE review_status = 'review';
