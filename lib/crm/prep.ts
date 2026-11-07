@@ -138,8 +138,8 @@ export async function createEventPrep(eventId: string, templateKey: string) {
 
 export async function getEventPrep(eventId: string) {
   const pool = getPool();
-  const { rows } = await pool.query<{ event_id: string; template_id: number | null; template_key: string | null; roles: string[]; assignees: Record<string, { name: string; contact: string }>; shooting_list: string | null; settings: Record<string, unknown>; retro: string | null; retro_applied_at: Date | null; title: string; slug: string; starts_at: Date; ends_at: Date | null; fee_cents: number }>(
-    `SELECT p.*, e.title, e.slug, e.starts_at, e.ends_at, e.fee_cents FROM event_prep p JOIN events e ON e.id = p.event_id WHERE p.event_id = $1`,
+  const { rows } = await pool.query<{ event_id: string; template_id: number | null; template_key: string | null; roles: string[]; assignees: Record<string, { name: string; contact: string }>; shooting_list: string | null; settings: Record<string, unknown>; retro: string | null; retro_applied_at: Date | null; title: string; slug: string; starts_at: Date; ends_at: Date | null }>(
+    `SELECT p.*, e.title, e.slug, e.starts_at, e.ends_at FROM event_prep p JOIN events e ON e.id = p.event_id WHERE p.event_id = $1`,
     [eventId]
   );
   if (!rows[0]) return null;

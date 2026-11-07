@@ -150,7 +150,25 @@ export function mpSafe<T>(v: T): T {
 }
 function noMoneyText(s: string): string {
   // 签到台“到场待核款”之类的提示：小程序里只说“请到签到台确认”，不出现金额和付款方式
-  const t = noMoneyImpl(s) ?? '';
-  return /付款|缴费|zelle|stripe|核款/i.test(t) ? '这位还需要在签到台确认费用，收款请在网站后台处理' : t;
+  if (/付款|缴费|zelle|stripe|核款/i.test(s)) return '这位还需要在签到台确认费用，收款请在网站后台处理';
+  return noMoneyImpl(s) ?? '';
 }
 import { noMoney as noMoneyImpl } from '@/lib/noMoney';
+
+/** 工作台待办：待跟进（不含 AI 起草的联系草稿——小程序里不展示 AI 内容）、待审名片、待审照片 */
+export async function workbenchTodo() {
+  const pool = getPool();
+  const { rows: followups } = await pool.query<{ id: string; name: string; contact_text: string | null; need: string | null; source: string; next_date: string | null }>(
+    `SELECT id, name, contact_text, need, source, next_date::text AS next_date FROM followups WHERE status = 'todo' ORDER BY next_date NULLS LAST, created_at DESC LIMIT 50`
+  );
+  const { listCardsForReview } = await import('./cardReview');
+  const cards = await listCardsForReview('pending', null).catch(() => null);
+  const { listPhotosForReview } = await import('./customerPhotos');
+  const photos = await listPhotosForReview('review').catch(() => null);
+  return {
+    followups: followups.map((f) => ({ id: f.id, name: f.name, contact: f.contact_text, need: f.need, source: f.source, nextDate: f.next_date })),
+    cards: (cards?.cards ?? []).filter((c) => c.pending).slice(0, 50)
+      .map((c) => ({ contactId: c.contact_id, name: c.name, company: c.company, title: c.title, intro: c.intro, avatarUrl: c.avatar_url })),
+    photos: (photos?.photos ?? []).slice(0, 60).map((p) => ({ id: p.id, thumb: p.thumb_url ?? p.url, event: p.event_title, uploader: p.uploader }))
+  };
+}
