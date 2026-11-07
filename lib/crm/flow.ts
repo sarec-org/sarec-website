@@ -213,7 +213,7 @@ export async function previewRegistration(slug: string, contactId: string | null
   return {
     event: publicEvent(ev),
     feeConfirmed: !!extra[0]?.paid,
-    collectIntro: !!extra[0]?.collect && !extra[0]?.has_intro && !!reg[0] && reg[0].status !== 'cancelled',
+    collectIntro: !!extra[0]?.collect && !extra[0]?.has_intro && !!reg[0] && reg[0].status !== 'cancelled' && new Date(ev.ends_at ?? new Date(new Date(ev.starts_at).getTime() + 3 * 3600e3)).getTime() > Date.now(),
     rosterReady: !!extra[0]?.roster && reg[0]?.arrival_status === 'checked_in',
     loggedIn: true,
     firstTime,

@@ -12,8 +12,8 @@ export type RosterEntry = { name: string; avatarUrl: string | null; company: str
 
 export async function buildRoster(eventId: string, opts: { send?: boolean } = {}) {
   const pool = getPool();
-  const { rows } = await pool.query<{ contact_id: string; name: string; avatar_url: string | null; token: string | null; company: string | null; title: string | null; intro: string | null; wechat_id: string | null; show_phone: boolean | null; show_email: boolean | null; show_wechat: boolean | null; hidden_at: Date | null }>(
-    `SELECT r.contact_id, c.name, c.avatar_url, m.token, m.company, m.title, m.intro, m.wechat_id, m.show_phone, m.show_email, m.show_wechat, m.hidden_at
+  const { rows } = await pool.query<{ contact_id: string; name: string; c_email: string | null; avatar_url: string | null; token: string | null; company: string | null; title: string | null; intro: string | null; wechat_id: string | null; show_phone: boolean | null; show_email: boolean | null; show_wechat: boolean | null; hidden_at: Date | null }>(
+    `SELECT r.contact_id, c.name, c.email AS c_email, c.avatar_url, m.token, m.company, m.title, m.intro, m.wechat_id, m.show_phone, m.show_email, m.show_wechat, m.hidden_at
        FROM registrations r JOIN contacts c ON c.id = r.contact_id LEFT JOIN member_cards m ON m.contact_id = r.contact_id
       WHERE r.event_id = $1 AND r.arrival_status = 'checked_in' AND NOT c.is_placeholder
       ORDER BY r.checked_in_at`,
@@ -30,7 +30,7 @@ export async function buildRoster(eventId: string, opts: { send?: boolean } = {}
       title: r.title,
       intro: r.intro,
       phone: r.show_phone ? info.phone?.value ?? null : null,
-      email: r.show_email ? info.email?.value ?? null : null,
+      email: r.show_email ? info.email?.value ?? r.c_email ?? null : null,
       wechatId: r.show_wechat ? r.wechat_id : null,
       cardToken: r.token
     });

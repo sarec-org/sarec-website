@@ -316,8 +316,7 @@ export async function runPrepReminders(now: Date = new Date()): Promise<{ remind
       reminded++;
     }
   }
-  // 没有邮箱的负责人：也标记已处理，免得每天重复计数（汇总里会列出）
-  await pool.query(`UPDATE event_prep_items SET reminded_at = now() WHERE id = ANY($1::bigint[]) AND reminded_at IS NULL`, [due.map((d) => d.id)]);
+  // 没分配负责人（或负责人没留邮箱）的项不标记——以后补了负责人，下一次定时任务还会提醒（测试 P3-1）
 
   // 2) 活动前 2 天：给东哥一封“还没完成的事项”汇总（每场一次）
   const to = digestEmail();
