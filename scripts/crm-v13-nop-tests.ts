@@ -89,6 +89,21 @@ async function main() {
   assert.equal(okStaff.email, email, '小程序工作台可以传活动照片');
   ok('小程序会话调收款 / 订单 / 设置 / 活动详情（含费用）接口：拒绝并提示用手机浏览器打开后台；传照片接口可用');
 
+  // 测试 P1-N2：活动列表 / 详情（含费用）的 GET 自己判断权限，也要拦小程序会话
+  const { GET: evList } = await import('@/app/api/v1/staff/events/route');
+  const { GET: evOne } = await import('@/app/api/v1/staff/events/[id]/route');
+  assert.equal((await evList(mpReq('/api/v1/staff/events', token))).status, 403);
+  assert.equal((await evOne(mpReq(`/api/v1/staff/events/${ev[0].id}`, token), { params: { id: ev[0].id } })).status, 403);
+  // 测试 P1-N3：工作台的筹备清单不出现收款相关文字
+  const { createEventPrep } = await import('@/lib/crm/prep');
+  await createEventPrep(ev[0].id, 'face');
+  const { GET: prepGet } = await import('@/app/api/v1/staff/prep/[eventId]/route');
+  const pj = await (await prepGet(mpReq(`/api/v1/staff/prep/${ev[0].id}`, token), { params: { eventId: ev[0].id } })).json();
+  assert.equal(pj.ok, true);
+  assert.ok(!/收费|缴费|付款|Zelle|Stripe|核款|收款码/i.test(JSON.stringify(pj.prep.items.map((i: { title: string }) => i.title)).replace(/收款相关事项/g, '')), '工作台清单没有收款文字');
+  assert.ok(pj.prep.items.some((i: { title: string }) => i.title.startsWith('收款相关事项')));
+  ok('小程序会话：活动列表 / 详情接口 403；筹备清单里收款相关事项只显示“请在网站后台查看”');
+
   await unbindStaff(email);
   assert.equal(await staffFor(mp.id), null, '解绑后不再是工作人员');
   ok('后台解绑后，这个微信不再能打开工作台');
@@ -161,6 +176,8 @@ async function cleanup() {
   if (made.codes.length) await pool.query(`DELETE FROM staff_bind_codes WHERE code = ANY($1::text[])`, [made.codes]);
   if (made.staff.length) await pool.query(`DELETE FROM staff_roles WHERE email = ANY($1::text[]) AND email LIKE 'dev13-%'`, [made.staff]);
   if (made.events.length) {
+    await pool.query(`DELETE FROM event_prep_items WHERE event_id = ANY($1::uuid[])`, [made.events]).catch(() => undefined);
+    await pool.query(`DELETE FROM event_prep WHERE event_id = ANY($1::uuid[])`, [made.events]).catch(() => undefined);
     await pool.query(`DELETE FROM registrations WHERE event_id = ANY($1::uuid[])`, [made.events]);
     await pool.query(`DELETE FROM events WHERE id = ANY($1::uuid[]) AND title LIKE 'DEV13-%'`, [made.events]);
   }

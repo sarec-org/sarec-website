@@ -108,8 +108,15 @@ export async function requireContact(req: Request): Promise<string> {
 /**
  * 1.3 N：小程序工作台合规——收款、订单、会费、价格相关的后台接口不给小程序会话用（收款数据只在网站后台）。
  */
-const STAFF_MONEY_PATH = /^\/api\/v1\/staff\/(orders|settings|rooms|bookings|points|screen-ads|display|offers|room-info|contacts\/[^/]+$|events(\/[^/]+)?$)/;
-async function denyMpStaffMoney(req: Request): Promise<void> {
+const STAFF_MONEY_PATH = /^\/api\/v1\/staff\/(orders|settings|rooms|bookings|points|screen-ads|display|offers|room-info|agent|contacts\/[^/]+$|events(\/[^/]+)?$)/;
+/** 是不是小程序的请求（版本头、servicewechat.com 来源、或 1.2+ 小程序会话） */
+export async function isMiniProgramRequest(req: Request): Promise<boolean> {
+  const referer = (req.headers.get('referer') ?? '').toLowerCase();
+  const header = (req.headers.get('x-sarec-client') ?? '').toLowerCase();
+  return referer.startsWith('https://servicewechat.com/') || header.startsWith('mp-') || (await isMp12(req));
+}
+
+export async function denyMpStaffMoney(req: Request): Promise<void> {
   let path = '';
   try { path = new URL(req.url).pathname; } catch { return; }
   if (!STAFF_MONEY_PATH.test(path)) return;

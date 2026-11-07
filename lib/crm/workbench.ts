@@ -63,7 +63,11 @@ export async function workbenchHome(s: Staff) {
             count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted
        FROM events e LEFT JOIN registrations r ON r.event_id = e.id
       WHERE e.event_status <> 'cancelled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() - interval '2 days'
-      GROUP BY e.id ORDER BY e.starts_at LIMIT 10`
+      GROUP BY e.id
+      ORDER BY CASE WHEN coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now() THEN 2
+                    WHEN e.starts_at <= now() + interval '18 hours' THEN 0 ELSE 1 END,
+               CASE WHEN coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now() THEN -extract(epoch FROM e.starts_at) ELSE extract(epoch FROM e.starts_at) END
+      LIMIT 10`
   );
   const out: Record<string, unknown> = {
     staff: { name: s.name, roles: s.roles },

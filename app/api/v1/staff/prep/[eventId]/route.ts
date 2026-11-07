@@ -4,12 +4,25 @@
 import { addPrepItem, applyRetroToTemplate, assignRole, deletePrepItem, getEventPrep, saveRetro, updatePrepItem } from '@/lib/crm/prep';
 import { CrmError } from '@/lib/crm/events';
 import { actor } from '@/lib/crm/staff';
-import { body, handler, ok, requireStaff, requireStaffAny } from '@/lib/crm/http';
+import { body, handler, isMiniProgramRequest, ok, requireStaff, requireStaffAny } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+const PAY_WORDS = /收费|缴费|付款|费用|Zelle|Stripe|核款|收款|会费|价格|\$\s*\d|美元/i;
 export const GET = handler(async (req: Request, { params }: { params: { eventId: string } }) => {
   await requireStaffAny(req, ['ops', 'checkin']);
-  return ok({ prep: await getEventPrep(params.eventId) });
+  const prep = await getEventPrep(params.eventId);
+  // 1.3 N（测试 P1-N3）：小程序工作台不出现收款相关文字；这些事项照常能打勾，内容在网站后台看
+  if (prep && (await isMiniProgramRequest(req))) {
+    return ok({
+      prep: {
+        ...prep,
+        shooting_list: prep.shooting_list && PAY_WORDS.test(prep.shooting_list) ? null : prep.shooting_list,
+        retro: null,
+        items: prep.items.map((i) => (PAY_WORDS.test(i.title) || PAY_WORDS.test(i.note ?? '') ? { ...i, title: '收款相关事项（内容请在网站后台查看）', note: null } : i))
+      }
+    });
+  }
+  return ok({ prep });
 });
 export const POST = handler(async (req: Request, { params }: { params: { eventId: string } }) => {
   const s = await requireStaffAny(req, ['ops', 'checkin']);

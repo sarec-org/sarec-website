@@ -2,11 +2,12 @@
 import { createEvent, listStaffEvents, type EventInput } from '@/lib/crm/staff';
 import { staffCan } from '@/lib/crm/auth';
 import { CrmError } from '@/lib/crm/events';
-import { body, handler, ok, requireContact, requireStaff } from '@/lib/crm/http';
+import { body, denyMpStaffMoney, handler, ok, requireContact, requireStaff } from '@/lib/crm/http';
 import { staffFor } from '@/lib/crm/auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
+  await denyMpStaffMoney(req); // 1.3 N（测试 P1-N2）：小程序会话不返回活动费用
   const s = await staffFor(await requireContact(req));
   if (!staffCan(s, 'ops') && !staffCan(s, 'checkin')) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
   return ok({ events: await listStaffEvents() });
