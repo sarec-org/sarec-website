@@ -8,8 +8,11 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getPool } from '@/lib/db/client';
 
+// 没有任何密钥时直接报错（fail closed），绝不退回写死的值——否则谁都能伪造付款链接
 function secret(): string {
-  return process.env.PAY_LINK_SECRET || process.env.CRON_SECRET || process.env.AGENT_IP_SALT || 'sarec-pay-link-v1';
+  const s = process.env.PAY_LINK_SECRET || process.env.CRON_SECRET || process.env.AGENT_IP_SALT;
+  if (!s) throw new Error('PAY_LINK_SECRET / CRON_SECRET 未配置，不能生成或校验付款链接');
+  return s;
 }
 
 export function payToken(orderNo: string): string {
@@ -18,7 +21,13 @@ export function payToken(orderNo: string): string {
 
 export function payTokenOk(orderNo: string, t: string | null | undefined): boolean {
   if (!t) return false;
-  const a = Buffer.from(payToken(orderNo));
+  let expected: string;
+  try {
+    expected = payToken(orderNo);
+  } catch {
+    return false;
+  }
+  const a = Buffer.from(expected);
   const b = Buffer.from(String(t));
   return a.length === b.length && timingSafeEqual(a, b);
 }
