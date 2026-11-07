@@ -52,3 +52,39 @@ ALTER TABLE event_photos ADD CONSTRAINT event_photos_review_status_check CHECK (
 CREATE UNIQUE INDEX IF NOT EXISTS event_photos_hash_uniq ON event_photos (event_id, content_hash) WHERE content_hash IS NOT NULL AND variant_of IS NULL;
 CREATE INDEX IF NOT EXISTS event_photos_uploader_idx ON event_photos (uploader_contact_id, event_id) WHERE uploader_contact_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS event_photos_review_idx ON event_photos (review_status) WHERE review_status = 'review';
+
+-- J. 活动后自动运营 --------------------------------------------------
+-- 活动结束后由每天的定时任务自动跑一次：汇总签到和照片 → 照片去重分组、精选建议 → 回顾文章 / 分享文案 / 服务号推文初稿
+-- → 助理在后台一次审核 → 发布（网站回顾、小程序相册；服务号推文复制后粘贴发布）→ 汇总需求、生成跟进任务 → 给到场的人推荐下一场。
+-- AI 只写初稿，必须人工审核后才发布；小程序里不展示运行时 AI 内容。
+CREATE TABLE IF NOT EXISTS event_recaps (
+  event_id      uuid PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
+  status        text NOT NULL DEFAULT 'drafted' CHECK (status IN ('drafted', 'published')),
+  stats         jsonb,
+  photo_groups  jsonb,          -- [{ pick: photoId, members: [photoId…] }]
+  picks         uuid[],         -- 精选建议（工作人员可增减）
+  recap_draft   text,           -- 活动回顾文章初稿
+  share_draft   text,           -- 分享 / 邀请文案初稿
+  oa_draft      text,           -- 服务号推文初稿
+  thanks_draft  text,           -- 给带人来的会员的感谢
+  needs         jsonb,          -- 活动中留下的需求汇总
+  next_recs     jsonb,          -- 给到场的人推荐的下一场 { slug, title, count }
+  drafted_by    text,           -- 'ai:<model>' / 'template'
+  drafted_at    timestamptz NOT NULL DEFAULT now(),
+  approved_by   text,
+  published_at  timestamptz
+);
+-- 有明确用途的定时 AI 任务：每次调用一条记录（单次上限、计入月预算）
+CREATE TABLE IF NOT EXISTS ai_task_log (
+  id            bigserial PRIMARY KEY,
+  task          text NOT NULL,
+  ref           text,
+  model         text,
+  ok            boolean NOT NULL,
+  input_tokens  int NOT NULL DEFAULT 0,
+  output_tokens int NOT NULL DEFAULT 0,
+  cost_micros   bigint NOT NULL DEFAULT 0,
+  error         text,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ai_task_log_created_idx ON ai_task_log (created_at);

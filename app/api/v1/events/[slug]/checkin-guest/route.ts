@@ -7,7 +7,7 @@
  * 不创建登录状态（没验证过手机号，不能凭它登录别人的账号）；页面问候只用对方刚填的名字，不回显库里的资料。
  */
 import { getPool, withTransaction } from '@/lib/db/client';
-import { CrmError, checkIn, normalizePhone } from '@/lib/crm/events';
+import { CrmError, checkIn, checkinWindow, normalizePhone, startRegistration } from '@/lib/crm/events';
 import { register, requireEvent } from '@/lib/crm/flow';
 import { body, handler, ok, siteUrl } from '@/lib/crm/http';
 import { checkinKeyOk } from '@/lib/crm/wechat';
@@ -24,6 +24,9 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
   const ev = await withTransaction((db) => requireEvent(db, params.slug));
   const { rows: sec } = await pool.query<{ checkin_secret: string }>('SELECT checkin_secret FROM events WHERE id = $1', [ev.id]);
   if (!checkinKeyOk(b.k, sec[0]?.checkin_secret)) throw new CrmError('wrong_code', '这不是本场活动门口的签到码。请找门口贴的签到码，再扫一次。');
+  // 1.3 P1：不在签到时间里（别的日子的码）→ 不签到，写清是哪天的活动
+  const win = checkinWindow(ev);
+  if (win.state !== 'open') return ok({ result: { kind: 'wrong_day', message: win.message } });
 
   // 1) 这个手机号有没有这场活动的报名（档案手机号或联系方式里的手机号）
   const { rows: hit } = await pool.query<{ contact_id: string }>(
@@ -43,14 +46,25 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
       [phone]
     );
     contactId = c[0]?.id ?? null;
-    if (!contactId) {
+    if (contactId) {
+      // 1.3 P1：手机号对上已有档案——没验证过手机号，不能改那份档案的姓名或资料；只给他现场报名，
+      // 现场填的名字记进审计日志给工作人员看
+      const existing = contactId;
+      await withTransaction(async (db) => {
+        await startRegistration(db, await requireEvent(db, params.slug), existing, { source: 'onsite' });
+        await db.query(
+          `INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value, reason) VALUES ('system', 'guest_checkin_name', 'contact', $1, $2, '网页签到：手机号对上已有档案，现场填写的姓名未写入档案')`,
+          [existing, JSON.stringify({ typedName: name, event: params.slug })]
+        );
+      });
+    } else {
       const { rows: ins } = await pool.query<{ id: string }>(
         `INSERT INTO contacts (name, acquisition_source) VALUES ($1, 'onsite_web') RETURNING id`,
         [name]
       );
       contactId = ins[0].id;
+      await register(params.slug, contactId, { name, phone, channel: 'onsite', oneStep: true, allowNoRole: true }, { base: siteUrl(req) });
     }
-    await register(params.slug, contactId, { name, phone, channel: 'onsite', oneStep: true, allowNoRole: true }, { base: siteUrl(req) });
   }
   const result = await withTransaction(async (db) => checkIn(db, await requireEvent(db, params.slug), contactId!));
   if (result.kind === 'checked_in') return ok({ result: { kind: 'checked_in', message: `${name}，欢迎！已签到` } });

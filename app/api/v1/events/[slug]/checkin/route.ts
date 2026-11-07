@@ -7,7 +7,7 @@
  * v = 2（1.2 小程序）/ 旧版：保持原来的行为（新人填姓名、行业）。
  */
 import { getPool, withTransaction } from '@/lib/db/client';
-import { CrmError, checkIn } from '@/lib/crm/events';
+import { CrmError, checkIn, checkinWindow } from '@/lib/crm/events';
 import { register, requireEvent } from '@/lib/crm/flow';
 import { loadProfile } from '@/lib/crm/profile';
 import { body, handler, ok, requireContact, siteUrl } from '@/lib/crm/http';
@@ -28,6 +28,12 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
     throw new CrmError('wrong_code', v >= 3 ? '这不是本场活动门口的签到码。请找门口贴的签到码，再扫一次。' : '这不是本场活动的签到码，请扫门口的签到码');
   }
 
+  // 1.3 P1：不在这场活动的签到时间里（别的日子的码），不签到、写清是哪天的活动
+  const win = checkinWindow(ev);
+  if (win.state !== 'open') {
+    if (v >= 3) return ok({ result: { kind: 'wrong_day', message: win.message } });
+    throw new CrmError('wrong_day', win.message);
+  }
   if (v >= 3) return ok({ result: await zeroGuideCheckin(params.slug, me, b, siteUrl(req)) });
 
   // 旧版：现场新客先最少登记三项（姓名、联系方式、主要角色）

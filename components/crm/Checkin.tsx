@@ -15,7 +15,7 @@ import { api, money } from './client';
 import s from './crm.module.css';
 
 type Result =
-  | { kind: 'checked_in' | 'already' | 'waitlisted' | 'rejected' | 'need_profile'; message: string; greetName?: string | null }
+  | { kind: 'checked_in' | 'already' | 'waitlisted' | 'rejected' | 'need_profile' | 'wrong_day'; message: string; greetName?: string | null }
   | { kind: 'pending_payment'; message: string; orderNo?: string; amountCents?: number };
 
 const NET_ERR = '网络不太好，签到还没成功。请再点一次“再试一次”；还不行就找门口工作人员。';
@@ -125,7 +125,9 @@ export function Checkin({ slug, k }: { slug: string; k: string }) {
           ? '请找门口工作人员'
           : kind === 'waitlisted'
             ? '名额已满，您在候补名单'
-            : '没能签到';
+            : kind === 'wrong_day'
+              ? '不是今天的签到码'
+              : '没能签到';
   const sub = err ?? (kind === 'checked_in' ? '里面请，祝您愉快。' : result?.message);
   return (
     <div className={s.page}>
@@ -143,6 +145,9 @@ export function Checkin({ slug, k }: { slug: string; k: string }) {
         <Link className={`${s.btn} ${s.btnBlock}`} href={`/zh/pay/${result.orderNo}`}>
           去付款{result.amountCents ? ` ${money(result.amountCents)}` : ''}
         </Link>
+      )}
+      {!err && kind === 'wrong_day' && (
+        <Link className={`${s.btn} ${s.btnBlock}`} href="/zh/events#open" style={{ fontSize: '1.3rem', minHeight: 64 }}>看今天的活动</Link>
       )}
       {good && (
         <p className={s.small} style={{ textAlign: 'center', marginTop: 32 }}>

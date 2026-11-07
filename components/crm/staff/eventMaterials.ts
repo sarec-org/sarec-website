@@ -225,49 +225,48 @@ export async function checkinA4(e: MaterialEvent, src: { codeSrc?: string; url?:
   g.fillStyle = '#fff';
   g.fillRect(0, 0, W, H);
 
-  // 顶部：活动名 + 时间（窄条，留出最大空间给码）
-  const bandH = 44 * mm;
+  // 版面按 A4（210 × 297mm）排：顶部条 0–40；标题 ~58；码 66–186；示意图 + 三步 196–250；绿条 258–282；底部小字 291
+  const bandH = 40 * mm;
   g.fillStyle = C.navy;
   g.fillRect(0, 0, W, bandH);
   g.fillStyle = C.gold;
-  g.fillRect(0, bandH, W, 1.6 * mm);
+  g.fillRect(0, bandH, W, 1.4 * mm);
   g.textAlign = 'center';
   const when = eventWhen(e);
   const head = e.title;
-  let size = 15 * mm;
+  let size = 14 * mm;
   g.font = `700 ${size}px ${FONT}`;
   while (g.measureText(head).width > W - 24 * mm && size > 8 * mm) {
     size -= mm / 2;
     g.font = `700 ${size}px ${FONT}`;
   }
   g.fillStyle = C.goldPale;
-  g.fillText(head, W / 2, 22 * mm);
+  g.fillText(head, W / 2, 20 * mm);
   g.fillStyle = C.goldSoft;
-  g.font = `400 ${6 * mm}px ${FONT}`;
-  g.fillText(`${when.date} ${when.time} · 中美房地产商会`, W / 2, 35 * mm);
+  g.font = `400 ${5.6 * mm}px ${FONT}`;
+  g.fillText(`${when.date} ${when.time} · 中美房地产商会`, W / 2, 32 * mm);
 
-  // 大标题
   g.fillStyle = C.navy;
-  g.font = `800 ${21 * mm}px ${FONT}`;
-  g.fillText('扫码签到', W / 2, bandH + 30 * mm);
+  g.font = `800 ${16 * mm}px ${FONT}`;
+  g.fillText('扫码签到', W / 2, 58 * mm);
 
-  // 大码（约 150mm）
-  const box = 152 * mm, bx = (W - box) / 2, by = bandH + 40 * mm;
+  // 码：120mm
+  const box = 120 * mm, bx = (W - box) / 2, by = 66 * mm;
   g.strokeStyle = C.gold;
-  g.lineWidth = 1.6 * mm;
-  roundRect(g, bx, by, box, box, 6 * mm);
+  g.lineWidth = 1.4 * mm;
+  roundRect(g, bx, by, box, box, 5 * mm);
   g.stroke();
-  const qrSize = Math.round(box - 12 * mm);
+  const qrSize = Math.round(box - 10 * mm);
   const img = src.codeSrc
     ? src.codeSrc
     : await QRCode.toDataURL(src.url || '', { width: qrSize, margin: 0, errorCorrectionLevel: 'M', color: { dark: C.ink, light: '#FFFFFF' } });
-  g.drawImage(await loadImg(img), bx + 6 * mm, by + 6 * mm, qrSize, qrSize);
+  g.drawImage(await loadImg(img), bx + 5 * mm, by + 5 * mm, qrSize, qrSize);
 
-  // 三步 + 示意图
-  const top = by + box + 14 * mm;
-  const illoW = 52 * mm, illoH = 82 * mm, illoX = 18 * mm;
-  drawScanIllustration(g, illoX, top, illoW, illoH, mm);
-  const tx = illoX + illoW + 12 * mm;
+  // 示意图 + 三步（196–250mm）
+  const top = 196 * mm;
+  const illoW = 34 * mm, illoH = 54 * mm, illoX = 22 * mm;
+  drawScanIllustration(g, illoX, top, illoW, illoH, mm * 0.68);
+  const tx = illoX + illoW + 10 * mm;
   g.textAlign = 'left';
   const steps: [string, string][] = [
     ['①', '打开微信'],
@@ -275,35 +274,34 @@ export async function checkinA4(e: MaterialEvent, src: { codeSrc?: string; url?:
     ['③', '对准上面这个码']
   ];
   steps.forEach(([n, t], i) => {
-    const y = top + 14 * mm + i * 25 * mm;
+    const y = top + 13 * mm + i * 18 * mm;
     g.fillStyle = C.gold;
-    g.font = `800 ${13 * mm}px ${FONT}`;
+    g.font = `800 ${11 * mm}px ${FONT}`;
     g.fillText(n, tx, y);
     g.fillStyle = C.navy;
-    let fs = 11 * mm;
+    let fs = 9.5 * mm;
     g.font = `700 ${fs}px ${FONT}`;
-    while (g.measureText(t).width > W - tx - 30 * mm && fs > 7 * mm) {
-      fs -= mm / 2;
+    while (g.measureText(t).width > W - tx - 28 * mm && fs > 6 * mm) {
+      fs -= mm / 4;
       g.font = `700 ${fs}px ${FONT}`;
     }
-    g.fillText(t, tx + 16 * mm, y);
+    g.fillText(t, tx + 14 * mm, y);
   });
 
-  // 扫完会怎样
+  // 扫完会怎样（258–282mm）
   g.textAlign = 'center';
-  const noteY = top + illoH + 14 * mm;
   g.fillStyle = '#EAF6EE';
-  roundRect(g, 14 * mm, noteY - 11 * mm, W - 28 * mm, 30 * mm, 4 * mm);
+  roundRect(g, 14 * mm, 258 * mm, W - 28 * mm, 24 * mm, 4 * mm);
   g.fill();
   g.fillStyle = '#1F6B3A';
-  g.font = `700 ${8.2 * mm}px ${FONT}`;
-  g.fillText('已报名：扫完自动签到，不用再点', W / 2, noteY);
-  g.font = `400 ${7 * mm}px ${FONT}`;
-  g.fillText('没报名：填姓名、手机两项，马上签到', W / 2, noteY + 12 * mm);
+  g.font = `700 ${7.4 * mm}px ${FONT}`;
+  g.fillText('已报名：扫完自动签到，不用再点', W / 2, 268 * mm);
+  g.font = `400 ${6.2 * mm}px ${FONT}`;
+  g.fillText('没报名：填姓名、手机两项，马上签到', W / 2, 278 * mm);
 
   g.fillStyle = C.goldMuted;
-  g.font = `400 ${5 * mm}px ${FONT}`;
-  g.fillText(src.codeSrc ? '扫不了？请找门口工作人员' : '网页版签到码 · 扫不了请找门口工作人员', W / 2, H - 12 * mm);
+  g.font = `400 ${4.4 * mm}px ${FONT}`;
+  g.fillText(src.codeSrc ? '扫不了？请找门口工作人员' : '网页版签到码 · 扫不了请找门口工作人员', W / 2, 291 * mm);
   return toBlob(c);
 }
 

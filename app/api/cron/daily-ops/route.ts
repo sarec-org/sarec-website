@@ -8,6 +8,7 @@ import { recordException, scanFollowups } from '@/lib/crm/followups';
 import { runAgentDigest } from '@/lib/agent/digest';
 import { laToday } from '@/lib/laDate';
 import { runFeatureReport } from '@/lib/crm/features';
+import { runPostEvent } from '@/lib/crm/postEvent';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,13 @@ async function run(req: Request) {
   } catch (e) {
     await recordException('agent_digest', `agent_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.agentDigest = 'error';
+  }
+  // 1.3 J：活动结束后的自动整理（每场一次；AI 只写初稿，计入月预算）
+  try {
+    out.postEvent = await runPostEvent();
+  } catch (e) {
+    await recordException('post_event', `post_event:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.postEvent = 'error';
   }
   // 1.3 L：每月 1 号的功能月报（只查数据库，不调 AI；同月只发一次）
   try {
