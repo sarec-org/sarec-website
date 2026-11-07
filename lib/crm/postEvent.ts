@@ -176,7 +176,14 @@ export async function buildRecap(eventId: string, opts: { force?: boolean } = {}
        WHERE event_recaps.status <> 'published'`,
     [eventId, JSON.stringify(s), JSON.stringify(g.groups), g.picks, ai?.recap ?? t.recap, ai?.share || t.share, ai?.oa || t.oa, t.thanks || null, JSON.stringify(needs), next ? JSON.stringify(next) : null, ai ? `ai:${ai.model}` : 'template']
   );
-  return { drafted: true, by: ai ? 'ai' : 'template', photos: g.picks.length };
+  // 1.3 M：私企面对面（清单设置 collectIntro）会后自动生成“本场电子名册”并发给参与者
+  const { rows: pr } = await pool.query<{ face: boolean }>(`SELECT (template_key = 'face' OR (settings->>'collectIntro')::boolean) AS face FROM event_prep WHERE event_id = $1`, [eventId]);
+  let roster = null;
+  if (pr[0]?.face) {
+    const { buildRoster } = await import('./roster');
+    roster = await buildRoster(eventId, { send: true }).catch(() => null);
+  }
+  return { drafted: true, by: ai ? 'ai' : 'template', photos: g.picks.length, roster };
 }
 
 /** 定时任务：结束 2 小时到 3 天内、还没生成回顾的活动，每次最多处理 2 场 */

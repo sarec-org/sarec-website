@@ -124,7 +124,12 @@ export async function getStaffEvent(id: string) {
     `SELECT r.status, r.arrival_status, r.source, r.checked_in_at, r.created_at, c.id AS contact_id, c.name, c.member_no::int,
             c.email, c.phone_e164, c.is_placeholder,
             (SELECT ab.name FROM contacts ab WHERE ab.id = r.added_by) AS added_by_name,
-            (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status
+            (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status,
+            -- 1.3 M：现场付 = 活动当天（洛杉矶时间）才确认到账的
+            (SELECT CASE WHEN o.status <> 'paid' THEN NULL
+                         WHEN (o.paid_at AT TIME ZONE 'America/Los_Angeles')::date = ((SELECT starts_at FROM events WHERE id = r.event_id) AT TIME ZONE 'America/Los_Angeles')::date THEN 'onsite'
+                         ELSE 'before' END
+               FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS paid_when
        FROM registrations r JOIN contacts c ON c.id = r.contact_id WHERE r.event_id = $1 ORDER BY r.created_at`,
     [id]
   );

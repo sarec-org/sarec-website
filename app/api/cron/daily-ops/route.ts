@@ -9,6 +9,8 @@ import { runAgentDigest } from '@/lib/agent/digest';
 import { laToday } from '@/lib/laDate';
 import { runFeatureReport } from '@/lib/crm/features';
 import { runPostEvent } from '@/lib/crm/postEvent';
+import { runPrepReminders } from '@/lib/crm/prep';
+import { runPayReminders } from '@/lib/crm/payLinks';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +42,19 @@ async function run(req: Request) {
   } catch (e) {
     await recordException('agent_digest', `agent_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.agentDigest = 'error';
+  }
+  // 1.3 M：筹备清单提醒（截止前一天给负责人；活动前 2 天给东哥汇总）、收费活动未付提醒（活动前 5 天）——按规则发，不调 AI
+  try {
+    out.prep = await runPrepReminders(new Date());
+  } catch (e) {
+    await recordException('prep_reminder', `prep_reminder:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.prep = 'error';
+  }
+  try {
+    out.payReminders = await runPayReminders(new Date());
+  } catch (e) {
+    await recordException('pay_reminder', `pay_reminder:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.payReminders = 'error';
   }
   // 1.3 J：活动结束后的自动整理（每场一次；AI 只写初稿，计入月预算）
   try {

@@ -132,3 +132,26 @@ export function siteUrl(req: Request): string {
   const proto = req.headers.get('x-forwarded-proto') ?? u.protocol.replace(':', '');
   return `${proto}://${host}`;
 }
+
+
+/** 1.3：订单页的身份——已登录用本人；邮件 / 短信里的付款链接带签名 ?t=，不用登录也能打开本人这张订单 */
+export async function orderContact(req: Request, orderNo: string): Promise<string> {
+  const t = new URL(req.url).searchParams.get('t') || req.headers.get('x-pay-token');
+  if (t) {
+    const { payTokenOk } = await import('./payLinks');
+    if (payTokenOk(orderNo, t)) {
+      const { rows } = await getPool().query<{ contact_id: string }>(`SELECT contact_id FROM orders WHERE order_no = $1`, [orderNo]);
+      if (rows[0]) return rows[0].contact_id;
+    }
+  }
+  return requireContact(req);
+}
+
+
+/** 运营或现场签到人员（1.3 筹备清单：工作人员在现场用手机打勾） */
+export async function requireStaffAny(req: Request, roles: StaffRole[]): Promise<Staff> {
+  const id = await requireContact(req);
+  const s = await staffFor(id);
+  if (!s || !roles.some((r) => staffCan(s, r))) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
+  return s;
+}

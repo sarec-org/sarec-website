@@ -8,7 +8,7 @@ import { EventForm } from '../EventForm';
 import { checkinA4, registerPoster, saveBlob, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
-type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; added_by_name?: string | null; is_placeholder?: boolean };
+type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; added_by_name?: string | null; is_placeholder?: boolean };
 
 export default function StaffEventDetail({ params }: { params: { id: string } }) {
   const [data, setData] = useState<{ event: Ev; registrations: Reg[] } | null>(null);
@@ -223,6 +223,13 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
             )}
 
             <h2 className={styles.h2}>报名名单（{data.registrations.length}）</h2>
+            {Number(data.event.fee_cents) > 0 && (() => {
+              const live = data.registrations.filter((r) => r.status !== 'cancelled');
+              const paid = live.filter((r) => r.order_status === 'paid' && r.paid_when !== 'onsite').length;
+              const onsite = live.filter((r) => r.order_status === 'paid' && r.paid_when === 'onsite').length;
+              const unpaid = live.length - paid - onsite;
+              return <p className={styles.notice}>收费：已付 <strong>{paid}</strong> · 未付 <strong>{unpaid}</strong> · 现场付 <strong>{onsite}</strong>。没付的，系统已在报名后、活动前 5 天各发过一次付款链接；到场没付的签到台现场 Zelle 扫码。</p>;
+            })()}
             <div style={{ overflowX: 'auto' }}>
               <table className={styles.table}>
                 <thead><tr><th>姓名</th><th>联系方式</th><th>报名</th><th>到场</th><th>付款</th></tr></thead>
@@ -233,7 +240,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                       <td className={styles.small}>{r.phone_e164 ?? r.email}</td>
                       <td>{({ registered: '已报名', waitlisted: '候补', cancelled: '已取消' } as Record<string, string>)[r.status]}{r.source === 'companion' ? `（由 ${r.added_by_name ?? '朋友'} 代报名${r.is_placeholder ? '，本人还没登录过' : ''}）` : r.source !== 'online' ? `（${r.source === 'onsite' ? '现场' : '工作人员'}）` : ''}</td>
                       <td>{({ none: '—', checked_in: '已签到', arrived_pending_payment: '到场待核款' } as Record<string, string>)[r.arrival_status]}</td>
-                      <td>{r.order_status ? ({ pending_payment: '待付款', payment_submitted: '待核款', paid: '已付款' } as Record<string, string>)[r.order_status] ?? r.order_status : '—'}</td>
+                      <td>{r.order_status ? (r.order_status === 'paid' ? (r.paid_when === 'onsite' ? '现场付' : '已付') : ({ pending_payment: '未付', payment_submitted: '已提交，待核款' } as Record<string, string>)[r.order_status] ?? r.order_status) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>

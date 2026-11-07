@@ -161,6 +161,12 @@ export type RegisterPreview = {
   profile: { name: string | null; phoneMasked: string | null; roleLabel: string | null } | null;
   photoConsent: boolean;
   registrationId: string | null;
+  /** 1.3：收费活动已付款（报名结果页显示“已确认”，不再显示“收费待确认”） */
+  feeConfirmed?: boolean;
+  /** 1.3 私企面对面：报名后请本人填“一句话介绍我和我的业务”（写进电子名片），名片里已有就不问 */
+  collectIntro?: boolean;
+  /** 1.3：会后电子名册已生成、本人到场（可以查看） */
+  rosterReady?: boolean;
 };
 
 export async function previewRegistration(slug: string, contactId: string | null): Promise<RegisterPreview> {
@@ -197,8 +203,18 @@ export async function previewRegistration(slug: string, contactId: string | null
   const name = c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null;
   const phoneKnown = !!(contactInfo.phone?.value || c[0]?.phone_e164);
   const role = findRoleSub(c[0]?.role_sub);
+  const { rows: extra } = await pool.query<{ paid: boolean; collect: boolean; has_intro: boolean; roster: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM orders o WHERE o.contact_id = $1 AND o.related_id = $2 AND o.purpose = 'event_fee' AND o.status = 'paid') AS paid,
+            COALESCE((SELECT (p.settings->>'collectIntro')::boolean FROM event_prep p WHERE p.event_id = $2), false) AS collect,
+            EXISTS (SELECT 1 FROM member_cards m WHERE m.contact_id = $1 AND coalesce(m.intro, '') <> '') AS has_intro,
+            EXISTS (SELECT 1 FROM event_rosters r WHERE r.event_id = $2) AS roster`,
+    [contactId, ev.id]
+  );
   return {
     event: publicEvent(ev),
+    feeConfirmed: !!extra[0]?.paid,
+    collectIntro: !!extra[0]?.collect && !extra[0]?.has_intro && !!reg[0] && reg[0].status !== 'cancelled',
+    rosterReady: !!extra[0]?.roster && reg[0]?.arrival_status === 'checked_in',
     loggedIn: true,
     firstTime,
     alreadyRegistered,
@@ -422,6 +438,15 @@ export async function myOverviewMp(contactId: string) {
       WHERE own.contact_id = $1 AND r.status <> 'cancelled' ORDER BY r.created_at`,
     [contactId]
   );
+  // 1.3 M：收费活动已到账 → “已确认”；本场电子名册已生成且本人到场 → “我的报名”里可打开
+  const { rows: extra } = await pool.query<{ slug: string; paid: boolean; roster: boolean }>(
+    `SELECT e.slug,
+            EXISTS (SELECT 1 FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = e.id AND o.purpose = 'event_fee' AND o.status = 'paid') AS paid,
+            (r.arrival_status = 'checked_in' AND EXISTS (SELECT 1 FROM event_rosters x WHERE x.event_id = e.id)) AS roster
+       FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1`,
+    [contactId]
+  );
+  const extraBy = new Map(extra.map((x) => [x.slug, x]));
   const compBy = new Map<string, { name: string; status: string; arrival: string }[]>();
   for (const x of comp) compBy.set(x.slug, [...(compBy.get(x.slug) ?? []), { name: x.name, status: x.status, arrival: x.arrival_status }]);
   return {
@@ -433,7 +458,9 @@ export async function myOverviewMp(contactId: string) {
     registrations: full.registrations.map((r: Record<string, unknown>) => ({
       slug: r.slug, title: r.title, starts_at: r.starts_at, location_name: r.location_name, status: r.status,
       arrival_status: r.arrival_status, checked_in_at: r.checked_in_at, paid_event: Number(r.fee_cents) > 0,
-      companions: compBy.get(String(r.slug)) ?? []
+      companions: compBy.get(String(r.slug)) ?? [],
+      fee_confirmed: !!extraBy.get(String(r.slug))?.paid,
+      roster: !!extraBy.get(String(r.slug))?.roster
     })),
     bookings: full.bookings.map((b: Record<string, unknown>) => ({ id: b.id, room: b.room, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status })),
     referrals: await myReferralStats(pool, contactId)

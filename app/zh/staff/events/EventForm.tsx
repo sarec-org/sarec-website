@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
 import { laWallToIso } from '@/lib/laDate';
@@ -50,6 +50,13 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     listed: initial ? initial.is_listed !== false : true
   });
   const [busy, setBusy] = useState(false);
+  // 1.3 M：活动类型 → 自动生成筹备清单（只在新建时）
+  const [prep, setPrep] = useState('lecture');
+  const [tpls, setTpls] = useState<{ key: string; name: string }[]>([{ key: 'lecture', name: '讲座（60–100 人）' }, { key: 'face', name: '私企面对面（约 20 人，收费）' }]);
+  useEffect(() => {
+    if (initial) return;
+    api<{ templates: { key: string; name: string }[] }>('/api/v1/staff/prep/templates').then((r) => r.ok && r.data.templates.length && setTpls(r.data.templates));
+  }, [initial]);
   const [err, setErr] = useState('');
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
@@ -58,7 +65,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     setErr('');
     const payload = {
       title: f.title,
-      ...(initial ? {} : { slug: f.slug }),
+      ...(initial ? {} : { slug: f.slug, prepTemplate: prep || undefined }),
       summary: f.summary,
       startsAt: fromLocalInput(f.startsAt),
       endsAt: fromLocalInput(f.endsAt),
@@ -89,6 +96,15 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       {err && <div className={styles.error}>{err}</div>}
       {input('title', '活动标题 *')}
       {!initial && input('slug', '链接名（选填，英文小写；不填自动生成）')}
+      {!initial && (
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="ev-prep">活动类型（自动生成筹备清单）</label>
+          <select id="ev-prep" className={styles.select} value={prep} onChange={(e) => setPrep(e.target.value)}>
+            {tpls.map((t) => <option key={t.key} value={t.key}>{t.name}</option>)}
+            <option value="">不生成清单</option>
+          </select>
+        </div>
+      )}
       <div className={styles.field}>
         <label className={styles.label} htmlFor="ev-summary">简介</label>
         <textarea id="ev-summary" className={styles.textarea} value={f.summary} onChange={(e) => set('summary', e.target.value)} />

@@ -13,5 +13,12 @@ export const GET = handler(async (req: Request) => {
 });
 export const POST = handler(async (req: Request) => {
   const s = await requireStaff(req, 'ops');
-  return ok({ event: await createEvent(s, await body<EventInput>(req)) });
+  const b = await body<EventInput & { prepTemplate?: string }>(req);
+  const event = await createEvent(s, b);
+  // 1.3 M：建活动时选了活动类型 → 自动生成筹备清单（按活动日期倒推截止日）
+  if (b.prepTemplate && typeof b.prepTemplate === 'string') {
+    const { createEventPrep } = await import('@/lib/crm/prep');
+    await createEventPrep(String((event as { id: string }).id), b.prepTemplate).catch(() => undefined);
+  }
+  return ok({ event });
 });
