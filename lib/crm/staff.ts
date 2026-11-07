@@ -122,7 +122,8 @@ export async function getStaffEvent(id: string) {
   if (!rows[0]) throw new CrmError('not_found', '找不到这场活动');
   const { rows: regs } = await getPool().query(
     `SELECT r.status, r.arrival_status, r.source, r.checked_in_at, r.created_at, c.id AS contact_id, c.name, c.member_no::int,
-            c.email, c.phone_e164,
+            c.email, c.phone_e164, c.is_placeholder,
+            (SELECT ab.name FROM contacts ab WHERE ab.id = r.added_by) AS added_by_name,
             (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status
        FROM registrations r JOIN contacts c ON c.id = r.contact_id WHERE r.event_id = $1 ORDER BY r.created_at`,
     [id]

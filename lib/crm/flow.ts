@@ -19,6 +19,7 @@ import {
   type AnswerValue,
   type Question
 } from './questionBank';
+import { mergePlaceholderByPhone } from './companions';
 
 export type QuestionDTO = {
   code: string;
@@ -240,6 +241,11 @@ export async function register(slug: string, contactId: string, input: RegisterI
   const out = await withTransaction(async (db) => {
     const ev = await requireEvent(db, slug);
     if (given) await saveContactInput(db, contactId, given, 'registration');
+    // 1.3：朋友之前被人“带一位朋友”代报过名（占位档案），现在自己来报名 / 签到：手机号对上就并进来
+    {
+      const { rows: ph } = await db.query<{ p: string | null }>(`SELECT phone_e164 AS p FROM contacts WHERE id = $1`, [contactId]);
+      await mergePlaceholderByPhone(db, contactId, given?.phone ?? ph[0]?.p ?? null);
+    }
     const { answered } = await loadProfile(db, contactId);
     const firstTime = !answered.has('Q03');
     let refContactId: string | null = null;
@@ -405,6 +411,15 @@ export async function myOverviewMp(contactId: string) {
   const { myReferralStats } = await import('./growth');
   const { rows: card } = await pool.query<{ company: string | null; title: string | null }>(`SELECT company, title FROM member_cards WHERE contact_id = $1`, [contactId]);
   const { rows: av } = await pool.query<{ avatar_url: string | null }>(`SELECT avatar_url FROM contacts WHERE id = $1`, [contactId]);
+  // 1.3：我带的朋友（同行人）是否已报名、已到场
+  const { rows: comp } = await pool.query<{ slug: string; name: string; status: string; arrival_status: string }>(
+    `SELECT e.slug, c.name, r.status, r.arrival_status
+       FROM registrations own JOIN registrations r ON r.companion_of = own.id JOIN contacts c ON c.id = r.contact_id JOIN events e ON e.id = own.event_id
+      WHERE own.contact_id = $1 AND r.status <> 'cancelled' ORDER BY r.created_at`,
+    [contactId]
+  );
+  const compBy = new Map<string, { name: string; status: string; arrival: string }[]>();
+  for (const x of comp) compBy.set(x.slug, [...(compBy.get(x.slug) ?? []), { name: x.name, status: x.status, arrival: x.arrival_status }]);
   return {
     contact: { ...full.contact, avatar_url: av[0]?.avatar_url ?? null, company: card[0]?.company ?? null, title: card[0]?.title ?? null },
     contactInfo: full.contactInfo,
@@ -413,7 +428,8 @@ export async function myOverviewMp(contactId: string) {
     profile: full.profile,
     registrations: full.registrations.map((r: Record<string, unknown>) => ({
       slug: r.slug, title: r.title, starts_at: r.starts_at, location_name: r.location_name, status: r.status,
-      arrival_status: r.arrival_status, checked_in_at: r.checked_in_at, paid_event: Number(r.fee_cents) > 0
+      arrival_status: r.arrival_status, checked_in_at: r.checked_in_at, paid_event: Number(r.fee_cents) > 0,
+      companions: compBy.get(String(r.slug)) ?? []
     })),
     bookings: full.bookings.map((b: Record<string, unknown>) => ({ id: b.id, room: b.room, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status })),
     referrals: await myReferralStats(pool, contactId)

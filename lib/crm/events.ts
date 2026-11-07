@@ -123,7 +123,7 @@ export async function startRegistration(
   db: Db,
   ev: EventRow,
   contactId: string,
-  opts: { source?: 'online' | 'onsite' | 'staff'; refContactId?: string | null; channelCode?: string | null } = {}
+  opts: { source?: 'online' | 'onsite' | 'staff' | 'companion'; refContactId?: string | null; channelCode?: string | null } = {}
 ): Promise<RegisterOutcome> {
   if (ev.event_status !== 'scheduled') throw new CrmError('event_closed', '活动已取消或已结束');
   const { rows: ex } = await db.query<Registration>(
