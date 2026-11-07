@@ -220,7 +220,10 @@ export async function homeData(contactId: string | null, opts: { base: string; w
         ORDER BY (coalesce(e.ends_at, e.starts_at + interval '3 hours') > now()) DESC, e.starts_at ASC LIMIT 1`,
       [contactId]
     );
-    const m = mine[0];
+    const m0 = mine[0];
+    // 1.2 线上问题 P-2/P-4：我报的那场已结束、但有未结束的活动时，首页大卡片和“邀请好友”都指向最近一场未结束的活动
+    const m0Over = m0 ? (m0.ends_at ?? new Date(new Date(m0.starts_at).getTime() + 3 * 3600_000)).getTime() <= now.getTime() || m0.event_status === 'completed' : false;
+    const m = m0 && !(m0Over && upcoming.length) ? m0 : undefined;
     if (m) {
       const end = m.ends_at ?? new Date(new Date(m.starts_at).getTime() + 3 * 3600_000);
       const ended = end.getTime() <= now.getTime() || m.event_status === 'completed';
