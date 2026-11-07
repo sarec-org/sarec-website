@@ -88,3 +88,9 @@ CREATE TABLE IF NOT EXISTS ai_task_log (
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ai_task_log_created_idx ON ai_task_log (created_at);
+
+-- B 修订（测试 P1-5）：朋友名单只显示邀请人自己填的名字和号码，不回显档案里的真实姓名；
+-- 手机号只用来匹配占位档案，不会把正式会员拉来报名。号码属于正式会员时，占位档案不存号码，号码存在这条报名上。
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS companion_name text;
+ALTER TABLE registrations ADD COLUMN IF NOT EXISTS companion_phone text;
+CREATE INDEX IF NOT EXISTS registrations_companion_phone_idx ON registrations (event_id, companion_phone) WHERE companion_phone IS NOT NULL;

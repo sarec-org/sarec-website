@@ -15,7 +15,7 @@ export const POST = handler(async (req: Request) => {
     sessionChannel: mini ? 'miniprogram' : 'web',
     bindContactId: bindTo
   });
-  if (mini && (req.headers.get('x-sarec-client') ?? '').toLowerCase().startsWith('mp-1.2')) {
+  if (mini && /^mp-1\.([2-9]|\d{2,})(\b|$)/.test((req.headers.get('x-sarec-client') ?? '').toLowerCase())) {
     await getPool().query(`UPDATE sessions SET client = 'mp-1.2' WHERE token_hash = $1`, [sha256(r.token)]).catch(() => undefined);
   }
   const res = ok({ contactId: r.contactId, created: r.created, ...(mini ? { token: r.token } : {}) }) as NextResponse;

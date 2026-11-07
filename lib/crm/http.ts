@@ -67,13 +67,15 @@ export async function optionalContact(req: Request): Promise<string | null> {
  * 是不是 1.2 小程序的请求：带 X-Sarec-Client: mp-1.2 头，或这个会话曾经被 1.2 用过（标记会话，之后不带头也算）。
  * 1.2 的会话一律不返回订单、金额、付款方式（合规：小程序不出现付费引导）。
  */
+// 1.2 及以后的小程序（mp-1.2、mp-1.3……）都按 1.2 的合规规则处理
+const NEW_MP = /^mp-1\.([2-9]|\d{2,})(\b|$)/;
 export async function isMp12(req: Request): Promise<boolean> {
   const token = tokenFrom(req);
   const header = (req.headers.get('x-sarec-client') ?? '').toLowerCase();
-  if (!token) return header.startsWith('mp-1.2');
+  if (!token) return NEW_MP.test(header);
   const hash = sha256(token);
   try {
-    if (header.startsWith('mp-1.2')) {
+    if (NEW_MP.test(header)) {
       await getPool().query(`UPDATE sessions SET client = 'mp-1.2' WHERE token_hash = $1 AND client IS DISTINCT FROM 'mp-1.2'`, [hash]);
       return true;
     }
@@ -81,7 +83,7 @@ export async function isMp12(req: Request): Promise<boolean> {
     return rows[0]?.client === 'mp-1.2';
   } catch {
     // 迁移还没跑（没有 client 列）：只看请求头
-    return header.startsWith('mp-1.2');
+    return NEW_MP.test(header);
   }
 }
 

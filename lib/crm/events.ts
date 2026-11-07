@@ -273,10 +273,7 @@ export async function checkIn(
     const out = await startRegistration(db, ev, contactId, { source: 'onsite' });
     reg = out.registration;
   }
-  if (reg.status === 'waitlisted' && method === 'self_scan' && ev.capacity != null) {
-    // 候补的人自己扫码：还有空位才转为已报名；满员时请到签到台由工作人员决定，避免超员
-    if ((await activeCount(db, ev.id)) >= ev.capacity) return { kind: 'waitlisted', message: '本场名额已满，您在候补名单中。请到签到台找工作人员，现场有空位会为您安排。' };
-  }
+  // 1.3：现场到了就让进——没报名的人到门口扫码直接报名签到，候补的人到门口扫码也直接转为已报名并签到（规则一致，测试 P2-3）
   if (reg.status === 'waitlisted') {
     // 候补的人到了现场：有空位，或工作人员现场核验放行 → 转为已报名再签到
     const { rows: up } = await db.query<Registration>(

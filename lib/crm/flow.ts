@@ -417,8 +417,8 @@ export async function myOverviewMp(contactId: string) {
   const { rows: av } = await pool.query<{ avatar_url: string | null }>(`SELECT avatar_url FROM contacts WHERE id = $1`, [contactId]);
   // 1.3：我带的朋友（同行人）是否已报名、已到场
   const { rows: comp } = await pool.query<{ slug: string; name: string; status: string; arrival_status: string }>(
-    `SELECT e.slug, c.name, r.status, r.arrival_status
-       FROM registrations own JOIN registrations r ON r.companion_of = own.id JOIN contacts c ON c.id = r.contact_id JOIN events e ON e.id = own.event_id
+    `SELECT e.slug, COALESCE(r.companion_name, '朋友') AS name, r.status, r.arrival_status
+       FROM registrations own JOIN registrations r ON r.companion_of = own.id JOIN events e ON e.id = own.event_id
       WHERE own.contact_id = $1 AND r.status <> 'cancelled' ORDER BY r.created_at`,
     [contactId]
   );

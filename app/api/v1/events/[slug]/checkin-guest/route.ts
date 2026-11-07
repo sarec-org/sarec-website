@@ -32,7 +32,7 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
   const { rows: hit } = await pool.query<{ contact_id: string }>(
     `SELECT r.contact_id FROM registrations r JOIN contacts c ON c.id = r.contact_id
       WHERE r.event_id = $1 AND r.status <> 'cancelled'
-        AND (c.phone_e164 = $2 OR EXISTS (SELECT 1 FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.value = $2))
+        AND (c.phone_e164 = $2 OR r.companion_phone = $2 OR EXISTS (SELECT 1 FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.value = $2))
       ORDER BY r.created_at LIMIT 1`,
     [ev.id, phone]
   );
