@@ -38,7 +38,22 @@ function CopyRow({ label, value, mono = true }: { label: string; value: string |
   );
 }
 
-export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string | null }) {
+// 1.3：邮件 / 短信里的付款链接带签名 t，不用登录；刷卡跳回来时 URL 不带 t，所以在本次浏览里记住它
+function payTokenFor(orderNo: string, t: string | null): string {
+  try {
+    const k = `sarec:payToken:${orderNo}`;
+    if (t) sessionStorage.setItem(k, t);
+    return t || sessionStorage.getItem(k) || '';
+  } catch {
+    return t || '';
+  }
+}
+
+export function PayOrder({ orderNo, stripe, token }: { orderNo: string; stripe: string | null; token?: string | null }) {
+  const tq = useCallback((first: boolean) => {
+    const t = payTokenFor(orderNo, token ?? null);
+    return t ? `${first ? '?' : '&'}t=${encodeURIComponent(t)}` : '';
+  }, [orderNo, token]);
   const [d, setD] = useState<Data | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -48,7 +63,7 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
   const [touch, setTouch] = useState(false);
 
   const load = useCallback(async (syncStripe = false) => {
-    const r = await api<Data>(`/api/v1/orders/${encodeURIComponent(orderNo)}${syncStripe ? '?stripe=success' : ''}`);
+    const r = await api<Data>(`/api/v1/orders/${encodeURIComponent(orderNo)}${syncStripe ? '?stripe=success' : ''}${tq(!syncStripe)}`);
     if (!r.ok) {
       if (r.status === 401) return setNeedLogin(true);
       return setErr(r.message);
@@ -60,7 +75,7 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
       else if (localStorage.getItem('sarec:lastOrder') === orderNo) localStorage.removeItem('sarec:lastOrder');
     } catch { /* ignore */ }
     return r.data;
-  }, [orderNo]);
+  }, [orderNo, tq]);
 
   useEffect(() => {
     setTouch(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
@@ -98,7 +113,7 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
   async function submitNote() {
     setBusy(true);
     setErr(null);
-    const r = await api(`/api/v1/orders/${encodeURIComponent(orderNo)}/note`, { body: { note: note.trim() || `已通过 Zelle 付款，备注订单号 ${orderNo}`, payerName: payer.trim() || null } });
+    const r = await api(`/api/v1/orders/${encodeURIComponent(orderNo)}/note${tq(true)}`, { body: { note: note.trim() || `已通过 Zelle 付款，备注订单号 ${orderNo}`, payerName: payer.trim() || null } });
     setBusy(false);
     if (!r.ok) return setErr(r.message);
     load();
@@ -106,7 +121,7 @@ export function PayOrder({ orderNo, stripe }: { orderNo: string; stripe: string 
   async function payByCard() {
     setBusy(true);
     setErr(null);
-    const r = await api<{ url: string }>(`/api/v1/orders/${encodeURIComponent(orderNo)}/stripe`, { method: 'POST' });
+    const r = await api<{ url: string }>(`/api/v1/orders/${encodeURIComponent(orderNo)}/stripe${tq(true)}`, { method: 'POST' });
     if (!r.ok) {
       setBusy(false);
       return setErr(r.message);

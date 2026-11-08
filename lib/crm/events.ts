@@ -123,7 +123,7 @@ export async function startRegistration(
   db: Db,
   ev: EventRow,
   contactId: string,
-  opts: { source?: 'online' | 'onsite' | 'staff'; refContactId?: string | null; channelCode?: string | null } = {}
+  opts: { source?: 'online' | 'onsite' | 'staff' | 'companion'; refContactId?: string | null; channelCode?: string | null } = {}
 ): Promise<RegisterOutcome> {
   if (ev.event_status !== 'scheduled') throw new CrmError('event_closed', '活动已取消或已结束');
   const { rows: ex } = await db.query<Registration>(
@@ -273,10 +273,7 @@ export async function checkIn(
     const out = await startRegistration(db, ev, contactId, { source: 'onsite' });
     reg = out.registration;
   }
-  if (reg.status === 'waitlisted' && method === 'self_scan' && ev.capacity != null) {
-    // 候补的人自己扫码：还有空位才转为已报名；满员时请到签到台由工作人员决定，避免超员
-    if ((await activeCount(db, ev.id)) >= ev.capacity) return { kind: 'waitlisted', message: '本场名额已满，您在候补名单中。请到签到台找工作人员，现场有空位会为您安排。' };
-  }
+  // 1.3：现场到了就让进——没报名的人到门口扫码直接报名签到，候补的人到门口扫码也直接转为已报名并签到（规则一致，测试 P2-3）
   if (reg.status === 'waitlisted') {
     // 候补的人到了现场：有空位，或工作人员现场核验放行 → 转为已报名再签到
     const { rows: up } = await db.query<Registration>(
@@ -326,4 +323,22 @@ export class CrmError extends Error {
   constructor(public code: string, message: string) {
     super(message);
   }
+}
+
+// ── 1.3：自己扫码签到的时间窗（工作人员代签到不受限）──────────────────────
+// 开始前 3 小时到结束后 2 小时可以签到；没有结束时间按开始后 4 小时算。
+// 门口留着别的场次的 A4、海报印错码时，写清“这是哪天的活动”，不在别的活动上签到。
+export function checkinWindow(ev: { starts_at: Date; ends_at: Date | null }, now = new Date()): { state: 'open' | 'too_early' | 'ended'; message: string } {
+  const st = new Date(ev.starts_at).getTime();
+  const en = ev.ends_at ? new Date(ev.ends_at).getTime() : st + 4 * 3600_000;
+  const t = now.getTime();
+  if (t >= st - 3 * 3600_000 && t <= en + 2 * 3600_000) return { state: 'open', message: '' };
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('zh-CN', { timeZone: 'America/Los_Angeles', month: 'numeric', day: 'numeric', weekday: 'short' })
+      .formatToParts(new Date(st))
+      .map((x) => [x.type, x.value])
+  );
+  const day = `${p.month}月${p.day}日（${p.weekday}）`;
+  if (t < st - 3 * 3600_000) return { state: 'too_early', message: `这是 ${day} 那场活动的签到码，现在还不能签到。今天的活动请扫门口贴的签到码。` };
+  return { state: 'ended', message: `这是 ${day} 那场活动的签到码，这场已经结束了。今天的活动请扫门口贴的签到码。` };
 }

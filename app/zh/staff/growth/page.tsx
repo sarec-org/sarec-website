@@ -13,7 +13,7 @@ type Stat = { name: string; target: string | null; client: string; n: number; pe
 type Ref = { id: string; member_no: number; name: string; visits: number; registered: number; arrived: number; first_referred: number; joined: number; inquiries: number };
 type Committee = { key: string; name: string; status: 'active' | 'preparing' };
 type Vis = { slug: string; title: string; defaultMp: string; mp: string; site: string };
-type Data = { track: { byName: Stat[] }; referrals: Ref[]; committees: { committee: string; n: number; names: string[] }[]; settings: Record<string, unknown> };
+type Data = { track: { byName: Stat[] }; referrals: Ref[]; committees: { committee: string; n: number; names: string[] }[]; settings: Record<string, unknown>; wecom?: { configured: boolean; callback: boolean; working: boolean; byPlacement: { placement: string | null; label: string; adds: number; matched: number }[] } };
 
 const NAME: Record<string, string> = {
   home_entry: '首页入口', share: '分享', share_timeline: '分享到朋友圈', poster: '生成海报', poster_save: '保存海报', card_open: '名片打开', card_share: '名片分享',
@@ -27,7 +27,16 @@ function Growth() {
   const [vis, setVis] = useState<Vis[]>([]);
   const [raw, setRaw] = useState<Record<string, { mp?: string; site?: string }>>({});
   const [channels, setChannels] = useState('');
+  // 1.3
+  const [topic, setTopic] = useState('');
+  const [oa, setOa] = useState('');
+  const [compMax, setCompMax] = useState('2');
+  const [phoneQuick, setPhoneQuick] = useState(false);
+  const [prompts, setPrompts] = useState<Record<string, boolean>>({ enabled: true, afterRegister: true, afterPhoto: true, nextEvent: true });
   const [comms, setComms] = useState<Committee[]>([]);
+  const [wecomUsers, setWecomUsers] = useState('');
+  const [recapDays, setRecapDays] = useState('7');
+  const [inviteText, setInviteText] = useState<Record<string, string>>({ title: '', intro: '' });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -35,7 +44,15 @@ function Growth() {
     if (r.ok) {
       setD(r.data);
       setChannels(String(r.data.settings.channels_finder_id ?? ''));
+      setTopic(String(r.data.settings.photo_topic ?? ''));
+      setOa(String(r.data.settings.oa_username ?? ''));
+      setCompMax(String(r.data.settings.companions_max ?? 2));
+      setPhoneQuick(r.data.settings.phone_quick === true);
+      if (r.data.settings.invite_prompts) setPrompts(r.data.settings.invite_prompts as Record<string, boolean>);
       setComms((r.data.settings.committees as Committee[]) ?? []);
+      setWecomUsers(String(r.data.settings.wecom_userids ?? ''));
+      setRecapDays(String(r.data.settings.home_recap_days ?? 7));
+      setInviteText({ title: '', intro: '', ...((r.data.settings.invite_card_text as Record<string, string>) ?? {}) });
     } else setMsg({ ok: false, text: r.message });
     const v = await api<{ items: Vis[]; raw: Record<string, { mp?: string; site?: string }> }>('/api/v1/staff/content-visibility');
     if (v.ok) { setVis(v.data.items); setRaw(v.data.raw ?? {}); }
@@ -102,6 +119,43 @@ function Growth() {
         <div><input type="file" accept="image/*" aria-label="上传商会微信二维码" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadQr(f); e.target.value = ''; }} /></div>
       </div>
 
+      <h2 className={styles.h2}>企业微信“联系我”码</h2>
+      <div className={styles.card}>
+        <p className={styles.small}>
+          配好后，小程序和网站里所有“加商会微信”的码自动换成企业微信码：报名成功页、签到成功页、相册、会议室、联系商会、首页各用一个，登录的人每人一个，加好友后自动关联到会员档案。
+          企业微信不可用（认证没过、权限不够、调用失败）或下面关掉时，自动显示上面上传的个人微信二维码。
+        </p>
+        <p className={styles.small}>
+          状态：{d?.wecom?.configured ? (d.wecom.working ? '✓ 企业微信接口可用' : '已填密钥，但接口暂时调不通（显示个人微信二维码）') : '还没配置企业微信密钥（显示个人微信二维码）'}
+          {d?.wecom?.configured ? (d.wecom.callback ? ' · 加好友回调已配置' : ' · 加好友回调还没配置（加了好友也关联不到会员档案）') : ''}
+        </p>
+        <label className={styles.label}>接待的企业微信成员账号（userid，多个用逗号分开）</label>
+        <div className={styles.inputRow}>
+          <input className={styles.input} value={wecomUsers} onChange={(e) => setWecomUsers(e.target.value)} placeholder="例如 DongGe" aria-label="企业微信成员账号" />
+          <button className={styles.btn} onClick={() => save('wecom_userids', wecomUsers.trim())}>保存</button>
+          <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => save('wecom_enabled', d?.settings.wecom_enabled === false)}>{d?.settings.wecom_enabled === false ? '打开企业微信码' : '先关掉，用个人微信码'}</button>
+        </div>
+        {!!d?.wecom?.byPlacement.length && (
+          <table className={styles.table}>
+            <thead><tr><th>入口</th><th>加好友</th><th>已关联会员档案</th></tr></thead>
+            <tbody>{d.wecom.byPlacement.map((r) => <tr key={String(r.placement)}><td>{r.label}</td><td>{r.adds}</td><td>{r.matched}</td></tr>)}</tbody>
+          </table>
+        )}
+      </div>
+
+      <h2 className={styles.h2}>首页与邀请</h2>
+      <div className={styles.card}>
+        <label className={styles.label}>活动结束后，首页显示“上一场回顾”多少天（之后显示品牌大图）</label>
+        <div className={styles.inputRow}>
+          <input className={styles.input} type="number" min={0} max={60} value={recapDays} onChange={(e) => setRecapDays(e.target.value)} style={{ maxWidth: 100 }} aria-label="回顾天数" />
+          <button className={styles.btn} onClick={() => save('home_recap_days', Math.round(Number(recapDays) || 0))}>保存</button>
+        </div>
+        <label className={styles.label}>“认识商会”邀请卡文案（小程序里显示，不能写金额）</label>
+        <input className={styles.input} value={inviteText.title} onChange={(e) => setInviteText({ ...inviteText, title: e.target.value })} placeholder="标题，默认：邀请你认识中美房地产商会" aria-label="邀请卡标题" />
+        <textarea className={styles.input} style={{ minHeight: 80, marginTop: 6 }} value={inviteText.intro} onChange={(e) => setInviteText({ ...inviteText, intro: e.target.value })} placeholder="一段介绍，默认用商会简介" aria-label="邀请卡介绍" />
+        <button className={styles.btn} style={{ marginTop: 6 }} onClick={() => save('invite_card_text', inviteText)}>保存</button>
+      </div>
+
       <h2 className={styles.h2}>视频号</h2>
       <div className={styles.card}>
         <div className={styles.inputRow}>
@@ -109,6 +163,51 @@ function Growth() {
           <button className={styles.btn} onClick={() => save('channels_finder_id', channels.trim())}>保存</button>
         </div>
         <p className={styles.small}>视频号要和小程序同一主体，或已在视频号助手里关联本小程序，才能从小程序跳转；还没关联时请留空（留空时小程序不显示入口，避免审核员点了打不开）。</p>
+      </div>
+
+      <h2 className={styles.h2}>邀请提醒（1.3）</h2>
+      <div className={styles.card}>
+        <p className={styles.small}>只在这三处提醒，每场活动最多一次，关掉后不再追；签到、填资料、出错时绝不弹。改完小程序立即生效。</p>
+        {([['enabled', '总开关'], ['afterRegister', '报名成功页一行“带位朋友一起来？”'], ['afterPhoto', '第一次保存合影 / 看照片时轻提示“把这张发给朋友”'], ['nextEvent', '看下一场相关活动时提示“邀请朋友同行”']] as [string, string][]).map(([k, label]) => (
+          <label key={k} className={styles.row} style={{ cursor: 'pointer' }}>
+            <span className={styles.rowValue}>{label}</span>
+            <input type="checkbox" checked={prompts[k] !== false} onChange={(e) => setPrompts({ ...prompts, [k]: e.target.checked })} />
+          </label>
+        ))}
+        <button className={styles.btn} onClick={() => save('invite_prompts', prompts)}>保存</button>
+      </div>
+
+      <h2 className={styles.h2}>带一位朋友（1.3）</h2>
+      <div className={styles.card}>
+        <div className={styles.inputRow}>
+          <input className={styles.input} type="number" min={0} max={5} value={compMax} onChange={(e) => setCompMax(e.target.value)} aria-label="每人最多带几位朋友" />
+          <button className={styles.btn} onClick={() => save('companions_max', Number(compMax))}>保存</button>
+        </div>
+        <p className={styles.small}>每份报名最多替几位朋友报名（0 = 关闭这个功能）。</p>
+      </div>
+
+      <h2 className={styles.h2}>一键填入微信手机号（1.3）</h2>
+      <div className={styles.card}>
+        <label className={styles.row} style={{ cursor: 'pointer' }}>
+          <span className={styles.rowValue}>报名、签到时显示“一键填入微信手机号”</span>
+          <input type="checkbox" checked={phoneQuick} onChange={(e) => setPhoneQuick(e.target.checked)} />
+        </label>
+        <button className={styles.btn} onClick={() => save('phone_quick', phoneQuick)}>保存</button>
+        <p className={styles.small}>按次计费（每次几分钱）。先在微信公众平台“付费管理”开通“手机号快速验证”，再打开这里。用户拒绝时自动回到手填。</p>
+      </div>
+
+      <h2 className={styles.h2}>贴图话题、服务号（1.3）</h2>
+      <div className={styles.card}>
+        <div className={styles.inputRow}>
+          <input className={styles.input} value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="贴图话题名，例如 SAREC活动现场；留空 = 不显示入口" aria-label="贴图话题" />
+          <button className={styles.btn} onClick={() => save('photo_topic', topic.trim())}>保存</button>
+        </div>
+        <p className={styles.small}>照片分享页“发到微信贴图话题”用这个话题。不承诺微信推荐，话题里的照片也不会自动回到商会相册。</p>
+        <div className={styles.inputRow}>
+          <input className={styles.input} value={oa} onChange={(e) => setOa(e.target.value)} placeholder="服务号原始 ID，gh_ 开头；留空 = 不显示" aria-label="服务号原始 ID" />
+          <button className={styles.btn} onClick={() => save('oa_username', oa.trim())}>保存</button>
+        </div>
+        <p className={styles.small}>签到成功页、相册页的“关注服务号”组件在部分进入方式（群卡片、朋友圈、搜索）不显示时，改显示去服务号主页的入口。</p>
       </div>
 
       <h2 className={styles.h2}>专委会与俱乐部</h2>

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
 import { laWallToIso } from '@/lib/laDate';
@@ -50,6 +50,30 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     listed: initial ? initial.is_listed !== false : true
   });
   const [busy, setBusy] = useState(false);
+  // 1.3 M：活动类型 → 自动生成筹备清单（只在新建时）
+  const [prep, setPrep] = useState('lecture');
+  // 活动类型的名称、默认人数、默认费用都从后台“活动筹备 → 模板”读，不写死；选了类型自动带出人数和费用，本场仍可改
+  type Tpl = { key: string; name: string; default_capacity: number | null; default_fee_cents: number | null };
+  const [tpls, setTpls] = useState<Tpl[]>([]);
+  const applyTpl = (t: Tpl | undefined) => {
+    if (!t) return;
+    setF((p) => ({
+      ...p,
+      capacity: t.default_capacity == null ? p.capacity : String(t.default_capacity),
+      fee: t.default_fee_cents == null ? p.fee : String(t.default_fee_cents / 100)
+    }));
+  };
+  useEffect(() => {
+    if (initial) return;
+    api<{ templates: Tpl[] }>('/api/v1/staff/prep/templates').then((r) => {
+      if (!r.ok || !r.data.templates.length) return;
+      setTpls(r.data.templates);
+      const first = r.data.templates.find((t) => t.key === 'lecture') ?? r.data.templates[0];
+      setPrep(first.key);
+      applyTpl(first);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial]);
   const [err, setErr] = useState('');
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
@@ -58,7 +82,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     setErr('');
     const payload = {
       title: f.title,
-      ...(initial ? {} : { slug: f.slug }),
+      ...(initial ? {} : { slug: f.slug, prepTemplate: prep || undefined }),
       summary: f.summary,
       startsAt: fromLocalInput(f.startsAt),
       endsAt: fromLocalInput(f.endsAt),
@@ -89,6 +113,16 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       {err && <div className={styles.error}>{err}</div>}
       {input('title', '活动标题 *')}
       {!initial && input('slug', '链接名（选填，英文小写；不填自动生成）')}
+      {!initial && (
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="ev-prep">活动类型（自动生成筹备清单）</label>
+          <select id="ev-prep" className={styles.select} value={prep} onChange={(e) => { setPrep(e.target.value); applyTpl(tpls.find((t) => t.key === e.target.value)); }}>
+            {tpls.map((t) => <option key={t.key} value={t.key}>{t.name}</option>)}
+            <option value="">不生成清单</option>
+          </select>
+          <p className={styles.small}>选了类型会自动填上默认名额和费用（在“活动筹备 → 模板”里改默认值），这一场可以再改。</p>
+        </div>
+      )}
       <div className={styles.field}>
         <label className={styles.label} htmlFor="ev-summary">简介</label>
         <textarea id="ev-summary" className={styles.textarea} value={f.summary} onChange={(e) => set('summary', e.target.value)} />

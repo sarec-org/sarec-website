@@ -135,7 +135,7 @@ export async function staffRecordBookingPayment(s: Staff, bookingId: string, p: 
 
 // ── 1.2 配置项（ops 可改）───────────────────────────────────────────────
 
-export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address'] as const;
+export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address', 'photo_topic', 'companions_max', 'invite_prompts', 'oa_username', 'channels_live', 'phone_quick', 'wecom_userids', 'wecom_enabled', 'home_recap_days', 'invite_card_text'] as const;
 export type GrowthKey = (typeof GROWTH_KEYS)[number];
 
 export async function growthSettings() {
@@ -146,6 +146,7 @@ export async function growthSettings() {
 }
 
 export async function updateGrowthSetting(s: Staff, key: string, value: unknown) {
+  if (key === 'wecom_userids') await getPool().query(`DELETE FROM wecom_contact_ways`).catch(() => undefined);
   if (!(GROWTH_KEYS as readonly string[]).includes(key)) throw new CrmError('bad_request', '不能修改这个配置');
   if (key === 'wechat_qr_url' && !(value === '' || (typeof value === 'string' && /^https:\/\//.test(value)))) throw new CrmError('bad_request', '请上传二维码图片');
   if (key === 'channels_finder_id' && !(typeof value === 'string' && /^(|sph[A-Za-z0-9]{4,40})$/.test(value.trim()))) {
@@ -153,12 +154,27 @@ export async function updateGrowthSetting(s: Staff, key: string, value: unknown)
   }
   if (key === 'room_notice' && (typeof value !== 'string' || MONEY_RE.test(value))) throw new CrmError('bad_request', '会议室说明会显示在小程序里，请不要写价格或金额');
   if (key === 'room_address' && (typeof value !== 'string' || value.length > 200)) throw new CrmError('bad_request', '地址太长了');
+  // 1.3 O：企业微信接待成员 userid（逗号分隔）；总开关（关掉 = 全部回到个人微信二维码）
+  if (key === 'wecom_userids' && !(typeof value === 'string' && /^[A-Za-z0-9_.@,，\s-]{0,500}$/.test(value))) throw new CrmError('bad_request', '请填写企业微信成员的账号（userid），多个用逗号分开');
+  if (key === 'wecom_enabled' && typeof value !== 'boolean') throw new CrmError('bad_request', '请选择开或关');
+  // 1.3 P-4：活动结束后首页显示“上一场回顾”的天数；P-2：商会邀请卡文案（小程序里显示，不能写金额）
+  if (key === 'home_recap_days' && !(Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 60)) throw new CrmError('bad_request', '请填 0–60 之间的整数');
+  if (key === 'invite_card_text' && (typeof value !== 'object' || value === null || Array.isArray(value) || Object.values(value).some((v) => typeof v !== 'string' || v.length > 200 || MONEY_RE.test(v)))) {
+    throw new CrmError('bad_request', '邀请卡文案每段不超过 200 字，不能写价格或金额');
+  }
   if (key === 'committees') {
     if (!Array.isArray(value) || value.some((c) => !c || typeof c.name !== 'string' || !['active', 'preparing'].includes(c.status))) {
       throw new CrmError('bad_request', '格式不对');
     }
   }
   if (key === 'content_visibility' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
+  // 1.3
+  if (key === 'photo_topic' && (typeof value !== 'string' || value.length > 30 || /[#\s]/.test(value.trim()))) throw new CrmError('bad_request', '贴图话题名不超过 30 个字，不要带 # 或空格；留空 = 不显示入口');
+  if (key === 'companions_max' && !(Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 5)) throw new CrmError('bad_request', '每人最多带几位朋友：0–5');
+  if (key === 'invite_prompts' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
+  if (key === 'oa_username' && !(typeof value === 'string' && /^(|gh_[a-f0-9]{12})$/.test(value.trim()))) throw new CrmError('bad_request', '服务号原始 ID 以 gh_ 开头（公众平台 → 设置 → 账号信息）；留空 = 不显示');
+  if (key === 'phone_quick' && typeof value !== 'boolean') throw new CrmError('bad_request', '格式不对');
+  if (key === 'channels_live' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
   return withTransaction(async (db) => {
     const before = await getSetting(db, key, null);
     await setSetting(db, key, typeof value === 'string' ? value.trim() : value, s.name);

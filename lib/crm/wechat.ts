@@ -66,6 +66,11 @@ async function miniProgramCode(r: CodeReq): Promise<Buffer> {
   return buf;
 }
 
+/** 1.3：任意页面 + 参数的小程序码（wxacode.get，带完整 path；渠道码等用） */
+export function miniProgramPathCode(path: string, tag: string): Promise<Buffer> {
+  return miniProgramCode({ page: path.split('?')[0], path, tag });
+}
+
 /** 活动报名小程序码（正式版），扫码进 pages/event/event（scene = slug） */
 export function eventRegisterCode(slug: string): Promise<Buffer> {
   return miniProgramCode(
@@ -86,6 +91,16 @@ export function inviteCode(slug: string, memberNo: number, envVersion: 'release'
       ? { page: 'pages/event/event', scene, tag: `invite slug=${slug}`, envVersion }
       : { page: 'pages/event/event', path: `pages/event/event?slug=${encodeURIComponent(slug)}&ref=${memberNo}&channel=poster`, tag: `invite slug=${slug}`, envVersion }
   );
+}
+
+/** 1.3 P-2 商会邀请卡专属码：扫码打开“商会介绍页”，带邀请人推荐码 */
+export function chamberInviteCode(memberNo: number, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
+  return miniProgramCode({ page: 'pages/intro/intro', scene: `r${memberNo}`, tag: 'chamber_invite', envVersion });
+}
+
+/** 1.3 N 工作人员绑定小程序码：工作人员在网站后台点“在小程序里用工作台”生成，用自己的微信扫一次（scene = “sb=绑定码”） */
+export function staffBindCode(code: string, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
+  return miniProgramCode({ page: 'pages/staff/bind', scene: `sb=${code}`, tag: 'staff_bind', envVersion });
 }
 
 /** 1.2 电子名片码：扫码打开名片页（scene = “c|名片编号”），页面实时显示当前会员状态 */

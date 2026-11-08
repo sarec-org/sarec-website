@@ -58,7 +58,58 @@ function Card({ c, onDone }: { c: C; onDone: (m: { ok: boolean; text: string }) 
   );
 }
 
+type P = { id: string; url: string; thumb_url: string; visibility: string; review_status: string; created_at: string; event_title: string; uploader: string | null; member_no: number | null };
+
+/** 1.3：客户上传、勾选“放进活动相册”但没自动通过的照片（不是本场报名的人传的）在这里审 */
+function PhotoReview() {
+  const [filter, setFilter] = useState('review');
+  const [data, setData] = useState<{ photos: P[]; pending: number } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const load = useCallback(async () => {
+    const r = await api<{ photos: P[]; pending: number }>(`/api/v1/staff/photos?filter=${filter}`);
+    if (r.ok) setData(r.data);
+    else setMsg({ ok: false, text: r.message });
+  }, [filter]);
+  useEffect(() => {
+    load();
+  }, [load]);
+  async function act(id: string, action: string) {
+    const r = await api('/api/v1/staff/photos', { body: { id, action } });
+    setMsg(r.ok ? { ok: true, text: { approve: '已放进相册', reject: '已退回（只有上传者自己能看）', hide: '已删除' }[action] ?? '已处理' } : { ok: false, text: r.message });
+    load();
+  }
+  return (
+    <>
+      <div className={styles.notice}>客户自己上传的照片默认只有本人和工作人员能看。本场报名的人勾选“放进活动相册”会直接进相册；其他人勾选的在这里审。</div>
+      <Msg m={msg} />
+      <div className={styles.chips}>
+        {([['review', '待审核'], ['album', '已在相册'], ['all', '全部客户照片']] as [string, string][]).map(([k, v]) => (
+          <button key={k} className={`${styles.chip} ${filter === k ? styles.chipOn : ''}`} onClick={() => setFilter(k)}>{v}{k === 'review' && data ? ` ${data.pending}` : ''}</button>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginTop: 12 }}>
+        {data?.photos.map((p) => (
+          <div key={p.id} className={styles.card} style={{ padding: 8 }}>
+            <a href={p.url} target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={p.thumb_url} alt="客户上传的照片" style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }} />
+            </a>
+            <p className={styles.small} style={{ margin: '6px 0' }}>{p.event_title}<br />{p.uploader ?? '—'}{p.member_no ? ` · No.${p.member_no}` : ''}</p>
+            <div className={styles.btnRow}>
+              {p.review_status === 'review' && <button className={styles.btn} onClick={() => act(p.id, 'approve')}>放进相册</button>}
+              {p.visibility === 'album' && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act(p.id, 'reject')}>退回</button>}
+              <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act(p.id, 'hide')}>删除</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {data && !data.photos.length && <p className={styles.muted}>暂无。</p>}
+    </>
+  );
+}
+
 export default function StaffCards() {
+  const [tab, setTab] = useState<'cards' | 'photos'>('cards');
   const [filter, setFilter] = useState('pending');
   const [q, setQ] = useState('');
   const [data, setData] = useState<{ cards: C[]; counts: { pending: number; hidden: number } } | null>(null);
@@ -72,9 +123,14 @@ export default function StaffCards() {
     load();
   }, [load]);
   return (
-    <StaffGate title="名片审核" role="ops">
+    <StaffGate title="内容审核" role="ops">
       {() => (
         <>
+          <div className={styles.tabs}>
+            <button className={`${styles.tab} ${tab === 'cards' ? styles.tabOn : ''}`} onClick={() => setTab('cards')}>名片</button>
+            <button className={`${styles.tab} ${tab === 'photos' ? styles.tabOn : ''}`} onClick={() => setTab('photos')}>客户照片</button>
+          </div>
+          {tab === 'photos' ? <PhotoReview /> : <>
           <div className={styles.notice}>
             会员自己填写、对外展示的电子名片（姓名、公司、职位、业务介绍、微信号、头像）。<strong>先发后审</strong>：文字保存前已过微信内容安全检查，明显违规的不能保存；这里逐条人工查看。
             下架后别人打开名片只显示“已下架”，本人仍可修改，改好后在这里恢复。
@@ -92,6 +148,7 @@ export default function StaffCards() {
           </div>
           {data?.cards.map((c) => <Card key={c.contact_id} c={c} onDone={(m) => { setMsg(m); load(); }} />)}
           {data && !data.cards.length && <p className={styles.muted}>{filter === 'pending' ? '没有待审核的名片。' : '暂无。'}</p>}
+          </>}
         </>
       )}
     </StaffGate>

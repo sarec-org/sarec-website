@@ -8,12 +8,16 @@ import { EventForm } from '../EventForm';
 import { checkinA4, registerPoster, saveBlob, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
-type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null };
+type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; pay_link?: string | null; added_by_name?: string | null; is_placeholder?: boolean };
 
 export default function StaffEventDetail({ params }: { params: { id: string } }) {
   const [data, setData] = useState<{ event: Ev; registrations: Reg[] } | null>(null);
   const [editing, setEditing] = useState(false);
   const [full, setFull] = useState(false);
+  // 1.3：门口签到码统一用小程序码（微信扫一扫直接进小程序签到）；网页链接码只作应急，收在下面
+  const [mpCode, setMpCode] = useState<string | null>(null);
+  const [mpCodeErr, setMpCodeErr] = useState<string | null>(null);
+  const [showWeb, setShowWeb] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [origin, setOrigin] = useState('');
   const [making, setMaking] = useState<string | null>(null);
@@ -27,6 +31,22 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     load();
   }, [load]);
   const link = data ? `${origin}/zh/checkin/${data.event.slug}?k=${data.event.checkin_secret}` : null;
+  const secret = data?.event.checkin_secret;
+  const loadMpCode = useCallback(async () => {
+    setMpCodeErr(null);
+    const res = await fetch(`/api/v1/staff/events/${params.id}/wxacode?kind=checkin`, { credentials: 'same-origin', cache: 'no-store' }).catch(() => null);
+    if (res && res.ok && (res.headers.get('content-type') || '').startsWith('image/')) {
+      const url = URL.createObjectURL(await res.blob());
+      setMpCode((old) => { if (old) URL.revokeObjectURL(old); return url; });
+      return;
+    }
+    const j = (await res?.json().catch(() => null)) as { error?: { message?: string } } | null;
+    setMpCode(null);
+    setMpCodeErr(j?.error?.message || '签到小程序码这会儿生成不了（微信接口没响应）');
+  }, [params.id]);
+  useEffect(() => {
+    if (secret) loadMpCode();
+  }, [secret, loadMpCode]);
   const qr = useQr(link, 900);
 
   async function patch(body: Record<string, unknown>, ok: string) {
@@ -43,26 +63,28 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     if (!quiet) setMsg({ ok: false, text: j?.error?.message || '生成小程序码失败，请稍后再试' });
     return null;
   }
-  async function make(kind: 'code' | 'poster' | 'a4') {
+  async function make(kind: 'code' | 'poster' | 'a4' | 'a4web') {
     if (!data || making) return;
     const ev = data.event as unknown as MaterialEvent;
     setMaking(kind);
     setMsg(null);
     try {
       if (kind === 'a4') {
-        // 优先用签到小程序码（微信扫一扫直接进小程序，按微信身份认人）；取不到时退回签到链接二维码
+        // 只用签到小程序码（微信扫一扫直接进小程序，按微信身份认人）。生成不了就明说，不悄悄换成网页码
         const code = await fetchCode('checkin', true);
-        if (!code && !link) return;
-        const url = code ? URL.createObjectURL(code) : null;
-        try {
-          saveBlob(await checkinA4(ev, url ? { codeSrc: url } : { url: link! }), `签到码-A4-${ev.slug}.png`);
-        } finally {
-          if (url) URL.revokeObjectURL(url);
-        }
         if (!code) {
-          setMsg({ ok: false, text: '签到小程序码暂时生成不了，已改用签到链接二维码（微信扫码会打开网页版签到）。稍后可再下载一次' });
+          setMsg({ ok: false, text: '签到小程序码这会儿生成不了（微信接口没响应）。请过 1 分钟再点一次；急用时可展开下面的“应急：网页版签到码”。' });
           return;
         }
+        const url = URL.createObjectURL(code);
+        try {
+          saveBlob(await checkinA4(ev, { codeSrc: url }), `门口签到码-A4-${ev.slug}.png`);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      } else if (kind === 'a4web') {
+        if (!link) return;
+        saveBlob(await checkinA4(ev, { url: link }), `网页版签到码-A4-${ev.slug}.png`);
       } else {
         const code = await fetchCode();
         if (!code) return;
@@ -85,12 +107,13 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     load();
   }
 
-  if (full && data && qr) {
+  if (full && data && (mpCode || qr)) {
     return (
       <div onClick={() => setFull(false)} style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#0A1730', textAlign: 'center' }}>
-        <p style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)', fontFamily: 'var(--serif-zh)', margin: '0 0 1rem' }}>扫码报名或签到</p>
+        <p style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)', fontFamily: 'var(--serif-zh)', margin: '0 0 1rem' }}>打开微信「扫一扫」，扫码签到</p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={qr} alt="签到二维码" style={{ width: 'min(80vw, 70vh)', height: 'auto' }} />
+        <img src={(showWeb ? qr : mpCode) || qr || ''} alt="签到码" style={{ width: 'min(80vw, 62vh)', height: 'auto' }} />
+        <p style={{ fontSize: 'clamp(1rem, 2.2vw, 1.6rem)', margin: '1rem 0 0' }}>已报名：扫完自动签到 · 没报名：填姓名、手机两项</p>
         <p style={{ fontSize: 'clamp(1.1rem, 2.5vw, 2rem)', margin: '1rem 0 0' }}>{data.event.title}</p>
         <p style={{ fontSize: '0.9rem', color: '#666', marginTop: '1.5rem' }}>点屏幕任意位置退出全屏</p>
       </div>
@@ -111,43 +134,58 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
               <div className={styles.row}><span className={styles.rowLabel}>报名</span><span className={styles.rowValue}>{data.event.registration_open ? '开放中' : '已关闭'}</span></div>
             </div>
 
-            <h2 className={styles.h2}>签到二维码</h2>
+            <h2 className={styles.h2}>门口签到码</h2>
             <div className={styles.card} style={{ textAlign: 'center' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {qr && <img src={qr} alt="签到二维码" className={styles.qrImg} />}
-              <p className={styles.small}>放在数字人竖屏右上角，或打印贴在门口。</p>
+              {mpCode ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={mpCode} alt="门口签到码（小程序码）" className={styles.qrImg} />
+              ) : (
+                <p className={mpCodeErr ? styles.error : styles.small}>{mpCodeErr ? `${mpCodeErr}。` : '正在生成签到码…'}</p>
+              )}
+              <p className={styles.small}>打印 A4 贴在门口，或全屏放在平板上。客人用微信「扫一扫」扫码：已报名的自动签到，没报名的填姓名、手机两项。</p>
               <div className={styles.btnRow}>
-                {qr && (
-                  <a className={styles.btn} href={qr} download={`checkin-${data.event.slug}.png`}>
-                    下载打印
-                  </a>
-                )}
-                <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setFull(true)}>
+                <button className={styles.btn} disabled={!!making || !mpCode} onClick={() => make('a4')}>
+                  {making === 'a4' ? '生成中…' : '下载 A4 门口签到码'}
+                </button>
+                <button className={`${styles.btn} ${styles.btnGhost}`} disabled={!mpCode} onClick={() => { setShowWeb(false); setFull(true); }}>
                   全屏显示
                 </button>
-                <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={async () => link && setMsg({ ok: await copyText(link), text: '签到链接已复制' })}>
-                  复制链接
-                </button>
+                {mpCodeErr && (
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={loadMpCode}>
+                    再试一次
+                  </button>
+                )}
               </div>
               {can(s, 'ops') && (
                 <button className={`${styles.btn} ${styles.btnDanger}`} style={{ marginTop: '0.75rem' }} onClick={regen}>
                   作废旧码，重新生成
                 </button>
               )}
+              <details style={{ marginTop: '1rem', textAlign: 'left' }} open={showWeb} onToggle={(e) => setShowWeb((e.target as HTMLDetailsElement).open)}>
+                <summary className={styles.small} style={{ cursor: 'pointer' }}>应急：网页版签到码（只在小程序码生成不了时用）</summary>
+                <p className={styles.small}>网页版用微信扫会打开网页（不是小程序），客人要填姓名、手机两项才能签到。</p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {qr && <img src={qr} alt="网页版签到码" className={styles.qrImg} style={{ maxWidth: 220 }} />}
+                <div className={styles.btnRow}>
+                  <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={!!making || !link} onClick={() => make('a4web')}>
+                    {making === 'a4web' ? '生成中…' : '下载网页版 A4'}
+                  </button>
+                  <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={async () => link && setMsg({ ok: await copyText(link), text: '签到链接已复制' })}>
+                    复制链接
+                  </button>
+                </div>
+              </details>
             </div>
 
-            <h2 className={styles.h2}>下载物料</h2>
+            <h2 className={styles.h2}>活动物料</h2>
             <div className={styles.card}>
-              <p className={styles.small}>报名码扫码直接进本场活动报名页（正式版小程序）；海报竖版适合发朋友圈和微信群；A4 签到码打印贴在门口。重新生成签到码后，A4 需重新下载打印。</p>
+              <p className={styles.small}>报名码：扫码直接进本场活动报名页（正式版小程序）；海报竖版适合发朋友圈和微信群。<strong>报名码不能签到</strong>，门口请贴上面的签到码。</p>
               <div className={styles.btnRow}>
                 <button className={styles.btn} disabled={!!making} onClick={() => make('code')}>
                   {making === 'code' ? '生成中…' : '下载小程序报名码'}
                 </button>
                 <button className={`${styles.btn} ${styles.btnGhost}`} disabled={!!making} onClick={() => make('poster')}>
                   {making === 'poster' ? '生成中…' : '下载海报版报名码'}
-                </button>
-                <button className={`${styles.btn} ${styles.btnGhost}`} disabled={!!making || !link} onClick={() => make('a4')}>
-                  {making === 'a4' ? '生成中…' : '下载 A4 打印版签到码'}
                 </button>
               </div>
             </div>
@@ -185,6 +223,13 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
             )}
 
             <h2 className={styles.h2}>报名名单（{data.registrations.length}）</h2>
+            {Number(data.event.fee_cents) > 0 && (() => {
+              const live = data.registrations.filter((r) => r.status !== 'cancelled');
+              const paid = live.filter((r) => r.order_status === 'paid' && r.paid_when !== 'onsite').length;
+              const onsite = live.filter((r) => r.order_status === 'paid' && r.paid_when === 'onsite').length;
+              const unpaid = live.length - paid - onsite;
+              return <p className={styles.notice}>收费：已付 <strong>{paid}</strong> · 未付 <strong>{unpaid}</strong> · 现场付 <strong>{onsite}</strong>。没付的，系统已在报名后、活动前 5 天各发过一次付款链接；到场没付的签到台现场 Zelle 扫码。</p>;
+            })()}
             <div style={{ overflowX: 'auto' }}>
               <table className={styles.table}>
                 <thead><tr><th>姓名</th><th>联系方式</th><th>报名</th><th>到场</th><th>付款</th></tr></thead>
@@ -193,9 +238,15 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                     <tr key={r.contact_id}>
                       <td><a href={`/zh/staff/contacts/${r.contact_id}`} style={{ color: 'var(--gold)' }}>{r.name}</a> <span className={styles.small}>#{r.member_no}</span></td>
                       <td className={styles.small}>{r.phone_e164 ?? r.email}</td>
-                      <td>{({ registered: '已报名', waitlisted: '候补', cancelled: '已取消' } as Record<string, string>)[r.status]}{r.source !== 'online' ? `（${r.source === 'onsite' ? '现场' : '工作人员'}）` : ''}</td>
+                      <td>{({ registered: '已报名', waitlisted: '候补', cancelled: '已取消' } as Record<string, string>)[r.status]}{r.source === 'companion' ? `（由 ${r.added_by_name ?? '朋友'} 代报名${r.is_placeholder ? '，本人还没登录过' : ''}）` : r.source !== 'online' ? `（${r.source === 'onsite' ? '现场' : '工作人员'}）` : ''}</td>
                       <td>{({ none: '—', checked_in: '已签到', arrived_pending_payment: '到场待核款' } as Record<string, string>)[r.arrival_status]}</td>
-                      <td>{r.order_status ? ({ pending_payment: '待付款', payment_submitted: '待核款', paid: '已付款' } as Record<string, string>)[r.order_status] ?? r.order_status : '—'}</td>
+                      <td>{r.order_status ? (r.order_status === 'paid' ? (r.paid_when === 'onsite' ? '现场付' : '已付') : ({ pending_payment: '未付', payment_submitted: '已提交，待核款' } as Record<string, string>)[r.order_status] ?? r.order_status) : '—'}
+                        {r.pay_link && (
+                          <button className={`${styles.btn} ${styles.btnQuiet}`} style={{ marginLeft: 6, padding: '2px 8px' }} onClick={async () => setMsg({ ok: await copyText(r.pay_link!), text: `${r.name} 的付款链接已复制，可以直接发给本人` })}>
+                            复制付款链接
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

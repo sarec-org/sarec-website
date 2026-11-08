@@ -18,6 +18,8 @@ export type InquiryInput = {
   fields?: Record<string, unknown> | null;
   contactId?: string | null;
   ref?: string | null;
+  /** 1.3：带来这条咨询的渠道 / 功能（c-xxxx、poster、share…） */
+  channel?: string | null;
   /** AI 助手：对话 id，用于去重（同一对话只生成一条咨询任务） */
   conversationId?: string | null;
   draft?: string | null;
@@ -49,9 +51,9 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
       if (rows[0]?.inquiry_id) return { inquiryId: rows[0].inquiry_id, followupId: rows[0].id, created: false };
     }
     const { rows } = await db.query<{ id: string }>(
-      `INSERT INTO inquiries (contact_id, source, intent, name, phone, email, wechat, message, fields, ref_contact_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
-      [input.contactId ?? null, input.source, clip(input.intent, 60), name, phone, email, wechat, message, input.fields ? JSON.stringify(input.fields) : null, refId]
+      `INSERT INTO inquiries (contact_id, source, intent, name, phone, email, wechat, message, fields, ref_contact_id, channel_code)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+      [input.contactId ?? null, input.source, clip(input.intent, 60), name, phone, email, wechat, message, input.fields ? JSON.stringify(input.fields) : null, refId, clip(input.channel, 40)]
     );
     const inquiryId = rows[0].id;
     const f = await upsertFollowup(db, {

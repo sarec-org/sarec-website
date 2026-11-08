@@ -13,7 +13,10 @@ export const GET = handler(async (req: Request, { params }: { params: { slug: st
   );
   const ev = rows[0];
   if (!ev) throw new CrmError('not_found', '找不到这场活动');
-  const photos = ev.album_published_at ? (await listEventPhotos(ev.id)).map((p) => ({ id: p.id, url: p.url, thumb: p.thumb_url, w: p.width, h: p.height, caption: p.caption })) : [];
+  // 工作人员的照片在“发布相册”后显示；客户自己放进相册、审核通过的照片马上显示（1.3）
+  const photos = (await listEventPhotos(ev.id))
+    .filter((p) => ev.album_published_at || p.by_customer)
+    .map((p) => ({ id: p.id, url: p.url, thumb: p.thumb_url, w: p.width, h: p.height, caption: p.caption, byGuest: !!p.by_customer }));
   const { rows: next } = await pool.query(
     `SELECT slug, title, starts_at, location_name, fee_cents, cover_url FROM events
       WHERE is_listed AND event_status = 'scheduled' AND registration_open AND starts_at > now() ORDER BY starts_at LIMIT 1`

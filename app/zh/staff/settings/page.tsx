@@ -8,7 +8,7 @@ type S = {
   settings: { key: string; value: unknown; updated_by: string | null }[];
   rooms: { id: number; name: string; hourly_cents: number; is_active: boolean }[];
   offers: { id: string; merchant: string; category: string | null; offer: string; conditions: string | null; contact: string | null; valid_until: string | null; is_active: boolean }[];
-  staff: { email: string; name: string; roles: string[]; is_active: boolean }[];
+  staff: { email: string; name: string; roles: string[]; is_active: boolean; mp_bound?: boolean }[];
 };
 const TIERS: [string, string][] = [['none', '注册用户'], ['member', '普通会员'], ['board', '理事'], ['exec_board', '常务理事'], ['vp', '副会长'], ['strategic_partner', '战略伙伴']];
 const ROLES: [string, string][] = [['checkin', '现场签到'], ['finance', '财务核款'], ['ops', '运营'], ['admin', '管理员']];
@@ -158,7 +158,8 @@ export default function StaffSettings() {
                       <td className={styles.small}>{x.roles.map((r) => ROLES.find(([k]) => k === r)?.[1] ?? r).join('、')}</td>
                       <td>
                         <button className={styles.copyBtn} onClick={() => setSt({ email: x.email, name: x.name, roles: x.roles })}>修改</button>{' '}
-                        <button className={styles.copyBtn} onClick={() => post({ kind: 'staff', email: x.email, name: x.name, roles: x.roles, isActive: !x.is_active }, x.is_active ? '已停用' : '已启用')}>{x.is_active ? '停用' : '启用'}</button>
+                        <button className={styles.copyBtn} onClick={() => post({ kind: 'staff', email: x.email, name: x.name, roles: x.roles, isActive: !x.is_active }, x.is_active ? '已停用' : '已启用')}>{x.is_active ? '停用' : '启用'}</button>{' '}
+                        {x.mp_bound ? <button className={styles.copyBtn} onClick={() => post({ kind: 'staff_unbind', email: x.email }, '已解绑小程序工作台')}>解绑小程序</button> : <span className={styles.small}>小程序未绑定</span>}
                       </td>
                     </tr>
                   ))}

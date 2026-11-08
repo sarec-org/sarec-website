@@ -19,6 +19,7 @@ import {
   type AnswerValue,
   type Question
 } from './questionBank';
+import { mergePlaceholderByPhone } from './companions';
 
 export type QuestionDTO = {
   code: string;
@@ -132,7 +133,19 @@ export async function listEvents(includePast = false) {
       ORDER BY e.starts_at ${includePast ? 'DESC' : 'ASC'} LIMIT 100`,
     [includePast]
   );
-  return rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number }));
+  const out = rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number }));
+  if (!includePast || !rows.length) return out;
+  // 1.3 P-4：往期每场一张卡——到场人数、照片数
+  const ids = rows.map((e) => e.id as string);
+  const { rows: st } = await getPool().query<{ event_id: string; attended: number; photos: number }>(
+    `SELECT e.id AS event_id,
+            (SELECT count(*)::int FROM registrations r WHERE r.event_id = e.id AND r.arrival_status = 'checked_in') AS attended,
+            (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL) AS photos
+       FROM events e WHERE e.id = ANY($1::uuid[])`,
+    [ids]
+  );
+  const by = new Map(st.map((x) => [x.event_id, x]));
+  return out.map((e, i) => ({ ...e, attended: by.get(ids[i])?.attended ?? 0, photoCount: by.get(ids[i])?.photos ?? 0 }));
 }
 
 export async function requireEvent(db: Db, slug: string): Promise<EventRow> {
@@ -172,6 +185,12 @@ export type RegisterPreview = {
   profile: { name: string | null; phoneMasked: string | null; roleLabel: string | null } | null;
   photoConsent: boolean;
   registrationId: string | null;
+  /** 1.3：收费活动已付款（报名结果页显示“已确认”，不再显示“收费待确认”） */
+  feeConfirmed?: boolean;
+  /** 1.3 私企面对面：报名后请本人填“一句话介绍我和我的业务”（写进电子名片），名片里已有就不问 */
+  collectIntro?: boolean;
+  /** 1.3：会后电子名册已生成、本人到场（可以查看） */
+  rosterReady?: boolean;
 };
 
 export async function previewRegistration(slug: string, contactId: string | null): Promise<RegisterPreview> {
@@ -208,8 +227,18 @@ export async function previewRegistration(slug: string, contactId: string | null
   const name = c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null;
   const phoneKnown = !!(contactInfo.phone?.value || c[0]?.phone_e164);
   const role = findRoleSub(c[0]?.role_sub);
+  const { rows: extra } = await pool.query<{ paid: boolean; collect: boolean; has_intro: boolean; roster: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM orders o WHERE o.contact_id = $1 AND o.related_id = $2 AND o.purpose = 'event_fee' AND o.status = 'paid') AS paid,
+            COALESCE((SELECT (p.settings->>'collectIntro')::boolean FROM event_prep p WHERE p.event_id = $2), false) AS collect,
+            EXISTS (SELECT 1 FROM member_cards m WHERE m.contact_id = $1 AND coalesce(m.intro, '') <> '') AS has_intro,
+            EXISTS (SELECT 1 FROM event_rosters r WHERE r.event_id = $2) AS roster`,
+    [contactId, ev.id]
+  );
   return {
     event: publicEvent(ev),
+    feeConfirmed: !!extra[0]?.paid,
+    collectIntro: !!extra[0]?.collect && !extra[0]?.has_intro && !!reg[0] && reg[0].status !== 'cancelled' && new Date(ev.ends_at ?? new Date(new Date(ev.starts_at).getTime() + 3 * 3600e3)).getTime() > Date.now(),
+    rosterReady: !!extra[0]?.roster && reg[0]?.arrival_status === 'checked_in',
     loggedIn: true,
     firstTime,
     alreadyRegistered,
@@ -241,6 +270,8 @@ export type RegisterInput = {
   email?: string;
   /** 1.2：一步报名。老用户不再答必答题（改为事后渐进补）；新用户只要姓名、手机、行业（邮箱选填）。 */
   oneStep?: boolean;
+  /** 1.3 门口签到：没报名的人只填姓名、手机两项，行业以后再补（不在门口问） */
+  allowNoRole?: boolean;
 };
 
 export async function register(slug: string, contactId: string, input: RegisterInput, opts: { base?: string } = {}) {
@@ -250,6 +281,11 @@ export async function register(slug: string, contactId: string, input: RegisterI
   const out = await withTransaction(async (db) => {
     const ev = await requireEvent(db, slug);
     if (given) await saveContactInput(db, contactId, given, 'registration');
+    // 1.3：朋友之前被人“带一位朋友”代报过名（占位档案），现在自己来报名 / 签到：手机号对上就并进来
+    {
+      const { rows: ph } = await db.query<{ p: string | null }>(`SELECT phone_e164 AS p FROM contacts WHERE id = $1`, [contactId]);
+      await mergePlaceholderByPhone(db, contactId, given?.phone ?? ph[0]?.p ?? null);
+    }
     const { answered } = await loadProfile(db, contactId);
     const firstTime = !answered.has('Q03');
     let refContactId: string | null = null;
@@ -272,6 +308,10 @@ export async function register(slug: string, contactId: string, input: RegisterI
       channelCode: input.channel ?? null,
       source: input.channel === 'onsite' ? 'onsite' : 'online'
     });
+    // 1.3：首次来源（渠道 / 功能）只写一次；本次（最后一次）来源在报名记录的 channel_code 上
+    if (input.channel && input.channel !== 'onsite') {
+      await db.query(`UPDATE contacts SET first_channel = $2 WHERE id = $1 AND first_channel IS NULL`, [contactId, String(input.channel).slice(0, 40)]);
+    }
     // 首次推荐人：第一次报名时记下，之后不再改（本次活动来源另存在报名记录里）
     if (refContactId && !out.alreadyRegistered) {
       await db.query(
@@ -286,7 +326,7 @@ export async function register(slug: string, contactId: string, input: RegisterI
       const name = (input.name ?? '').trim();
       const role = findRoleSub(input.roleSub);
       if (!name) throw new CrmError('answers_required', '请填写怎么称呼您');
-      if (!role) throw new CrmError('answers_required', '请选择您的主要行业');
+      if (!role && !input.allowNoRole) throw new CrmError('answers_required', '请选择您的主要行业');
       const { rows: c } = await db.query<{ email: string | null; phone_e164: string | null }>(`SELECT email, phone_e164 FROM contacts WHERE id = $1`, [contactId]);
       const ph = c[0]?.phone_e164 ?? given?.phone ?? null;
       const contact = ph ? { phone: ph } : { email: c[0]?.email ?? given?.email ?? '' };
@@ -294,9 +334,9 @@ export async function register(slug: string, contactId: string, input: RegisterI
       const r = await submitAnswers(db, contactId, out.task, [
         { code: 'Q01', value: { text: name.slice(0, 100) } },
         { code: 'Q02', value: contact },
-        { code: 'Q03', value: { category: role.category, sub: role.key } }
+        ...(role ? [{ code: 'Q03', value: { category: role.category, sub: role.key } }] : [])
       ]);
-      if (role.key === 'other' && input.roleOther?.trim()) {
+      if (role && role.key === 'other' && input.roleOther?.trim()) {
         await db.query(`UPDATE profile_answers SET note = $3 WHERE contact_id = $1 AND item_code = 'Q03' AND status = 'current' AND task_id = $2`, [
           contactId,
           out.task.id,
@@ -415,6 +455,24 @@ export async function myOverviewMp(contactId: string) {
   const { myReferralStats } = await import('./growth');
   const { rows: card } = await pool.query<{ company: string | null; title: string | null }>(`SELECT company, title FROM member_cards WHERE contact_id = $1`, [contactId]);
   const { rows: av } = await pool.query<{ avatar_url: string | null }>(`SELECT avatar_url FROM contacts WHERE id = $1`, [contactId]);
+  // 1.3：我带的朋友（同行人）是否已报名、已到场
+  const { rows: comp } = await pool.query<{ slug: string; name: string; status: string; arrival_status: string }>(
+    `SELECT e.slug, COALESCE(r.companion_name, '朋友') AS name, r.status, r.arrival_status
+       FROM registrations own JOIN registrations r ON r.companion_of = own.id JOIN events e ON e.id = own.event_id
+      WHERE own.contact_id = $1 AND r.status <> 'cancelled' ORDER BY r.created_at`,
+    [contactId]
+  );
+  // 1.3 M：收费活动已到账 → “已确认”；本场电子名册已生成且本人到场 → “我的报名”里可打开
+  const { rows: extra } = await pool.query<{ slug: string; paid: boolean; roster: boolean }>(
+    `SELECT e.slug,
+            EXISTS (SELECT 1 FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = e.id AND o.purpose = 'event_fee' AND o.status = 'paid') AS paid,
+            (r.arrival_status = 'checked_in' AND EXISTS (SELECT 1 FROM event_rosters x WHERE x.event_id = e.id)) AS roster
+       FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1`,
+    [contactId]
+  );
+  const extraBy = new Map(extra.map((x) => [x.slug, x]));
+  const compBy = new Map<string, { name: string; status: string; arrival: string }[]>();
+  for (const x of comp) compBy.set(x.slug, [...(compBy.get(x.slug) ?? []), { name: x.name, status: x.status, arrival: x.arrival_status }]);
   return {
     contact: { ...full.contact, avatar_url: av[0]?.avatar_url ?? null, company: card[0]?.company ?? null, title: card[0]?.title ?? null },
     contactInfo: full.contactInfo,
@@ -423,7 +481,10 @@ export async function myOverviewMp(contactId: string) {
     profile: full.profile,
     registrations: full.registrations.map((r: Record<string, unknown>) => ({
       slug: r.slug, title: r.title, starts_at: r.starts_at, location_name: r.location_name, status: r.status,
-      arrival_status: r.arrival_status, checked_in_at: r.checked_in_at, paid_event: Number(r.fee_cents) > 0
+      arrival_status: r.arrival_status, checked_in_at: r.checked_in_at, paid_event: Number(r.fee_cents) > 0,
+      companions: compBy.get(String(r.slug)) ?? [],
+      fee_confirmed: !!extraBy.get(String(r.slug))?.paid,
+      roster: !!extraBy.get(String(r.slug))?.roster
     })),
     bookings: full.bookings.map((b: Record<string, unknown>) => ({ id: b.id, room: b.room, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status })),
     referrals: await myReferralStats(pool, contactId)

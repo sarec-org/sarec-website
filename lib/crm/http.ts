@@ -67,13 +67,15 @@ export async function optionalContact(req: Request): Promise<string | null> {
  * 是不是 1.2 小程序的请求：带 X-Sarec-Client: mp-1.2 头，或这个会话曾经被 1.2 用过（标记会话，之后不带头也算）。
  * 1.2 的会话一律不返回订单、金额、付款方式（合规：小程序不出现付费引导）。
  */
+// 1.2 及以后的小程序（mp-1.2、mp-1.3……）都按 1.2 的合规规则处理
+const NEW_MP = /^mp-1\.([2-9]|\d{2,})(\b|$)/;
 export async function isMp12(req: Request): Promise<boolean> {
   const token = tokenFrom(req);
   const header = (req.headers.get('x-sarec-client') ?? '').toLowerCase();
-  if (!token) return header.startsWith('mp-1.2');
+  if (!token) return NEW_MP.test(header);
   const hash = sha256(token);
   try {
-    if (header.startsWith('mp-1.2')) {
+    if (NEW_MP.test(header)) {
       await getPool().query(`UPDATE sessions SET client = 'mp-1.2' WHERE token_hash = $1 AND client IS DISTINCT FROM 'mp-1.2'`, [hash]);
       return true;
     }
@@ -81,7 +83,7 @@ export async function isMp12(req: Request): Promise<boolean> {
     return rows[0]?.client === 'mp-1.2';
   } catch {
     // 迁移还没跑（没有 client 列）：只看请求头
-    return header.startsWith('mp-1.2');
+    return NEW_MP.test(header);
   }
 }
 
@@ -103,7 +105,30 @@ export async function requireContact(req: Request): Promise<string> {
   return id;
 }
 
+/**
+ * 1.3 N：小程序工作台合规——收款、订单、会费、价格相关的后台接口不给小程序会话用（收款数据只在网站后台）。
+ */
+const STAFF_MONEY_PATH = /^\/api\/v1\/staff\/(orders|settings|rooms|bookings|points|screen-ads|display|offers|room-info|agent|contacts\/[^/]+$|events(\/[^/]+)?$)/;
+/** 是不是小程序的请求（版本头、servicewechat.com 来源、或 1.2+ 小程序会话） */
+export async function isMiniProgramRequest(req: Request): Promise<boolean> {
+  const referer = (req.headers.get('referer') ?? '').toLowerCase();
+  const header = (req.headers.get('x-sarec-client') ?? '').toLowerCase();
+  return referer.startsWith('https://servicewechat.com/') || header.startsWith('mp-') || (await isMp12(req));
+}
+
+export async function denyMpStaffMoney(req: Request): Promise<void> {
+  let path = '';
+  try { path = new URL(req.url).pathname; } catch { return; }
+  if (!STAFF_MONEY_PATH.test(path)) return;
+  const referer = (req.headers.get('referer') ?? '').toLowerCase();
+  const header = (req.headers.get('x-sarec-client') ?? '').toLowerCase();
+  if (referer.startsWith('https://servicewechat.com/') || header.startsWith('mp-') || (await isMp12(req))) {
+    throw new CrmError('forbidden', '收款、订单和会费请在手机浏览器打开商会后台：sinoamericanrec.org/zh/staff');
+  }
+}
+
 export async function requireStaff(req: Request, role: StaffRole): Promise<Staff> {
+  await denyMpStaffMoney(req);
   const id = await requireContact(req);
   const s = await staffFor(id);
   if (!staffCan(s, role)) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
@@ -129,4 +154,28 @@ export function siteUrl(req: Request): string {
   const host = req.headers.get('x-forwarded-host') ?? u.host;
   const proto = req.headers.get('x-forwarded-proto') ?? u.protocol.replace(':', '');
   return `${proto}://${host}`;
+}
+
+
+/** 1.3：订单页的身份——已登录用本人；邮件 / 短信里的付款链接带签名 ?t=，不用登录也能打开本人这张订单 */
+export async function orderContact(req: Request, orderNo: string): Promise<string> {
+  const t = new URL(req.url).searchParams.get('t') || req.headers.get('x-pay-token');
+  if (t) {
+    const { payTokenOk } = await import('./payLinks');
+    if (payTokenOk(orderNo, t)) {
+      const { rows } = await getPool().query<{ contact_id: string }>(`SELECT contact_id FROM orders WHERE order_no = $1`, [orderNo]);
+      if (rows[0]) return rows[0].contact_id;
+    }
+  }
+  return requireContact(req);
+}
+
+
+/** 运营或现场签到人员（1.3 筹备清单：工作人员在现场用手机打勾） */
+export async function requireStaffAny(req: Request, roles: StaffRole[]): Promise<Staff> {
+  await denyMpStaffMoney(req);
+  const id = await requireContact(req);
+  const s = await staffFor(id);
+  if (!s || !roles.some((r) => staffCan(s, r))) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
+  return s;
 }

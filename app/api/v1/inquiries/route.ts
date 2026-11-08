@@ -26,7 +26,7 @@ export const POST = handler(async (req: Request) => {
       source: b.source === 'mp' ? 'mp' : 'web_form',
       intent: b.intent as string, name: b.name as string, phone: b.phone as string, email: b.email as string,
       wechat: b.wechat as string, message: b.message as string, fields: { ...fields, _ip: ip },
-      contactId: me, ref: typeof b.ref === 'string' || typeof b.ref === 'number' ? String(b.ref) : null
+      contactId: me, ref: typeof b.ref === 'string' || typeof b.ref === 'number' ? String(b.ref) : null, channel: typeof b.channel === 'string' ? b.channel : null
     },
     siteUrl(req)
   );
