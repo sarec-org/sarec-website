@@ -23,7 +23,14 @@ export const TOKENS = ['{姓名}', '{公司}', '{上次参加的活动}'] as con
 export type Filters = { audience?: 'all' | 'member' | 'registered'; eventTypes?: string[]; industries?: string[]; channels?: string[] };
 export type Recipient = { contactId: string; email: string; name: string | null; company: string | null; lastEvent: string | null };
 
-const base = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
+// 正式站用正式域名；预览 / 本地用这次部署自己的网址，退订链接指回当前环境（预览站的 NEXT_PUBLIC_SITE_URL 指着旧分支）
+const base = () => {
+  if (process.env.VERCEL_ENV === 'production') {
+    const env = process.env.NEXT_PUBLIC_SITE_URL ?? '';
+    return (/sinoamericanrec\.org/.test(env) ? env : 'https://sinoamericanrec.org').replace(/\/$/, '');
+  }
+  return (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
+};
 const ACTIVE_APP = ['approved', 'paid', 'second_payment_due'];
 
 function cleanFilters(f: unknown): Filters {
@@ -350,6 +357,8 @@ export async function sendTest(s: Staff, id: number) {
   if (!isEmailConfigured()) throw new CrmError('unavailable', '邮件服务还没配置');
   const res = await getResend().emails.send({ from: getFromAddress(), to, subject: m.subject, html: m.html, text: m.text, headers: listUnsubHeaders(to) });
   if (res.error) throw new CrmError('send_failed', '测试邮件没发出去，请稍后再试');
+  // 测试环境只发白名单：被拦下的不能算“已发测试”
+  if (res.data?.id === 'blocked-non-production') throw new CrmError('send_failed', `测试环境只能发到测试白名单，${to.replace(/^(.{2}).*(@.*)$/, '$1***$2')} 不在白名单里，测试邮件没有发出。请把测试收件邮箱改成白名单里的地址`);
   await pool.query(`UPDATE newsletter_issues SET test_sent_at = now(), test_sent_to = $2, test_hash = $3, updated_at = now() WHERE id = $1`, [id, to, contentHash(i)]);
   return { to: to.replace(/^(.{2}).*(@.*)$/, '$1***$2') };
 }
