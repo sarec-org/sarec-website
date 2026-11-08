@@ -86,6 +86,19 @@ function Growth() {
         {[7, 30, 90].map((n) => <button key={n} className={`${styles.chip} ${days === n ? styles.chipOn : ''}`} onClick={() => setDays(n)}>最近 {n} 天</button>)}
       </div>
 
+      {/* 手机上也能一眼找到：放在页面最上面，大按钮上传（原来是页面很下面的一个小文件框，手机上找不到） */}
+      <h2 className={styles.h2} id="wechat-qr">商会微信二维码</h2>
+      <div className={styles.card}>
+        <p className={styles.small}>小程序和网站里所有“加商会微信”的地方都显示这张图（报名成功页、签到成功页、首页、相册、会议室、联系商会、商会介绍页）。换图立即生效，不用发新版本。个人号加满时上传新号的码即可。</p>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {qr ? <img src={qr} alt="商会微信二维码" style={{ width: 180, height: 180, objectFit: 'contain', background: '#fff', display: 'block', marginBottom: 12 }} /> : <p className={styles.notice}>还没有上传。没上传时，小程序只显示“联系商会”和电话。</p>}
+        <label className={styles.btn} style={{ cursor: 'pointer', width: '100%' }}>
+          {qr ? '更换二维码图片' : '上传二维码图片'}
+          <input type="file" accept="image/*" aria-label="上传商会微信二维码" style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadQr(f); e.target.value = ''; }} />
+        </label>
+        <p className={styles.small} style={{ marginBottom: 0 }}>手机上点按钮可以直接从相册选截图（微信 → 我 → 二维码名片 → 保存图片）。</p>
+      </div>
+
       <h2 className={styles.h2}>点击统计</h2>
       {d && (d.track.byName.length === 0 ? <p className={styles.muted}>这段时间还没有打点数据。</p> : (
         <table className={styles.table}>
@@ -110,14 +123,6 @@ function Growth() {
           </tbody>
         </table>
       ))}
-
-      <h2 className={styles.h2}>商会微信二维码</h2>
-      <div className={styles.card}>
-        <p className={styles.small}>报名成功页、首页“加商会微信”、会议室“联系预约”都显示这张图。企业微信注册好后在这里换成企微码即可，不用发新版本。</p>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {qr ? <img src={qr} alt="商会微信二维码" style={{ width: 160, height: 160, objectFit: 'contain', background: '#fff' }} /> : <p className={styles.notice}>还没有上传。没上传时，小程序只显示“联系商会”和电话。</p>}
-        <div><input type="file" accept="image/*" aria-label="上传商会微信二维码" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadQr(f); e.target.value = ''; }} /></div>
-      </div>
 
       <h2 className={styles.h2}>企业微信“联系我”码</h2>
       <div className={styles.card}>
