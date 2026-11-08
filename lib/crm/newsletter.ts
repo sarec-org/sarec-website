@@ -392,7 +392,7 @@ export async function sendTest(s: Staff, id: number) {
   const { getResend, getFromAddress, isEmailConfigured } = await import('@/lib/email/resend-client');
   if (!isEmailConfigured()) throw new CrmError('unavailable', '邮件服务还没配置');
   const res = await getResend().emails.send({ from: getFromAddress(), to, subject: m.subject, html: m.html, text: m.text, headers: listUnsubHeaders(to) });
-  if (res.error) throw new CrmError('send_failed', '测试邮件没发出去，请稍后再试');
+  if (res.error) throw new CrmError('send_failed', `测试邮件没发出去：${sendErrorText(String(res.error.name ?? ''), String((res.error as { message?: string }).message ?? ''))}`);
   // 测试环境只发白名单：被拦下的不能算“已发测试”
   if (res.data?.id === 'blocked-non-production') throw new CrmError('send_failed', `测试环境只能发到测试白名单，${to.replace(/^(.{2}).*(@.*)$/, '$1***$2')} 不在白名单里，测试邮件没有发出。请把测试收件邮箱改成白名单里的地址`);
   await pool.query(`UPDATE newsletter_issues SET test_sent_at = now(), test_sent_to = $2, test_hash = $3, updated_at = now() WHERE id = $1`, [id, to, contentHash(i)]);
@@ -539,14 +539,16 @@ function sendErrorText(name: string, message: string): string {
     rate_limit_exceeded: '发得太快，邮件服务暂时限流',
     daily_quota_exceeded: '邮件服务今天的额度用完了',
     monthly_quota_exceeded: '邮件服务本月的额度用完了',
-    validation_error: '收件地址或发件设置不被邮件服务接受（测试环境只能发给白名单里的地址）',
+    validation_error: '收件地址或发件设置不被邮件服务接受',
     invalid_from_address: '发件地址没有通过验证',
     application_error: '邮件服务暂时故障',
     internal_server_error: '邮件服务暂时故障',
     missing_api_key: '邮件服务的密钥没有配置',
     invalid_api_key: '邮件服务的密钥无效'
   };
-  const head = zh[name] ?? '邮件服务暂时没发出去';
+  let head = zh[name] ?? '邮件服务暂时没发出去';
+  if (/domain[\s\S]*not verified/i.test(message)) head = '发件域名没有在邮件服务里验证';
+  else if (name === 'validation_error' && process.env.VERCEL_ENV !== 'production') head += '（测试环境只能发给白名单里的地址）';
   let raw = message.replace(/\s+/g, ' ').trim();
   if (raw.length > 90) raw = raw.slice(0, 90).replace(/\s+\S*$/, '') + '…';
   return raw ? `${head}（原文：${raw}）` : head;
