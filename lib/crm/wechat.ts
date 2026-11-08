@@ -37,7 +37,7 @@ export async function withWxToken<T>(run: (token: string) => Promise<T>, errcode
 /** scene 只能 32 个可见字符，且限 [0-9a-zA-Z!#$&'()*+,/:;=?@-._~] */
 export const SCENE_OK = /^[0-9A-Za-z!#$&'()*+,/:;=?@\-._~]{1,32}$/;
 
-type CodeReq = { page: string; scene?: string; path?: string; tag: string; envVersion?: 'release' | 'trial' | 'develop' };
+type CodeReq = { page: string; scene?: string; path?: string; tag: string; envVersion?: 'release' | 'trial' | 'develop'; checkPath?: boolean };
 
 /** 调微信生成正式版小程序码：有 scene 用 wxacode.getUnlimited（数量不限），否则 wxacode.get（带完整 path，总量有限） */
 async function miniProgramCode(r: CodeReq): Promise<Buffer> {
@@ -50,7 +50,7 @@ async function miniProgramCode(r: CodeReq): Promise<Buffer> {
   };
   const { buf, json } = await withWxToken(async (token) => {
     const [url, payload] = r.scene
-      ? [`https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`, { ...common, scene: r.scene, page: r.page, check_path: env === 'release' }]
+      ? [`https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`, { ...common, scene: r.scene, page: r.page, check_path: env === 'release' && r.checkPath !== false }]
       : [`https://api.weixin.qq.com/wxa/getwxacode?access_token=${token}`, { ...common, path: r.path }];
     const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const b = Buffer.from(await res.arrayBuffer());
@@ -95,12 +95,13 @@ export function inviteCode(slug: string, memberNo: number, envVersion: 'release'
 
 /** 1.3 P-2 商会邀请卡专属码：扫码打开“商会介绍页”，带邀请人推荐码 */
 export function chamberInviteCode(memberNo: number, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
-  return miniProgramCode({ page: 'pages/intro/intro', scene: `r${memberNo}`, tag: 'chamber_invite', envVersion });
+  // 1.3 新页面：正式版发布前（体验版、审核期间）也能生成；发布后同一个码照常能用
+  return miniProgramCode({ page: 'pages/intro/intro', scene: `r${memberNo}`, tag: 'chamber_invite', envVersion, checkPath: false });
 }
 
 /** 1.3 N 工作人员绑定小程序码：工作人员在网站后台点“在小程序里用工作台”生成，用自己的微信扫一次（scene = “sb=绑定码”） */
 export function staffBindCode(code: string, envVersion: 'release' | 'trial' | 'develop' = 'release'): Promise<Buffer> {
-  return miniProgramCode({ page: 'pages/staff/bind', scene: `sb=${code}`, tag: 'staff_bind', envVersion });
+  return miniProgramCode({ page: 'pages/staff/bind', scene: `sb=${code}`, tag: 'staff_bind', envVersion, checkPath: false });
 }
 
 /** 1.2 电子名片码：扫码打开名片页（scene = “c|名片编号”），页面实时显示当前会员状态 */

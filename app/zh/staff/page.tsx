@@ -14,6 +14,7 @@ const SECTIONS: { href: string; title: string; desc: string; role: string }[] = 
   { href: '/zh/staff/album', title: '活动相册', desc: '上传现场照片（自动加水印）、活动封面、发布并通知到场的人', role: 'ops' },
   { href: '/zh/staff/rooms', title: '会议室与电子屏', desc: '线下预约登记（防撞期）、收款登记、会议室展示信息、电子屏审核', role: 'ops' },
   { href: '/zh/staff/growth', title: '增长与设置', desc: '点击统计、推荐排行、商会微信二维码、视频号、专委会、内容显示范围', role: 'ops' },
+  { href: '/zh/staff/growth#wechat-qr', title: '换商会微信二维码', desc: '小程序和网站里所有“加商会微信”的码，手机上也能直接换图', role: 'ops' },
   { href: '/zh/staff/newsletter', title: '邮件通讯', desc: '给验证过邮箱的会员和注册用户发通讯：按标签筛选、个性化、先发测试给东哥、东哥确认后才群发；看送达、打开、点击、退订', role: 'ops' },
   { href: '/zh/staff/prep', title: '活动筹备清单', desc: '每场活动按类型自动生成的筹备清单：负责人、截止时间、打勾、拍摄清单、复盘；模板也在这里改', role: 'ops|checkin' },
   { href: '/zh/staff/recaps', title: '活动回顾', desc: '活动结束后自动整理好的照片精选、回顾、推文初稿，一次审核发布', role: 'ops' },
