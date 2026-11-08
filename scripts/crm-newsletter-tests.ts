@@ -185,6 +185,7 @@ async function main() {
     const g1 = await nl.getIssue(failId);
     assert.equal(g1.issue.status, 'sending', '失败后不能显示“已发送”');
     assert.ok(g1.sendError && g1.sendError.count > 0, '后台能看到没发出的原因');
+    assert.ok(g1.sendError!.message.startsWith('发得太快，邮件服务暂时限流'), '原因是中文大白话');
     const again = await nl.processQueue(failId);
     assert.ok(again.sent > 0 && again.left === 0, '“接着发”重试成功');
     assert.equal((await nl.getIssue(failId)).issue.status, 'sent');

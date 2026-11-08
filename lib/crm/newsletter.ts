@@ -507,7 +507,7 @@ export async function processQueue(id: number, opts: { max?: number } = {}) {
     const res = await getResend().batch.send(payload);
     if (res.error || !res.data) {
       // 整批没发出去（限流、Resend 故障、参数错误）：仍然留在队列里，记下原因；这一期保持“发送中”，后台显示警告，“接着发”或第二天定时任务会重试
-      const why = `${String(res.error?.name ?? 'send_failed')}: ${String((res.error as { message?: string } | null)?.message ?? '').slice(0, 120)}`;
+      const why = sendErrorText(String(res.error?.name ?? ''), String((res.error as { message?: string } | null)?.message ?? ''));
       await pool.query(`UPDATE newsletter_sends SET error = $3 WHERE issue_id = $1 AND id = ANY($2)`, [id, todo.map((r) => r.id), why.slice(0, 200)]);
       failedBatch = true;
       break;
@@ -531,6 +531,25 @@ export async function processQueue(id: number, opts: { max?: number } = {}) {
   if (!left[0].n) await pool.query(`UPDATE newsletter_issues SET status = 'sent', sent_at = now(), updated_at = now() WHERE id = $1 AND status = 'sending'`, [id]);
   else if (budget <= 0) await quotaAlert(`第 ${id} 期还有 ${left[0].n} 封没发：今天的发信额度用完了，明天会自动接着发。`);
   return { sent, left: left[0].n, paused: left[0].n > 0, failed: failedBatch };
+}
+
+/** Resend 的报错换成大白话（原文放在后面，按词截断，不切半个单词） */
+function sendErrorText(name: string, message: string): string {
+  const zh: Record<string, string> = {
+    rate_limit_exceeded: '发得太快，邮件服务暂时限流',
+    daily_quota_exceeded: '邮件服务今天的额度用完了',
+    monthly_quota_exceeded: '邮件服务本月的额度用完了',
+    validation_error: '收件地址或发件设置不被邮件服务接受（测试环境只能发给白名单里的地址）',
+    invalid_from_address: '发件地址没有通过验证',
+    application_error: '邮件服务暂时故障',
+    internal_server_error: '邮件服务暂时故障',
+    missing_api_key: '邮件服务的密钥没有配置',
+    invalid_api_key: '邮件服务的密钥无效'
+  };
+  const head = zh[name] ?? '邮件服务暂时没发出去';
+  let raw = message.replace(/\s+/g, ' ').trim();
+  if (raw.length > 90) raw = raw.slice(0, 90).replace(/\s+\S*$/, '') + '…';
+  return raw ? `${head}（原文：${raw}）` : head;
 }
 
 async function recipientData(ids: string[]) {
