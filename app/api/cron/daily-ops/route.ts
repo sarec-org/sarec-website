@@ -56,6 +56,14 @@ async function run(req: Request) {
     await recordException('pay_reminder', `pay_reminder:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.payReminders = 'error';
   }
+  // 邮件通讯：接着发东哥已确认、前一天额度用完没发完的期数（没确认的期数一封都不发）；月额度过 80% 提醒
+  try {
+    const { runNewsletterQueue } = await import('@/lib/crm/newsletter');
+    out.newsletter = await runNewsletterQueue();
+  } catch (e) {
+    await recordException('newsletter_queue', `newsletter_queue:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.newsletter = 'error';
+  }
   // 1.3 J：活动结束后的自动整理（每场一次；AI 只写初稿，计入月预算）
   try {
     out.postEvent = await runPostEvent();

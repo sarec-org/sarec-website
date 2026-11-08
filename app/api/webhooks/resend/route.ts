@@ -23,11 +23,18 @@ export async function POST(req: Request) {
     req.headers.get('svix-signature') ?? ''
   );
   if (!ok) return NextResponse.json({ ok: false }, { status: 401 });
-  let evt: { type?: string; data?: { to?: string[] | string; bounce?: { type?: string; subType?: string; message?: string } } };
+  let evt: { type?: string; data?: { email_id?: string; to?: string[] | string; bounce?: { type?: string; subType?: string; message?: string } } };
   try {
     evt = JSON.parse(payload);
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
+  }
+  // 邮件通讯统计：送达 / 打开 / 点击 / 投诉（投诉自动停发）
+  const toList = Array.isArray(evt.data?.to) ? evt.data!.to : evt.data?.to ? [evt.data.to] : [];
+  if (evt.type && ['email.delivered', 'email.opened', 'email.clicked', 'email.complained'].includes(evt.type)) {
+    const { recordEmailEvent } = await import('@/lib/crm/newsletter');
+    await recordEmailEvent(evt.type, evt.data?.email_id ?? null, toList).catch(() => undefined);
+    return NextResponse.json({ ok: true });
   }
   if (evt.type !== 'email.bounced') return NextResponse.json({ ok: true, ignored: true });
   // 只处理永久退信（地址不存在等）；临时退信（邮箱满、暂时不可达）不标无效
@@ -36,5 +43,7 @@ export async function POST(req: Request) {
   const to = Array.isArray(evt.data?.to) ? evt.data!.to : evt.data?.to ? [evt.data.to] : [];
   let n = 0;
   for (const addr of to) n += await markEmailBounced(addr, `退信${evt.data?.bounce?.subType ? `（${evt.data.bounce.subType}）` : ''}`);
+  const { recordEmailEvent } = await import('@/lib/crm/newsletter');
+  await recordEmailEvent('email.bounced', evt.data?.email_id ?? null, to).catch(() => undefined);
   return NextResponse.json({ ok: true, marked: n });
 }

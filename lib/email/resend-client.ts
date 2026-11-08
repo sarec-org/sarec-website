@@ -23,6 +23,7 @@ export function getResend(): Resend {
   if (!client) {
     client = new Resend(key);
     if (!isProduction()) guardNonProduction(client);
+    countSingleSends(client);
   }
   return client;
 }
@@ -50,6 +51,50 @@ function guardNonProduction(c: Resend) {
       return { data: { id: 'blocked-non-production' }, error: null };
     }
     return send({ ...payload, to: kept, cc: undefined, bcc: undefined } as Parameters<typeof send>[0], options);
+  }) as typeof send;
+  // 批量发送（邮件通讯）同样只发给测试白名单；被拦下的给一个假 ID，保持和请求一一对应
+  const batch = c.batch.send.bind(c.batch);
+  (c.batch as { send: typeof batch }).send = (async (payload: Parameters<typeof batch>[0], options?: Parameters<typeof batch>[1]) => {
+    const items = payload as { to: string | string[] }[];
+    const allowed = items.map((p) => (Array.isArray(p.to) ? p.to : [p.to]).some((t) => typeof t === 'string' && testRecipientAllowed(t)));
+    const keep = items.filter((_, i) => allowed[i]);
+    let ids: { id: string }[] = [];
+    if (keep.length) {
+      const res = await batch(keep as Parameters<typeof batch>[0], options);
+      if (res.error) return res;
+      ids = ((res.data as { data?: { id: string }[] } | null)?.data ?? []) as { id: string }[];
+    }
+    if (keep.length < items.length) console.log(`[email] non-production: blocked ${items.length - keep.length} batch recipient(s)`);
+    let k = 0;
+    const data = allowed.map((ok, i) => (ok ? ids[k++] ?? { id: `blocked-${i}` } : { id: 'blocked-non-production' }));
+    return { data: { data }, error: null } as unknown as Awaited<ReturnType<typeof batch>>;
+  }) as typeof batch;
+}
+
+/**
+ * 邮件通讯：每天实际发出的邮件数（所有邮件），用来控制在 Resend 现有套餐内。
+ * 单封发送在这里自动计数；批量发送（邮件通讯）由调用方计数。计数失败不影响发信。
+ */
+export async function countSends(n: number, newsletter = false): Promise<void> {
+  if (!n) return;
+  try {
+    const { getPool } = await import('@/lib/db/client');
+    await getPool().query(
+      `INSERT INTO email_send_counts (day, sent, newsletter) VALUES ((now() AT TIME ZONE 'America/Los_Angeles')::date, $1, $2)
+       ON CONFLICT (day) DO UPDATE SET sent = email_send_counts.sent + EXCLUDED.sent, newsletter = email_send_counts.newsletter + EXCLUDED.newsletter`,
+      [n, newsletter ? n : 0]
+    );
+  } catch {
+    /* 迁移没跑或数据库暂时不可用：不影响发信 */
+  }
+}
+
+function countSingleSends(c: Resend) {
+  const send = c.emails.send.bind(c.emails);
+  (c.emails as { send: typeof send }).send = (async (payload: Parameters<typeof send>[0], options?: Parameters<typeof send>[1]) => {
+    const res = await send(payload, options);
+    if (!res.error && res.data?.id !== 'blocked-non-production') await countSends(1);
+    return res;
   }) as typeof send;
 }
 
