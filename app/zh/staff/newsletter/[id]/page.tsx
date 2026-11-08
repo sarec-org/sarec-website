@@ -12,6 +12,7 @@ import { api, fmtDateTime } from '@/components/crm/client';
 type Filters = { audience: 'all' | 'member' | 'registered'; eventTypes: string[]; industries: string[]; channels: string[] };
 type Issue = { id: number; subject: string; body: string; source: string; status: string; filters: Filters; ai_reviewed_at: string | null; ai_reviewed_by: string | null; test_sent_at: string | null; test_sent_to: string | null; confirmed_at: string | null; confirmed_by: string | null; sent_at: string | null; recipient_count: number | null };
 type Data = {
+  sendError: { message: string; count: number } | null;
   issue: Issue;
   gate: { aiNeedsReview: boolean; testSentForThisVersion: boolean; canConfirm: boolean };
   recipients: number;
@@ -163,7 +164,7 @@ export default function NewsletterIssue({ params }: { params: { id: string } }) 
                 <ol className={styles.small} style={{ paddingLeft: 18 }}>
                   {i.source === 'ai' && <li>{i.ai_reviewed_at ? `✓ AI 草稿已由 ${i.ai_reviewed_by} 审核` : 'AI 起草的内容要东哥先审核'}</li>}
                   <li>{d.gate.testSentForThisVersion ? `✓ 这一版的测试邮件已发到 ${i.test_sent_to}（${fmtDateTime(i.test_sent_at!)}）` : i.test_sent_at ? '内容改过了，请重新发测试邮件' : `先发一封测试邮件到 ${d.testTo ?? '（还没设置测试邮箱）'}`}</li>
-                  <li>{i.confirmed_at ? `✓ 已确认发送` : '东哥看过测试邮件后，点“确认发送”才群发'}</li>
+                  <li>{i.confirmed_at ? (i.status === 'sent' ? '✓ 已确认并全部发出' : `✓ 已确认发送，还有 ${d.stats.queued} 封在队列里`) : '东哥看过测试邮件后，点“确认发送”才群发'}</li>
                 </ol>
                 {draft && (
                   <div className={styles.btnRow}>
@@ -184,6 +185,7 @@ export default function NewsletterIssue({ params }: { params: { id: string } }) 
                     )}
                   </div>
                 )}
+                {d.sendError && <p className={styles.error}>有 {d.sendError.count} 封没发出去：{d.sendError.message}。系统每天会自动重试，也可以点“接着发剩下的”马上重试。</p>}
                 {i.status === 'sending' && can(s, 'admin') && <button className={styles.btn} disabled={!!busy} onClick={() => act('resume', (x) => `又发出 ${x.sent} 封，还剩 ${x.left} 封`)}>接着发剩下的</button>}
                 <p className={styles.small}>本月额度：已用 {d.quota.usedMonth} / {d.quota.monthly || '不限'}，群发还能用约 {Number.isFinite(d.quota.leftMonth) ? d.quota.leftMonth : '不限'} 封；今天还能发约 {Number.isFinite(d.quota.leftToday) ? d.quota.leftToday : '不限'} 封。</p>
                 {can(s, 'admin') && draft && (

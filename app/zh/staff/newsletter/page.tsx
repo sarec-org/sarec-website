@@ -7,7 +7,7 @@ import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
 
-type Row = { id: number; subject: string; source: string; status: string; created_at: string; sent_at: string | null; recipient_count: number | null; sent: number; delivered: number; opened: number; clicked: number; unsubscribed: number; bounced: number; complained: number };
+type Row = { id: number; subject: string; source: string; status: string; queued: number; send_errors: number; created_at: string; sent_at: string | null; recipient_count: number | null; sent: number; delivered: number; opened: number; clicked: number; unsubscribed: number; bounced: number; complained: number };
 type Quota = { monthly: number; daily: number; usedToday: number; usedMonth: number; leftToday: number; leftMonth: number };
 const STATUS: Record<string, string> = { draft: '草稿', sending: '发送中', sent: '已发送', cancelled: '已取消' };
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : '—');
@@ -58,7 +58,7 @@ export default function NewsletterList() {
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td><Link href={`/zh/staff/newsletter/${r.id}`} style={{ color: 'var(--gold)' }}>{r.subject || '（未写标题）'}</Link>{r.source === 'ai' ? <span className={styles.small}>（AI 草稿）</span> : null}<div className={styles.small}>{fmtDateTime(r.sent_at ?? r.created_at)}</div></td>
-                    <td>{STATUS[r.status] ?? r.status}</td>
+                    <td>{r.send_errors ? <span style={{ color: '#E7A1A1' }}>发送出错，{r.queued} 封没发出（会自动重试）</span> : r.status === 'sending' ? `发送中（剩 ${r.queued} 封）` : STATUS[r.status] ?? r.status}</td>
                     <td>{r.recipient_count ?? '—'}</td>
                     <td>{r.delivered} <span className={styles.small}>{pct(r.delivered, r.sent)}</span></td>
                     <td>{r.opened} <span className={styles.small}>{pct(r.opened, r.delivered || r.sent)}</span></td>

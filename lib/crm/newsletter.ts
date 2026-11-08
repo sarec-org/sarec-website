@@ -51,21 +51,33 @@ export async function audience(filters: unknown, opts: { limit?: number } = {}):
        SELECT c.id AS contact_id, lower(c.email) AS email FROM contacts c WHERE c.email IS NOT NULL AND c.email_verified_at IS NOT NULL
        UNION
        SELECT m.contact_id, lower(m.value) FROM contact_methods m WHERE m.kind = 'email' AND m.is_current AND m.status = 'confirmed'
-     ), picked AS (
-       SELECT DISTINCT ON (v.email) v.contact_id, v.email
+     ), facts AS (
+       -- 同一个邮箱可能对应几个档案：条件按“邮箱”判断（任何一个档案满足就算），不按单个档案
+       SELECT v.email, c.id AS contact_id, c.created_at, c.name,
+              EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.application_status = ANY($6) AND a.membership_end_date >= current_date) AS is_member,
+              EXISTS (SELECT 1 FROM registrations r JOIN event_prep p ON p.event_id = r.event_id
+                       WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in' AND p.template_key = ANY($2)) AS type_match,
+              (c.role_category = ANY($3)) AS role_match,
+              (coalesce(c.first_channel, c.acquisition_source) = ANY($4)) AS channel_match,
+              EXISTS (SELECT 1 FROM registrations r WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in') AS attended
          FROM verified v JOIN contacts c ON c.id = v.contact_id
         WHERE NOT c.is_placeholder
-          AND v.email <> $5
-          AND NOT EXISTS (SELECT 1 FROM email_unsubscribes u WHERE u.email = v.email)
-          AND NOT EXISTS (SELECT 1 FROM contact_methods bad WHERE bad.kind = 'email' AND lower(bad.value) = v.email AND bad.status = 'invalid')
-          AND ($1 = 'all'
-               OR ($1 = 'member') = EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.application_status = ANY($6) AND a.membership_end_date >= current_date))
-          AND (cardinality($2::text[]) = 0 OR EXISTS (
-                SELECT 1 FROM registrations r JOIN event_prep p ON p.event_id = r.event_id
-                 WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in' AND p.template_key = ANY($2)))
-          AND (cardinality($3::text[]) = 0 OR c.role_category = ANY($3))
-          AND (cardinality($4::text[]) = 0 OR coalesce(c.first_channel, c.acquisition_source) = ANY($4))
-        ORDER BY v.email, c.created_at
+     ), by_email AS (
+       SELECT email, bool_or(is_member) AS is_member, bool_or(type_match) AS type_match, bool_or(coalesce(role_match, false)) AS role_match,
+              bool_or(coalesce(channel_match, false)) AS channel_match
+         FROM facts GROUP BY email
+     ), picked AS (
+       -- 个性化用哪个档案：会员档案优先，其次有真实姓名、到过场的，再其次最早建的
+       SELECT DISTINCT ON (f.email) f.contact_id, f.email
+         FROM facts f JOIN by_email b ON b.email = f.email
+        WHERE f.email <> $5
+          AND NOT EXISTS (SELECT 1 FROM email_unsubscribes u WHERE u.email = f.email)
+          AND NOT EXISTS (SELECT 1 FROM contact_methods bad WHERE bad.kind = 'email' AND lower(bad.value) = f.email AND bad.status = 'invalid')
+          AND ($1 = 'all' OR ($1 = 'member') = b.is_member)
+          AND (cardinality($2::text[]) = 0 OR b.type_match)
+          AND (cardinality($3::text[]) = 0 OR b.role_match)
+          AND (cardinality($4::text[]) = 0 OR b.channel_match)
+        ORDER BY f.email, f.is_member DESC, (f.name IS NOT NULL AND f.name <> '微信用户') DESC, f.attended DESC, f.created_at
      )
      SELECT p.contact_id, p.email, c.name, m.company,
             (SELECT e.title FROM registrations r JOIN events e ON e.id = r.event_id
@@ -100,19 +112,32 @@ export async function filterOptions() {
 
 // ── 个性化与排版 ───────────────────────────────────────────────────────
 
+// 会员自己填的名字、公司里如果有 * [ ] ( ) 之类的排版符号，换成全角，不能变成链接或加粗
+const plain = (x: string | null) => (x ?? '').replace(/\*/g, '＊').replace(/\[/g, '［').replace(/\]/g, '］').replace(/\(/g, '（').replace(/\)/g, '）').replace(/^#+\s*/, '').replace(/^-\s+/, '');
 function vars(r: Pick<Recipient, 'name' | 'company' | 'lastEvent'>): Record<string, string> {
-  return { '{姓名}': r.name ?? '', '{公司}': r.company ?? '', '{上次参加的活动}': r.lastEvent ?? '' };
+  return { '{姓名}': plain(r.name), '{公司}': plain(r.company), '{上次参加的活动}': plain(r.lastEvent) };
+}
+
+/** 标题：用到的变量没有值时，把它所在的括号段或半句（按 ，、·｜：— 分）整段去掉，不留“后的商会通讯”这类残片 */
+function subjectOf(text: string, v: Record<string, string>): string {
+  const missing = TOKENS.filter((t) => text.includes(t) && !v[t]);
+  let s = text;
+  for (const t of missing) {
+    s = s.replace(new RegExp(`[（(][^（）()]*${t.replace(/[{}]/g, '\\$&')}[^（）()]*[）)]`, 'g'), '');
+    s = s
+      .split(/(?=[，,、·｜|：:—])|(?<=[，,、·｜|：:—])/)
+      .filter((seg) => !seg.includes(t))
+      .join('');
+  }
+  for (const t of TOKENS) s = s.split(t).join(v[t]);
+  s = s.replace(/^[\s，,、：:·｜|\-—]+/, '').replace(/[\s，,、：:·｜|\-—]+$/, '').replace(/([，,、·｜|：:—])\s*(?=[，,、·｜|：:—])/g, '').replace(/\s{2,}/g, ' ').trim();
+  return s;
 }
 
 /** 正文：某一行用到的变量没有值 → 正文第一行改成“您好，”，其它行整行去掉；标题里没有值的变量去掉 */
 export function personalize(text: string, r: Pick<Recipient, 'name' | 'company' | 'lastEvent'>, kind: 'body' | 'subject'): string {
   const v = vars(r);
-  if (kind === 'subject') {
-    let s = text;
-    for (const t of TOKENS) s = s.split(t).join(v[t]);
-    s = s.replace(/^[\s，,、：:·\-—]+/, '').replace(/\s{2,}/g, ' ').trim();
-    return s || '您好';
-  }
+  if (kind === 'subject') return subjectOf(text, v) || '中美房地产商会通讯';
   const lines = text.split('\n');
   const firstIdx = lines.findIndex((l) => l.trim() !== '');
   const out: string[] = [];
@@ -138,7 +163,12 @@ function inline(s: string): string {
 
 /** 简单排版：空行分段、## 小标题、- 列表、**加粗**、[文字](链接) */
 export function bodyHtml(text: string): string {
-  const blocks = text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+  // 小标题单独成段；列表和普通段落之间自动分开（AI 草稿常写成“## 标题”下一行就是“- 列表”）
+  const norm = text
+    .replace(/^(##\s.*)$/gm, '\n$1\n')
+    .replace(/^([^\n·•\-].*)\n(?=\s*[-·•]\s)/gm, '$1\n\n')
+    .replace(/^(\s*[-·•]\s.*)\n(?=[^\n·•\s\-])/gm, '$1\n\n');
+  const blocks = norm.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
   return blocks
     .map((b) => {
       if (b.startsWith('## ')) return `<h2 style="font-size:18px;margin:24px 0 8px;color:#06111E">${inline(b.slice(3))}</h2>`;
@@ -232,7 +262,8 @@ export async function listIssues() {
     `SELECT i.id, i.subject, i.source, i.status, i.created_at, i.sent_at, i.recipient_count, i.test_sent_at, i.confirmed_at,
             count(s.*) FILTER (WHERE s.status = 'sent')::int AS sent,
             count(s.delivered_at)::int AS delivered, count(s.opened_at)::int AS opened, count(s.clicked_at)::int AS clicked,
-            count(s.unsubscribed_at)::int AS unsubscribed, count(s.bounced_at)::int AS bounced, count(s.complained_at)::int AS complained
+            count(s.unsubscribed_at)::int AS unsubscribed, count(s.bounced_at)::int AS bounced, count(s.complained_at)::int AS complained,
+            count(*) FILTER (WHERE s.status = 'queued')::int AS queued, count(*) FILTER (WHERE s.status = 'queued' AND s.error IS NOT NULL)::int AS send_errors
        FROM newsletter_issues i LEFT JOIN newsletter_sends s ON s.issue_id = i.id
       GROUP BY i.id ORDER BY i.created_at DESC LIMIT 100`
   );
@@ -278,7 +309,12 @@ export async function getIssue(id: number) {
        FROM newsletter_sends WHERE issue_id = $1`,
     [id]
   );
+  const { rows: le } = await getPool().query<{ error: string; n: number }>(
+    `SELECT max(error) AS error, count(*)::int AS n FROM newsletter_sends WHERE issue_id = $1 AND status = 'queued' AND error IS NOT NULL`,
+    [id]
+  );
   return {
+    sendError: le[0]?.n ? { message: le[0].error, count: le[0].n } : null,
     issue: { ...i, hash },
     gate: {
       aiNeedsReview: i.source === 'ai' && !i.ai_reviewed_at,
@@ -447,6 +483,9 @@ export async function processQueue(id: number, opts: { max?: number } = {}) {
   let budget = Math.min(Number.isFinite(q.leftToday) ? q.leftToday : 1e9, Number.isFinite(q.leftMonth) ? q.leftMonth : 1e9, opts.max ?? 2000);
   const { getResend, getFromAddress } = await import('@/lib/email/resend-client');
   let sent = 0;
+  let failedBatch = false;
+  // 以前版本标成 failed 的，重新排队重试
+  await pool.query(`UPDATE newsletter_sends SET status = 'queued' WHERE issue_id = $1 AND status = 'failed'`, [id]);
   while (budget > 0) {
     const { rows } = await pool.query<{ id: number; email: string; contact_id: string | null }>(
       `SELECT id, email, contact_id FROM newsletter_sends WHERE issue_id = $1 AND status = 'queued' ORDER BY id LIMIT $2`,
@@ -467,12 +506,17 @@ export async function processQueue(id: number, opts: { max?: number } = {}) {
     });
     const res = await getResend().batch.send(payload);
     if (res.error || !res.data) {
-      await pool.query(`UPDATE newsletter_sends SET status = 'failed', error = $3 WHERE issue_id = $1 AND id = ANY($2)`, [id, todo.map((r) => r.id), String(res.error?.name ?? 'send_failed').slice(0, 80)]);
+      // 整批没发出去（限流、Resend 故障、参数错误）：仍然留在队列里，记下原因；这一期保持“发送中”，后台显示警告，“接着发”或第二天定时任务会重试
+      const why = `${String(res.error?.name ?? 'send_failed')}: ${String((res.error as { message?: string } | null)?.message ?? '').slice(0, 120)}`;
+      await pool.query(`UPDATE newsletter_sends SET error = $3 WHERE issue_id = $1 AND id = ANY($2)`, [id, todo.map((r) => r.id), why.slice(0, 200)]);
+      failedBatch = true;
       break;
     }
     const ids = (res.data as { data?: { id: string }[] }).data ?? (res.data as unknown as { id: string }[]);
     for (let k = 0; k < todo.length; k++) {
-      await pool.query(`UPDATE newsletter_sends SET status = 'sent', resend_id = $2, sent_at = now() WHERE id = $1`, [todo[k].id, ids?.[k]?.id ?? null]);
+      const rid = ids?.[k]?.id ?? null;
+      // 预览站白名单拦下的没有真实 ID，不存（避免 webhook 回写时撞到同一个假 ID）
+      await pool.query(`UPDATE newsletter_sends SET status = 'sent', resend_id = $2, sent_at = now(), error = NULL WHERE id = $1`, [todo[k].id, rid && !rid.startsWith('blocked') ? rid : null]);
     }
     const { countSends } = await import('@/lib/email/resend-client');
     await countSends(todo.length, true);
@@ -480,9 +524,13 @@ export async function processQueue(id: number, opts: { max?: number } = {}) {
     budget -= todo.length;
   }
   const { rows: left } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM newsletter_sends WHERE issue_id = $1 AND status = 'queued'`, [id]);
+  if (failedBatch) {
+    const { recordException } = await import('./followups');
+    await recordException('newsletter_send', `newsletter_send:${id}`, String(id), `邮件通讯第 ${id} 期有 ${left[0].n} 封没发出去（${i.subject.slice(0, 30)}），会自动重试，也可以在后台点“接着发”`).catch(() => undefined);
+  }
   if (!left[0].n) await pool.query(`UPDATE newsletter_issues SET status = 'sent', sent_at = now(), updated_at = now() WHERE id = $1 AND status = 'sending'`, [id]);
   else if (budget <= 0) await quotaAlert(`第 ${id} 期还有 ${left[0].n} 封没发：今天的发信额度用完了，明天会自动接着发。`);
-  return { sent, left: left[0].n, paused: left[0].n > 0 };
+  return { sent, left: left[0].n, paused: left[0].n > 0, failed: failedBatch };
 }
 
 async function recipientData(ids: string[]) {
@@ -522,7 +570,7 @@ export async function recordEmailEvent(type: string, emailId: string | null, to:
       if (!e) continue;
       await pool.query(
         `INSERT INTO email_unsubscribes (email, reason, issue_id) VALUES ($1, $2, (SELECT issue_id FROM newsletter_sends WHERE resend_id = $3 LIMIT 1))
-         ON CONFLICT (email) DO UPDATE SET reason = CASE WHEN EXCLUDED.reason = 'complaint' THEN 'complaint' ELSE email_unsubscribes.reason END`,
+         ON CONFLICT (email) DO UPDATE SET reason = CASE WHEN EXCLUDED.reason = 'complaint' OR email_unsubscribes.reason = 'complaint' THEN 'complaint' WHEN EXCLUDED.reason = 'bounce' OR email_unsubscribes.reason = 'bounce' THEN 'bounce' ELSE email_unsubscribes.reason END`,
         [e, type === 'email.complained' ? 'complaint' : 'bounce', emailId]
       );
       await pool.query(`UPDATE newsletter_sends SET status = 'skipped', error = $2 WHERE email = $1 AND status = 'queued'`, [e, type === 'email.complained' ? 'complaint' : 'bounce']);

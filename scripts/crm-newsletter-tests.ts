@@ -9,12 +9,14 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 
 const sent: { url: string; body: unknown }[] = [];
+let failNext = false;
 const realFetch = globalThis.fetch;
 globalThis.fetch = (async (url: unknown, init?: { body?: string }) => {
   const u = String((url as { url?: string })?.url ?? url);
   if (u.includes('api.resend.com')) {
     const body = JSON.parse(init?.body ?? '{}');
     sent.push({ url: u, body });
+    if (u.endsWith('/emails/batch') && failNext) { failNext = false; return new Response(JSON.stringify({ name: 'rate_limit_exceeded', message: 'Too many requests', statusCode: 429 }), { status: 429, headers: { 'content-type': 'application/json' } }); }
     const payload = u.endsWith('/emails/batch') ? { data: (body as unknown[]).map((_, i) => ({ id: `dev13-r-${Date.now()}-${i}` })) } : { id: `dev13-r-${Date.now()}` };
     return new Response(JSON.stringify(payload), { status: 200, headers: { 'content-type': 'application/json' } });
   }
@@ -68,6 +70,25 @@ async function main() {
     assert.equal((await nl.audience({ channels: [CH], industries: ['owner_investor'] })).length, 1, '按行业筛选');
     assert.equal((await nl.audience({ channels: [CH], audience: 'member' })).length, 0, '只发会员：测试账号都不是会员');
     ok('收件人：只发验证过邮箱的人；未验证、无效、退订的不发；能按行业 / 会员 / 渠道筛选');
+
+    // 测试 P2-NL2：同一邮箱两个档案，条件按邮箱判断
+    const dupA = await mk('dupA', em('dup'), true, { role: 'owner_investor' });
+    const dupB = await mk('dupB', null, false);
+    await pool.query(`INSERT INTO contact_methods (contact_id, kind, value, status, is_current, source) VALUES ($1, 'email', $2, 'confirmed', true, 'test')`, [dupB, em('dup')]);
+    const dupList = (await nl.audience({ channels: [CH], industries: ['owner_investor'] })).filter((r) => r.email === em('dup'));
+    assert.equal(dupList.length, 1, '同一邮箱只发一封，只要一个档案满足行业条件就算');
+    assert.equal(dupList[0].contactId, dupA, '个性化用满足条件 / 有真实姓名的档案');
+    void dupB;
+
+    // 测试 P2-NL1：“## 小标题”下一行直接是列表
+    const h = nl.bodyHtml('## 本周\n- 研究文章\n- 活动');
+    assert.ok(h.includes('<h2') && h.includes('<ul') && (h.match(/<li/g) || []).length === 2, '小标题和列表分开排版');
+    // P3：标题里空变量连同半句去掉；名字里的排版符号不生效
+    assert.equal(nl.personalize('{上次参加的活动}后的商会通讯', { name: null, company: null, lastEvent: null }, 'subject'), '中美房地产商会通讯');
+    assert.equal(nl.personalize('商会本周通讯（{上次参加的活动}之后）', { name: null, company: null, lastEvent: null }, 'subject'), '商会本周通讯');
+    assert.equal(nl.personalize('{姓名}，商会本周通讯', { name: null, company: null, lastEvent: null }, 'subject'), '商会本周通讯');
+    assert.ok(!nl.bodyHtml(nl.personalize('{姓名}，您好', { name: '[点我](https://x.test)', company: null, lastEvent: null }, 'body')).includes('<a '), '名字里的链接写法不会变成链接');
+    ok('同一邮箱多档案按邮箱判断；小标题接列表正确排版；标题空变量不留残片；名字里的排版符号不生效');
 
     // 个性化兜底
     const r0 = list.find((r) => r.email === em('n'))!;
@@ -125,17 +146,17 @@ async function main() {
 
     // 确认发送
     const out = await nl.confirmSend(admin as never, id);
-    assert.equal(out.recipients, 3);
-    assert.equal(out.sent, 3);
+    assert.equal(out.recipients, 4);
+    assert.equal(out.sent, 4);
     const batch = sent.find((x) => x.url.endsWith('/emails/batch'))!;
     const bodies = batch.body as { to: string; subject: string; html: string; text: string }[];
-    assert.equal(bodies.length, 3);
+    assert.equal(bodies.length, 4);
     const toN = bodies.find((b) => b.to === em('n'))!;
     assert.ok(toN.text.startsWith('您好，'), '没有姓名的人：“您好，”兜底');
     assert.ok(bodies.every((b) => b.html.includes('/zh/unsubscribe?t=') && b.text.includes('500 S Hacienda Blvd')));
     const { rows: is } = await pool.query(`SELECT status FROM newsletter_issues WHERE id = $1`, [id]);
     assert.equal(is[0].status, 'sent');
-    ok('东哥确认后才群发：3 人各一封、个性化正确、每封带退订和地址');
+    ok('东哥确认后才群发：4 人各一封、个性化正确、每封带退订和地址');
 
     // 统计回写 + 投诉停发
     const { rows: s1 } = await pool.query<{ resend_id: string; email: string }>(`SELECT resend_id, email FROM newsletter_sends WHERE issue_id = $1 ORDER BY email`, [id]);
@@ -154,12 +175,28 @@ async function main() {
     assert.ok(!(await nl.audience(f)).some((r) => r.email === s1[1].email), '投诉过的不能被“重新订阅”恢复');
     ok('统计：送达、打开、点击、投诉、退订按期回写；投诉自动停发；退订立即生效');
 
+    // 测试 P1-NL1：整批发送失败 → 留在队列、这一期保持“发送中”、显示原因；恢复后“接着发”能发出
+    const { id: failId } = await nl.createIssue(ops as never, { subject: '失败重试', body: '{姓名}，您好：\n\n正文', filters: f });
+    made.issues.push(failId);
+    await nl.sendTest(ops as never, failId);
+    failNext = true;
+    const fr = await nl.confirmSend(admin as never, failId);
+    assert.equal(fr.sent, 0);
+    const g1 = await nl.getIssue(failId);
+    assert.equal(g1.issue.status, 'sending', '失败后不能显示“已发送”');
+    assert.ok(g1.sendError && g1.sendError.count > 0, '后台能看到没发出的原因');
+    const again = await nl.processQueue(failId);
+    assert.ok(again.sent > 0 && again.left === 0, '“接着发”重试成功');
+    assert.equal((await nl.getIssue(failId)).issue.status, 'sent');
+    ok('整批发送失败：留在队列、保持“发送中”并显示原因；重试后发出');
+
     const q = await nl.quotaState();
     assert.ok(q.usedToday >= 3, '群发计入每天发信数');
     ok('发信数计入额度（每天 / 每月）');
     console.log(`\n全部通过：${passed} 项`);
   } finally {
     const all = await pool.query<{ email: string }>(`SELECT email FROM newsletter_sends WHERE issue_id = ANY($1::bigint[])`, [made.issues]);
+    await pool.query(`DELETE FROM ops_exceptions WHERE kind = 'newsletter_send' AND dedupe_key = ANY($1::text[])`, [made.issues.map((x) => `newsletter_send:${x}`)]).catch(() => undefined);
     await pool.query(`DELETE FROM newsletter_issues WHERE id = ANY($1::bigint[])`, [made.issues]);
     await pool.query(`DELETE FROM email_unsubscribes WHERE email LIKE $1`, [`dev13+%-${sfx}@example.com`]);
     void all;
