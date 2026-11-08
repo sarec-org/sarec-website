@@ -91,7 +91,16 @@ export function validateAnswer(code: string, raw: unknown): AnswerValue {
   }
 }
 
+/** 活动是否已结束（按时间算：结束时间，没填结束时间按开始后 3 小时） */
+export function isEventOver(e: { starts_at: Date | string; ends_at?: Date | string | null; event_status?: string }): boolean {
+  if (e.event_status === 'completed') return true;
+  const end = e.ends_at ? new Date(e.ends_at) : new Date(new Date(e.starts_at).getTime() + 3 * 3600_000);
+  return end.getTime() <= Date.now();
+}
+
 export function publicEvent(e: EventRow & Record<string, unknown>) {
+  // 1.2 线上问题 P-1：已结束的活动一律显示“已结束”，不能报名、不能邀请（小程序 1.2 按 status / registrationOpen 隐藏按钮）
+  const over = e.event_status === 'scheduled' && isEventOver(e);
   return {
     slug: e.slug,
     title: e.title,
@@ -104,8 +113,9 @@ export function publicEvent(e: EventRow & Record<string, unknown>) {
     capacity: e.capacity,
     feeCents: e.fee_cents,
     topicTags: e.topic_tags,
-    registrationOpen: e.registration_open,
-    status: e.event_status,
+    registrationOpen: e.registration_open && !over,
+    status: over ? 'completed' : e.event_status,
+    ended: over || e.event_status === 'completed',
     coverUrl: (e.cover_url as string | null) ?? null,
     recap: (e.recap as string | null) ?? null,
     albumPublished: !!e.album_published_at
@@ -116,7 +126,9 @@ export async function listEvents(includePast = false) {
   const { rows } = await getPool().query(
     `SELECT e.*, (SELECT count(*)::int FROM registrations r WHERE r.event_id = e.id AND r.status = 'registered') AS registered
        FROM events e
-      WHERE e.event_status <> 'cancelled' AND e.is_listed AND ($1 OR coalesce(e.ends_at, e.starts_at) > now() - interval '1 day')
+      WHERE e.event_status <> 'cancelled' AND e.is_listed
+        AND (CASE WHEN $1 THEN coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now()
+                  ELSE coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() AND e.event_status = 'scheduled' END)
       ORDER BY e.starts_at ${includePast ? 'DESC' : 'ASC'} LIMIT 100`,
     [includePast]
   );

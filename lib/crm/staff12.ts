@@ -29,13 +29,21 @@ export async function updateRoomInfo(s: Staff, b: { id?: number; capacity?: numb
   });
 }
 
+/** 1.2 线上问题 P-3：会议室完整地址（后台“增长与设置”的 room_address 可改，比如补室号） */
+export const ROOM_ADDRESS = '500 S Hacienda Blvd, City of Industry, CA 91745';
+const OLD_ROOM_NOTICE = '会员按等级享受会议室优惠，具体请联系商会工作人员。';
+/** 小程序里的会议室说明：不写价格（合规红线） */
+export const ROOM_NOTICE_MP = '会场月卡：不限次数使用，先到先得，不影响商会正常会议安排。详情请联系商会。';
+
 export async function roomsInfo() {
   const pool = getPool();
   const { rows } = await pool.query<{ id: number; name: string; capacity: number | null; equipment: string | null; intro: string | null; photo_urls: string[] }>(
     `SELECT id, name, capacity, equipment, intro, photo_urls FROM rooms WHERE is_active ORDER BY id`
   );
-  const notice = await getSetting<string>(pool, 'room_notice', '会员按等级享受会议室优惠，具体请联系商会工作人员。');
-  return { rooms: rows.map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, equipment: r.equipment, intro: r.intro, photos: r.photo_urls ?? [] })), notice: MONEY_RE.test(notice) ? '会员按等级享受会议室优惠，具体请联系商会工作人员。' : notice };
+  const saved = await getSetting<string>(pool, 'room_notice', '');
+  // 没改过（还是旧默认文字）就用新的月卡说明；工作人员改过的照用
+  const notice = !saved || saved === OLD_ROOM_NOTICE ? ROOM_NOTICE_MP : saved;
+  return { rooms: rows.map((r) => ({ id: r.id, name: r.name, capacity: r.capacity, equipment: r.equipment, intro: r.intro, photos: r.photo_urls ?? [] })), notice: MONEY_RE.test(notice) ? ROOM_NOTICE_MP : notice };
 }
 
 // ── 线下预约登记（工作人员电话 / 微信谈好后记一笔）────────────────────────────

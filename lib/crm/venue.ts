@@ -9,7 +9,7 @@ import { cancelOrder, getSetting, newOrderNo } from './orders';
 import { activeTier, bookRoom, myRoomPrice } from './rooms';
 
 export const ROOM_RULES_NOTICE =
-  '会场月卡标准价 299 美元/月，开放时段内不限小时、不限时段，先定先得。如会议室使用拥挤，商会有权调整预约规则，调整前通知持卡人并公布生效日期。';
+  '会场月卡 $299/月：不限次数使用，先到先得，不影响商会正常会议安排。会议室使用拥挤时，商会有权调整规则，调整前通知持卡人并公布生效日期。地址：500 S Hacienda Blvd, City of Industry, CA 91745。';
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 21;
 const TZ = 'America/Los_Angeles';
