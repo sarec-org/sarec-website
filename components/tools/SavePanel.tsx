@@ -145,8 +145,15 @@ export function drawShareCard(c: ShareCard, lang: Locale): string {
   g.fillStyle = '#040B16'; g.fillRect(0, 0, W, H);
   g.strokeStyle = 'rgba(201,165,103,0.55)'; g.lineWidth = 2; g.strokeRect(48, 48, W - 96, H - 96);
   g.fillStyle = '#C9A567'; g.font = `600 30px ${sans}`; g.fillText('SAREC · 中美房地产商会', 96, 150);
-  g.fillStyle = '#F2EAD6'; g.font = `600 60px ${serif}`;
-  wrap(g, c.title, 96, 250, W - 192, 76);
+  // 标题尽量一行：放不下就逐级缩小字号（最小 44px），再放不下才折行（验收：不留“准）”孤字）
+  g.fillStyle = '#F2EAD6';
+  let size = 60;
+  g.font = `600 ${size}px ${serif}`;
+  while (size > 44 && g.measureText(c.title).width > W - 192) {
+    size -= 2;
+    g.font = `600 ${size}px ${serif}`;
+  }
+  wrap(g, c.title, 96, 250, W - 192, Math.round(size * 1.27));
   // 重点数字
   g.fillStyle = 'rgba(242,234,214,0.74)'; g.font = `32px ${sans}`; g.fillText(c.highlight[0], 96, 420);
   g.fillStyle = '#ECD292'; g.font = `600 112px ${serif}`; g.fillText(c.highlight[1], 96, 540);
