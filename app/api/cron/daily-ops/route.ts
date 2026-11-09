@@ -12,6 +12,7 @@ import { runPostEvent } from '@/lib/crm/postEvent';
 import { runPrepReminders } from '@/lib/crm/prep';
 import { runPayReminders } from '@/lib/crm/payLinks';
 import { scanJoinFollowups } from '@/lib/crm/join';
+import { inferRegions } from '@/lib/crm/regions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,6 +38,8 @@ async function run(req: Request) {
     await recordException('join_scan', `join_scan:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     return 'error';
   });
+  // 1.3.1 E：没填常驻地区的人按报名过的活动地区推断（参加一次外地活动不改）
+  out.regions = await inferRegions().catch(() => 'error');
   try {
     out.followups = await scanFollowups();
   } catch (e) {

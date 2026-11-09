@@ -10,6 +10,7 @@
  * 5. 统计：送达、打开、点击、退订、退信、投诉，按每一期看（Resend webhook 回写）。
  * 6. 费用：每天 / 每月实际发信数计入 email_send_counts；群发前检查 Resend 套餐额度，不够就拦下并提醒东哥。
  */
+import { REGIONS } from '@/lib/crm/regions';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import type { Staff } from './auth';
@@ -20,7 +21,7 @@ import { ROLE_CATEGORIES } from './questionBank';
 export const ORG_ADDRESS_DEFAULT = '中美房地产商会 SAREC · 500 S Hacienda Blvd, City of Industry, CA 91745, USA';
 export const TOKENS = ['{姓名}', '{公司}', '{上次参加的活动}'] as const;
 
-export type Filters = { audience?: 'all' | 'member' | 'registered'; eventTypes?: string[]; industries?: string[]; channels?: string[] };
+export type Filters = { audience?: 'all' | 'member' | 'registered'; eventTypes?: string[]; industries?: string[]; channels?: string[]; regions?: string[] };
 export type Recipient = { contactId: string; email: string; name: string | null; company: string | null; lastEvent: string | null };
 
 // 正式站用正式域名；预览 / 本地用这次部署自己的网址，退订链接指回当前环境（预览站的 NEXT_PUBLIC_SITE_URL 指着旧分支）
@@ -37,7 +38,7 @@ function cleanFilters(f: unknown): Filters {
   const o = (f && typeof f === 'object' ? f : {}) as Record<string, unknown>;
   const arr = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).slice(0, 60)).filter(Boolean).slice(0, 50) : []);
   const audience = o.audience === 'member' || o.audience === 'registered' ? o.audience : 'all';
-  return { audience, eventTypes: arr(o.eventTypes), industries: arr(o.industries), channels: arr(o.channels) };
+  return { audience, eventTypes: arr(o.eventTypes), industries: arr(o.industries), channels: arr(o.channels), regions: arr(o.regions) };
 }
 
 // ── 收件人 ─────────────────────────────────────────────────────────────
@@ -59,12 +60,14 @@ export async function audience(filters: unknown, opts: { limit?: number } = {}):
                        WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in' AND p.template_key = ANY($2)) AS type_match,
               (c.role_category = ANY($3)) AS role_match,
               (coalesce(c.first_channel, c.acquisition_source) = ANY($4)) AS channel_match,
+              -- 1.3.1 E：地区（本人填写的常驻地区优先，其次推断；关注地区也算）
+              (coalesce(c.region_self, c.region_inferred, '洛杉矶/橙县') = ANY($7) OR c.focus_regions && $7::text[]) AS region_match,
               EXISTS (SELECT 1 FROM registrations r WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in') AS attended
          FROM verified v JOIN contacts c ON c.id = v.contact_id
         WHERE NOT c.is_placeholder
      ), by_email AS (
        SELECT email, bool_or(is_member) AS is_member, bool_or(type_match) AS type_match, bool_or(coalesce(role_match, false)) AS role_match,
-              bool_or(coalesce(channel_match, false)) AS channel_match
+              bool_or(coalesce(channel_match, false)) AS channel_match, bool_or(coalesce(region_match, false)) AS region_match
          FROM facts GROUP BY email
      ), picked AS (
        -- 个性化用哪个档案：会员档案优先，其次有真实姓名、到过场的，再其次最早建的
@@ -77,6 +80,7 @@ export async function audience(filters: unknown, opts: { limit?: number } = {}):
           AND (cardinality($2::text[]) = 0 OR b.type_match)
           AND (cardinality($3::text[]) = 0 OR b.role_match)
           AND (cardinality($4::text[]) = 0 OR b.channel_match)
+          AND (cardinality($7::text[]) = 0 OR b.region_match)
         ORDER BY f.email, f.is_member DESC, (f.name IS NOT NULL AND f.name <> '微信用户') DESC, f.attended DESC, f.created_at
      )
      SELECT p.contact_id, p.email, c.name, m.company,
@@ -85,7 +89,7 @@ export async function audience(filters: unknown, opts: { limit?: number } = {}):
        FROM picked p JOIN contacts c ON c.id = p.contact_id LEFT JOIN member_cards m ON m.contact_id = p.contact_id
       ORDER BY p.email
       ${opts.limit ? `LIMIT ${Math.max(1, Math.min(10000, Math.floor(opts.limit)))}` : ''}`,
-    [f.audience, f.eventTypes, f.industries, f.channels, review, ACTIVE_APP]
+    [f.audience, f.eventTypes, f.industries, f.channels, review, ACTIVE_APP, f.regions ?? []]
   );
   return rows.map((r) => ({
     contactId: r.contact_id, email: r.email,
@@ -106,7 +110,8 @@ export async function filterOptions() {
   return {
     eventTypes: types,
     industries: ROLE_CATEGORIES.map((c) => ({ key: c.key, label: c.label })),
-    channels: channels.map((c) => ({ key: c.v, label: c.v, n: c.n }))
+    channels: channels.map((c) => ({ key: c.v, label: c.v, n: c.n })),
+    regions: REGIONS.map((r) => ({ key: r, label: r }))
   };
 }
 
