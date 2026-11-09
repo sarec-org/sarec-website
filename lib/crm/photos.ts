@@ -186,12 +186,19 @@ export async function sendPhotoNotices(eventId: string): Promise<{ sent: number;
       await pool.query(`UPDATE event_photo_notices SET channel = 'home', status = 'pending' WHERE event_id = $1 AND contact_id = $2`, [eventId, d.contact_id]);
       continue;
     }
+    // 1.3.1 I 频率控制：24 小时内已经收到过别的类型的推送 → 这次不推，改成首页“新增 N 张照片”
+    const { touchedToday, recordTouch } = await import('@/lib/crm/touch');
+    if (await touchedToday(pool, d.contact_id, 'photos')) {
+      await pool.query(`UPDATE event_photo_notices SET channel = 'home', status = 'pending' WHERE event_id = $1 AND contact_id = $2`, [eventId, d.contact_id]);
+      continue;
+    }
     // 先占位再推，避免并发重复推送
     const lock = await pool.query(`UPDATE event_reminder_subs SET status = 'sent', sent_at = now() WHERE id = $1 AND status IN ('pending','failed') RETURNING id`, [d.sub_id]);
     if (!lock.rowCount) continue;
     try {
       await pushPhotosNotice(tmpl!, d.openid, ev[0]);
       await pool.query(`UPDATE event_photo_notices SET status = 'sent', sent_at = now(), error = NULL WHERE event_id = $1 AND contact_id = $2`, [eventId, d.contact_id]);
+      await recordTouch(pool, d.contact_id, 'photos', 'wx');
       sent++;
     } catch (e) {
       const msg = (e instanceof Error ? e.message : 'error').slice(0, 200);

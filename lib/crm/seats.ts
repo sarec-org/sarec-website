@@ -339,6 +339,8 @@ async function notify(db: Db, regId: string, kind: Kind): Promise<boolean> {
       if (j.errcode) throw new Error(String(j.errcode));
       await db.query(`UPDATE event_reminder_subs SET status = 'sent', sent_at = now() WHERE id = $1`, [sub[0].id]);
       await log('wx', true);
+      const { recordTouch } = await import('@/lib/crm/touch');
+      await recordTouch(db, r.contact_id, `confirm_${kind}`, 'wx', true);
       return true;
     } catch (e) {
       await log('wx', false, e instanceof Error ? e.message.slice(0, 40) : 'error');
@@ -351,6 +353,7 @@ async function notify(db: Db, regId: string, kind: Kind): Promise<boolean> {
     const body = TEXT[kind](r.title, fmtWhen(r.starts_at, r.timezone)).replace('{窗口}', ` ${hrs} 小时`) + (kind === 'released' ? '' : ` ${confirmLink(r.id)}`) + ' 【SAREC】';
     const ok = await smsSend(r.phone, body).catch(() => false);
     await log('sms', ok, ok ? undefined : 'sms_failed');
+    if (ok) { const { recordTouch } = await import('@/lib/crm/touch'); await recordTouch(db, r.contact_id, `confirm_${kind}`, 'sms', true); }
     if (ok) return true;
   }
   if (!r.phone && !sub[0]) await log('none', false, 'no_channel');
