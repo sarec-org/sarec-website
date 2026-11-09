@@ -8,6 +8,7 @@ import { api } from '@/components/crm/client';
 const SECTIONS: { href: string; title: string; desc: string; role: string }[] = [
   { href: '/zh/staff/followups', title: '待跟进任务', desc: 'AI 助手线索、新咨询、活动后希望了解、30 天内到期会员；失败与异常在“待处理”', role: 'ops' },
   { href: '/zh/staff/checkin', title: '现场签到台', desc: '查人、代签到、现场登记', role: 'checkin' },
+  { href: '/zh/staff/join-requests', title: '入会申请', desc: '小程序“加入商会”提交的申请：一键发网站缴费链接（短信 / 邮件 / 复制发微信），满 7 天没入会提醒跟进', role: 'ops' },
   { href: '/zh/staff/payments', title: '核款工作台', desc: '核对 Zelle 到账，一键确认或标记未到账', role: 'finance' },
   { href: '/zh/staff/events', title: '活动管理', desc: '新建、编辑、关闭报名、下载签到码', role: 'ops' },
   { href: '/zh/staff/contacts', title: '客户查询', desc: '档案、时间线、积分、标签、导出', role: 'ops' },
