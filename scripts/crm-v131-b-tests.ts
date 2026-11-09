@@ -107,7 +107,9 @@ async function main() {
   assert.equal((await st(e2.id, p[1])).confirm_status, 'released');
   assert.ok(sms.slice(before).some((x) => x.includes('已转入候补名单')) && sms.slice(before).some((x) => x.includes('有名额了')));
   ok('前 21 小时：没回的转候补（排在原候补后面，不马上拿回刚释放的名额），候补按顺序递补');
-  assert.equal(await seats.waitlistPosition(pool, e2.id, p[1]) ! > (await seats.waitlistPosition(pool, e2.id, p[4]))!, true);
+  const posReleased = (await seats.waitlistPosition(pool, e2.id, p[1])) ?? 0;
+  const posOld = (await seats.waitlistPosition(pool, e2.id, p[4])) ?? 0;
+  assert.ok(posReleased > posOld);
   const y = await seats.answerConfirm(await regOf(p[3]), true);
   assert.equal(y.state, 'confirmed');
   assert.equal((await st(e2.id, p[3])).status, 'registered');
