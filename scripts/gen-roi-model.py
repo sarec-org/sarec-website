@@ -39,7 +39,7 @@ rows = [
     ('', None),
     ('怎么用 How to use', BOLD),
     ('1. 只改「输入 Inputs」页的蓝色格子（房价、首付、利率、租金、费用、增长率等）。Edit only the blue cells on the Inputs sheet.', B_FONT),
-    ('2. 「现金流 Cash Flow」页自动算出 10 年现金流、第 10 年卖出净额、IRR、Cap Rate、现金回报率、DSCR。The Cash Flow sheet recalculates automatically.', B_FONT),
+    ('2. 「现金流 Cash Flow」页自动算出 10 年现金流和第 10 年卖出净额；「关键指标 Metrics」页汇总 Cap Rate、现金回报率、DSCR、IRR、权益倍数。Cash Flow and Metrics sheets recalculate automatically.', B_FONT),
     ('3. 第 0 年为投入现金（首付 + 过户费用 + 初始装修），第 10 年按假设增值率卖出并还清贷款余额。Year 0 = cash invested; year 10 includes sale net of selling costs and loan payoff.', B_FONT),
     ('', None),
     ('口径说明 Assumptions', BOLD),
@@ -204,25 +204,102 @@ for y in YEARS:
     else:
         put('total', f"={c}{ROW['cfbt']}")
 
-m = ROW['total'] + 2
-cf.cell(row=m, column=1, value='关键指标 Key metrics').font = T_FONT
+cf.cell(row=ROW['total'] + 2, column=1, value=DISCLAIMER).font = Font(name='Arial', italic=True, color='9C2B2B')
+cf.freeze_panes = 'B4'
+
+# —— 关键指标（单独一页，和网站"模板里有什么"四项一致；验收 P3）——
+km = wb.create_sheet('关键指标 Metrics')
+km.column_dimensions['A'].width = 44
+km.column_dimensions['B'].width = 18
+km['A1'] = '关键指标 Key metrics'
+km['A1'].font = T_FONT
+for colname, h in zip('AB', ['指标 Metric', '数值 Value']):
+    km[f'{colname}3'] = h
+    km[f'{colname}3'].font, km[f'{colname}3'].fill = H_FONT, NAVY_FILL
+CF = "'现金流 Cash Flow'!"
 first, last = col[0], col[10]
 METRICS = [
-    ('Cap Rate（第 1 年 NOI ÷ 房价）', f"=C{ROW['noi']}/{REF['price']}", PCT),
-    ('现金回报率 Cash-on-cash（第 1 年）', f"=IF({REF['cash']}=0,\"—\",C{ROW['cfbt']}/{REF['cash']})", PCT),
-    ('偿债覆盖率 DSCR（第 1 年）', f"=IF({REF['ds']}=0,\"—\",C{ROW['noi']}/{REF['ds']})", '0.00"x"'),
-    ('10 年 IRR（税前）10-yr IRR (pre-tax)', f"=IFERROR(IRR({first}{ROW['total']}:{last}{ROW['total']}),\"—\")", PCT),
-    ('权益倍数 Equity multiple', f"=IF({REF['cash']}=0,\"—\",SUM(C{ROW['total']}:{last}{ROW['total']})/{REF['cash']})", '0.00"x"'),
-    ('10 年累计税前现金流 Cumulative cash flow', f"=SUM(C{ROW['cfbt']}:{last}{ROW['cfbt']})", USD),
+    ('Cap Rate（第 1 年 NOI ÷ 房价）', f"={CF}C{ROW['noi']}/{REF['price']}", PCT),
+    ('现金回报率 Cash-on-cash（第 1 年）', f"=IF({REF['cash']}=0,\"—\",{CF}C{ROW['cfbt']}/{REF['cash']})", PCT),
+    ('偿债覆盖率 DSCR（第 1 年）', f"=IF({REF['ds']}=0,\"—\",{CF}C{ROW['noi']}/{REF['ds']})", '0.00"x"'),
+    ('10 年 IRR（税前）10-yr IRR (pre-tax)', f"=IFERROR(IRR({CF}{first}{ROW['total']}:{last}{ROW['total']}),\"—\")", PCT),
+    ('权益倍数 Equity multiple', f"=IF({REF['cash']}=0,\"—\",SUM({CF}C{ROW['total']}:{last}{ROW['total']})/{REF['cash']})", '0.00"x"'),
+    ('10 年累计税前现金流 Cumulative cash flow', f"=SUM({CF}C{ROW['cfbt']}:{last}{ROW['cfbt']})", USD),
 ]
-for i, (label, f, fmt) in enumerate(METRICS, 1):
-    cf.cell(row=m + i, column=1, value=label).font = BOLD
-    c = cf.cell(row=m + i, column=2, value=f)
+for i, (label, f, fmt) in enumerate(METRICS, 4):
+    km.cell(row=i, column=1, value=label).font = BOLD
+    c = km.cell(row=i, column=2, value=f)
     c.number_format, c.font, c.fill, c.border = fmt, Font(name='Arial', bold=True, color=NAVY), SUM_FILL, BOX
-cf.cell(row=m + len(METRICS) + 2, column=1, value=DISCLAIMER).font = Font(name='Arial', italic=True, color='9C2B2B')
-cf.freeze_panes = 'B4'
+km.cell(row=4 + len(METRICS) + 1, column=1, value=DISCLAIMER).font = Font(name='Arial', italic=True, color='9C2B2B')
 
 wb.active = 0
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 wb.save(OUT)
-print('wrote', os.path.abspath(OUT), 'metrics row', m + 1)
+
+
+def cache_values(path):
+    """
+    把公式算好的结果写进每个公式格的 <v>（验收 P3）：Excel / WPS / Numbers 打开照样重算，
+    Mac 快速预览、Gmail、网盘在线预览这类不算公式的地方也能看到数字。需要 formulas==1.2.8。
+    """
+    import html
+    import re
+    import shutil
+    import zipfile
+    try:
+        import formulas
+    except ImportError:
+        print('⚠ 没装 formulas，跳过写入缓存值（pip install formulas==1.2.8）')
+        return
+    sol = formulas.ExcelModel().loads(path).finish().calculate()
+    vals = {}
+    for k, v in sol.items():
+        k = str(k)
+        if '!' not in k:
+            continue
+        sheet, cell = k.rsplit('!', 1)
+        if ':' in cell:
+            continue
+        sheet = sheet.strip("'").split(']', 1)[-1].upper()
+        try:
+            vals[(sheet, cell.upper())] = v.value[0][0]
+        except Exception:
+            continue
+    zin = zipfile.ZipFile(path)
+    names = [html.unescape(n).upper() for n in re.findall(r'<sheet [^>]*name="([^"]+)"', zin.read('xl/workbook.xml').decode())]
+    filled = 0
+
+    def rep_for(sheet):
+        def rep(mm):
+            nonlocal filled
+            attrs, f = mm.group(1), mm.group(2)
+            ref = re.search(r'r="([A-Z]+\d+)"', attrs).group(1)
+            x = vals.get((sheet, ref))
+            if isinstance(x, str):
+                filled += 1
+                return f'<c{re.sub(r" t=\"[^\"]*\"", "", attrs)} t="str">{f}<v>{html.escape(x)}</v></c>'
+            try:
+                num = float(x)
+            except (TypeError, ValueError):
+                return mm.group(0)
+            filled += 1
+            return f'<c{attrs}>{f}<v>{repr(num)}</v></c>'
+        return rep
+
+    tmp = path + '.tmp'
+    with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            m = re.match(r'xl/worksheets/sheet(\d+)\.xml$', item.filename)
+            if m:
+                xml = data.decode()
+                xml = re.sub(r'<c([^>]*)>(<f>.*?</f>)(?:<v\s*/>|<v></v>)</c>', rep_for(names[int(m.group(1)) - 1]), xml)
+                data = xml.encode()
+            zout.writestr(item, data)
+    zin.close()
+    shutil.move(tmp, path)
+    print('cached values written:', filled)
+
+
+cache_values(OUT)
+print('wrote', os.path.abspath(OUT))

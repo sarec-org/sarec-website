@@ -77,7 +77,7 @@ function Body() {
       <div>
         <div className={t.big}>
           <div className={t.stat}><p className={t.statLabel}>{L(lang, '直接卖出粗算税额', 'Tax if sold outright')}</p><p className={t.statValue}>{usd(r.taxIfSold.total)}</p></div>
-          <div className={t.stat}><p className={t.statLabel}>{L(lang, '换房当年应税', 'Taxable now (exchange)')}</p><p className={t.statValue}>{usd(r.taxNow)}</p></div>
+          <div className={t.stat}><p className={t.statLabel}>{L(lang, '换房当年要交的税', 'Tax due now (exchange)')}</p><p className={t.statValue}>{usd(r.taxNow)}</p></div>
           <div className={t.stat}><p className={t.statLabel}>{L(lang, '递延税额', 'Tax deferred')}</p><p className={t.statValue}>{usd(r.deferred)}</p></div>
         </div>
         <div className={s.card}>
@@ -124,7 +124,7 @@ function Body() {
           defaultTitle={L(lang, `卖 ${usd(clean.salePrice)} → 换 ${usd(clean.replacementPrice)}`, `Sell ${usd(clean.salePrice)} → buy ${usd(clean.replacementPrice)}`)}
           onLoad={(i) => setInp({ ...EX1031_DEFAULTS, ...i })}
           share={() => ({
-            title: L(lang, '1031 换房税务粗算', '1031 exchange tax estimate'),
+            title: L(lang, '1031 换房税务粗算（以会计师为准）', '1031 exchange tax estimate (confirm with CPA)'),
             path: '/zh/tools/1031',
             highlight: [L(lang, '递延税额（粗算）', 'Tax deferred (est.)'), usd(r.deferred)],
             lines: [
@@ -133,8 +133,7 @@ function Body() {
               [L(lang, '应税利得', 'Taxable gain'), usd(r.gain)],
               [L(lang, '直接卖出税额', 'Tax if sold'), usd(r.taxIfSold.total)],
               [L(lang, '新房价格', 'Replacement price'), usd(clean.replacementPrice)],
-              [L(lang, '换房当年应税', 'Taxable now'), usd(r.taxNow)],
-              [L(lang, '粗算，以会计师为准', 'Estimate — confirm with CPA'), '']
+              [L(lang, '换房当年要交的税', 'Tax due now'), usd(r.taxNow)],
             ]
           })}
         />
