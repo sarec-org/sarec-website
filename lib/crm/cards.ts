@@ -299,7 +299,7 @@ export async function posterData(contactId: string, slug: string, base: string) 
   const { rows: ev } = await pool.query<{
     slug: string; title: string; starts_at: Date; ends_at: Date | null; location_name: string | null; address: string | null;
     fee_cents: number; cover_url: string | null; event_status: string; topic_tags: string[];
-  }>(`SELECT slug, title, starts_at, ends_at, location_name, address, fee_cents, cover_url, event_status, topic_tags FROM events WHERE slug = $1`, [slug]);
+  }>(`SELECT slug, title, starts_at, ends_at, timezone, location_name, address, fee_cents, cover_url, event_status, topic_tags FROM events WHERE slug = $1`, [slug]);
   if (!ev[0]) throw new CrmError('not_found', '找不到这场活动');
   // 1.2 线上问题 P-1/P-2：已结束的活动不能再邀请
   const end = ev[0].ends_at ?? new Date(new Date(ev[0].starts_at).getTime() + 3 * 3600_000);
@@ -317,6 +317,7 @@ export async function posterData(contactId: string, slug: string, base: string) 
       slug: ev[0].slug,
       title: ev[0].title,
       startsAt: ev[0].starts_at,
+      timezone: (ev[0] as { timezone?: string }).timezone ?? 'America/Los_Angeles',
       endsAt: ev[0].ends_at,
       locationName: ev[0].location_name,
       address: ev[0].address,
