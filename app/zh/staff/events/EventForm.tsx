@@ -168,7 +168,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
         <textarea id="ev-summary" className={styles.textarea} value={f.summary} onChange={(e) => set('summary', e.target.value)} />
       </div>
       {input('startsAt', `开始时间（${TZ_NAME[tzOf(f.region)] ?? '当地时间'}）*`, 'datetime-local')}
-      {input('endsAt', '结束时间', 'datetime-local')}
+      {input('endsAt', `结束时间（${TZ_NAME[tzOf(f.region)] ?? '当地时间'}）`, 'datetime-local')}
       {input('locationName', '地点名称')}
       {input('address', '地址（用于一键导航）')}
       <div className={styles.field}>
