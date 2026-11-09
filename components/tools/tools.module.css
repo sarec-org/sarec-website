@@ -1,0 +1,54 @@
+/* 1.4 网站工具：沿用 crm.module.css 的藏蓝金；表单字号 ≥16px。 */
+.wrap { padding-top: 6.5rem; }
+.topRow { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.langSwitch { display: inline-flex; border: 1px solid var(--line-3); border-radius: 999px; overflow: hidden; }
+.langBtn,
+.langOn {
+  min-height: 40px; min-width: 56px; padding: 0 0.9rem; font-size: 1rem; border: 0; cursor: pointer;
+  background: transparent; color: var(--ivory-mute);
+}
+.langOn { background: var(--gold-faint); color: var(--gold-bright); }
+
+.notice {
+  border: 1px solid var(--gold-dim); background: var(--gold-faint); color: var(--gold-bright);
+  border-radius: 6px; padding: 0.7rem 0.9rem; margin: 0 0 1.1rem; font-size: 1rem;
+}
+.disclaimer {
+  margin: 2.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line-3);
+  color: var(--ivory-mute); font-size: 0.95rem; text-align: center;
+}
+
+.grid { display: grid; gap: 1.5rem; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 900px) { .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.formGrid { display: grid; gap: 0 1rem; grid-template-columns: 1fr; }
+@media (min-width: 520px) { .formGrid { grid-template-columns: 1fr 1fr; } }
+
+.numWrap { display: flex; align-items: stretch; }
+.num { font-size: 1.0625rem; font-variant-numeric: tabular-nums; }
+.numWrap .num { flex: 1 1 auto; min-width: 0; }
+.affix {
+  display: inline-flex; align-items: center; padding: 0 0.7rem; color: var(--ivory-mute); font-size: 1rem;
+  border: 1px solid var(--line-3); background: rgba(242, 234, 214, 0.04);
+}
+.numWrap .affix:first-child { border-right: 0; border-radius: 6px 0 0 6px; }
+.numWrap .affix:last-child { border-left: 0; border-radius: 0 6px 6px 0; }
+.numWrap .affix:first-child + .num { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.numWrap .num:has(+ .affix) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+
+.big { display: grid; gap: 0.75rem; grid-template-columns: 1fr; margin: 0 0 1rem; }
+@media (min-width: 520px) { .big { grid-template-columns: repeat(3, 1fr); } }
+.stat { border: 1px solid var(--line-3); border-radius: 6px; padding: 0.9rem 1rem; background: rgba(242, 234, 214, 0.03); }
+.statLabel { margin: 0; color: var(--ivory-mute); font-size: 0.95rem; }
+.statValue { margin: 0.2rem 0 0; font-family: var(--serif-zh); font-size: 1.6rem; color: var(--gold-bright); font-variant-numeric: tabular-nums; }
+.neg { color: #e7a1a1; }
+
+.rows { width: 100%; border-collapse: collapse; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.rows td { padding: 0.55rem 0; border-bottom: 1px solid var(--line-3); }
+.rows td:last-child { text-align: right; }
+.rows tr:last-child td { border-bottom: 0; font-weight: 600; color: var(--ivory); }
+
+.saved { list-style: none; padding: 0; margin: 0; }
+.saved li { display: flex; gap: 0.6rem; align-items: center; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--line-3); }
+.saved li:last-child { border-bottom: 0; }
+.linkBtn { background: none; border: 0; color: var(--gold); font-size: 1rem; cursor: pointer; min-height: 44px; padding: 0 0.4rem; }
+.preview { width: 100%; max-width: 360px; border-radius: 8px; border: 1px solid var(--line-3); display: block; margin: 0.75rem auto 0; }
