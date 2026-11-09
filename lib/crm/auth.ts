@@ -215,7 +215,10 @@ export async function sessionContact(token: string | null | undefined): Promise<
     `UPDATE sessions SET last_seen_at = now() WHERE token_hash = $1 AND expires_at > now() RETURNING contact_id`,
     [sha256(token)]
   );
-  return rows[0]?.contact_id ?? null;
+  if (!rows[0]) return null;
+  // 1.3.1 A4：这个会话的档案已挂到 / 合并进主档案 → 按主档案算（merged_into 始终指向最终的主档案）
+  const { rows: m } = await getPool().query<{ merged_into: string | null }>(`SELECT merged_into FROM contacts WHERE id = $1`, [rows[0].contact_id]);
+  return m[0]?.merged_into ?? rows[0].contact_id;
 }
 
 export async function destroySession(token: string): Promise<void> {
@@ -248,6 +251,18 @@ export async function wechatLogin(code: string): Promise<{ token: string; contac
     );
     let id = rows[0]?.id;
     let verified = !!(rows[0]?.email_verified_at || rows[0]?.phone_verified_at);
+    // 1.3.1 A4：这个微信登录已挂到别的档案下（换了微信 / 合并过重复档案）→ 登录到主档案
+    for (let i = 0; id && i < 3; i++) {
+      const { rows: m } = await db.query<{ merged_into: string | null }>(`SELECT merged_into FROM contacts WHERE id = $1`, [id]);
+      if (!m[0]?.merged_into) break;
+      const { rows: t } = await db.query<{ id: string; email_verified_at: Date | null; phone_verified_at: Date | null }>(
+        `SELECT id, email_verified_at, phone_verified_at FROM contacts WHERE id = $1`,
+        [m[0].merged_into]
+      );
+      if (!t[0]) break;
+      id = t[0].id;
+      verified = !!(t[0].email_verified_at || t[0].phone_verified_at);
+    }
     if (!id) {
       const ins = await db.query<{ id: string }>(
         `INSERT INTO contacts (name, wechat_openid, wechat_unionid, acquisition_source) VALUES ('微信用户', $1, $2, 'miniprogram') RETURNING id`,
