@@ -82,7 +82,7 @@ async function main() {
   assert.equal(n1.step.kind, 'welcome');
   const w1 = n1.step as { greetName: string; points: number; showJoin: boolean; already: boolean };
   assert.equal(w1.greetName, 'DEV131-新人');
-  assert.equal(w1.points, 15); // 签到 10 + 补一项资料 5
+  assert.equal(w1.points, 10); // 新人签到就是 10 分（职业必填，不算补资料，东哥 11/9）
   assert.equal(w1.showJoin, true);
   assert.equal(await arrival(ev.id, shell), 'checked_in');
   ok('填完 → 建档 + 现场报名 + 到场，欢迎页（签到 10 + 职业 5，显示“了解入会”）');
@@ -97,7 +97,7 @@ async function main() {
   assert.equal(again.kind, 'welcome');
   assert.equal((again as { already: boolean }).already, true);
   assert.equal((again as { showJoin: boolean }).showJoin, false);
-  assert.equal(await pts(shell), 15);
+  assert.equal(await pts(shell), 10);
   ok('同一场再扫：直接欢迎光临，不再问、不重复计分，“了解入会”不再出现');
 
   console.log('A3 来过的人 1–3 道选择题');
