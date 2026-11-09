@@ -9,7 +9,7 @@ import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate, can } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
 
-type Filters = { audience: 'all' | 'member' | 'registered'; eventTypes: string[]; industries: string[]; channels: string[] };
+type Filters = { audience: 'all' | 'member' | 'registered'; eventTypes: string[]; industries: string[]; channels: string[]; regions: string[] };
 type Issue = { id: number; subject: string; body: string; source: string; status: string; filters: Filters; ai_reviewed_at: string | null; ai_reviewed_by: string | null; test_sent_at: string | null; test_sent_to: string | null; confirmed_at: string | null; confirmed_by: string | null; sent_at: string | null; recipient_count: number | null };
 type Data = {
   sendError: { message: string; count: number } | null;
@@ -26,10 +26,10 @@ type Opt = { key: string; label?: string; name?: string; n?: number };
 export default function NewsletterIssue({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [d, setD] = useState<Data | null>(null);
-  const [opts, setOpts] = useState<{ eventTypes: Opt[]; industries: Opt[]; channels: Opt[] } | null>(null);
+  const [opts, setOpts] = useState<{ eventTypes: Opt[]; industries: Opt[]; channels: Opt[]; regions?: Opt[] } | null>(null);
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [filters, setFilters] = useState<Filters>({ audience: 'all', eventTypes: [], industries: [], channels: [] });
+  const [filters, setFilters] = useState<Filters>({ audience: 'all', eventTypes: [], industries: [], channels: [], regions: [] });
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState('');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -43,12 +43,12 @@ export default function NewsletterIssue({ params }: { params: { id: string } }) 
     setD(r.data);
     setSubject(r.data.issue.subject);
     setBody(r.data.issue.body);
-    setFilters({ ...{ audience: 'all' as const, eventTypes: [] as string[], industries: [] as string[], channels: [] as string[] }, ...(r.data.issue.filters as Partial<Filters>) });
+    setFilters({ ...{ audience: 'all' as const, eventTypes: [] as string[], industries: [] as string[], channels: [] as string[], regions: [] as string[] }, ...(r.data.issue.filters as Partial<Filters>) });
     setDirty(false);
   }, [params.id]);
   useEffect(() => {
     load();
-    api<{ options: { eventTypes: Opt[]; industries: Opt[]; channels: Opt[] } }>('/api/v1/staff/newsletter').then((r) => r.ok && setOpts(r.data.options));
+    api<{ options: { eventTypes: Opt[]; industries: Opt[]; channels: Opt[]; regions?: Opt[] } }>('/api/v1/staff/newsletter').then((r) => r.ok && setOpts(r.data.options));
   }, [load]);
 
   async function save(silent = false) {
@@ -75,7 +75,7 @@ export default function NewsletterIssue({ params }: { params: { id: string } }) 
     setDirty(true);
     requestAnimationFrame(() => { el.focus(); el.selectionStart = el.selectionEnd = a + t.length; });
   };
-  const toggle = (k: 'eventTypes' | 'industries' | 'channels', v: string) => {
+  const toggle = (k: 'eventTypes' | 'industries' | 'channels' | 'regions', v: string) => {
     setFilters((f) => ({ ...f, [k]: f[k].includes(v) ? f[k].filter((x) => x !== v) : [...f[k], v] }));
     setDirty(true);
   };
@@ -135,6 +135,8 @@ export default function NewsletterIssue({ params }: { params: { id: string } }) 
                     <div className={styles.chips}>{opts.eventTypes.map((o) => <button key={o.key} className={`${styles.chip} ${filters.eventTypes.includes(o.key) ? styles.chipOn : ''}`} disabled={!draft} onClick={() => toggle('eventTypes', o.key)}>{o.name}</button>)}</div>
                     <p className={styles.label}>行业（不选 = 不限）</p>
                     <div className={styles.chips}>{opts.industries.map((o) => <button key={o.key} className={`${styles.chip} ${filters.industries.includes(o.key) ? styles.chipOn : ''}`} disabled={!draft} onClick={() => toggle('industries', o.key)}>{o.label}</button>)}</div>
+                    <p className={styles.label}>地区（按常驻地区 / 关注地区；不选 = 不限）</p>
+                    <div className={styles.chips}>{(opts.regions ?? []).map((o) => <button key={o.key} className={`${styles.chip} ${(filters.regions ?? []).includes(o.key) ? styles.chipOn : ''}`} disabled={!draft} onClick={() => toggle('regions', o.key)}>{o.label}</button>)}</div>
                     <p className={styles.label}>渠道来源（不选 = 不限）</p>
                     <div className={styles.chips}>{opts.channels.map((o) => <button key={o.key} className={`${styles.chip} ${filters.channels.includes(o.key) ? styles.chipOn : ''}`} disabled={!draft} onClick={() => toggle('channels', o.key)}>{o.label} <span className={styles.small}>{o.n}</span></button>)}</div>
                   </>

@@ -12,7 +12,7 @@ import { CrmError } from './events';
 import type { Db } from './profile';
 
 export type TemplateItem = { id: number; sort_order: number; anchor: 'start' | 'end'; offset_minutes: number; when_label: string; title: string; role: string };
-export type Template = { id: number; key: string; name: string; roles: string[]; shooting_list: string | null; settings: Record<string, unknown>; default_capacity: number | null; default_fee_cents: number | null; items: TemplateItem[] };
+export type Template = { id: number; key: string; name: string; roles: string[]; shooting_list: string | null; settings: Record<string, unknown>; default_capacity: number | null; default_hard_capacity?: number | null; default_fee_cents: number | null; items: TemplateItem[] };
 export type PrepItem = { id: number; sort_order: number; when_label: string; title: string; role: string; due_at: string; done_at: string | null; done_by: string | null; note: string | null; photo_url: string | null; from_template_item: number | null };
 
 const str = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
@@ -23,7 +23,8 @@ export const rolesOf = (role: string) => role.split('、').map((r) => r.trim()).
 export async function listTemplates(db: Db = getPool()): Promise<Template[]> {
   // 1.3 M：活动类型的默认人数、默认费用（0014 之前没有这两列时按空处理）
   const { rows } = await db
-    .query<Omit<Template, 'items'>>(`SELECT id, key, name, roles, shooting_list, settings, default_capacity, default_fee_cents FROM prep_templates ORDER BY sort_order, id`)
+    .query<Omit<Template, 'items'>>(`SELECT id, key, name, roles, shooting_list, settings, default_capacity, default_hard_capacity, default_fee_cents FROM prep_templates ORDER BY sort_order, id`)
+    .catch(() => db.query<Omit<Template, 'items'>>(`SELECT id, key, name, roles, shooting_list, settings, default_capacity, default_fee_cents FROM prep_templates ORDER BY sort_order, id`))
     .catch(() => db.query<Omit<Template, 'items'>>(`SELECT id, key, name, roles, shooting_list, settings, NULL::int AS default_capacity, NULL::int AS default_fee_cents FROM prep_templates ORDER BY sort_order, id`));
   const { rows: items } = await db.query<TemplateItem & { template_id: number }>(
     `SELECT id, template_id, sort_order, anchor, offset_minutes, when_label, title, role FROM prep_template_items ORDER BY template_id, sort_order, id`

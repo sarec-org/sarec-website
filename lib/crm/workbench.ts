@@ -26,7 +26,7 @@ export async function claimBindCode(contactId: string, rawCode: string) {
     const { rows } = await db.query<{ staff_email: string; expires_at: Date; used_at: Date | null }>(`SELECT staff_email, expires_at, used_at FROM staff_bind_codes WHERE code = $1 FOR UPDATE`, [code]);
     const r = rows[0];
     if (!r || r.used_at) throw new CrmError('bad_request', '这个绑定码已经用过或不存在，请在网站后台重新生成');
-    if (r.expires_at.getTime() < Date.now()) throw new CrmError('bad_request', '绑定码已过期（10 分钟有效），请在网站后台重新生成');
+    if (r.expires_at.getTime() < Date.now()) throw new CrmError('bad_request', '绑定码已过期，请让管理员在“团队”页重新生成');
     if (r.staff_email.toLowerCase() === reviewEmail()) throw new CrmError('forbidden', '这个账号不能绑定工作台');
     const { rows: st } = await db.query<{ name: string; is_active: boolean }>(`SELECT name, is_active FROM staff_roles WHERE email = $1`, [r.staff_email]);
     if (!st[0]?.is_active) throw new CrmError('forbidden', '这位工作人员已停用，请联系管理员');
@@ -63,11 +63,13 @@ export async function workbenchHome(s: Staff) {
             count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted
        FROM events e LEFT JOIN registrations r ON r.event_id = e.id
       WHERE e.event_status <> 'cancelled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() - interval '2 days'
+        AND ($1::text[] IS NULL OR e.region = ANY($1::text[]))
       GROUP BY e.id
       ORDER BY CASE WHEN coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now() THEN 2
                     WHEN e.starts_at <= now() + interval '18 hours' THEN 0 ELSE 1 END,
                CASE WHEN coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now() THEN -extract(epoch FROM e.starts_at) ELSE extract(epoch FROM e.starts_at) END
-      LIMIT 10`
+      LIMIT 10`,
+    [!s.roles.includes('admin') && s.regions?.length ? s.regions : null] // 1.3.1 F：地区管理员只看自己地区
   );
   const out: Record<string, unknown> = {
     staff: { name: s.name, roles: s.roles },

@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request, { params }: { params: { slug: string } }) => {
   const pool = getPool();
   const { rows } = await pool.query<{ id: string; slug: string; title: string; starts_at: Date; recap: string | null; album_published_at: Date | null; cover_url: string | null }>(
-    `SELECT id, slug, title, starts_at, recap, album_published_at, cover_url FROM events WHERE slug = $1`,
+    `SELECT id, slug, title, starts_at, timezone, recap, album_published_at, cover_url FROM events WHERE slug = $1`,
     [params.slug]
   );
   const ev = rows[0];
@@ -18,14 +18,14 @@ export const GET = handler(async (req: Request, { params }: { params: { slug: st
     .filter((p) => ev.album_published_at || p.by_customer)
     .map((p) => ({ id: p.id, url: p.url, thumb: p.thumb_url, w: p.width, h: p.height, caption: p.caption, byGuest: !!p.by_customer }));
   const { rows: next } = await pool.query(
-    `SELECT slug, title, starts_at, location_name, fee_cents, cover_url FROM events
+    `SELECT slug, title, starts_at, timezone, location_name, fee_cents, cover_url FROM events
       WHERE is_listed AND event_status = 'scheduled' AND registration_open AND starts_at > now() ORDER BY starts_at LIMIT 1`
   );
   const me = await optionalContact(req);
   if (me && ev.album_published_at) await markAlbumSeen(me, ev.slug);
   return ok({
-    event: { slug: ev.slug, title: ev.title, startsAt: ev.starts_at, recap: ev.recap, published: !!ev.album_published_at, coverUrl: ev.cover_url },
+    event: { slug: ev.slug, title: ev.title, startsAt: ev.starts_at, timezone: (ev as { timezone?: string }).timezone, recap: ev.recap, published: !!ev.album_published_at, coverUrl: ev.cover_url },
     photos,
-    next: next[0] ? { slug: next[0].slug, title: next[0].title, startsAt: next[0].starts_at, locationName: next[0].location_name, feeCents: next[0].fee_cents, coverUrl: next[0].cover_url } : null
+    next: next[0] ? { slug: next[0].slug, title: next[0].title, startsAt: next[0].starts_at, timezone: (next[0] as { timezone?: string }).timezone, locationName: next[0].location_name, feeCents: next[0].fee_cents, coverUrl: next[0].cover_url } : null
   });
 });

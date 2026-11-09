@@ -5,6 +5,7 @@
  * - 关键操作写 crm_audit_log：谁、何时、对什么、依据。
  * - 权限在 API 层用 requireStaff 判断；本文件只做业务。
  */
+import { REGION_TZ, isRegion } from '@/lib/crm/regions';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import type { Staff } from './auth';
@@ -54,7 +55,12 @@ export type EventInput = {
   locationName?: string;
   address?: string;
   capacity?: number | null;
+  hardCapacity?: number | null; // 1.3.1 B：硬上限（场地坐得下的极限）
+  videoUrl?: string | null; // 1.3.1 G5：活动视频（YouTube / 视频号链接）
   feeCents?: number;
+  region?: string; // 1.3.1 E：所在地区
+  notifyScope?: 'local' | 'regions' | 'all'; // 通知范围：本地区 / 指定几个地区 / 全部地区（全部地区只有管理员能选）
+  notifyRegions?: string[];
   topicTags?: string[];
   registrationOpen?: boolean;
   listed?: boolean;
@@ -69,6 +75,12 @@ function slugify(title: string, startsAt: Date): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
   return `${d}-${ascii || 'event'}-${randomBytes(2).toString('hex')}`;
+}
+
+/** 1.3.1 F：地区管理员只能建 / 管自己地区的活动 */
+export function regionGuard(s: Staff, region: string) {
+  if (s.roles.includes('admin') || !s.regions?.length) return;
+  if (!s.regions.includes(region)) throw new CrmError('forbidden', `您只能管理 ${s.regions.join('、')} 的活动`);
 }
 
 function eventFields(b: EventInput, partial: boolean) {
@@ -92,7 +104,33 @@ function eventFields(b: EventInput, partial: boolean) {
   if (b.timezone !== undefined) out.timezone = str(b.timezone, 60) || 'America/Los_Angeles';
   if (b.locationName !== undefined) out.location_name = str(b.locationName, 200) || null;
   if (b.address !== undefined) out.address = str(b.address, 300) || null;
-  if (b.capacity !== undefined) out.capacity = b.capacity == null || b.capacity === ('' as unknown) ? null : Math.max(0, Math.floor(Number(b.capacity)));
+  const num = (v: unknown, label: string) => {
+    if (v == null || v === ('' as unknown)) return null;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) throw new CrmError('bad_request', `${label}请填 0 或正整数`);
+    return Math.floor(n);
+  };
+  if (b.capacity !== undefined) out.capacity = num(b.capacity, '当前上限');
+  if (b.hardCapacity !== undefined) out.hard_capacity = num(b.hardCapacity, '硬上限');
+  if (out.capacity != null && out.hard_capacity != null && Number(out.capacity) > Number(out.hard_capacity)) {
+    throw new CrmError('bad_request', '当前上限不能超过硬上限（场地坐得下的极限）');
+  }
+  if (b.videoUrl !== undefined) {
+    const v = str(b.videoUrl, 300);
+    if (v && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be|channels\.weixin\.qq\.com|weixin\.qq\.com)\//i.test(v)) throw new CrmError('bad_request', '视频链接请填 YouTube 或视频号的链接');
+    out.video_url = v || null;
+  }
+  if (b.region !== undefined) {
+    if (!isRegion(b.region)) throw new CrmError('bad_request', '请选择活动所在地区');
+    out.region = b.region;
+    // 1.3.1 E（测试 P2-E4）：没单独指定时区时，按地区带出（纽约 → 纽约时间，中国大陆 → 北京时间）
+    if (b.timezone === undefined && REGION_TZ[b.region]) out.timezone = REGION_TZ[b.region];
+  }
+  if (b.notifyScope !== undefined) {
+    if (!['local', 'regions', 'all'].includes(String(b.notifyScope))) throw new CrmError('bad_request', '请选择通知范围');
+    out.notify_scope = b.notifyScope;
+  }
+  if (b.notifyRegions !== undefined) out.notify_regions = (Array.isArray(b.notifyRegions) ? b.notifyRegions : []).filter(isRegion);
   if (b.feeCents !== undefined) out.fee_cents = Math.max(0, Math.round(Number(b.feeCents) || 0));
   if (b.topicTags !== undefined) out.topic_tags = (b.topicTags ?? []).filter((t) => t in TOPIC_LABELS);
   if (b.registrationOpen !== undefined) out.registration_open = !!b.registrationOpen;
@@ -106,7 +144,7 @@ function eventFields(b: EventInput, partial: boolean) {
 
 export async function listStaffEvents() {
   const { rows } = await getPool().query(
-    `SELECT e.id, e.slug, e.title, e.starts_at, e.ends_at, e.location_name, e.capacity, e.fee_cents, e.topic_tags,
+    `SELECT e.id, e.slug, e.title, e.starts_at, e.ends_at, e.location_name, e.capacity, e.fee_cents, e.topic_tags, e.region,
             e.registration_open, e.is_listed, e.event_status,
             count(r.*) FILTER (WHERE r.status = 'registered')::int AS registered,
             count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted,
@@ -149,6 +187,9 @@ function safeLink(orderNo: string): string | null {
 }
 
 export async function createEvent(s: Staff, b: EventInput) {
+  if (b.notifyScope === 'all' && !s.roles.includes('admin')) throw new CrmError('forbidden', '“全部地区”通知只有管理员能选');
+  regionGuard(s, b.region ?? '洛杉矶/橙县');
+  if (b.endsAt && b.startsAt && new Date(b.endsAt).getTime() <= new Date(b.startsAt).getTime()) throw new CrmError('bad_request', '结束时间要晚于开始时间');
   const f = eventFields(b, false);
   const slug = str(b.slug, 80).toLowerCase().replace(/[^a-z0-9-]/g, '') || slugify(f.title as string, f.starts_at as Date);
   return withTransaction(async (db) => {
@@ -167,6 +208,25 @@ export async function createEvent(s: Staff, b: EventInput) {
 }
 
 export async function updateEvent(s: Staff, id: string, b: EventInput) {
+  if (b.notifyScope === 'all' && !s.roles.includes('admin')) throw new CrmError('forbidden', '“全部地区”通知只有管理员能选');
+  if (b.region !== undefined) regionGuard(s, b.region);
+  // 编辑时只改一个数也要守住“当前上限 ≤ 硬上限”、结束晚于开始（测试 P2）
+  {
+    const { rows: cur } = await getPool().query<{ capacity: number | null; hard_capacity: number | null; starts_at: Date; ends_at: Date | null }>(`SELECT capacity, hard_capacity, starts_at, ends_at FROM events WHERE id = $1`, [id]);
+    const c0 = cur[0];
+    if (c0) {
+      const cap = b.capacity !== undefined ? (b.capacity === null || b.capacity === ('' as unknown) ? null : Number(b.capacity)) : c0.capacity;
+      const hard = b.hardCapacity !== undefined ? (b.hardCapacity === null || b.hardCapacity === ('' as unknown) ? null : Number(b.hardCapacity)) : c0.hard_capacity;
+      if (cap != null && hard != null && cap > hard) throw new CrmError('bad_request', '当前上限不能超过硬上限（场地坐得下的极限）');
+      const st = b.startsAt !== undefined ? new Date(String(b.startsAt)) : c0.starts_at;
+      const en = b.endsAt !== undefined ? (b.endsAt ? new Date(b.endsAt) : null) : c0.ends_at;
+      if (en && st && en.getTime() <= new Date(st).getTime()) throw new CrmError('bad_request', '结束时间要晚于开始时间');
+    }
+  }
+  if (s.regions?.length && !s.roles.includes('admin')) {
+    const { rows: r0 } = await getPool().query<{ region: string }>(`SELECT region FROM events WHERE id = $1`, [id]);
+    if (r0[0]) regionGuard(s, r0[0].region);
+  }
   const f = eventFields(b, true);
   if (!Object.keys(f).length) throw new CrmError('bad_request', '没有要修改的内容');
   return withTransaction(async (db) => {
@@ -724,6 +784,14 @@ export async function upsertStaffRole(s: Staff, b: { email?: string; name?: stri
   const name = str(b.name, 60) || email.split('@')[0];
   if (email === s.email && (!roles.includes('admin') || b.isActive === false)) {
     throw new CrmError('bad_request', '不能取消自己的管理员权限，避免没人能管理后台');
+  }
+  // 1.3.1 F：旧的“设置 → 工作人员”也不能停掉 / 降级最后一个能登录的管理员
+  if (!roles.includes('admin') || b.isActive === false) {
+    const { rows: cur } = await getPool().query<{ roles: string[]; is_active: boolean }>(`SELECT roles, is_active FROM staff_roles WHERE email = $1`, [email]);
+    if (cur[0]?.is_active && cur[0].roles.includes('admin')) {
+      const { assertOtherAdmin } = await import('@/lib/crm/team');
+      await assertOtherAdmin(email);
+    }
   }
   return withTransaction(async (db) => {
     await db.query(
