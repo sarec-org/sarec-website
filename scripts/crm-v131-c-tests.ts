@@ -14,7 +14,7 @@ globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
 process.env.RESEND_API_KEY = 're_dev131_intercepted';
 process.env.PREVIEW_EMAIL_ALLOW = 'dev131@example.com,info@sinoamericanrec.org';
 process.env.LEAD_NOTIFY_EMAIL = 'dev131@example.com';
-process.env.TWILIO_ACCOUNT_SID = 'ACdev131'; process.env.TWILIO_AUTH_TOKEN = 'dev131'; process.env.TWILIO_FROM_NUMBER = '+15550000000';
+process.env.TWILIO_ACCOUNT_SID = 'ACdev131'; process.env.TWILIO_AUTH_TOKEN = 'dev131'; process.env.TWILIO_FROM_NUMBER = '+15550000000'; process.env.SMS_ALLOW_ALL_NONPROD = '1';
 import { getPool } from '@/lib/db/client';
 import { guardNotProduction } from './_guard';
 guardNotProduction();

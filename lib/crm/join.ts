@@ -62,8 +62,9 @@ export async function submitJoin(contactId: string, b: { name?: string; company?
   const company = String(b.company ?? '').trim().slice(0, 100);
   const industry = INDUSTRIES.includes(String(b.industry)) ? String(b.industry) : '';
   const phone = b.phone ? normalizePhone(String(b.phone)) : null;
-  const miss = [name ? '' : '姓名', phone ? '' : '手机'].filter(Boolean);
+  const miss = [name ? '' : '姓名', b.phone ? '' : '手机'].filter(Boolean);
   if (miss.length) throw new CrmError('incomplete', `还差：${miss.join('、')}`);
+  if (!phone) throw new CrmError('bad_phone', '手机号格式不对：美国号码 10 位，中国号码请加 +86');
   const pool = getPool();
   const ms = await memberStatus(pool, contactId);
   if (ms.isMember) throw new CrmError('already_member', '您已经是会员了，可以在“我的会员卡”里查看');
