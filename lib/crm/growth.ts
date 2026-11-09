@@ -245,12 +245,15 @@ export async function homeData(contactId: string | null, opts: { base: string; w
     : lastEvent && lastEnd && Date.now() - new Date(lastEnd).getTime() <= recapDays * 86400_000
       ? { kind: 'recap' as const, summary: String(lastEvent.recap ?? '').split(/\n+/).map((x) => x.trim()).filter(Boolean)[0]?.slice(0, 80) ?? null }
       : { kind: 'brand' as const };
+  // 首页回顾小修（测试 P2-H1）：上一场结束超过 home_recap_days 天，首页任何位置都不再显示“上一场回顾”
+  // （线上 1.3.0 首页下方那块回顾只看 lastEvent，不看天数）；相册和链接照样保留在活动-往期里
+  const recapFresh = !!(lastEnd && Date.now() - new Date(lastEnd).getTime() <= recapDays * 86400_000);
   return {
     me,
     status,
     homeCard,
     upcoming: upcoming.map(evCard),
-    lastEvent,
+    lastEvent: recapFresh ? lastEvent : null,
     albums,
     wechatQr: (await (await import('@/lib/wecom')).wechatQrFor('home', contactId))?.url ?? null,
     channelsId: (await getSetting<string>(pool, 'channels_finder_id', '')) || null
