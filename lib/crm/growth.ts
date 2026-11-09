@@ -178,16 +178,12 @@ export async function homeData(contactId: string | null, opts: { base: string; w
       `SELECT thumb_url, url FROM event_photos WHERE event_id = $1 AND NOT is_hidden ORDER BY sort_order, created_at LIMIT 3`,
       [past[0].id]
     );
-    const { rows: att } = await pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM registrations WHERE event_id = $1 AND arrival_status = 'checked_in'`,
-      [past[0].id]
-    );
     lastEvent = {
       slug: past[0].slug,
       title: past[0].title,
       startsAt: past[0].starts_at,
       recap: past[0].recap,
-      attended: att[0].n,
+      // 首页回顾小修：客户端不显示到场人数（到场人数只在工作台 / 后台看）
       photoCount: past[0].photo_count,
       albumPublished: !!past[0].album_published_at,
       photos: past[0].album_published_at ? photos.map((p) => ({ thumb: p.thumb_url, url: p.url })) : []
