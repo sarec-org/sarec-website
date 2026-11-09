@@ -27,7 +27,8 @@ export async function flowStats(limit = 8) {
   );
   const { rows: rep } = await pool.query<{ repeaters: number; attendees: number }>(
     `SELECT count(*) FILTER (WHERE n >= 2)::int AS repeaters, count(*)::int AS attendees
-       FROM (SELECT contact_id, count(*) AS n FROM registrations WHERE arrival_status = 'checked_in' GROUP BY contact_id) x`
+       FROM (SELECT r.contact_id, count(*) AS n FROM registrations r JOIN events e ON e.id = r.event_id
+              WHERE r.arrival_status = 'checked_in' AND e.slug NOT LIKE 'dev%' GROUP BY r.contact_id) x`
   );
   const { rows: join } = await pool.query<{ total: number; paid: number; link_sent: number }>(
     `SELECT count(*)::int AS total, count(*) FILTER (WHERE status = 'paid')::int AS paid, count(*) FILTER (WHERE status IN ('link_sent','paid'))::int AS link_sent FROM join_requests`
@@ -39,7 +40,7 @@ export async function flowStats(limit = 8) {
       scans: e.scans, scanDone: e.scan_done, scanRate: pct(e.scan_done, e.scans),
       regs: e.regs, arrived: e.arrived, arriveRate: pct(e.arrived, e.regs),
       sharedRegs: e.shared_regs, sharedArrived: e.shared_arrived,
-      manual: e.manual + e.backfill, backfill: e.backfill
+      manual: e.manual, backfill: e.backfill
     })),
     repeaters: rep[0]?.repeaters ?? 0,
     attendees: rep[0]?.attendees ?? 0,

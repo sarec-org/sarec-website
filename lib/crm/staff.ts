@@ -5,7 +5,7 @@
  * - 关键操作写 crm_audit_log：谁、何时、对什么、依据。
  * - 权限在 API 层用 requireStaff 判断；本文件只做业务。
  */
-import { isRegion } from '@/lib/crm/regions';
+import { REGION_TZ, isRegion } from '@/lib/crm/regions';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import type { Staff } from './auth';
@@ -123,6 +123,8 @@ function eventFields(b: EventInput, partial: boolean) {
   if (b.region !== undefined) {
     if (!isRegion(b.region)) throw new CrmError('bad_request', '请选择活动所在地区');
     out.region = b.region;
+    // 1.3.1 E（测试 P2-E4）：没单独指定时区时，按地区带出（纽约 → 纽约时间，中国大陆 → 北京时间）
+    if (b.timezone === undefined && REGION_TZ[b.region]) out.timezone = REGION_TZ[b.region];
   }
   if (b.notifyScope !== undefined) {
     if (!['local', 'regions', 'all'].includes(String(b.notifyScope))) throw new CrmError('bad_request', '请选择通知范围');

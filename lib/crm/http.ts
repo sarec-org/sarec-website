@@ -223,8 +223,13 @@ export async function regionScope(req: Request, s: Staff | null): Promise<void> 
   if (m) ids.add(m[1]);
   const q = u.searchParams.get('eventId');
   if (q) ids.add(q);
-  if (req.method !== 'GET' && (req.headers.get('content-type') ?? '').includes('application/json')) {
-    const b = (await req.clone().json().catch(() => null)) as { eventId?: string } | null;
+  if (req.method !== 'GET' && !req.bodyUsed && (req.headers.get('content-type') ?? '').includes('application/json')) {
+    let b: { eventId?: string } | null = null;
+    try {
+      b = (await req.clone().json()) as { eventId?: string } | null;
+    } catch {
+      b = null;
+    }
     if (b?.eventId) ids.add(String(b.eventId));
   }
   if (path.startsWith('/api/v1/staff/checkin/search') && !q) deny();

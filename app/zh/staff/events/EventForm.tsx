@@ -19,20 +19,33 @@ export const TOPICS: Record<string, string> = {
 type Ev = Record<string, unknown>;
 const TZ = 'America/Los_Angeles';
 
-/** datetime-local（洛杉矶时间）⇄ ISO */
-export function toLocalInput(iso: unknown): string {
+/** 1.3.1 E：活动所在地区 → 时区（表单里的时间按活动当地时间填） */
+export const REGION_TZ: Record<string, string> = { '洛杉矶/橙县': 'America/Los_Angeles', 旧金山湾区: 'America/Los_Angeles', 纽约: 'America/New_York', 中国大陆: 'Asia/Shanghai' };
+export const TZ_NAME: Record<string, string> = { 'America/Los_Angeles': '洛杉矶时间', 'America/New_York': '纽约时间', 'Asia/Shanghai': '北京时间' };
+const tzOf = (region: string) => REGION_TZ[region] ?? TZ;
+
+/** datetime-local（活动当地时间）⇄ ISO */
+export function toLocalInput(iso: unknown, tz: string = TZ): string {
   if (!iso) return '';
   const d = new Date(String(iso));
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
   const g = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
   return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}`;
 }
-export function fromLocalInput(v: string): string | null {
+export function fromLocalInput(v: string, tz: string = TZ): string | null {
   if (!v) return null;
-  // 以洛杉矶时区解释（和浏览器所在时区无关；原写法在非洛杉矶时区的电脑上会差出时差）
+  // 以活动当地时区解释（和浏览器所在时区无关）
   const [d, t] = v.split('T');
   if (!d || !t) return null;
-  return laWallToIso(d, t.slice(0, 5));
+  if (tz === TZ) return laWallToIso(d, t.slice(0, 5));
+  const wall = Date.parse(`${d}T${t.slice(0, 5)}:00Z`);
+  const offsetAt = (ms: number) => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+    return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second) - ms;
+  };
+  let utc = wall - offsetAt(wall);
+  utc = wall - offsetAt(utc);
+  return new Date(utc).toISOString();
 }
 
 export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { id: string }) => void }) {
@@ -40,8 +53,8 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     title: String(initial?.title ?? ''),
     slug: String(initial?.slug ?? ''),
     summary: String(initial?.summary ?? ''),
-    startsAt: toLocalInput(initial?.starts_at),
-    endsAt: toLocalInput(initial?.ends_at),
+    startsAt: toLocalInput(initial?.starts_at, String(initial?.timezone ?? TZ)),
+    endsAt: toLocalInput(initial?.ends_at, String(initial?.timezone ?? TZ)),
     locationName: String(initial?.location_name ?? ''),
     address: String(initial?.address ?? ''),
     capacity: initial?.capacity == null ? '' : String(initial.capacity),
@@ -92,8 +105,9 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       title: f.title,
       ...(initial ? {} : { slug: f.slug, prepTemplate: prep || undefined }),
       summary: f.summary,
-      startsAt: fromLocalInput(f.startsAt),
-      endsAt: fromLocalInput(f.endsAt),
+      startsAt: fromLocalInput(f.startsAt, tzOf(f.region)),
+      endsAt: fromLocalInput(f.endsAt, tzOf(f.region)),
+      timezone: tzOf(f.region),
       locationName: f.locationName,
       address: f.address,
       capacity: f.capacity === '' ? null : Number(f.capacity),
@@ -153,7 +167,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
         <label className={styles.label} htmlFor="ev-summary">一句话介绍（首页轮播、海报、报名页都用它）</label>
         <textarea id="ev-summary" className={styles.textarea} value={f.summary} onChange={(e) => set('summary', e.target.value)} />
       </div>
-      {input('startsAt', '开始时间（洛杉矶时间）*', 'datetime-local')}
+      {input('startsAt', `开始时间（${TZ_NAME[tzOf(f.region)] ?? '当地时间'}）*`, 'datetime-local')}
       {input('endsAt', '结束时间', 'datetime-local')}
       {input('locationName', '地点名称')}
       {input('address', '地址（用于一键导航）')}

@@ -94,8 +94,9 @@ async function main() {
   const t0 = Date.now();
   const r1 = await seats.runConfirmTimeline(new Date(t0), { force: true });
   assert.ok(r1.asked >= 3);
-  assert.match(sms[0], /明天的活动您来吗/);
-  assert.match(sms[0], /\/zh\/confirm\/[0-9a-f-]+\?t=/);
+  const ask = sms.find((x) => x.includes('明天的活动您来吗')) ?? '';
+  assert.match(ask, /明天的活动您来吗/);
+  assert.match(ask, /\/zh\/confirm\/[0-9a-f-]+\?t=/);
   ok('前 24 小时：问“明天的活动您来吗？”，短信带一键确认链接');
   const regOf = async (c: string) => (await pool.query<{ id: string }>(`SELECT id FROM registrations WHERE event_id = $1 AND contact_id = $2`, [e2.id, c])).rows[0].id;
   const info = await seats.confirmInfo(await regOf(p[0]));

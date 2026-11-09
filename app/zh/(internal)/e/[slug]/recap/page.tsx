@@ -32,7 +32,7 @@ async function load(slug: string) {
   const { rows: photos } = e.album_published_at
     ? await pool.query<{ url: string; thumb_url: string; caption: string | null }>(
         `SELECT url, thumb_url, NULL AS caption FROM event_photos
-          WHERE event_id = $1 AND NOT is_hidden AND coalesce(visibility, 'album') = 'album' AND variant_of IS NULL
+          WHERE event_id = $1 AND NOT is_hidden AND coalesce(visibility, 'album') = 'album' AND variant_of IS NULL AND coalesce(review_status, 'ok') = 'ok'
           ORDER BY sort_order, created_at LIMIT 60`,
         [e.id]
       )
@@ -112,7 +112,7 @@ export default async function Recap({ params }: { params: { slug: string } }) {
   return (
     <main style={{ maxWidth: 1080, margin: '0 auto', padding: '96px 20px 64px', color: '#F2EAD6' }}>
       {/* eslint-disable-next-line react/no-danger */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <p style={{ color: '#C9A567', letterSpacing: 3, fontSize: 14, margin: 0 }}>活动回顾 · RECAP</p>
       <h1 style={{ fontFamily: "'Songti SC','Noto Serif SC',serif", fontSize: 'clamp(28px, 5vw, 44px)', lineHeight: 1.25, margin: '12px 0 8px' }}>{e.title}</h1>
       <p style={{ opacity: 0.75, margin: 0 }}>{fmt(e.starts_at, e.timezone)}{e.location_name ? ` · ${e.location_name}` : ''}</p>

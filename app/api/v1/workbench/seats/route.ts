@@ -26,20 +26,21 @@ export const GET = handler(async (req: Request) => {
   return ok(mpSafe({ board: await confirmBoard(eventId), waitlist: wait, timelineEnabled: await timelineEnabled() }));
 });
 export const POST = handler(async (req: Request) => {
+  // 先查权限（地区管理员要核对请求体里的活动），再读请求体（测试 P1-F2）
+  const s0 = await requireStaff(req, 'checkin');
   const b = await body<{ eventId?: string; action?: string; add?: number; set?: number; contactId?: string; exempt?: boolean; on?: boolean }>(req);
   if (b.action === 'timeline') {
-    const s = await requireStaff(req, 'admin');
-    return ok(await setTimelineEnabled(s, !!b.on));
+    if (!s0.roles.includes('admin')) throw new CrmError('forbidden', '确认时间线开关只有管理员能改');
+    return ok(await setTimelineEnabled(s0, !!b.on));
   }
   if (b.action === 'admit') {
-    const s = await requireStaff(req, 'checkin');
     if (!b.eventId || !b.contactId) throw new CrmError('bad_request', '请先选择活动和要放进来的人');
-    return ok(await staffAdmit(s, b.eventId, b.contactId));
+    return ok(await staffAdmit(s0, b.eventId, b.contactId));
   }
-  const s = await requireStaff(req, 'ops');
-  if (b.action === 'exempt' && b.contactId) return ok(await setNoshowExempt(s, b.contactId, b.exempt !== false));
+  if (!s0.roles.includes('admin') && !s0.roles.includes('ops')) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
+  if (b.action === 'exempt' && b.contactId) return ok(await setNoshowExempt(s0, b.contactId, b.exempt !== false));
   if (!b.eventId) throw new CrmError('bad_request', '请先选择活动');
-  if (b.action === 'add' && [10, 20].includes(Number(b.add))) return ok(await raiseCapacity(s, b.eventId, { add: Number(b.add) }));
-  if (b.action === 'set' && b.set != null) return ok(await raiseCapacity(s, b.eventId, { set: Number(b.set) }));
+  if (b.action === 'add' && [10, 20].includes(Number(b.add))) return ok(await raiseCapacity(s0, b.eventId, { add: Number(b.add) }));
+  if (b.action === 'set' && b.set != null) return ok(await raiseCapacity(s0, b.eventId, { set: Number(b.set) }));
   throw new CrmError('bad_request', '操作不对，请刷新后再试');
 });

@@ -529,7 +529,7 @@ export async function processQueue(id: number, opts: { max?: number } = {}) {
       await pool.query(`UPDATE newsletter_sends SET status = 'sent', resend_id = $2, sent_at = now(), error = NULL WHERE id = $1`, [todo[k].id, rid && !rid.startsWith('blocked') ? rid : null]);
     }
     // 1.3.1 I：通讯也记进共用触达记录（频率控制看得到）
-    await pool.query(`INSERT INTO contact_touches (contact_id, kind, channel) SELECT contact_id, 'newsletter', 'email' FROM newsletter_sends WHERE id = ANY($1) AND contact_id IS NOT NULL`, [todo.map((r) => r.id)]).catch(() => undefined);
+    await pool.query(`INSERT INTO contact_touches (contact_id, kind, channel) SELECT contact_id, 'newsletter', 'email' FROM newsletter_sends WHERE id = ANY($1) AND contact_id IS NOT NULL AND resend_id IS NOT NULL`, [todo.map((r) => r.id)]).catch(() => undefined);
     const { countSends } = await import('@/lib/email/resend-client');
     await countSends(todo.length, true);
     sent += todo.length;

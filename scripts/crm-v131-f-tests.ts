@@ -51,6 +51,10 @@ async function main() {
   await regionScope(new Request(`${B}/api/v1/staff/checkin/search?q=a&eventId=${ev.id}`), s!);
   await regionScope(new Request(`${B}/api/v1/staff/contacts?q=a`), { ...s!, roles: ['admin'] });
   ok('地区管理员碰别的地区的活动、名单、加名额、客户查询、全局查人一律 403；自己地区的照常（测试 P1-F1）');
+  const used = new Request(`${B}/api/v1/workbench/seats`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventId: ev.id, action: 'add', add: 10 }) });
+  await used.json();
+  await regionScope(used, s!);
+  ok('请求体已经读过时不再报 500（测试 P1-F2）');
   await team.updateMember(admin, r1.id, { isActive: false });
   assert.equal(await staffFor(phone), null);
   ok('停用：立即失去工作台权限');

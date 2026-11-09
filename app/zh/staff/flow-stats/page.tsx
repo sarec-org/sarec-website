@@ -32,6 +32,7 @@ export default function FlowStats() {
               <h2 className={styles.h}>最近的活动</h2>
               {!d.events.length && <p className={styles.muted}>还没有已举办的活动。</p>}
               {!!d.events.length && (
+                <div style={{ overflowX: 'auto' }}>
                 <table className={styles.table}>
                   <thead><tr><th>活动</th><th>扫码完成签到</th><th>报名到场率</th><th>分享带来的报名（到场）</th><th>人工处理</th></tr></thead>
                   <tbody>{d.events.map((e) => (
@@ -44,6 +45,7 @@ export default function FlowStats() {
                     </tr>
                   ))}</tbody>
                 </table>
+                </div>
               )}
             </>
           )}
