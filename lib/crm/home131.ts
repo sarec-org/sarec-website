@@ -76,6 +76,11 @@ export function dayWord(d: Date, tz: string, now = new Date()) {
   if (diff === 1) return '明天';
   return `${a.m} 月 ${a.d} 日 周${WD[a.wd] ?? ''}`;
 }
+/** “12 月 12 日 周六”（海报等不用“今天 / 明天”的地方） */
+export function fullDate(d: Date, tz: string) {
+  const p = parts(d, tz);
+  return `${p.m} 月 ${p.d} 日 周${WD[p.wd] ?? ''}`;
+}
 const md = (d: Date, tz: string) => { const p = parts(d, tz); return { month: `${p.m} 月`, day: String(p.d) }; };
 
 type Ev = {

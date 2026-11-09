@@ -45,6 +45,9 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     locationName: String(initial?.location_name ?? ''),
     address: String(initial?.address ?? ''),
     capacity: initial?.capacity == null ? '' : String(initial.capacity),
+    hardCapacity: initial?.hard_capacity == null ? '' : String(initial.hard_capacity),
+    region: String(initial?.region ?? '洛杉矶/橙县'),
+    notifyScope: String(initial?.notify_scope ?? 'local'),
     fee: initial?.fee_cents ? String(Number(initial.fee_cents) / 100) : '0',
     topicTags: (initial?.topic_tags as string[]) ?? [],
     listed: initial ? initial.is_listed !== false : true
@@ -53,13 +56,14 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
   // 1.3 M：活动类型 → 自动生成筹备清单（只在新建时）
   const [prep, setPrep] = useState('lecture');
   // 活动类型的名称、默认人数、默认费用都从后台“活动筹备 → 模板”读，不写死；选了类型自动带出人数和费用，本场仍可改
-  type Tpl = { key: string; name: string; default_capacity: number | null; default_fee_cents: number | null };
+  type Tpl = { key: string; name: string; default_capacity: number | null; default_hard_capacity?: number | null; default_fee_cents: number | null };
   const [tpls, setTpls] = useState<Tpl[]>([]);
   const applyTpl = (t: Tpl | undefined) => {
     if (!t) return;
     setF((p) => ({
       ...p,
       capacity: t.default_capacity == null ? p.capacity : String(t.default_capacity),
+      hardCapacity: t.default_hard_capacity == null ? p.hardCapacity : String(t.default_hard_capacity),
       fee: t.default_fee_cents == null ? p.fee : String(t.default_fee_cents / 100)
     }));
   };
@@ -75,6 +79,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
   const [err, setErr] = useState('');
+  const [cover, setCover] = useState<File | null>(null);
   const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
 
   async function save() {
@@ -89,6 +94,9 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       locationName: f.locationName,
       address: f.address,
       capacity: f.capacity === '' ? null : Number(f.capacity),
+      hardCapacity: f.hardCapacity === '' ? null : Number(f.hardCapacity),
+      region: f.region,
+      notifyScope: f.notifyScope,
       feeCents: Math.round(Number(f.fee || 0) * 100),
       topicTags: f.topicTags,
       listed: f.listed
@@ -96,9 +104,17 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     const r = initial
       ? await api<{ id: string }>(`/api/v1/staff/events/${initial.id}`, { method: 'PATCH', body: payload })
       : await api<{ event: { id: string } }>('/api/v1/staff/events', { body: payload });
+    if (!r.ok) { setBusy(false); return setErr(r.message); }
+    const id = initial ? String(initial.id) : (r.data as { event: { id: string } }).event.id;
+    // 封面图（可选）：和活动一起保存；没传的话首页、海报用该类型的默认图
+    if (cover) {
+      const fd = new FormData();
+      fd.append('file', cover);
+      const up = await fetch(`/api/v1/staff/events/${id}/cover`, { method: 'POST', body: fd, credentials: 'same-origin' }).then((x) => x.json()).catch(() => null);
+      if (!up?.ok) setErr('活动已保存，但封面图没传上去：' + (up?.error?.message ?? '请在活动页再传一次'));
+    }
     setBusy(false);
-    if (!r.ok) return setErr(r.message);
-    onSaved(initial ? { id: String(initial.id) } : (r.data as { event: { id: string } }).event);
+    onSaved({ id });
   }
 
   const input = (k: keyof typeof f, label: string, type = 'text', extra: Record<string, unknown> = {}) => (
@@ -124,14 +140,32 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
         </div>
       )}
       <div className={styles.field}>
-        <label className={styles.label} htmlFor="ev-summary">简介</label>
+        <label className={styles.label} htmlFor="ev-summary">一句话介绍（首页轮播、海报、报名页都用它）</label>
         <textarea id="ev-summary" className={styles.textarea} value={f.summary} onChange={(e) => set('summary', e.target.value)} />
       </div>
       {input('startsAt', '开始时间（洛杉矶时间）*', 'datetime-local')}
       {input('endsAt', '结束时间', 'datetime-local')}
       {input('locationName', '地点名称')}
       {input('address', '地址（用于一键导航）')}
-      {input('capacity', '名额（不填 = 不限）', 'number', { min: 0, inputMode: 'numeric' })}
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="ev-region">所在地区</label>
+        <select id="ev-region" className={styles.select} value={f.region} onChange={(e) => set('region', e.target.value)}>
+          {['洛杉矶/橙县', '旧金山湾区', '纽约', '美国其他', '中国大陆', '其他'].map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+      </div>
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="ev-scope">通知谁</label>
+        <select id="ev-scope" className={styles.select} value={f.notifyScope} onChange={(e) => set('notifyScope', e.target.value)}>
+          <option value="local">本地区的人（外地的人在首页公告区能看到）</option>
+          <option value="all">所有地区（高峰论坛等；只有管理员能选）</option>
+        </select>
+      </div>
+      {input('capacity', '当前上限（报到这个数后进候补；不填 = 不限）', 'number', { min: 0, inputMode: 'numeric' })}
+      {input('hardCapacity', '硬上限（场地坐得下的极限；加名额最多加到这里）', 'number', { min: 0, inputMode: 'numeric' })}
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="ev-cover">封面图（选填；不传就用这个类型的默认图）</label>
+        <input id="ev-cover" type="file" accept="image/*" onChange={(e) => setCover(e.target.files?.[0] ?? null)} />
+      </div>
       {input('fee', '费用（美元，0 = 免费）', 'number', { min: 0, step: '0.01', inputMode: 'decimal' })}
       <div className={styles.field}>
         <span className={styles.label}>活动主题（决定报名时优先问哪些题）</span>
