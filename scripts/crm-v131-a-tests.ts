@@ -104,7 +104,8 @@ async function main() {
   ok(`认出来 → 先记到场，再出 ${qs.length} 道题（常住地区第一）`);
   const w2 = await ck.answer(ev.slug, old, { region: { choice: '洛杉矶/橙县' }, profession: { choice: '开发商', text: '在橙县做独栋开发' } });
   assert.equal(w2.kind, 'welcome');
-  assert.equal(w2.points, 10 + 5 + 5 + 5);
+  assert.equal(w2.points, 5 + 5 + 5); // 只算这次答题新得的；签到 10 分在扫码那一步
+  assert.equal((await ck.answer(ev.slug, old, { region: { choice: '洛杉矶/橙县' } })).points, 0);
   const { rows: rg } = await pool.query<{ region_self: string }>(`SELECT region_self FROM contacts WHERE id = $1`, [old]);
   assert.equal(rg[0].region_self, '洛杉矶/橙县');
   ok('点完 → 欢迎页；常住地区写进档案（本人填写），手填的多给 5 分');
@@ -230,6 +231,14 @@ async function main() {
   const st = await contact('DEV131-工作人员');
   await pool.query(`INSERT INTO staff_roles (email, name, roles, mp_contact_id) VALUES ($1, 'DEV131', '{checkin}', $2)`, [`dev131-${sfx}@example.com`, st]);
   await assert.rejects(dm.mergeContacts(staff, k, st), /工作人员账号/);
+  const stPhone = P();
+  await pool.query(`UPDATE contacts SET phone_e164 = $2, phone_verified_at = now() WHERE id = $1`, [st, stPhone]);
+  const wx3 = await contact('微信用户');
+  wxPhone = stPhone;
+  const n5 = await ck.newcomer(ev.slug, wx3, { name: '冒充', profession: '其他', phoneCode: 'dev131codeSTAFF' });
+  assert.equal(n5.contactId, wx3);
+  assert.equal(n5.token, undefined);
+  ok('验证过的号属于工作人员档案 → 不自动挂、不发工作人员会话（测试 P2-A1）');
   await pool.query(`DELETE FROM staff_roles WHERE email = $1`, [`dev131-${sfx}@example.com`]);
   ok('工作人员账号不能被合并掉（合并不会带来或丢掉管理员权限）');
 
