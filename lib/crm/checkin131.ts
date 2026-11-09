@@ -153,8 +153,9 @@ export async function answer(slug: string, contactId: string, answers: Record<st
     const ev = await requireEvent(db, slug);
     const reg = await regOf(db, ev.id, contactId);
     if (!reg || reg.arrival_status !== 'checked_in') throw new CrmError('not_checked_in', '请先扫门口的签到码');
+    // 只返回这次答题新得的积分（测试 P3-A1：同一份答案再交一次不能又显示“记入 10 积分”）；签到分在扫码那一步已经告诉过客户
     const earned = await saveAnswers(db, contactId, answers);
-    return welcome(db, ev, contactId, false, earned + (await checkinPoints(db, contactId, ev.id)));
+    return welcome(db, ev, contactId, false, earned);
   });
 }
 
@@ -290,6 +291,14 @@ export async function wxPhoneStep(contactId: string, code: string): Promise<{ ph
   return { phone, cc, number: phone.slice(cc.length), proof: phoneProof(contactId, phone) };
 }
 
+async function isStaffContact(db: Db, contactId: string): Promise<boolean> {
+  const { rows } = await db.query(
+    `SELECT 1 FROM staff_roles s JOIN contacts c ON (s.mp_contact_id = c.id OR (s.email = c.email AND c.email_verified_at IS NOT NULL)) WHERE c.id = $1 LIMIT 1`,
+    [contactId]
+  );
+  return !!rows[0];
+}
+
 export type NewcomerInput = { name?: string; profession?: string; phoneCode?: string; phoneProof?: string; phone?: string; cc?: string; smsCode?: string };
 
 /**
@@ -325,7 +334,9 @@ export async function newcomer(slug: string, me: string, b: NewcomerInput): Prom
     let target = me;
     let token: string | undefined;
     const owner = verified ? await verifiedOwner(db, phone!, me) : null;
-    if (owner && (await isEmptyShell(db, me))) {
+    // 工作人员档案不自动挂（测试 P2-A1）：工作人员身份只能走绑定码，现场签到不能让新微信拿到工作人员会话
+    const ownerIsStaff = owner ? await isStaffContact(db, owner) : false;
+    if (owner && !ownerIsStaff && (await isEmptyShell(db, me))) {
       // 这个微信登录挂到已有档案下：以后用这个微信打开就是那份档案（报名、积分都在）
       await db.query(`UPDATE contacts SET merged_into = $2, updated_at = now() WHERE id = $1`, [me, owner]);
       await db.query(
