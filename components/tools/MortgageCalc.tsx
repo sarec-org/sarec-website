@@ -88,6 +88,7 @@ function MortgageBody() {
           onLoad={(i) => setInp({ ...MORTGAGE_DEFAULTS, ...i })}
           share={() => ({
             title: L(lang, '月供与现金流粗算', 'Mortgage & cash flow estimate'),
+            path: '/zh/tools/mortgage',
             highlight: [L(lang, '月现金流', 'Monthly cash flow'), usd(r.cashFlow)],
             lines: [
               [L(lang, '房价', 'Price'), usd(clean.price)],
