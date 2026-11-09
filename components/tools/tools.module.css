@@ -62,3 +62,12 @@
 .tag { align-self: flex-start; font-size: 0.85rem; color: var(--gold-bright); border: 1px solid var(--gold-dim); border-radius: 999px; padding: 0.1rem 0.6rem; }
 .toolName { font-family: var(--serif-zh); font-size: 1.3rem; color: var(--ivory); }
 .toolGo { margin-top: auto; color: var(--gold); font-size: 1rem; }
+
+/* 术语速查 */
+.terms { display: grid; gap: 0.75rem; grid-template-columns: 1fr; margin: 0; }
+@media (min-width: 900px) { .terms { grid-template-columns: 1fr 1fr; } }
+.term { border: 1px solid var(--line-3); border-radius: 6px; padding: 0.85rem 1rem; background: rgba(242, 234, 214, 0.03); }
+.term dt { display: flex; flex-wrap: wrap; gap: 0.3rem 0.75rem; align-items: baseline; margin: 0 0 0.3rem; }
+.term dd { margin: 0; color: var(--ivory-warm); font-size: 1rem; }
+.termEn { font-weight: 600; color: var(--ivory); font-size: 1.05rem; }
+.termZh { color: var(--gold-bright); font-family: var(--serif-zh); font-size: 1.05rem; }

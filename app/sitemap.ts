@@ -30,6 +30,7 @@ const staticRoutes = [
   '/zh/tools/mortgage',
   '/zh/tools/1031',
   '/zh/tools/roi-model',
+  '/zh/tools/glossary',
   '/zh/projects',
   '/zh/case-studies',
   '/zh/case-studies/4136-rosewood',

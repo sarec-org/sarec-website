@@ -26,6 +26,13 @@ export const TOOLS_LIST = [
     dz: '10 年现金流、IRR、Cap Rate、现金回报率、DSCR，全部公式可改。',
     de: '10-year cash flow, IRR, cap rate, cash-on-cash and DSCR — fully editable formulas.',
     tag: { zh: '会员下载', en: 'Members' }
+  },
+  {
+    href: '/zh/tools/glossary',
+    zh: '中英地产术语速查', en: 'Real Estate Glossary',
+    dz: '买卖、贷款、投资指标、产权、开发、税务、物业常用的 100 个词，中英对照、一句话解释。',
+    de: '100 common terms across deals, financing, metrics, title, development, tax and operations.',
+    tag: { zh: '免费', en: 'Free' }
   }
 ] as const;
 
