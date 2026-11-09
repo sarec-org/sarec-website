@@ -366,12 +366,18 @@ export async function register(slug: string, contactId: string, input: RegisterI
       alreadyRegistered: out.alreadyRegistered,
       orderNo: out.orderNo,
       taskId: out.task.id,
-      message: out.registration.status === 'waitlisted' ? '本场已满员，您已进入候补名单，有空位会通知您' : afterRequiredMessage(t[0]),
+      message: out.registration.status === 'waitlisted'
+        ? ((out.registration as { noshow_waitlisted?: boolean }).noshow_waitlisted
+            ? '您前两次报名没有确认也没有到场，这次先为您排在候补，有空位会通知您'
+            : '本场已满员，您已进入候补名单，有空位会通知您')
+        : afterRequiredMessage(t[0]),
       pointsAwarded,
       // 1.3.1 B：“名额已满，已为您排候补第 N 位”；报名成功写清“活动前一天请确认出席”
       waitlistPos: out.registration.status === 'waitlisted' ? await waitlistPosition(db, ev.id, contactId) : null,
       confirmNote: out.registration.status === 'registered'
-        ? (Date.now() >= new Date(ev.starts_at).getTime() - 24 * 3600_000 ? '已为您确认出席，开场前到场即可' : '活动前一天请确认出席，未确认名额会让给候补')
+        ? (Date.now() >= new Date(ev.starts_at).getTime() - 24 * 3600_000
+            ? `已为您确认出席，请在 ${new Intl.DateTimeFormat('zh-CN', { timeZone: (ev as { timezone?: string }).timezone || 'America/Los_Angeles', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ev.starts_at))} 开场前到场`
+            : '活动前一天请确认出席，未确认名额会让给候补')
         : null
     };
   });

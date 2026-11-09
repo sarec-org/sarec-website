@@ -1,6 +1,6 @@
 /** GET /api/v1/home —— 1.2 首页服务台（小程序首页、网站手机版共用）：状态卡、近期活动、上一场回顾、研究与动态、相册通知 */
 import { homeData } from '@/lib/crm/growth';
-import { handler, isMp12, ok, optionalContact, siteUrl } from '@/lib/crm/http';
+import { handler, isMp12, isMp131, mp131Safe, ok, optionalContact, siteUrl } from '@/lib/crm/http';
 import { noMoneySummaries } from '@/lib/noMoney';
 import { homeEntriesOrder } from '@/lib/crm/features';
 import { contentResearchList, setContentVisibility, type Visibility } from '@/lib/mpContent';
@@ -18,5 +18,6 @@ export const GET = handler(async (req: Request) => {
   // 小程序 1.2：状态卡、近期活动、上一场回顾的简介里不带金额
   // 1.3 L：首页入口顺序（后台“功能排行”页调整，立即生效）
   const out = { ...data, research, entriesOrder: await homeEntriesOrder() };
-  return ok((await isMp12(req)) ? noMoneySummaries(out) : out);
+  const safe = (await isMp12(req)) ? noMoneySummaries(out) : out;
+  return ok(isMp131(req) ? mp131Safe(safe) : safe);
 });

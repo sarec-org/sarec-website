@@ -12,7 +12,7 @@ globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
   if (u.includes('api.weixin.qq.com') || u.includes('api.resend.com')) throw new Error('测试里不应该调用 ' + u);
   return realFetch(url as string, init);
 }) as typeof fetch;
-process.env.TWILIO_ACCOUNT_SID = 'ACdev131'; process.env.TWILIO_AUTH_TOKEN = 'dev131'; process.env.TWILIO_FROM_NUMBER = '+15550000000';
+process.env.TWILIO_ACCOUNT_SID = 'ACdev131'; process.env.TWILIO_AUTH_TOKEN = 'dev131'; process.env.TWILIO_FROM_NUMBER = '+15550000000'; process.env.SMS_ALLOW_ALL_NONPROD = '1';
 delete process.env.WX_APPID; delete process.env.RESEND_API_KEY;
 import { getPool, withTransaction } from '@/lib/db/client';
 import { guardNotProduction } from './_guard';
@@ -64,6 +64,17 @@ async function main() {
   ok('报到当前上限 → 后面的进候补（第 1、2 位），工作人员收到一次提醒');
   const up = await seats.raiseCapacity(staff, e1.id, { add: 10 });
   assert.equal(up.capacity, 3);
+  assert.equal((await st(e1.id, c)).status, 'registered');
+  assert.equal((await st(e1.id, d)).status, 'waitlisted');
+  const lateP = await person('后来的');
+  await reg(e1.slug, lateP);
+  assert.equal((await st(e1.id, lateP)).status, 'waitlisted');
+  ok('时间线关着时 +10：候补第 1 位直接转正；后来报名的人不能插队（测试 P1-B2）');
+  await pool.query(`UPDATE registrations SET status = 'cancelled' WHERE event_id = $1 AND contact_id = $2`, [e1.id, a]);
+  await withTransaction(async (db) => { await seats.fillSeats(db, e1.id); });
+  assert.equal((await st(e1.id, d)).status, 'registered');
+  assert.equal((await st(e1.id, lateP)).status, 'waitlisted');
+  ok('有人取消：按候补顺序补上');
   await assert.rejects(seats.raiseCapacity(staff, e1.id, { add: 10 }), /已到硬上限 3 人/);
   ok('+10 不超过硬上限（到 3 为止）；到硬上限锁死，只能候补');
   const { getEventBySlug, startRegistration } = await import('@/lib/crm/events');
@@ -152,12 +163,25 @@ async function main() {
   const flake = await person('爽约');
   for (const tag of ['past1', 'past2']) {
     const e = await event(tag, -48, 10, 20);
-    await pool.query(`INSERT INTO registrations (event_id, contact_id, status, confirm_status) VALUES ($1, $2, 'registered', 'asked')`, [e.id, flake]);
+    await pool.query(`INSERT INTO registrations (event_id, contact_id, status, confirm_status, asked_at) VALUES ($1, $2, 'registered', 'asked', now() - interval '3 days')`, [e.id, flake]);
+  }
+  const old = await person('旧报名没签到');
+  for (const tag of ['old1', 'old2']) {
+    const e = await event(tag, -48, 10, 20);
+    await pool.query(`INSERT INTO registrations (event_id, contact_id, status) VALUES ($1, $2, 'registered')`, [e.id, old]);
   }
   const e6 = await event('next', 72, 10, 20);
   await reg(e6.slug, flake);
+  assert.equal((await st(e6.id, flake)).status, 'registered');
+  ok('时间线没打开：连续爽约规则不生效（测试 P1-B1）');
+  await pool.query(`DELETE FROM registrations WHERE event_id = $1 AND contact_id = $2`, [e6.id, flake]);
+  seats.timelineOverride.value = true;
+  await reg(e6.slug, flake);
   assert.equal((await st(e6.id, flake)).status, 'waitlisted');
-  ok('连续两次报了名、没确认也没来 → 下次报名进候补');
+  await reg(e6.slug, old);
+  assert.equal((await st(e6.id, old)).status, 'registered');
+  seats.timelineOverride.value = null;
+  ok('时间线打开后：真的问过确认、两次都没确认也没来 → 进候补；1.3.1 以前没问过确认的旧报名不算');
   await seats.setNoshowExempt(staff, flake, true);
   const e7 = await event('next2', 72, 10, 20);
   await reg(e7.slug, flake);
