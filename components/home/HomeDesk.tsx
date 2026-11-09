@@ -26,7 +26,7 @@ export type HomeData = {
   me: { name: string | null; memberNo: number | null; isMember: boolean; tierName: string | null } | null;
   status: Status;
   upcoming: HomeEvent[];
-  lastEvent: { slug: string; title: string; startsAt: string; recap: string | null; attended: number; photos: { thumb: string; url: string }[]; albumPublished: boolean } | null;
+  lastEvent: { slug: string; title: string; startsAt: string; recap: string | null; photos: { thumb: string; url: string }[]; albumPublished: boolean } | null;
   albums: { slug: string; title: string; cover: string | null; n: number }[];
   wechatQr: string | null;
 };
