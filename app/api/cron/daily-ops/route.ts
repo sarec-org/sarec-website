@@ -11,6 +11,7 @@ import { runFeatureReport } from '@/lib/crm/features';
 import { runPostEvent } from '@/lib/crm/postEvent';
 import { runPrepReminders } from '@/lib/crm/prep';
 import { runPayReminders } from '@/lib/crm/payLinks';
+import { inferRegions } from '@/lib/crm/regions';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,8 @@ async function run(req: Request) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   const out: Record<string, unknown> = {};
+  // 1.3.1 E：没填常驻地区的人按报名过的活动地区推断（参加一次外地活动不改）
+  out.regions = await inferRegions().catch(() => 'error');
   try {
     out.followups = await scanFollowups();
   } catch (e) {

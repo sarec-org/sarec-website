@@ -5,6 +5,7 @@
  * - 关键操作写 crm_audit_log：谁、何时、对什么、依据。
  * - 权限在 API 层用 requireStaff 判断；本文件只做业务。
  */
+import { isRegion } from '@/lib/crm/regions';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import type { Staff } from './auth';
@@ -55,6 +56,9 @@ export type EventInput = {
   address?: string;
   capacity?: number | null;
   feeCents?: number;
+  region?: string; // 1.3.1 E：所在地区
+  notifyScope?: 'local' | 'regions' | 'all'; // 通知范围：本地区 / 指定几个地区 / 全部地区（全部地区只有管理员能选）
+  notifyRegions?: string[];
   topicTags?: string[];
   registrationOpen?: boolean;
   listed?: boolean;
@@ -93,6 +97,15 @@ function eventFields(b: EventInput, partial: boolean) {
   if (b.locationName !== undefined) out.location_name = str(b.locationName, 200) || null;
   if (b.address !== undefined) out.address = str(b.address, 300) || null;
   if (b.capacity !== undefined) out.capacity = b.capacity == null || b.capacity === ('' as unknown) ? null : Math.max(0, Math.floor(Number(b.capacity)));
+  if (b.region !== undefined) {
+    if (!isRegion(b.region)) throw new CrmError('bad_request', '请选择活动所在地区');
+    out.region = b.region;
+  }
+  if (b.notifyScope !== undefined) {
+    if (!['local', 'regions', 'all'].includes(String(b.notifyScope))) throw new CrmError('bad_request', '请选择通知范围');
+    out.notify_scope = b.notifyScope;
+  }
+  if (b.notifyRegions !== undefined) out.notify_regions = (Array.isArray(b.notifyRegions) ? b.notifyRegions : []).filter(isRegion);
   if (b.feeCents !== undefined) out.fee_cents = Math.max(0, Math.round(Number(b.feeCents) || 0));
   if (b.topicTags !== undefined) out.topic_tags = (b.topicTags ?? []).filter((t) => t in TOPIC_LABELS);
   if (b.registrationOpen !== undefined) out.registration_open = !!b.registrationOpen;
@@ -149,6 +162,7 @@ function safeLink(orderNo: string): string | null {
 }
 
 export async function createEvent(s: Staff, b: EventInput) {
+  if (b.notifyScope === 'all' && !s.roles.includes('admin')) throw new CrmError('forbidden', '“全部地区”通知只有管理员能选');
   const f = eventFields(b, false);
   const slug = str(b.slug, 80).toLowerCase().replace(/[^a-z0-9-]/g, '') || slugify(f.title as string, f.starts_at as Date);
   return withTransaction(async (db) => {
@@ -167,6 +181,7 @@ export async function createEvent(s: Staff, b: EventInput) {
 }
 
 export async function updateEvent(s: Staff, id: string, b: EventInput) {
+  if (b.notifyScope === 'all' && !s.roles.includes('admin')) throw new CrmError('forbidden', '“全部地区”通知只有管理员能选');
   const f = eventFields(b, true);
   if (!Object.keys(f).length) throw new CrmError('bad_request', '没有要修改的内容');
   return withTransaction(async (db) => {

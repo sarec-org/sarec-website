@@ -4,6 +4,7 @@
  * 报名预览 / 报名提交 / 下一道选填题 / 答题 / 跳过 / 我的总览。
  * 规则全部来自 engine.ts / profile.ts / events.ts（题库 V1.1），这里只做编排与校验。
  */
+import { tzLabel } from '@/lib/crm/regions';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { afterRequiredMessage, completeness, itemBadge, pickOptional } from './engine';
 import { CrmError, getEventBySlug, startRegistration, submitAnswers, type EventRow } from './events';
@@ -109,6 +110,8 @@ export function publicEvent(e: EventRow & Record<string, unknown>) {
     startsAt: e.starts_at,
     endsAt: e.ends_at,
     timezone: (e.timezone as string) ?? 'America/Los_Angeles',
+    tzLabel: tzLabel(e.timezone as string), // 1.3.1 E：活动时间按所在地时区显示并注明
+    region: (e.region as string | undefined) ?? '洛杉矶/橙县',
     locationName: (e.location_name as string | null) ?? null,
     address: (e.address as string | null) ?? null,
     capacity: e.capacity,
