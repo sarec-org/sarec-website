@@ -54,6 +54,7 @@ export type EventInput = {
   locationName?: string;
   address?: string;
   capacity?: number | null;
+  hardCapacity?: number | null; // 1.3.1 B：硬上限（场地坐得下的极限）
   feeCents?: number;
   topicTags?: string[];
   registrationOpen?: boolean;
@@ -93,6 +94,10 @@ function eventFields(b: EventInput, partial: boolean) {
   if (b.locationName !== undefined) out.location_name = str(b.locationName, 200) || null;
   if (b.address !== undefined) out.address = str(b.address, 300) || null;
   if (b.capacity !== undefined) out.capacity = b.capacity == null || b.capacity === ('' as unknown) ? null : Math.max(0, Math.floor(Number(b.capacity)));
+  if (b.hardCapacity !== undefined) out.hard_capacity = b.hardCapacity == null || b.hardCapacity === ('' as unknown) ? null : Math.max(0, Math.floor(Number(b.hardCapacity)));
+  if (out.capacity != null && out.hard_capacity != null && Number(out.capacity) > Number(out.hard_capacity)) {
+    throw new CrmError('bad_request', '当前上限不能超过硬上限（场地坐得下的极限）');
+  }
   if (b.feeCents !== undefined) out.fee_cents = Math.max(0, Math.round(Number(b.feeCents) || 0));
   if (b.topicTags !== undefined) out.topic_tags = (b.topicTags ?? []).filter((t) => t in TOPIC_LABELS);
   if (b.registrationOpen !== undefined) out.registration_open = !!b.registrationOpen;

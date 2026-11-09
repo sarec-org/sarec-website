@@ -22,6 +22,8 @@ export const POST = handler(async (req: Request) => {
     if (t) {
       if (b.capacity === undefined && t.default_capacity != null) b.capacity = t.default_capacity;
       if (b.feeCents === undefined && t.default_fee_cents != null) b.feeCents = t.default_fee_cents;
+      const hard = (t as { default_hard_capacity?: number | null }).default_hard_capacity;
+      if (b.hardCapacity === undefined && hard != null) b.hardCapacity = Math.max(hard, Number(b.capacity ?? 0));
     }
   }
   const event = await createEvent(s, b);
