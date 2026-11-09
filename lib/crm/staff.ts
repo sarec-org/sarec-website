@@ -56,6 +56,7 @@ export type EventInput = {
   address?: string;
   capacity?: number | null;
   hardCapacity?: number | null; // 1.3.1 B：硬上限（场地坐得下的极限）
+  videoUrl?: string | null; // 1.3.1 G5：活动视频（YouTube / 视频号链接）
   feeCents?: number;
   region?: string; // 1.3.1 E：所在地区
   notifyScope?: 'local' | 'regions' | 'all'; // 通知范围：本地区 / 指定几个地区 / 全部地区（全部地区只有管理员能选）
@@ -107,6 +108,11 @@ function eventFields(b: EventInput, partial: boolean) {
   if (b.hardCapacity !== undefined) out.hard_capacity = b.hardCapacity == null || b.hardCapacity === ('' as unknown) ? null : Math.max(0, Math.floor(Number(b.hardCapacity)));
   if (out.capacity != null && out.hard_capacity != null && Number(out.capacity) > Number(out.hard_capacity)) {
     throw new CrmError('bad_request', '当前上限不能超过硬上限（场地坐得下的极限）');
+  }
+  if (b.videoUrl !== undefined) {
+    const v = str(b.videoUrl, 300);
+    if (v && !/^https:\/\/(www\.)?(youtube\.com|youtu\.be|channels\.weixin\.qq\.com|weixin\.qq\.com)\//i.test(v)) throw new CrmError('bad_request', '视频链接请填 YouTube 或视频号的链接');
+    out.video_url = v || null;
   }
   if (b.region !== undefined) {
     if (!isRegion(b.region)) throw new CrmError('bad_request', '请选择活动所在地区');

@@ -48,6 +48,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     hardCapacity: initial?.hard_capacity == null ? '' : String(initial.hard_capacity),
     region: String(initial?.region ?? '洛杉矶/橙县'),
     notifyScope: String(initial?.notify_scope ?? 'local'),
+    videoUrl: String(initial?.video_url ?? ''),
     fee: initial?.fee_cents ? String(Number(initial.fee_cents) / 100) : '0',
     topicTags: (initial?.topic_tags as string[]) ?? [],
     listed: initial ? initial.is_listed !== false : true
@@ -97,6 +98,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       hardCapacity: f.hardCapacity === '' ? null : Number(f.hardCapacity),
       region: f.region,
       notifyScope: f.notifyScope,
+      ...(initial ? { videoUrl: f.videoUrl } : {}),
       feeCents: Math.round(Number(f.fee || 0) * 100),
       topicTags: f.topicTags,
       listed: f.listed
@@ -162,6 +164,8 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       </div>
       {input('capacity', '当前上限（报到这个数后进候补；不填 = 不限）', 'number', { min: 0, inputMode: 'numeric' })}
       {input('hardCapacity', '硬上限（场地坐得下的极限；加名额最多加到这里）', 'number', { min: 0, inputMode: 'numeric' })}
+      {initial && input('videoUrl', '活动视频链接（活动后填；YouTube 会嵌入回顾页，视频号给链接）')}
+      {initial && initial.slug ? <p className={styles.small}>网站回顾页：<a href={`/zh/e/${String(initial.slug)}/recap`} target="_blank" rel="noreferrer">/zh/e/{String(initial.slug)}/recap</a>（照片发布、回顾审核后自动有内容）</p> : null}
       <div className={styles.field}>
         <label className={styles.label} htmlFor="ev-cover">封面图（选填；不传就用这个类型的默认图）</label>
         <input id="ev-cover" type="file" accept="image/*" onChange={(e) => setCover(e.target.files?.[0] ?? null)} />
