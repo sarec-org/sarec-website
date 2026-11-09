@@ -114,6 +114,12 @@ async function main() {
     await nl.sendTest(ops as never, id);
     const test = sent.pop()!;
     assert.ok(String((test.body as { subject: string }).subject).startsWith('【测试】'));
+    // 标题本来就以【测试】开头：测试邮件不再重复加
+    const { id: dupId } = await nl.createIssue(ops as never, { subject: '【测试】{姓名}，本周通讯', body: '{姓名}，您好：\n\n正文', filters: f });
+    made.issues.push(dupId);
+    await nl.sendTest(ops as never, dupId);
+    const dupSubj = String((sent.pop()!.body as { subject: string }).subject);
+    assert.ok(dupSubj.startsWith('【测试】') && !dupSubj.startsWith('【测试】【测试】'), `测试邮件标题不重复【测试】：${dupSubj}`);
     assert.ok(String((test.body as { html: string }).html).includes('一键退订') && String((test.body as { html: string }).html).includes('500 S Hacienda Blvd'));
     assert.ok((test.body as { headers: Record<string, string> }).headers['List-Unsubscribe-Post'] === 'List-Unsubscribe=One-Click');
     await assert.rejects(nl.confirmSend(ops as never, id), /管理员/, '助理不能确认群发');

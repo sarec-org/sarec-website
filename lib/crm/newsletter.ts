@@ -335,7 +335,9 @@ export async function getIssue(id: number) {
 }
 
 function render(i: Pick<IssueRow, 'subject' | 'body'>, r: Recipient | Pick<Recipient, 'name' | 'company' | 'lastEvent' | 'email'>, opts: { test?: boolean; preview?: boolean } = {}) {
-  const subject = (opts.test ? '【测试】' : '') + personalize(i.subject, r, 'subject');
+  const base = personalize(i.subject, r, 'subject');
+  // 测试邮件标题前加“【测试】”；标题本来就以【测试】开头时不再重复加
+  const subject = opts.test && !/^\s*[【\[]测试[】\]]/.test(base) ? `【测试】${base}` : base;
   const body = personalize(i.body, r, 'body');
   const unsub = opts.preview ? '#' : unsubUrl(r.email);
   const html = `<!doctype html><html><body style="margin:0;background:#F4F1EA;font-family:-apple-system,'PingFang SC','Helvetica Neue',Arial,sans-serif;color:#1F2A36">
