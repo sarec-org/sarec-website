@@ -17,6 +17,11 @@ export const GET = handler(async (req: Request) => {
   const research = sp.get('client') === 'web' ? [] : contentResearchList().items.slice(0, 6);
   // 小程序 1.2：状态卡、近期活动、上一场回顾的简介里不带金额
   // 1.3 L：首页入口顺序（后台“功能排行”页调整，立即生效）
-  const out = { ...data, research, entriesOrder: await homeEntriesOrder() };
+  const out: Record<string, unknown> = { ...data, research, entriesOrder: await homeEntriesOrder() };
+  // 1.3.1 G：新首页（轮播、待办卡、近期活动、外地公告、照片墙、会员企业、知识与工具）；1.3.0 不带 v=131，不受影响
+  if (sp.get('v') === '131') {
+    const { home131 } = await import('@/lib/crm/home131');
+    out.h131 = await home131(me, { region: sp.get('region') });
+  }
   return ok((await isMp12(req)) ? noMoneySummaries(out) : out);
 });

@@ -13,6 +13,7 @@ const SECTIONS: { href: string; title: string; desc: string; role: string }[] = 
   { href: '/zh/staff/checkin-questions', title: '签到选择题', desc: '来过的人扫码时自动出的 1–3 道选择题：题目、选项、顺序、启用', role: 'ops' },
   { href: '/zh/staff/join-requests', title: '入会申请', desc: '小程序“加入商会”提交的申请：一键发网站缴费链接（短信 / 邮件 / 复制发微信），满 7 天没入会提醒跟进', role: 'ops' },
   { href: '/zh/staff/payments', title: '核款工作台', desc: '核对 Zelle 到账，一键确认或标记未到账', role: 'finance' },
+  { href: '/zh/staff/home-slides', title: '首页轮播', desc: '系统自动排；只处理例外：置顶、隐藏、改文案 / 换图、手动加一张（都要截止时间）；预览新人 / 已报名 / 会员分别看到什么', role: 'ops' },
   { href: '/zh/staff/events', title: '活动管理', desc: '新建、编辑、关闭报名、下载签到码', role: 'ops' },
   { href: '/zh/staff/contacts', title: '客户查询', desc: '档案、时间线、积分、标签、导出', role: 'ops' },
   { href: '/zh/staff/album', title: '活动相册', desc: '上传现场照片（自动加水印）、活动封面、发布并通知到场的人', role: 'ops' },
