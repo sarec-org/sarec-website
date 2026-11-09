@@ -130,6 +130,12 @@ async function markArrived(db: Db, ev: EventRow, contactId: string) {
 export async function scan(slug: string, contactId: string): Promise<CheckinStep> {
   return withTransaction(async (db) => {
     const ev = await requireEvent(db, slug);
+    // 流程数据：现场码被扫了多少人（每人每场记一次），用来算“扫码完成签到比例”
+    await db.query(
+      `INSERT INTO track_events (name, client, contact_id, target)
+       SELECT 'checkin_scan', 'server', $1, $2 WHERE NOT EXISTS (SELECT 1 FROM track_events WHERE name = 'checkin_scan' AND contact_id = $1 AND target = $2)`,
+      [contactId, ev.slug]
+    ).catch(() => undefined);
     if (!(await recognized(db, contactId, ev.id))) {
       return { kind: 'new', professions: PROFESSIONS, phoneQuick: await phoneQuickOn(db), smsAvailable: twilioVerifyConfigured() };
     }

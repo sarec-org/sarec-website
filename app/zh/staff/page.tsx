@@ -23,6 +23,7 @@ const SECTIONS: { href: string; title: string; desc: string; role: string }[] = 
   { href: '/zh/staff/newsletter', title: '邮件通讯', desc: '给验证过邮箱的会员和注册用户发通讯：按标签筛选、个性化、先发测试给东哥、东哥确认后才群发；看送达、打开、点击、退订', role: 'ops' },
   { href: '/zh/staff/prep', title: '活动筹备清单', desc: '每场活动按类型自动生成的筹备清单：负责人、截止时间、打勾、拍摄清单、复盘；模板也在这里改', role: 'ops|checkin' },
   { href: '/zh/staff/recaps', title: '活动回顾', desc: '活动结束后自动整理好的照片精选、回顾、推文初稿，一次审核发布', role: 'ops' },
+  { href: '/zh/staff/flow-stats', title: '流程数据', desc: '一页看懂：扫码完成签到比例、报名到场率、分享带来的报名、入会转化、重复参加人数、每场人工处理多少项', role: 'ops' },
   { href: '/zh/staff/features', title: '功能排行', desc: '每个功能用了多少、带来多少报名到场入会；调首页入口顺序', role: 'ops' },
   { href: '/zh/staff/channels', title: '渠道码', desc: '合作商家 / 机构 / 副会长单位专属码，按渠道看报名到场', role: 'ops' },
   { href: '/zh/staff/cards', title: '内容审核', desc: '会员自己填写的电子名片、客户上传的照片：逐条查看，可下架、退回、删除', role: 'ops' },
