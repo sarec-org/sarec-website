@@ -125,6 +125,7 @@ function Body() {
           onLoad={(i) => setInp({ ...EX1031_DEFAULTS, ...i })}
           share={() => ({
             title: L(lang, '1031 换房税务粗算', '1031 exchange tax estimate'),
+            path: '/zh/tools/1031',
             highlight: [L(lang, '递延税额（粗算）', 'Tax deferred (est.)'), usd(r.deferred)],
             lines: [
               [L(lang, '卖出价', 'Sale price'), usd(clean.salePrice)],
