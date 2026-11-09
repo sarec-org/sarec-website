@@ -3,7 +3,9 @@ const nextConfig = {
   experimental: {
     // AI 助手知识库在接口里同步读取 content/（文章、活动、新闻 YAML）；确保这些文件随函数一起部署
     outputFileTracingIncludes: {
-      '/api/v1/agent/**': ['./content/**/*', './app/zh/(internal)/research/*/page.tsx']
+      '/api/v1/agent/**': ['./content/**/*', './app/zh/(internal)/research/*/page.tsx'],
+      // 1.4 会员下载模板（不放 public/，只经接口给会员）
+      '/api/v1/tools/download/**': ['./private/tools/*']
     }
   },
   images: {
