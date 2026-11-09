@@ -132,6 +132,7 @@ export async function requireStaff(req: Request, role: StaffRole): Promise<Staff
   const id = await requireContact(req);
   const s = await staffFor(id);
   if (!staffCan(s, role)) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
+  await regionScope(req, s);
   return s!;
 }
 
@@ -177,5 +178,64 @@ export async function requireStaffAny(req: Request, roles: StaffRole[]): Promise
   const id = await requireContact(req);
   const s = await staffFor(id);
   if (!s || !roles.some((r) => staffCan(s, r))) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
+  await regionScope(req, s);
   return s;
+}
+
+/** 1.3.1 及以后的小程序（X-Sarec-Client: mp-1.3.1 …）：不给任何人数、金额（只给“名额状态”和“免费 / 收费”） */
+const MP131 = /^mp-1\.(3\.[1-9]\d*|[4-9]|\d{2,})(\b|$)/;
+export function isMp131(req: Request): boolean {
+  return MP131.test((req.headers.get('x-sarec-client') ?? '').toLowerCase());
+}
+const DROP = new Set(['registered', 'capacity', 'hardCapacity', 'hard_capacity', 'seatsLeft', 'amountCents', 'amount_cents', 'grossCents', 'checked_in', 'attended']);
+/** 递归去掉人数和金额；feeCents 只留“收不收费”（1 / 0），小程序按它显示“免费 / 收费活动” */
+export function mp131Safe<T>(v: T): T {
+  if (Array.isArray(v)) return v.map((x) => mp131Safe(x)) as unknown as T;
+  if (v && typeof v === 'object' && !(v instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+      if (DROP.has(k)) continue;
+      if (k === 'feeCents' || k === 'fee_cents') out[k] = Number(x) > 0 ? 1 : 0;
+      else out[k] = mp131Safe(x);
+    }
+    return out as T;
+  }
+  return v;
+}
+
+/**
+ * 1.3.1 F（测试 P1-F1）：地区管理员（非管理员、staff_roles.regions 不为空）只能碰自己地区的活动。
+ * - 只开放：活动（列表按地区过滤；单场按地区核对）、工作台、签到台、筹备清单、工作人员本人信息；
+ *   客户查询、通讯、合并、入会申请、首页轮播、题库、设置、团队、数据等全站页面一律不开放。
+ * - 路径里的活动编号、?eventId=、请求体里的 eventId，都核对活动所在地区。
+ * - 签到台查人必须带 eventId（只在自己地区的活动里查）。
+ */
+const REGION_OK = ['/api/v1/staff/me', '/api/v1/staff/events', '/api/v1/staff/checkin', '/api/v1/staff/prep', '/api/v1/staff/mp-bind', '/api/v1/workbench'];
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+export async function regionScope(req: Request, s: Staff | null): Promise<void> {
+  if (!s || s.roles.includes('admin') || !s.regions?.length) return;
+  const u = new URL(req.url);
+  const path = u.pathname;
+  const deny = () => { throw new CrmError('forbidden', `您是 ${s.regions!.join('、')} 地区管理员，只能管理自己地区的活动`); };
+  if (!REGION_OK.some((p) => path === p || path.startsWith(p + '/'))) deny();
+  const ids = new Set<string>();
+  const m = path.match(new RegExp(`/(?:staff/events|workbench/event|staff/prep)/(${UUID})`));
+  if (m) ids.add(m[1]);
+  const q = u.searchParams.get('eventId');
+  if (q) ids.add(q);
+  if (req.method !== 'GET' && !req.bodyUsed && (req.headers.get('content-type') ?? '').includes('application/json')) {
+    let b: { eventId?: string } | null = null;
+    try {
+      b = (await req.clone().json()) as { eventId?: string } | null;
+    } catch {
+      b = null;
+    }
+    if (b?.eventId) ids.add(String(b.eventId));
+  }
+  if (path.startsWith('/api/v1/staff/checkin/search') && !q) deny();
+  for (const id of Array.from(ids)) {
+    if (!new RegExp(`^${UUID}$`).test(id)) deny();
+    const { rows } = await getPool().query<{ region: string | null }>(`SELECT region FROM events WHERE id = $1`, [id]);
+    if (!rows[0] || !rows[0].region || !s.regions.includes(rows[0].region)) deny();
+  }
 }
