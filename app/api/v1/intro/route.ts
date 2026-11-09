@@ -1,7 +1,7 @@
 /** GET /api/v1/intro —— 商会介绍页（朋友扫“认识商会”邀请卡打开）：简介、往期活动照片、近期活动、加商会微信、了解入会（不出现会费金额） */
 import { getPool } from '@/lib/db/client';
 import { listEvents } from '@/lib/crm/flow';
-import { handler, ok, optionalContact } from '@/lib/crm/http';
+import { handler, isMp131, mp131Safe, ok, optionalContact } from '@/lib/crm/http';
 import { noMoneySummaries } from '@/lib/noMoney';
 import { wechatQrFor } from '@/lib/wecom';
 export const runtime = 'nodejs';
@@ -19,7 +19,7 @@ export const GET = handler(async (req: Request) => {
       WHERE e.is_listed AND e.event_status <> 'cancelled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now()`
   );
   const qr = await wechatQrFor('intro', await optionalContact(req));
-  return ok({
+  const out = {
     title: '中美房地产商会 SAREC',
     tagline: '连接中美资本，重构房地产项目协作',
     about: [
@@ -34,5 +34,7 @@ export const GET = handler(async (req: Request) => {
     upcoming: noMoneySummaries((await listEvents(false)).slice(0, 3)),
     wechatQr: qr?.url ?? null,
     join: '想了解入会，可以加商会微信或联系工作人员，我们会为您介绍会员权益。'
-  });
+  };
+  // 1.3.1 小程序：不给人数和金额（测试 P2，和活动列表 / 详情 / 首页同一套）
+  return ok(isMp131(req) ? mp131Safe(out) : out);
 });
