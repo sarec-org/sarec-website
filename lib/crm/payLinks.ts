@@ -35,7 +35,7 @@ export function payTokenOk(orderNo: string, t: string | null | undefined): boole
 const base = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
 export const payLink = (orderNo: string) => `${base()}/zh/pay/${orderNo}?t=${payToken(orderNo)}`;
 
-async function smsSend(to: string, text: string): Promise<boolean> {
+export async function smsSend(to: string, text: string): Promise<boolean> {
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const tok = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_FROM_NUMBER;
