@@ -22,6 +22,7 @@ export default function StaffSettings() {
   const [pass, setPass] = useState('');
   const [offer, setOffer] = useState({ merchant: '', category: '', offer: '', conditions: '', contact: '', validUntil: '' });
   const [st, setSt] = useState({ email: '', name: '', roles: [] as string[] });
+  const [tl, setTl] = useState<boolean | null>(null);
 
   const val = (data: S, k: string) => data.settings.find((x) => x.key === k)?.value;
   const load = useCallback(async () => {
@@ -34,6 +35,8 @@ export default function StaffSettings() {
     setFee(Object.fromEntries(Object.entries(ff).map(([k, v]) => [k, String(v / 100)])));
     setPpd(String(val(r.data, 'points_per_dollar') ?? 10));
     setPass(String(Number(val(r.data, 'room_pass_cents') ?? 29900) / 100));
+    const t = await api<{ timelineEnabled: boolean }>('/api/v1/workbench/seats');
+    setTl(t.ok ? !!t.data.timelineEnabled : null);
   }, []);
   useEffect(() => {
     load();
@@ -42,6 +45,12 @@ export default function StaffSettings() {
   async function post(body: Record<string, unknown>, ok: string) {
     const r = await api('/api/v1/staff/settings', { body });
     setMsg(r.ok ? { ok: true, text: ok } : { ok: false, text: r.message });
+    load();
+  }
+  /** 1.3.1 B：确认时间线开关（走名额接口，留操作记录） */
+  async function toggleTimeline() {
+    const r = await api<{ on: boolean }>('/api/v1/workbench/seats', { body: { action: 'timeline', on: !tl } });
+    setMsg(r.ok ? { ok: true, text: !tl ? '确认时间线已打开：报了名的人会在活动前收到确认消息，名额按候补顺序递补' : '确认时间线已关闭：不再发确认消息，也不再自动转人' } : { ok: false, text: r.message });
     load();
   }
   async function saveOffer() {
@@ -64,6 +73,18 @@ export default function StaffSettings() {
         d && (
           <>
             <Msg m={msg} />
+            <h2 className={styles.h2}>活动确认时间线</h2>
+            <div className={styles.card}>
+              <p>
+                当前：<strong>{tl === null ? '读不到，请刷新' : tl ? '已打开' : '已关闭（一条确认消息都不发、一个人都不自动转）'}</strong>
+              </p>
+              <p className={styles.small}>打开后：活动前按设定时间请报名的人确认出席；没确认的名额按候补顺序递补。随时可以关。</p>
+              {tl !== null && (
+                <button className={styles.btn} onClick={toggleTimeline}>
+                  {tl ? '关闭确认时间线' : '打开确认时间线'}
+                </button>
+              )}
+            </div>
             <h2 className={styles.h2}>Zelle 付款</h2>
             <div className={styles.card}>
               <p>当前：<strong>{zelleOn ? '已打开（付款页显示 Zelle 和银行卡）' : '已关闭（付款页只显示银行卡）'}</strong></p>

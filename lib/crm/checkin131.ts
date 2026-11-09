@@ -176,7 +176,7 @@ export async function answer(slug: string, contactId: string, answers: Record<st
 }
 
 /** 记回答 + 积分（每题一次；手填的多给）。返回新得积分。 */
-export async function saveAnswers(db: Db, contactId: string, answers: Record<string, { choice?: string; text?: string }>): Promise<number> {
+export async function saveAnswers(db: Db, contactId: string, answers: Record<string, { choice?: string; text?: string }>, opts: { noPoints?: boolean } = {}): Promise<number> {
   const qs = new Map((await activeQuestions(db)).map((q) => [q.key, q]));
   let earned = 0;
   for (const [key, a] of Object.entries(answers ?? {})) {
@@ -203,6 +203,8 @@ export async function saveAnswers(db: Db, contactId: string, answers: Record<str
         await db.query(`UPDATE contacts SET role_category = coalesce(role_category, $2), role_sub = coalesce(role_sub, $3), updated_at = now() WHERE id = $1`, [contactId, cat, sub]);
       }
     }
+    // 东哥 11/9：新人签到页的“职业”是必填项，不算补资料，不另给分（新人签到就是签到的 10 分）
+    if (opts.noPoints) continue;
     const ins = await db.query(
       `INSERT INTO points_ledger (contact_id, category, points, event_key, reason, rule_version)
        VALUES ($1, 'profile', $2, $3, $4, 'v1.3.1') ON CONFLICT (event_key) DO NOTHING RETURNING id`,
@@ -388,7 +390,7 @@ export async function newcomer(slug: string, me: string, b: NewcomerInput): Prom
     }
     const { rows: has } = await db.query(`SELECT 1 FROM registrations WHERE event_id = $1 AND contact_id = $2 AND status <> 'cancelled'`, [ev.id, target]);
     if (!has[0]) await startRegistration(db, ev, target, { source: 'onsite' });
-    const earned = await saveAnswers(db, target, { profession: { choice: profession! } });
+    const earned = await saveAnswers(db, target, { profession: { choice: profession! } }, { noPoints: true });
     // 新人这一屏就是这次唯一要填的：不再追加选择题
     await db.query(`UPDATE registrations SET ck_asked_at = coalesce(ck_asked_at, now()) WHERE event_id = $1 AND contact_id = $2`, [ev.id, target]);
     const step = await afterRecognized(db, ev, target, earned);
