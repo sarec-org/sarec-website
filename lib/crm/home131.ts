@@ -65,7 +65,7 @@ export function clock(d: Date, tz: string) {
   const seg = p.h < 6 ? '凌晨' : p.h < 12 ? '上午' : p.h < 18 ? '下午' : '晚';
   return `${seg} ${h12}:${p.min}`;
 }
-/** “今天” / “明天” / “12 月 12 日 周六” */
+/** “今天” / “明天” / “M 月 D 日 周X” */
 export function dayWord(d: Date, tz: string, now = new Date()) {
   const a = parts(d, tz);
   const b = parts(now, tz);
@@ -76,7 +76,7 @@ export function dayWord(d: Date, tz: string, now = new Date()) {
   if (diff === 1) return '明天';
   return `${a.m} 月 ${a.d} 日 周${WD[a.wd] ?? ''}`;
 }
-/** “12 月 12 日 周六”（海报等不用“今天 / 明天”的地方） */
+/** “M 月 D 日 周X”（海报等不用“今天 / 明天”的地方） */
 export function fullDate(d: Date, tz: string) {
   const p = parts(d, tz);
   return `${p.m} 月 ${p.d} 日 周${WD[p.wd] ?? ''}`;
