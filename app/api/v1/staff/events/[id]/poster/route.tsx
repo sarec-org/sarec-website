@@ -40,7 +40,7 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
   if (!e) throw new CrmError('not_found', '找不到这场活动');
   const tz = e.timezone || 'America/Los_Angeles';
   const [W, H] = SIZES[size];
-  const cover = await dataUri(e.cover_url ? (e.cover_url.startsWith('http') ? e.cover_url : SITE() + e.cover_url) : `${SITE()}/_next/image?url=${encodeURIComponent(defaultCover(e.template_key, e.id))}&w=1200&q=80`);
+  const cover = await dataUri(e.cover_url ? (e.cover_url.startsWith('http') ? e.cover_url : SITE() + e.cover_url) : `${SITE()}${defaultCover(e.template_key, e.id)}`);
   const code = wxConfigured() ? await eventRegisterCode(e.slug) : await QRCode.toBuffer(`SAREC-TEST:pages/event/event?slug=${e.slug}`, { margin: 1, width: 400 });
   const qr = `data:image/png;base64,${code.toString('base64')}`;
   const when = `${fullDate(e.starts_at, tz)} ${clock(e.starts_at, tz)}（${tzLabel(tz)}）`;

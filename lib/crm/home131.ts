@@ -36,10 +36,11 @@ const img = (path: string, w = 750) => `${SITE()}/_next/image?url=${encodeURICom
 
 /** 默认图库（没传封面时按活动类型选；都是商会网站上已有的城市 / 建筑 / 会场图） */
 export const DEFAULT_COVERS: Record<string, string[]> = {
-  lecture: ['/images/la/la-skyline-marquee.jpg', '/images/home/los-angeles-hero.jpg', '/images/events/business-project-meeting.jpg', '/images/projects/4155-wilshire-bronson.webp', '/images/projects/3434-chesapeake-ed1.webp'],
-  face: ['/images/events/business-handshake-meeting.jpg', '/images/events/business-project-meeting.jpg', '/images/projects/2219-wellesley-v2.webp', '/images/projects/4155-wilshire-bronson.webp', '/images/la/la-skyline-marquee.jpg'],
-  summit: ['/images/home/los-angeles-hero.jpg', '/images/la/la-skyline-marquee.jpg', '/images/projects/1340-glendale-triangle.webp', '/images/projects/3434-chesapeake-ed1.webp', '/images/events/business-project-meeting.jpg'],
-  other: ['/images/la/la-skyline-marquee.jpg', '/images/events/business-project-meeting.jpg', '/images/projects/236-berendo.webp', '/images/projects/2478-purdue.webp', '/images/home/los-angeles-hero.jpg']
+  // 只用 jpg / png（海报生成器不认 webp）
+  lecture: ['/images/la/la-skyline-marquee.jpg', '/images/home/los-angeles-hero.jpg', '/images/events/business-project-meeting.jpg', '/images/artgrid/services-hero-la-city.jpg', '/images/artgrid/la-city-02.jpg'],
+  face: ['/images/events/business-handshake-meeting.jpg', '/images/events/business-project-meeting.jpg', '/images/projects/4136-rosewood-rendering.png', '/images/artgrid/la-city-02.jpg', '/images/la/la-skyline-marquee.jpg'],
+  summit: ['/images/home/los-angeles-hero.jpg', '/images/la/la-skyline-marquee.jpg', '/images/artgrid/services-hero-la-city.jpg', '/images/artgrid/la-city-02.jpg', '/images/events/business-project-meeting.jpg'],
+  other: ['/images/la/la-skyline-marquee.jpg', '/images/events/business-project-meeting.jpg', '/images/artgrid/la-city-02.jpg', '/images/projects/4136-rosewood-rendering.png', '/images/home/los-angeles-hero.jpg']
 };
 export function defaultCover(type: string | null | undefined, id: string): string {
   const list = DEFAULT_COVERS[type && DEFAULT_COVERS[type] ? type : 'other'];
