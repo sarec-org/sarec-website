@@ -2,15 +2,19 @@
 import { createEvent, listStaffEvents, type EventInput } from '@/lib/crm/staff';
 import { staffCan } from '@/lib/crm/auth';
 import { CrmError } from '@/lib/crm/events';
-import { body, denyMpStaffMoney, handler, ok, requireContact, requireStaff } from '@/lib/crm/http';
+import { body, denyMpStaffMoney, handler, ok, requireContact, requireStaff, regionScope } from '@/lib/crm/http';
 import { staffFor } from '@/lib/crm/auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   await denyMpStaffMoney(req); // 1.3 N（测试 P1-N2）：小程序会话不返回活动费用
   const s = await staffFor(await requireContact(req));
+  await regionScope(req, s); // 1.3.1 F：地区管理员只能碰自己地区的活动
   if (!staffCan(s, 'ops') && !staffCan(s, 'checkin')) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
-  return ok({ events: await listStaffEvents() });
+  // 1.3.1 F：地区管理员只看自己地区的活动
+  const all = (await listStaffEvents()) as { region?: string }[];
+  const mine = s && !s.roles.includes('admin') && s.regions?.length ? all.filter((e) => !e.region || s.regions!.includes(e.region)) : all;
+  return ok({ events: mine });
 });
 export const POST = handler(async (req: Request) => {
   const s = await requireStaff(req, 'ops');
@@ -22,6 +26,8 @@ export const POST = handler(async (req: Request) => {
     if (t) {
       if (b.capacity === undefined && t.default_capacity != null) b.capacity = t.default_capacity;
       if (b.feeCents === undefined && t.default_fee_cents != null) b.feeCents = t.default_fee_cents;
+      const hard = (t as { default_hard_capacity?: number | null }).default_hard_capacity;
+      if (b.hardCapacity === undefined && hard != null) b.hardCapacity = Math.max(hard, Number(b.capacity ?? 0));
     }
   }
   const event = await createEvent(s, b);

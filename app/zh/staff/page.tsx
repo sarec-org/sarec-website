@@ -8,7 +8,12 @@ import { api } from '@/components/crm/client';
 const SECTIONS: { href: string; title: string; desc: string; role: string }[] = [
   { href: '/zh/staff/followups', title: '待跟进任务', desc: 'AI 助手线索、新咨询、活动后希望了解、30 天内到期会员；失败与异常在“待处理”', role: 'ops' },
   { href: '/zh/staff/checkin', title: '现场签到台', desc: '查人、代签到、现场登记', role: 'checkin' },
+  { href: '/zh/staff/backfill', title: '补登记到场', desc: '实际来了但系统没记上的人：按手机号补报名并记到场，活动结束后也能补，留操作记录', role: 'checkin' },
+  { href: '/zh/staff/duplicates', title: '合并重复档案', desc: '同手机号 / 同邮箱 / 同名的疑似重复，确认后合并（报名、签到、积分都保留，重复积分不相加），可撤销', role: 'ops' },
+  { href: '/zh/staff/checkin-questions', title: '签到选择题', desc: '来过的人扫码时自动出的 1–3 道选择题：题目、选项、顺序、启用', role: 'ops' },
+  { href: '/zh/staff/join-requests', title: '入会申请', desc: '小程序“加入商会”提交的申请：一键发网站缴费链接（短信 / 邮件 / 复制发微信），满 7 天没入会提醒跟进', role: 'ops' },
   { href: '/zh/staff/payments', title: '核款工作台', desc: '核对 Zelle 到账，一键确认或标记未到账', role: 'finance' },
+  { href: '/zh/staff/home-slides', title: '首页轮播', desc: '系统自动排；只处理例外：置顶、隐藏、改文案 / 换图、手动加一张（都要截止时间）；预览新人 / 已报名 / 会员分别看到什么', role: 'ops' },
   { href: '/zh/staff/events', title: '活动管理', desc: '新建、编辑、关闭报名、下载签到码', role: 'ops' },
   { href: '/zh/staff/contacts', title: '客户查询', desc: '档案、时间线、积分、标签、导出', role: 'ops' },
   { href: '/zh/staff/album', title: '活动相册', desc: '上传现场照片（自动加水印）、活动封面、发布并通知到场的人', role: 'ops' },
@@ -18,10 +23,12 @@ const SECTIONS: { href: string; title: string; desc: string; role: string }[] = 
   { href: '/zh/staff/newsletter', title: '邮件通讯', desc: '给验证过邮箱的会员和注册用户发通讯：按标签筛选、个性化、先发测试给东哥、东哥确认后才群发；看送达、打开、点击、退订', role: 'ops' },
   { href: '/zh/staff/prep', title: '活动筹备清单', desc: '每场活动按类型自动生成的筹备清单：负责人、截止时间、打勾、拍摄清单、复盘；模板也在这里改', role: 'ops|checkin' },
   { href: '/zh/staff/recaps', title: '活动回顾', desc: '活动结束后自动整理好的照片精选、回顾、推文初稿，一次审核发布', role: 'ops' },
+  { href: '/zh/staff/flow-stats', title: '流程数据', desc: '一页看懂：扫码完成签到比例、报名到场率、分享带来的报名、入会转化、重复参加人数、每场人工处理多少项', role: 'ops' },
   { href: '/zh/staff/features', title: '功能排行', desc: '每个功能用了多少、带来多少报名到场入会；调首页入口顺序', role: 'ops' },
   { href: '/zh/staff/channels', title: '渠道码', desc: '合作商家 / 机构 / 副会长单位专属码，按渠道看报名到场', role: 'ops' },
   { href: '/zh/staff/cards', title: '内容审核', desc: '会员自己填写的电子名片、客户上传的照片：逐条查看，可下架、退回、删除', role: 'ops' },
   { href: '/zh/staff/display', title: '官网展示审核', desc: '会员资料能否在官网展示（不影响会员身份）', role: 'ops' },
+  { href: '/zh/staff/team', title: '团队', desc: '工作人员和权限：加人（手机号 + 角色 + 地区 → 绑定码）、停用、改角色，立即生效；每个微信账号单独一行；关键操作记录', role: 'admin' },
   { href: '/zh/staff/settings', title: '设置', desc: '会员价、屏幕费、积分比例、商家优惠、工作人员', role: 'admin' }
 ];
 
