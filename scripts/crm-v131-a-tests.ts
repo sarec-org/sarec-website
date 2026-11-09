@@ -153,6 +153,20 @@ async function main() {
   assert.equal(await sessionContact(shellTok), main);
   ok('旧会话 / 新会话都按主档案算（换微信不丢资格）');
 
+  const wx2 = await contact('微信用户');
+  const p3 = P();
+  wxPhone = p3;
+  const shown = await ck.wxPhoneStep(wx2, 'dev131code789');
+  assert.equal(shown.phone, p3);
+  assert.equal(shown.cc, '+1');
+  assert.equal(ck.proofOk(wx2, p3, shown.proof), true);
+  assert.equal(ck.proofOk(wx2, P(), shown.proof), false);
+  assert.equal(ck.proofOk(main, p3, shown.proof), false);
+  const n4 = await ck.newcomer(ev.slug, wx2, { name: 'DEV131-一键填', profession: '贷款', phone: p3, phoneProof: shown.proof });
+  const { rows: v4 } = await pool.query<{ v: Date | null }>(`SELECT phone_verified_at AS v FROM contacts WHERE id = $1`, [n4.contactId]);
+  assert.ok(v4[0].v);
+  ok('一键填：先给客户看号码，提交时带签名证明；换号码、换人都不认，验证过的号写进档案');
+
   const busy = await contact('DEV131-有内容的微信', { phone_e164: P() });
   await pool.query(`INSERT INTO registrations (event_id, contact_id) VALUES ($1, $2)`, [ev2.id, busy]);
   const p2 = P();

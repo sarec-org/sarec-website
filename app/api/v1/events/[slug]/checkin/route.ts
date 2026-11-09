@@ -13,14 +13,14 @@ import { register, requireEvent } from '@/lib/crm/flow';
 import { loadProfile } from '@/lib/crm/profile';
 import { body, handler, ok, requireContact, siteUrl } from '@/lib/crm/http';
 import { checkinKeyOk } from '@/lib/crm/wechat';
-import { answer as ckAnswer, newcomer, scan, sendSms } from '@/lib/crm/checkin131';
+import { answer as ckAnswer, newcomer, scan, sendSms, wxPhoneStep } from '@/lib/crm/checkin131';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 type Body = {
   k?: string; name?: string; roleSub?: string; phone?: string; email?: string; v?: number;
   // 1.3.1（v = 4）
-  step?: 'scan' | 'sms' | 'new' | 'answers'; profession?: string; phoneCode?: string; cc?: string; smsCode?: string;
+  step?: 'scan' | 'sms' | 'wxphone' | 'new' | 'answers'; profession?: string; phoneCode?: string; phoneProof?: string; cc?: string; smsCode?: string;
   answers?: Record<string, { choice?: string; text?: string }>;
 };
 
@@ -43,6 +43,7 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
   }
   // 1.3.1 A：注册 + 签到一体（新人一屏三项 / 来过的人 1–3 道选择题 / 资料齐了直接欢迎光临）
   if (v >= 4) {
+    if (b.step === 'wxphone') return ok({ wxphone: await wxPhoneStep(me, String(b.phoneCode ?? '')) });
     if (b.step === 'sms') return ok({ sms: await sendSms(me, String(b.phone ?? ''), String(b.cc ?? '+1')) });
     if (b.step === 'new') {
       const r = await newcomer(params.slug, me, b);

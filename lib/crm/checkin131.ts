@@ -13,6 +13,7 @@
  * 而当前这个微信登录还是空档案，就把这个微信登录挂到那份档案下面（merged_into），换发那份档案的会话；
  * 当前档案已有内容时不自动合并，记一条“疑似重复”给助理在工作台确认。
  */
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { createSession } from '@/lib/crm/auth';
 import { CrmError, checkIn, normalizePhone, startRegistration, type EventRow } from '@/lib/crm/events';
@@ -264,7 +265,32 @@ export async function isEmptyShell(db: Db, contactId: string): Promise<boolean> 
   return !!rows[0]?.empty;
 }
 
-export type NewcomerInput = { name?: string; profession?: string; phoneCode?: string; phone?: string; cc?: string; smsCode?: string };
+// 微信一键填：先换出号码给客户看（“不是这个号？手动填”），提交时带回签名证明这个号是微信验证过的（30 分钟内、同一档案有效）
+function proofSecret(): string {
+  const s = process.env.NEWSLETTER_SECRET || process.env.CRON_SECRET || process.env.AGENT_IP_SALT || (process.env.NODE_ENV !== 'production' ? 'dev-local-only' : '');
+  if (!s) throw new CrmError('server_error', '系统配置不完整，请直接手动填写手机号');
+  return s;
+}
+export function phoneProof(contactId: string, phone: string, exp = Date.now() + 30 * 60_000): string {
+  const sig = createHmac('sha256', proofSecret()).update(`wxphone|${contactId}|${phone}|${exp}`).digest('base64url');
+  return `${exp}.${sig}`;
+}
+export function proofOk(contactId: string, phone: string, proof: string): boolean {
+  const [expS, sig] = String(proof ?? '').split('.');
+  const exp = Number(expS);
+  if (!exp || exp < Date.now() || !sig) return false;
+  const want = phoneProof(contactId, phone, exp).split('.')[1];
+  const a = Buffer.from(sig);
+  const b = Buffer.from(want);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+export async function wxPhoneStep(contactId: string, code: string): Promise<{ phone: string; cc: string; number: string; proof: string }> {
+  const phone = await wxPhoneFromCode(code);
+  const cc = phone.startsWith('+86') ? '+86' : phone.startsWith('+1') ? '+1' : phone.slice(0, phone.length - 10);
+  return { phone, cc, number: phone.slice(cc.length), proof: phoneProof(contactId, phone) };
+}
+
+export type NewcomerInput = { name?: string; profession?: string; phoneCode?: string; phoneProof?: string; phone?: string; cc?: string; smsCode?: string };
 
 /**
  * 新人一屏三项 → 建档、现场报名、签到，到欢迎页。
@@ -280,6 +306,9 @@ export async function newcomer(slug: string, me: string, b: NewcomerInput): Prom
   let verified = false;
   if (b.phoneCode) {
     phone = await wxPhoneFromCode(String(b.phoneCode));
+    verified = true;
+  } else if (b.phoneProof && b.phone && proofOk(me, String(b.phone), String(b.phoneProof))) {
+    phone = String(b.phone);
     verified = true;
   } else {
     phone = normalizePhone(String(b.phone ?? ''), b.cc === '+86' ? '+86' : '+1');
