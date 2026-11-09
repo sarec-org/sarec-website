@@ -4,6 +4,7 @@
  * 报名预览 / 报名提交 / 下一道选填题 / 答题 / 跳过 / 我的总览。
  * 规则全部来自 engine.ts / profile.ts / events.ts（题库 V1.1），这里只做编排与校验。
  */
+import { seatStatus, waitlistPosition } from '@/lib/crm/seats';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { afterRequiredMessage, completeness, itemBadge, pickOptional } from './engine';
 import { CrmError, getEventBySlug, startRegistration, submitAnswers, type EventRow } from './events';
@@ -133,7 +134,8 @@ export async function listEvents(includePast = false) {
       ORDER BY e.starts_at ${includePast ? 'DESC' : 'ASC'} LIMIT 100`,
     [includePast]
   );
-  const out = rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number }));
+  // 1.3.1 B1：客户端只看名额状态标签（线上 1.3.0 还用 registered / capacity 判断“已满”，先保留不显示）
+  const out = rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number, seat: seatStatus(e.capacity as number | null, e.registered as number) }));
   if (!includePast || !rows.length) return out;
   // 1.3 P-4：往期每场一张卡——到场人数、照片数
   const ids = rows.map((e) => e.id as string);
@@ -365,7 +367,12 @@ export async function register(slug: string, contactId: string, input: RegisterI
       orderNo: out.orderNo,
       taskId: out.task.id,
       message: out.registration.status === 'waitlisted' ? '本场已满员，您已进入候补名单，有空位会通知您' : afterRequiredMessage(t[0]),
-      pointsAwarded
+      pointsAwarded,
+      // 1.3.1 B：“名额已满，已为您排候补第 N 位”；报名成功写清“活动前一天请确认出席”
+      waitlistPos: out.registration.status === 'waitlisted' ? await waitlistPosition(db, ev.id, contactId) : null,
+      confirmNote: out.registration.status === 'registered'
+        ? (Date.now() >= new Date(ev.starts_at).getTime() - 24 * 3600_000 ? '已为您确认出席，开场前到场即可' : '活动前一天请确认出席，未确认名额会让给候补')
+        : null
     };
   });
   // 报名成功：发确认邮件（含“确认邮箱”按钮）；失败不影响报名

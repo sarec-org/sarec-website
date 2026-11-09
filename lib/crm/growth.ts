@@ -7,6 +7,7 @@
  *   会员端只显示三个数字，不显示被邀请人的联系方式和缴费情况。
  * - 首页状态卡按人变：未报名 / 已报名未开始 / 活动当天 / 活动结束。
  */
+import { seatStatus } from '@/lib/crm/seats';
 import QRCode from 'qrcode';
 import { getPool } from '@/lib/db/client';
 import { getSetting } from './orders';
@@ -144,7 +145,9 @@ function evCard(e: EvRow) {
     locationName: e.location_name,
     address: e.address,
     feeCents: e.fee_cents,
-    seatsLeft: e.capacity != null ? Math.max(0, e.capacity - Number(e.registered ?? 0)) : null,
+    // 1.3.1 B1：不给客户端名额数字（线上 1.3.0 的“剩余 N 席”随之不显示），只给 名额充足 / 所剩不多 / 已满可候补
+    seatsLeft: null,
+    seat: seatStatus(e.capacity, Number(e.registered ?? 0)),
     coverUrl: e.cover_url,
     summary: e.summary,
     registrationOpen: e.registration_open,
