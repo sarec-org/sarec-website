@@ -58,7 +58,7 @@ export async function watermark(input: Buffer): Promise<{ full: Buffer; thumb: B
 }
 
 /** 任意图片上传（活动封面、商会微信二维码、头像）：压缩后存 Blob，返回地址 */
-export async function uploadImage(kind: 'cover' | 'qr' | 'avatar' | 'room' | 'prep', input: Buffer, opts: { maxSide?: number; png?: boolean } = {}): Promise<string> {
+export async function uploadImage(kind: 'cover' | 'qr' | 'avatar' | 'room' | 'prep' | 'card', input: Buffer, opts: { maxSide?: number; png?: boolean } = {}): Promise<string> {
   if (!blobConfigured()) throw new CrmError('storage_unconfigured', '图片存储还没有配置');
   const max = opts.maxSide ?? 1600;
   const img = sharp(input, { failOn: 'none' }).rotate().resize({ width: max, height: max, fit: 'inside', withoutEnlargement: true });

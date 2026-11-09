@@ -35,7 +35,9 @@ async function ensureCard(db: Db, contactId: string) {
   const { rows } = await db.query<{
     token: string; company: string | null; title: string | null; intro: string | null; wechat_id: string | null;
     show_phone: boolean; show_email: boolean; show_wechat: boolean; hidden_at: Date | null; hidden_reason: string | null;
-  }>(`SELECT token, company, title, intro, wechat_id, show_phone, show_email, show_wechat, hidden_at, hidden_reason FROM member_cards WHERE contact_id = $1`, [contactId]);
+    template: string; name_en: string | null; company_en: string | null; title_en: string | null; industry: string | null; project_photo_url: string | null;
+  }>(`SELECT token, company, title, intro, wechat_id, show_phone, show_email, show_wechat, hidden_at, hidden_reason,
+             template, name_en, company_en, title_en, industry, project_photo_url FROM member_cards WHERE contact_id = $1`, [contactId]);
   return rows[0];
 }
 
@@ -47,6 +49,16 @@ async function profileCompany(db: Db, contactId: string): Promise<string | null>
   );
   return rows[0]?.value?.text ?? null;
 }
+
+async function profileIndustry(db: Db, contactId: string): Promise<string | null> {
+  const { rows } = await db.query<{ v: string | null }>(
+    `SELECT value->>'choice' AS v FROM profile_answers WHERE contact_id = $1 AND item_code = 'CK:profession' AND status = 'current' LIMIT 1`,
+    [contactId]
+  ).catch(() => ({ rows: [] as { v: string | null }[] }));
+  return rows[0]?.v ?? null;
+}
+
+const TEMPLATE_KEYS = ['navy', 'white', 'bilingual', 'estate'];
 
 /** 我的名片（编辑用） */
 export async function myCard(contactId: string) {
@@ -74,7 +86,12 @@ export async function myCard(contactId: string) {
     email: info.email?.value ?? null,
     // 被工作人员下架时：本人仍可修改，别人打开显示“已下架”
     hidden: card.hidden_at ? { at: card.hidden_at, reason: card.hidden_reason } : null,
-    status: await statusOf(pool, contactId)
+    status: await statusOf(pool, contactId),
+    // 1.3.1 D：4 款模板 + 中英双语 + 行业 + 项目照片（行业没填时用签到时选的职业）
+    template: card.template,
+    nameEn: card.name_en, companyEn: card.company_en, titleEn: card.title_en,
+    industry: card.industry ?? (await profileIndustry(pool, contactId)),
+    projectPhotoUrl: card.project_photo_url
   };
 }
 
@@ -107,6 +124,36 @@ export async function updateMyCard(contactId: string, b: Record<string, unknown>
     wechat: b.wechatId !== undefined ? wechat || null : before?.wechat_id ?? null,
     name: typeof b.name === 'string' && b.name.trim() ? b.name.trim().slice(0, 100) : before?.name ?? ''
   };
+  // 1.3.1 D：模板、英文、行业也走内容安全
+  const extra = [clip(b.nameEn, 60), clip(b.companyEn, 100), clip(b.titleEn, 60), clip(b.industry, 20)].filter(Boolean).join('\n');
+  if (extra) {
+    const r0 = await msgSecCheck(extra, before?.openid ?? null, 1);
+    if (r0 === 'risky') throw new CrmError('content_risky', '名片内容未通过内容安全检查，请修改后再保存');
+  }
+  if (b.template !== undefined && !TEMPLATE_KEYS.includes(String(b.template))) throw new CrmError('bad_request', '请选择名片模板');
+  if (b.projectPhotoUrl !== undefined && b.projectPhotoUrl !== null && !/^https:\/\/[a-z0-9.-]+\.(public\.blob\.vercel-storage\.com|vercel-storage\.com)\//i.test(String(b.projectPhotoUrl))) {
+    throw new CrmError('bad_request', '项目照片请在名片页上传');
+  }
+  await pool.query(
+    `UPDATE member_cards SET
+       template = coalesce($2, template),
+       name_en = CASE WHEN $3::boolean THEN $4 ELSE name_en END,
+       company_en = CASE WHEN $5::boolean THEN $6 ELSE company_en END,
+       title_en = CASE WHEN $7::boolean THEN $8 ELSE title_en END,
+       industry = CASE WHEN $9::boolean THEN $10 ELSE industry END,
+       project_photo_url = CASE WHEN $11::boolean THEN $12 ELSE project_photo_url END,
+       content_updated_at = CASE WHEN $13::boolean THEN now() ELSE content_updated_at END
+     WHERE contact_id = $1`,
+    [
+      contactId, b.template !== undefined ? String(b.template) : null,
+      b.nameEn !== undefined, clip(b.nameEn, 60) || null,
+      b.companyEn !== undefined, clip(b.companyEn, 100) || null,
+      b.titleEn !== undefined, clip(b.titleEn, 60) || null,
+      b.industry !== undefined, clip(b.industry, 20) || null,
+      b.projectPhotoUrl !== undefined, (b.projectPhotoUrl as string | null) || null,
+      !!extra || b.projectPhotoUrl !== undefined
+    ]
+  );
   const changed =
     !before || next.company !== before.company || next.title !== before.title || next.intro !== before.intro || next.wechat !== before.wechat_id || next.name !== before.name;
   let sec: string | null = null;
@@ -152,8 +199,10 @@ export async function publicCard(token: string) {
   const { rows } = await pool.query<{
     contact_id: string; company: string | null; title: string | null; intro: string | null; wechat_id: string | null;
     show_phone: boolean; show_email: boolean; show_wechat: boolean; name: string; avatar_url: string | null; role_sub: string | null; member_no: number; hidden_at: Date | null;
+    template: string; name_en: string | null; company_en: string | null; title_en: string | null; industry: string | null; project_photo_url: string | null;
   }>(
     `SELECT m.contact_id, m.company, m.title, m.intro, m.wechat_id, m.show_phone, m.show_email, m.show_wechat,
+            m.template, m.name_en, m.company_en, m.title_en, m.industry, m.project_photo_url,
             c.name, c.avatar_url, c.role_sub, c.member_no::int AS member_no, m.hidden_at
        FROM member_cards m JOIN contacts c ON c.id = m.contact_id WHERE m.token = $1`,
     [token]
@@ -176,6 +225,7 @@ export async function publicCard(token: string) {
     email: r.show_email ? info.email?.value ?? null : null,
     wechatId: r.show_wechat ? r.wechat_id : null,
     status: await statusOf(pool, r.contact_id),
+    template: r.template, nameEn: r.name_en, companyEn: r.company_en, titleEn: r.title_en, industry: r.industry, projectPhotoUrl: r.project_photo_url,
     checkedAt: new Date().toISOString()
   };
 }
