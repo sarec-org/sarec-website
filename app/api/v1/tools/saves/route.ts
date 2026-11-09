@@ -9,6 +9,7 @@ import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
 import { body, handler, ok, requireContact } from '@/lib/crm/http';
 import { calcMortgage, cleanMortgageInput } from '@/lib/tools/mortgage';
+import { calc1031, clean1031Input } from '@/lib/tools/exchange1031';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,8 @@ export const dynamic = 'force-dynamic';
 const MAX_PER_USER = 50;
 
 const TOOLS: Record<string, { clean: (x: Record<string, unknown>) => object; calc: (x: Record<string, unknown>) => object }> = {
-  mortgage: { clean: cleanMortgageInput, calc: calcMortgage }
+  mortgage: { clean: cleanMortgageInput, calc: calcMortgage },
+  '1031': { clean: clean1031Input, calc: calc1031 }
 };
 
 function tableMissing(e: unknown): boolean {
