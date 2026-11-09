@@ -179,3 +179,24 @@ export async function requireStaffAny(req: Request, roles: StaffRole[]): Promise
   if (!s || !roles.some((r) => staffCan(s, r))) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
   return s;
 }
+
+/** 1.3.1 及以后的小程序（X-Sarec-Client: mp-1.3.1 …）：不给任何人数、金额（只给“名额状态”和“免费 / 收费”） */
+const MP131 = /^mp-1\.(3\.[1-9]\d*|[4-9]|\d{2,})(\b|$)/;
+export function isMp131(req: Request): boolean {
+  return MP131.test((req.headers.get('x-sarec-client') ?? '').toLowerCase());
+}
+const DROP = new Set(['registered', 'capacity', 'hardCapacity', 'hard_capacity', 'seatsLeft', 'amountCents', 'amount_cents', 'grossCents', 'checked_in', 'attended']);
+/** 递归去掉人数和金额；feeCents 只留“收不收费”（1 / 0），小程序按它显示“免费 / 收费活动” */
+export function mp131Safe<T>(v: T): T {
+  if (Array.isArray(v)) return v.map((x) => mp131Safe(x)) as unknown as T;
+  if (v && typeof v === 'object' && !(v instanceof Date)) {
+    const out: Record<string, unknown> = {};
+    for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
+      if (DROP.has(k)) continue;
+      if (k === 'feeCents' || k === 'fee_cents') out[k] = Number(x) > 0 ? 1 : 0;
+      else out[k] = mp131Safe(x);
+    }
+    return out as T;
+  }
+  return v;
+}

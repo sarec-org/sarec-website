@@ -61,13 +61,17 @@ export async function waitlistPosition(db: Db, eventId: string, contactId: strin
   return rows[0]?.pos ?? null;
 }
 
-/** 连续两次报了名、没确认也没来（消息发不出去的那次不算）。 */
+/**
+ * 连续两次报了名、没确认也没来。只看确认时间线打开后真的问过的报名（asked_at 有值；消息发不出去的不算）；
+ * 被转候补的（released）也算没确认。时间线没打开时这条规则不生效（测试 P1-B1：1.3.1 以前的报名都没问过确认）。
+ */
 export async function isRepeatNoShow(db: Db, contactId: string): Promise<boolean> {
+  if (!(await timelineEnabled())) return false;
   const { rows } = await db.query<{ miss: boolean }>(
-    `SELECT (r.arrival_status = 'none' AND r.confirm_status <> 'confirmed' AND NOT r.unreachable) AS miss
+    `SELECT (r.arrival_status = 'none' AND r.confirm_status IN ('asked','released') AND NOT r.unreachable) AS miss
        FROM registrations r JOIN events e ON e.id = r.event_id
-      WHERE r.contact_id = $1 AND r.status = 'registered' AND e.event_status <> 'cancelled'
-        AND coalesce(e.ends_at, e.starts_at + interval '3 hours') < now()
+      WHERE r.contact_id = $1 AND r.asked_at IS NOT NULL AND (r.status = 'registered' OR r.confirm_status = 'released')
+        AND e.event_status <> 'cancelled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') < now()
       ORDER BY e.starts_at DESC LIMIT 2`,
     [contactId]
   );
@@ -214,6 +218,8 @@ export async function answerConfirm(regId: string, yes: boolean) {
     const r = rows[0];
     if (!r) throw new CrmError('not_found', '找不到这份报名');
     if (r.status === 'cancelled') return { state: 'cancelled', message: '这份报名已经取消了' };
+    const { rows: evs } = await db.query<{ open: boolean }>(`SELECT (event_status = 'scheduled' AND starts_at > now()) AS open FROM events WHERE id = $1`, [r.event_id]);
+    if (!evs[0]?.open) return { state: 'closed', message: '活动已开始或已结束，不需要再确认了' };
     if (r.arrival_status === 'checked_in') return { state: 'checked_in', message: '您已签到，祝您愉快' };
     if (!yes) {
       await db.query(`UPDATE registrations SET status = 'cancelled', cancelled_at = now(), confirm_status = 'declined', offer_expires_at = NULL, updated_at = now() WHERE id = $1`, [regId]);
@@ -222,7 +228,7 @@ export async function answerConfirm(regId: string, yes: boolean) {
     }
     if (r.status === 'waitlisted') {
       if (r.confirm_status !== 'offered' || !r.offer_expires_at || r.offer_expires_at <= new Date()) {
-        return { state: 'waitlist', message: '确认期限已过，名额已让给下一位。您还在候补名单里，有空位会再通知您。' };
+        return { state: 'waitlist', message: '确认期限已过，名额已让给下一位。如果还想来，请联系商会工作人员。' };
       }
       await db.query(`UPDATE registrations SET status = 'registered', confirm_status = 'confirmed', confirmed_at = now(), offer_expires_at = NULL, updated_at = now() WHERE id = $1`, [regId]);
       return { state: 'confirmed', message: '名额已为您保留，到时见！' };
@@ -236,9 +242,24 @@ export async function answerConfirm(regId: string, yes: boolean) {
 
 /** 空出的名额按候补顺序发递补邀请（同一座位不同时发给多人；刚被转候补的人 1 小时内不拿回自己刚释放的名额）。 */
 export async function fillSeats(db: Db, eventId: string, now = new Date(), force = false): Promise<number> {
-  // 时间线没打开：不自动递补（和 1.3 一样，现场工作人员手动放人），也不发任何消息
-  if (!force && !(await timelineEnabled())) return 0;
-  const { rows: ev } = await db.query<{ capacity: number | null; starts_at: Date; event_status: string }>(`SELECT capacity, starts_at, event_status FROM events WHERE id = $1`, [eventId]);
+  // 锁活动行：同一个空位不会同时发给两个人（定时任务和“去不了”同时发生时排队）
+  const { rows: ev } = await db.query<{ capacity: number | null; starts_at: Date; event_status: string }>(`SELECT capacity, starts_at, event_status FROM events WHERE id = $1 FOR UPDATE`, [eventId]);
+  // 时间线没打开（测试 P1-B2）：空位直接按候补顺序转正式报名，不发任何消息；后面新报名的人不能插队
+  if (!force && !(await timelineEnabled())) {
+    const e0 = ev[0];
+    if (!e0 || e0.capacity == null || e0.event_status !== 'scheduled') return 0;
+    const free0 = e0.capacity - (await takenSeats(db, eventId));
+    if (free0 <= 0) return 0;
+    const { rows: up } = await db.query(
+      `UPDATE registrations SET status = 'registered', confirm_status = CASE WHEN confirm_status IN ('offered','offer_expired') THEN 'none' ELSE confirm_status END,
+              offer_expires_at = NULL, updated_at = now()
+        WHERE id IN (SELECT id FROM registrations WHERE event_id = $1 AND status = 'waitlisted' AND NOT noshow_waitlisted
+                      ORDER BY coalesce(waitlisted_at, created_at), created_at LIMIT $2)
+        RETURNING id`,
+      [eventId, free0]
+    );
+    return up.length;
+  }
   const e = ev[0];
   if (!e || e.capacity == null || e.event_status !== 'scheduled') return 0;
   const startMs = new Date(e.starts_at).getTime();
@@ -271,7 +292,7 @@ const TEXT: Record<Kind, (t: string, when: string) => string> = {
   ask: (t, w) => `明天的活动您来吗？「${t}」${w}。请点链接确认，未确认的名额会让给候补：`,
   remind: (t, w) => `「${t}」${w}，您还没确认是否出席。1 小时内未确认将转候补，请点链接确认：`,
   released: (t) => `「${t}」您没有确认出席，名额已让给候补，您已转入候补名单，有空位会通知您。`,
-  offer: (t, w) => `有名额了！「${t}」${w}。请在 4 小时内点链接确认，逾期名额会给下一位：`
+  offer: (t, w) => `有名额了！「${t}」${w}。请在{窗口}内点链接确认，逾期名额会给下一位：`
 };
 const NOTE: Record<Kind, string> = { ask: '明天的活动您来吗？点开确认', remind: '1 小时内未确认将转候补', released: '已转候补，有空位会通知您', offer: '有名额了，请尽快确认' };
 
@@ -280,8 +301,8 @@ function fmtWhen(d: Date, tz: string) {
 }
 
 async function notify(db: Db, regId: string, kind: Kind): Promise<boolean> {
-  const { rows } = await db.query<{ id: string; event_id: string; contact_id: string; slug: string; title: string; starts_at: Date; timezone: string; location_name: string | null; phone: string | null }>(
-    `SELECT r.id, r.event_id, r.contact_id, e.slug, e.title, e.starts_at, e.timezone, e.location_name,
+  const { rows } = await db.query<{ id: string; event_id: string; contact_id: string; slug: string; title: string; starts_at: Date; timezone: string; location_name: string | null; phone: string | null; offer_expires_at: Date | null }>(
+    `SELECT r.id, r.event_id, r.contact_id, e.slug, e.title, e.starts_at, e.timezone, e.location_name, r.offer_expires_at,
             COALESCE(c.phone_e164, (SELECT value FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current)) AS phone
        FROM registrations r JOIN events e ON e.id = r.event_id JOIN contacts c ON c.id = r.contact_id WHERE r.id = $1`,
     [regId]
@@ -326,18 +347,27 @@ async function notify(db: Db, regId: string, kind: Kind): Promise<boolean> {
   // 2) 短信兜底
   if (r.phone) {
     const { smsSend } = await import('@/lib/crm/payLinks');
-    const body = TEXT[kind](r.title, fmtWhen(r.starts_at, r.timezone)) + (kind === 'released' ? '' : ` ${confirmLink(r.id)}`) + ' 【SAREC】';
+    const hrs = r.offer_expires_at ? Math.max(1, Math.round((new Date(r.offer_expires_at).getTime() - Date.now()) / 3600_000)) : OFFER_H;
+    const body = TEXT[kind](r.title, fmtWhen(r.starts_at, r.timezone)).replace('{窗口}', ` ${hrs} 小时`) + (kind === 'released' ? '' : ` ${confirmLink(r.id)}`) + ' 【SAREC】';
     const ok = await smsSend(r.phone, body).catch(() => false);
     await log('sms', ok, ok ? undefined : 'sms_failed');
     if (ok) return true;
   }
   if (!r.phone && !sub[0]) await log('none', false, 'no_channel');
+  if (kind !== 'ask') {
+    // 递补邀请 / 转候补 / 再问一次发不出去：进异常名单，请工作人员电话或微信联系（ask 的失败在时间线里另记）
+    const { recordException } = await import('@/lib/crm/followups');
+    await recordException(`confirm_${kind}_failed`, `confirm_${kind}:${r.id}`, r.id, `${NOTE[kind]}：消息发不出去，请电话或微信联系`).catch(() => undefined);
+  }
   return false;
 }
 
 // ── 定时：每 5–15 分钟跑一次 ──────────────────────────────────────────────
 
+/** 只给回归测试用：进程内覆盖开关，避免在共用测试库里真的打开时间线 */
+export const timelineOverride: { value: boolean | null } = { value: null };
 export async function timelineEnabled(): Promise<boolean> {
+  if (timelineOverride.value !== null) return timelineOverride.value;
   return !!(await getSetting<boolean>(getPool(), 'confirm_timeline_enabled', false));
 }
 

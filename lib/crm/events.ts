@@ -98,14 +98,6 @@ export async function getEventBySlug(db: Db, slug: string): Promise<EventRow | n
   return rows[0] ?? null;
 }
 
-async function activeCount(db: Db, eventId: string): Promise<number> {
-  const { rows } = await db.query<{ n: string }>(
-    `SELECT count(*)::text AS n FROM registrations WHERE event_id = $1 AND status = 'registered'`,
-    [eventId]
-  );
-  return Number(rows[0].n);
-}
-
 export type RegisterOutcome = {
   registration: Registration;
   task: Task;
@@ -136,7 +128,10 @@ export async function startRegistration(
     if (!ev.registration_open && opts.source !== 'staff') throw new CrmError('registration_closed', '本场报名已截止');
     // 现场来的人（扫签到码 / 工作人员登记）已经到了门口：不受名额限制，直接算已报名。
     const onsite = opts.source === 'onsite' || opts.source === 'staff';
-    const full = !onsite && ev.capacity != null && (await activeCount(db, ev.id)) >= ev.capacity;
+    // 1.3.1 B：先把空位按候补顺序补上（不让后来的人插队），再按“已报名 + 递补确认中”算满没满
+    const { fillSeats, takenSeats } = await import('@/lib/crm/seats');
+    if (!onsite && ev.capacity != null) await fillSeats(db, ev.id);
+    const full = !onsite && ev.capacity != null && (await takenSeats(db, ev.id)) >= ev.capacity;
     const status = full ? 'waitlisted' : 'registered';
     const { rows } = await db.query<Registration>(
       reg
