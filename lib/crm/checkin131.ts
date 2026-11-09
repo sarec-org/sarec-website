@@ -30,6 +30,16 @@ export const TEXT_BONUS_POINTS = 5; // “愿意多写一点”手填的多给
 export const MAX_QUESTIONS = 3;
 export const PROFESSIONS = ['开发商', '经纪', '贷款', '投资人', '律师会计', '建筑装修', '其他'];
 export const REGIONS = ['洛杉矶/橙县', '旧金山湾区', '纽约', '美国其他', '中国大陆', '其他'];
+/** 签到“职业”→ 报名用的主要行业（Q03 大类 / 小类） */
+const PROFESSION_ROLE: Record<string, [string, string]> = {
+  开发商: ['developer', 'developer'],
+  经纪: ['transaction', 'agent'],
+  贷款: ['finance', 'finance_1'],
+  投资人: ['owner_investor', 'investor'],
+  律师会计: ['professional', 'lawyer'],
+  建筑装修: ['construction', 'construction_1'],
+  其他: ['other', 'other']
+};
 
 export type CheckinQuestion = { key: string; prompt: string; options: string[]; allowText: boolean };
 
@@ -175,6 +185,18 @@ export async function saveAnswers(db: Db, contactId: string, answers: Record<str
       [contactId, itemCode(key), JSON.stringify({ choice, ...(text ? { text } : {}) }), text && !choice ? 'self_text' : 'self_select']
     );
     if (key === 'region' && choice) await db.query(`UPDATE contacts SET region_self = $2, updated_at = now() WHERE id = $1`, [contactId, choice]);
+    // 职业同时记成报名用的“主要行业”（Q03），报名时不再问第二遍（测试 P2-M4）；已经答过 Q03 的不动
+    if (key === 'profession' && choice && PROFESSION_ROLE[choice]) {
+      const [cat, sub] = PROFESSION_ROLE[choice];
+      const { rows: q3 } = await db.query(`SELECT 1 FROM profile_answers WHERE contact_id = $1 AND item_code = 'Q03' AND status = 'current'`, [contactId]);
+      if (!q3[0]) {
+        await db.query(
+          `INSERT INTO profile_answers (contact_id, item_code, value, source, recorded_by, note) VALUES ($1, 'Q03', $2, 'self_select', 'self', '现场签到选的职业')`,
+          [contactId, JSON.stringify({ category: cat, sub })]
+        );
+        await db.query(`UPDATE contacts SET role_category = coalesce(role_category, $2), role_sub = coalesce(role_sub, $3), updated_at = now() WHERE id = $1`, [contactId, cat, sub]);
+      }
+    }
     const ins = await db.query(
       `INSERT INTO points_ledger (contact_id, category, points, event_key, reason, rule_version)
        VALUES ($1, 'profile', $2, $3, $4, 'v1.3.1') ON CONFLICT (event_key) DO NOTHING RETURNING id`,

@@ -86,6 +86,13 @@ async function main() {
   assert.equal(w1.showJoin, true);
   assert.equal(await arrival(ev.id, shell), 'checked_in');
   ok('填完 → 建档 + 现场报名 + 到场，欢迎页（签到 10 + 职业 5，显示“了解入会”）');
+  const { rows: q3 } = await pool.query<{ value: { category: string; sub: string } }>(`SELECT value FROM profile_answers WHERE contact_id = $1 AND item_code = 'Q03' AND status = 'current'`, [shell]);
+  assert.deepEqual(q3[0]?.value, { category: 'transaction', sub: 'agent' });
+  const { previewRegistration } = await import('@/lib/crm/flow');
+  const ev9 = await event('later', 48);
+  const pr = await previewRegistration(ev9.slug, shell) as { firstTime: boolean };
+  assert.equal(pr.firstTime, false);
+  ok('签到选的职业同时记成报名用的主要行业，下次报名不再问第二遍（测试 P2-M4）');
   const again = await ck.scan(ev.slug, shell);
   assert.equal(again.kind, 'welcome');
   assert.equal((again as { already: boolean }).already, true);
