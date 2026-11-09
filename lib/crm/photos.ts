@@ -58,7 +58,7 @@ export async function watermark(input: Buffer): Promise<{ full: Buffer; thumb: B
 }
 
 /** 任意图片上传（活动封面、商会微信二维码、头像）：压缩后存 Blob，返回地址 */
-export async function uploadImage(kind: 'cover' | 'qr' | 'avatar' | 'room' | 'prep', input: Buffer, opts: { maxSide?: number; png?: boolean } = {}): Promise<string> {
+export async function uploadImage(kind: 'cover' | 'qr' | 'avatar' | 'room' | 'prep' | 'card', input: Buffer, opts: { maxSide?: number; png?: boolean } = {}): Promise<string> {
   if (!blobConfigured()) throw new CrmError('storage_unconfigured', '图片存储还没有配置');
   const max = opts.maxSide ?? 1600;
   const img = sharp(input, { failOn: 'none' }).rotate().resize({ width: max, height: max, fit: 'inside', withoutEnlargement: true });
@@ -186,12 +186,19 @@ export async function sendPhotoNotices(eventId: string): Promise<{ sent: number;
       await pool.query(`UPDATE event_photo_notices SET channel = 'home', status = 'pending' WHERE event_id = $1 AND contact_id = $2`, [eventId, d.contact_id]);
       continue;
     }
+    // 1.3.1 I 频率控制：24 小时内已经收到过别的类型的推送 → 这次不推，改成首页“新增 N 张照片”
+    const { touchedToday, recordTouch } = await import('@/lib/crm/touch');
+    if (await touchedToday(pool, d.contact_id, 'photos')) {
+      await pool.query(`UPDATE event_photo_notices SET channel = 'home', status = 'pending' WHERE event_id = $1 AND contact_id = $2`, [eventId, d.contact_id]);
+      continue;
+    }
     // 先占位再推，避免并发重复推送
     const lock = await pool.query(`UPDATE event_reminder_subs SET status = 'sent', sent_at = now() WHERE id = $1 AND status IN ('pending','failed') RETURNING id`, [d.sub_id]);
     if (!lock.rowCount) continue;
     try {
       await pushPhotosNotice(tmpl!, d.openid, ev[0]);
       await pool.query(`UPDATE event_photo_notices SET status = 'sent', sent_at = now(), error = NULL WHERE event_id = $1 AND contact_id = $2`, [eventId, d.contact_id]);
+      await recordTouch(pool, d.contact_id, 'photos', 'wx');
       sent++;
     } catch (e) {
       const msg = (e instanceof Error ? e.message : 'error').slice(0, 200);

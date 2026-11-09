@@ -7,6 +7,7 @@
  *   会员端只显示三个数字，不显示被邀请人的联系方式和缴费情况。
  * - 首页状态卡按人变：未报名 / 已报名未开始 / 活动当天 / 活动结束。
  */
+import { seatStatus } from '@/lib/crm/seats';
 import QRCode from 'qrcode';
 import { getPool } from '@/lib/db/client';
 import { getSetting } from './orders';
@@ -144,7 +145,9 @@ function evCard(e: EvRow) {
     locationName: e.location_name,
     address: e.address,
     feeCents: e.fee_cents,
-    seatsLeft: e.capacity != null ? Math.max(0, e.capacity - Number(e.registered ?? 0)) : null,
+    // 1.3.1 B1：不给客户端名额数字（线上 1.3.0 的“剩余 N 席”随之不显示），只给 名额充足 / 所剩不多 / 已满可候补
+    seatsLeft: null,
+    seat: seatStatus(e.capacity, Number(e.registered ?? 0)),
     coverUrl: e.cover_url,
     summary: e.summary,
     registrationOpen: e.registration_open,
@@ -178,16 +181,12 @@ export async function homeData(contactId: string | null, opts: { base: string; w
       `SELECT thumb_url, url FROM event_photos WHERE event_id = $1 AND NOT is_hidden ORDER BY sort_order, created_at LIMIT 3`,
       [past[0].id]
     );
-    const { rows: att } = await pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM registrations WHERE event_id = $1 AND arrival_status = 'checked_in'`,
-      [past[0].id]
-    );
     lastEvent = {
       slug: past[0].slug,
       title: past[0].title,
       startsAt: past[0].starts_at,
       recap: past[0].recap,
-      attended: att[0].n,
+      // 首页回顾小修：客户端不显示到场人数（到场人数只在工作台 / 后台看）
       photoCount: past[0].photo_count,
       albumPublished: !!past[0].album_published_at,
       photos: past[0].album_published_at ? photos.map((p) => ({ thumb: p.thumb_url, url: p.url })) : []
@@ -249,12 +248,15 @@ export async function homeData(contactId: string | null, opts: { base: string; w
     : lastEvent && lastEnd && Date.now() - new Date(lastEnd).getTime() <= recapDays * 86400_000
       ? { kind: 'recap' as const, summary: String(lastEvent.recap ?? '').split(/\n+/).map((x) => x.trim()).filter(Boolean)[0]?.slice(0, 80) ?? null }
       : { kind: 'brand' as const };
+  // 首页回顾小修（测试 P2-H1）：上一场结束超过 home_recap_days 天，首页任何位置都不再显示“上一场回顾”
+  // （线上 1.3.0 首页下方那块回顾只看 lastEvent，不看天数）；相册和链接照样保留在活动-往期里
+  const recapFresh = !!(lastEnd && Date.now() - new Date(lastEnd).getTime() <= recapDays * 86400_000);
   return {
     me,
     status,
     homeCard,
     upcoming: upcoming.map(evCard),
-    lastEvent,
+    lastEvent: recapFresh ? lastEvent : null,
     albums,
     wechatQr: (await (await import('@/lib/wecom')).wechatQrFor('home', contactId))?.url ?? null,
     channelsId: (await getSetting<string>(pool, 'channels_finder_id', '')) || null

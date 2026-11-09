@@ -4,6 +4,8 @@
  * 报名预览 / 报名提交 / 下一道选填题 / 答题 / 跳过 / 我的总览。
  * 规则全部来自 engine.ts / profile.ts / events.ts（题库 V1.1），这里只做编排与校验。
  */
+import { seatStatus, waitlistPosition } from '@/lib/crm/seats';
+import { tzLabel } from '@/lib/crm/regions';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { afterRequiredMessage, completeness, itemBadge, pickOptional } from './engine';
 import { CrmError, getEventBySlug, startRegistration, submitAnswers, type EventRow } from './events';
@@ -109,6 +111,8 @@ export function publicEvent(e: EventRow & Record<string, unknown>) {
     startsAt: e.starts_at,
     endsAt: e.ends_at,
     timezone: (e.timezone as string) ?? 'America/Los_Angeles',
+    tzLabel: tzLabel(e.timezone as string), // 1.3.1 E：活动时间按所在地时区显示并注明
+    region: (e.region as string | undefined) ?? '洛杉矶/橙县',
     locationName: (e.location_name as string | null) ?? null,
     address: (e.address as string | null) ?? null,
     capacity: e.capacity,
@@ -133,19 +137,19 @@ export async function listEvents(includePast = false) {
       ORDER BY e.starts_at ${includePast ? 'DESC' : 'ASC'} LIMIT 100`,
     [includePast]
   );
-  const out = rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number }));
+  // 1.3.1 B1：客户端只看名额状态标签（线上 1.3.0 还用 registered / capacity 判断“已满”，先保留不显示）
+  const out = rows.map((e) => ({ ...publicEvent(e), registered: e.registered as number, seat: seatStatus(e.capacity as number | null, e.registered as number) }));
   if (!includePast || !rows.length) return out;
-  // 1.3 P-4：往期每场一张卡——到场人数、照片数
+  // 1.3 P-4：往期每场一张卡——照片数（首页回顾小修：到场人数不给客户端）
   const ids = rows.map((e) => e.id as string);
-  const { rows: st } = await getPool().query<{ event_id: string; attended: number; photos: number }>(
+  const { rows: st } = await getPool().query<{ event_id: string; photos: number }>(
     `SELECT e.id AS event_id,
-            (SELECT count(*)::int FROM registrations r WHERE r.event_id = e.id AND r.arrival_status = 'checked_in') AS attended,
             (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL) AS photos
        FROM events e WHERE e.id = ANY($1::uuid[])`,
     [ids]
   );
   const by = new Map(st.map((x) => [x.event_id, x]));
-  return out.map((e, i) => ({ ...e, attended: by.get(ids[i])?.attended ?? 0, photoCount: by.get(ids[i])?.photos ?? 0 }));
+  return out.map((e, i) => ({ ...e, photoCount: by.get(ids[i])?.photos ?? 0 }));
 }
 
 export async function requireEvent(db: Db, slug: string): Promise<EventRow> {
@@ -364,8 +368,19 @@ export async function register(slug: string, contactId: string, input: RegisterI
       alreadyRegistered: out.alreadyRegistered,
       orderNo: out.orderNo,
       taskId: out.task.id,
-      message: out.registration.status === 'waitlisted' ? '本场已满员，您已进入候补名单，有空位会通知您' : afterRequiredMessage(t[0]),
-      pointsAwarded
+      message: out.registration.status === 'waitlisted'
+        ? ((out.registration as { noshow_waitlisted?: boolean }).noshow_waitlisted
+            ? '您前两次报名没有确认也没有到场，这次先为您排在候补，有空位会通知您'
+            : '本场已满员，您已进入候补名单，有空位会通知您')
+        : afterRequiredMessage(t[0]),
+      pointsAwarded,
+      // 1.3.1 B：“名额已满，已为您排候补第 N 位”；报名成功写清“活动前一天请确认出席”
+      waitlistPos: out.registration.status === 'waitlisted' ? await waitlistPosition(db, ev.id, contactId) : null,
+      confirmNote: out.registration.status === 'registered'
+        ? (Date.now() >= new Date(ev.starts_at).getTime() - 24 * 3600_000
+            ? `已为您确认出席，请在 ${new Intl.DateTimeFormat('zh-CN', { timeZone: (ev as { timezone?: string }).timezone || 'America/Los_Angeles', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ev.starts_at))} 开场前到场`
+            : '活动前一天请确认出席，未确认名额会让给候补')
+        : null
     };
   });
   // 报名成功：发确认邮件（含“确认邮箱”按钮）；失败不影响报名
@@ -504,7 +519,7 @@ export async function myOverview(contactId: string) {
   const balance = await pointsBalance(pool, contactId);
   const { view, answered } = await loadProfile(pool, contactId);
   const { rows: regs } = await pool.query(
-    `SELECT e.slug, e.title, e.starts_at, e.location_name, e.fee_cents, r.status, r.arrival_status, r.checked_in_at,
+    `SELECT e.slug, e.title, e.starts_at, e.timezone, e.location_name, e.fee_cents, r.status, r.arrival_status, r.checked_in_at,
             (SELECT o.order_no FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = e.id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_no,
             (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = e.id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status
        FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1 ORDER BY e.starts_at DESC LIMIT 50`,

@@ -35,7 +35,12 @@ export function payTokenOk(orderNo: string, t: string | null | undefined): boole
 const base = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
 export const payLink = (orderNo: string) => `${base()}/zh/pay/${orderNo}?t=${payToken(orderNo)}`;
 
-async function smsSend(to: string, text: string): Promise<boolean> {
+export async function smsSend(to: string, text: string): Promise<boolean> {
+  // 正式站以外（预览 / 本地）：只发给白名单里的测试号码（PREVIEW_SMS_ALLOW，逗号分隔），不给真实会员发短信
+  if (process.env.VERCEL_ENV !== 'production' && !/^(1|true)$/i.test(process.env.SMS_ALLOW_ALL_NONPROD ?? '')) {
+    const allow = (process.env.PREVIEW_SMS_ALLOW || '').split(',').map((x) => x.trim()).filter(Boolean);
+    if (!allow.includes(to)) return false;
+  }
   const sid = process.env.TWILIO_ACCOUNT_SID;
   const tok = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_FROM_NUMBER;

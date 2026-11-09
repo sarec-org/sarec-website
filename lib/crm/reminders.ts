@@ -255,6 +255,9 @@ export async function runEventReminders(now = new Date()): Promise<{ sent: numbe
     if (!rowCount) continue;
     try {
       await pushOne(tm, d.openid, d, d.kind);
+      const { recordTouch } = await import('@/lib/crm/touch');
+      const { rows: who } = await pool.query<{ contact_id: string }>(`SELECT contact_id FROM event_reminder_subs WHERE id = $1`, [d.id]);
+      await recordTouch(pool, who[0]?.contact_id, 'reminder', 'wx', true);
       sent++;
     } catch (e) {
       failed++;

@@ -98,14 +98,6 @@ export async function getEventBySlug(db: Db, slug: string): Promise<EventRow | n
   return rows[0] ?? null;
 }
 
-async function activeCount(db: Db, eventId: string): Promise<number> {
-  const { rows } = await db.query<{ n: string }>(
-    `SELECT count(*)::text AS n FROM registrations WHERE event_id = $1 AND status = 'registered'`,
-    [eventId]
-  );
-  return Number(rows[0].n);
-}
-
 export type RegisterOutcome = {
   registration: Registration;
   task: Task;
@@ -136,7 +128,10 @@ export async function startRegistration(
     if (!ev.registration_open && opts.source !== 'staff') throw new CrmError('registration_closed', '本场报名已截止');
     // 现场来的人（扫签到码 / 工作人员登记）已经到了门口：不受名额限制，直接算已报名。
     const onsite = opts.source === 'onsite' || opts.source === 'staff';
-    const full = !onsite && ev.capacity != null && (await activeCount(db, ev.id)) >= ev.capacity;
+    // 1.3.1 B：先把空位按候补顺序补上（不让后来的人插队），再按“已报名 + 递补确认中”算满没满
+    const { fillSeats, takenSeats } = await import('@/lib/crm/seats');
+    if (!onsite && ev.capacity != null) await fillSeats(db, ev.id);
+    const full = !onsite && ev.capacity != null && (await takenSeats(db, ev.id)) >= ev.capacity;
     const status = full ? 'waitlisted' : 'registered';
     const { rows } = await db.query<Registration>(
       reg
@@ -146,6 +141,11 @@ export async function startRegistration(
       reg ? [ev.id, contactId, status] : [ev.id, contactId, status, opts.source ?? 'online', opts.refContactId ?? null, opts.channelCode ?? null]
     );
     reg = rows[0];
+    // 1.3.1 B：连续爽约进候补、候补排队时间、前 24 小时内报名即确认、报满提醒工作人员
+    const { afterRegister } = await import('@/lib/crm/seats');
+    await afterRegister(db, ev, reg.id, opts.source ?? 'online');
+    const { rows: again } = await db.query<Registration>(`SELECT * FROM registrations WHERE id = $1`, [reg.id]);
+    reg = again[0];
   }
   const task = await openEventTask(db, contactId, ev.id, ev.ends_at ?? ev.starts_at);
   const { view, answered, cooling } = await loadProfile(db, contactId);
@@ -202,6 +202,9 @@ export async function cancelRegistration(db: Db, eventId: string, contactId: str
       WHERE contact_id = $1 AND related_id = $2 AND purpose = 'event_fee' AND status = 'pending_payment'`,
     [contactId, eventId]
   );
+  // 1.3.1 B：空出的名额按候补顺序递补（确认时间线打开后才生效）
+  const { fillSeats } = await import('@/lib/crm/seats');
+  await fillSeats(db, eventId);
 }
 
 // ── 订单 ───────────────────────────────────────────────────────────────
@@ -250,7 +253,7 @@ export type CheckinResult =
   | { kind: 'waitlisted'; message: string }
   | { kind: 'rejected'; message: string };
 
-export const CHECKIN_POINTS = 20; // 方案 V3.1 第 08 节试点建议值，可在发布前调整
+export const CHECKIN_POINTS = 10; // 1.3.1 积分规则：签到 10（先记账不兑换；以前的记录不改）
 
 export async function checkIn(
   db: Db,
