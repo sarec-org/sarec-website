@@ -76,6 +76,12 @@ function slugify(title: string, startsAt: Date): string {
   return `${d}-${ascii || 'event'}-${randomBytes(2).toString('hex')}`;
 }
 
+/** 1.3.1 F：地区管理员只能建 / 管自己地区的活动 */
+export function regionGuard(s: Staff, region: string) {
+  if (s.roles.includes('admin') || !s.regions?.length) return;
+  if (!s.regions.includes(region)) throw new CrmError('forbidden', `您只能管理 ${s.regions.join('、')} 的活动`);
+}
+
 function eventFields(b: EventInput, partial: boolean) {
   const out: Record<string, unknown> = {};
   if (!partial || b.title !== undefined) {
@@ -124,7 +130,7 @@ function eventFields(b: EventInput, partial: boolean) {
 
 export async function listStaffEvents() {
   const { rows } = await getPool().query(
-    `SELECT e.id, e.slug, e.title, e.starts_at, e.ends_at, e.location_name, e.capacity, e.fee_cents, e.topic_tags,
+    `SELECT e.id, e.slug, e.title, e.starts_at, e.ends_at, e.location_name, e.capacity, e.fee_cents, e.topic_tags, e.region,
             e.registration_open, e.is_listed, e.event_status,
             count(r.*) FILTER (WHERE r.status = 'registered')::int AS registered,
             count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted,
@@ -168,6 +174,7 @@ function safeLink(orderNo: string): string | null {
 
 export async function createEvent(s: Staff, b: EventInput) {
   if (b.notifyScope === 'all' && !s.roles.includes('admin')) throw new CrmError('forbidden', '“全部地区”通知只有管理员能选');
+  regionGuard(s, b.region ?? '洛杉矶/橙县');
   const f = eventFields(b, false);
   const slug = str(b.slug, 80).toLowerCase().replace(/[^a-z0-9-]/g, '') || slugify(f.title as string, f.starts_at as Date);
   return withTransaction(async (db) => {
@@ -187,6 +194,11 @@ export async function createEvent(s: Staff, b: EventInput) {
 
 export async function updateEvent(s: Staff, id: string, b: EventInput) {
   if (b.notifyScope === 'all' && !s.roles.includes('admin')) throw new CrmError('forbidden', '“全部地区”通知只有管理员能选');
+  if (b.region !== undefined) regionGuard(s, b.region);
+  if (s.regions?.length && !s.roles.includes('admin')) {
+    const { rows: r0 } = await getPool().query<{ region: string }>(`SELECT region FROM events WHERE id = $1`, [id]);
+    if (r0[0]) regionGuard(s, r0[0].region);
+  }
   const f = eventFields(b, true);
   if (!Object.keys(f).length) throw new CrmError('bad_request', '没有要修改的内容');
   return withTransaction(async (db) => {

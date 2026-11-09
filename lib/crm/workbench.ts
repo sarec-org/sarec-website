@@ -26,7 +26,7 @@ export async function claimBindCode(contactId: string, rawCode: string) {
     const { rows } = await db.query<{ staff_email: string; expires_at: Date; used_at: Date | null }>(`SELECT staff_email, expires_at, used_at FROM staff_bind_codes WHERE code = $1 FOR UPDATE`, [code]);
     const r = rows[0];
     if (!r || r.used_at) throw new CrmError('bad_request', '这个绑定码已经用过或不存在，请在网站后台重新生成');
-    if (r.expires_at.getTime() < Date.now()) throw new CrmError('bad_request', '绑定码已过期（10 分钟有效），请在网站后台重新生成');
+    if (r.expires_at.getTime() < Date.now()) throw new CrmError('bad_request', '绑定码已过期，请让管理员在“团队”页重新生成');
     if (r.staff_email.toLowerCase() === reviewEmail()) throw new CrmError('forbidden', '这个账号不能绑定工作台');
     const { rows: st } = await db.query<{ name: string; is_active: boolean }>(`SELECT name, is_active FROM staff_roles WHERE email = $1`, [r.staff_email]);
     if (!st[0]?.is_active) throw new CrmError('forbidden', '这位工作人员已停用，请联系管理员');

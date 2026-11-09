@@ -318,15 +318,15 @@ export async function pollQrLogin(poll: string): Promise<{ status: 'pending' | '
 
 // ── 工作人员 ────────────────────────────────────────────────────────────
 export type StaffRole = 'checkin' | 'finance' | 'ops' | 'admin';
-export type Staff = { contactId: string; email: string; name: string; roles: StaffRole[] };
+export type Staff = { contactId: string; email: string; name: string; roles: StaffRole[]; regions?: string[] }; // regions：地区管理员只管这些地区（空 = 全部）
 
 export async function staffFor(contactId: string): Promise<Staff | null> {
   // 网站：已验证的邮箱和工作人员表一致；1.3 N 小程序：工作人员扫后台绑定码绑定过的微信账号
-  const { rows } = await getPool().query<{ email: string; name: string; roles: StaffRole[] }>(
-    `SELECT s.email, s.name, s.roles FROM contacts c JOIN staff_roles s ON s.email = c.email
+  const { rows } = await getPool().query<{ email: string; name: string; roles: StaffRole[]; regions?: string[] }>(
+    `SELECT s.email, s.name, s.roles, s.regions FROM contacts c JOIN staff_roles s ON s.email = c.email
       WHERE c.id = $1 AND c.email_verified_at IS NOT NULL AND s.is_active
      UNION ALL
-     SELECT s.email, s.name, s.roles FROM staff_roles s WHERE s.mp_contact_id = $1 AND s.is_active
+     SELECT s.email, s.name, s.roles, s.regions FROM staff_roles s WHERE s.mp_contact_id = $1 AND s.is_active
      LIMIT 1`,
     [contactId]
   ).catch(async () =>
