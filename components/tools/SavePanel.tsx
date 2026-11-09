@@ -13,7 +13,8 @@ import t from './tools.module.css';
 
 type Saved<I> = { id: string; title: string; inputs: I; created_at: string };
 
-export type ShareCard = { title: string; lines: [string, string][]; highlight: [string, string] };
+/** path：分享图底部印的网址，用本工具自己的页面 */
+export type ShareCard = { title: string; path: string; lines: [string, string][]; highlight: [string, string] };
 
 export function SavePanel<I extends object>({
   tool,
@@ -161,7 +162,7 @@ export function drawShareCard(c: ShareCard, lang: Locale): string {
   g.textAlign = 'left';
   g.fillStyle = 'rgba(242,234,214,0.6)'; g.font = `26px ${sans}`;
   g.fillText(L(lang, DISCLAIMER.zh, DISCLAIMER.en), 96, H - 140);
-  g.fillStyle = '#C9A567'; g.fillText('sinoamericanrec.org/zh/tools', 96, H - 96);
+  g.fillStyle = '#C9A567'; g.fillText(`sinoamericanrec.org${c.path}`, 96, H - 96);
   return cv.toDataURL('image/png');
 }
 

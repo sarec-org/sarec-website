@@ -6,6 +6,7 @@
 import Link from 'next/link';
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { Locale } from '@/lib/i18n/types';
+import { TOOLS_INDEX_READY } from '@/lib/tools/config';
 import s from '@/components/crm/crm.module.css';
 import t from './tools.module.css';
 
@@ -51,7 +52,7 @@ export function ToolShell({
     <LangCtx.Provider value={{ lang, setLang }}>
       <div className={`${s.page} ${s.pageWide} ${t.wrap}`}>
         <div className={t.topRow}>
-          {hideBack ? <span /> : <Link href="/zh/tools" className={s.back}>← {L(lang, '全部工具', 'All tools')}</Link>}
+          {hideBack || !TOOLS_INDEX_READY ? <span /> : <Link href="/zh/tools" className={s.back}>← {L(lang, '全部工具', 'All tools')}</Link>}
           <div className={t.langSwitch} role="group" aria-label="Language">
             <button type="button" className={lang === 'zh' ? t.langOn : t.langBtn} onClick={() => setLang('zh')} aria-pressed={lang === 'zh'}>中文</button>
             <button type="button" className={lang === 'en' ? t.langOn : t.langBtn} onClick={() => setLang('en')} aria-pressed={lang === 'en'}>EN</button>

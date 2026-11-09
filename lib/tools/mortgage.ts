@@ -103,5 +103,14 @@ export function calcMortgage(raw: Partial<Record<keyof MortgageInput, unknown>>)
 }
 
 /** 美元千分位，整数 */
-export const usd = (n: number) => `${n < 0 ? '-' : ''}$${Math.round(Math.abs(n)).toLocaleString('en-US')}`;
-export const pct = (n: number | null, digits = 2) => (n === null || !Number.isFinite(n) ? '—' : `${n.toFixed(digits)}%`);
+/** 负号统一用数学减号“−”（U+2212），金额和百分比在页面、分享图上同一个样子（验收 P3-T1） */
+export const MINUS = '\u2212';
+export const usd = (n: number) => {
+  const v = Math.round(Math.abs(n));
+  return `${n < 0 && v !== 0 ? MINUS : ''}$${v.toLocaleString('en-US')}`;
+};
+export const pct = (n: number | null, digits = 2) => {
+  if (n === null || !Number.isFinite(n)) return '—';
+  const t = Math.abs(n).toFixed(digits);
+  return `${n < 0 && Number(t) !== 0 ? MINUS : ''}${t}%`;
+};
