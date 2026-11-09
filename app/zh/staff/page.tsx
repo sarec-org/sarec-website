@@ -8,6 +8,9 @@ import { api } from '@/components/crm/client';
 const SECTIONS: { href: string; title: string; desc: string; role: string }[] = [
   { href: '/zh/staff/followups', title: '待跟进任务', desc: 'AI 助手线索、新咨询、活动后希望了解、30 天内到期会员；失败与异常在“待处理”', role: 'ops' },
   { href: '/zh/staff/checkin', title: '现场签到台', desc: '查人、代签到、现场登记', role: 'checkin' },
+  { href: '/zh/staff/backfill', title: '补登记到场', desc: '实际来了但系统没记上的人：按手机号补报名并记到场，活动结束后也能补，留操作记录', role: 'checkin' },
+  { href: '/zh/staff/duplicates', title: '合并重复档案', desc: '同手机号 / 同邮箱 / 同名的疑似重复，确认后合并（报名、签到、积分都保留，重复积分不相加），可撤销', role: 'ops' },
+  { href: '/zh/staff/checkin-questions', title: '签到选择题', desc: '来过的人扫码时自动出的 1–3 道选择题：题目、选项、顺序、启用', role: 'ops' },
   { href: '/zh/staff/payments', title: '核款工作台', desc: '核对 Zelle 到账，一键确认或标记未到账', role: 'finance' },
   { href: '/zh/staff/events', title: '活动管理', desc: '新建、编辑、关闭报名、下载签到码', role: 'ops' },
   { href: '/zh/staff/contacts', title: '客户查询', desc: '档案、时间线、积分、标签、导出', role: 'ops' },

@@ -250,7 +250,7 @@ export type CheckinResult =
   | { kind: 'waitlisted'; message: string }
   | { kind: 'rejected'; message: string };
 
-export const CHECKIN_POINTS = 20; // 方案 V3.1 第 08 节试点建议值，可在发布前调整
+export const CHECKIN_POINTS = 10; // 1.3.1 积分规则：签到 10（先记账不兑换；以前的记录不改）
 
 export async function checkIn(
   db: Db,
