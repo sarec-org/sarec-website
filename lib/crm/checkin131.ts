@@ -223,8 +223,9 @@ export async function saveAnswers(db: Db, contactId: string, answers: Record<str
   return earned;
 }
 
-async function phoneQuickOn(db: Db): Promise<boolean> {
-  return !!(await getSetting<boolean>(db as never, 'phone_quick', false)) && wxConfigured();
+// 海外主体不能用微信“手机号快速验证”组件（东哥 11/9 微信后台确认）：永久关闭，只用短信验证码
+async function phoneQuickOn(_db: Db): Promise<boolean> {
+  return false;
 }
 
 /** 微信“手机号快速验证”：code 换手机号（微信已验证过）。 */
