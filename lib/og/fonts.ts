@@ -1,5 +1,5 @@
 /**
- * 生成图片（名片、活动海报）用的中文字体：Google Fonts 动态子集（只取用到的字），satori 只认 truetype，用老 UA 取 ttf。
+ * 生成图片（名片、活动海报）用的中文字体：Google Fonts 动态子集（只取用到的字），satori 只认 truetype / woff；Google 对 Wget 的 UA 返回 ttf（老 IE 的 UA 现在拿到的是 eot）。
  * 宋体标题用 Noto Serif SC，正文用 Noto Sans SC。取不到字体时返回空数组（图片照样生成，用默认字体）。
  */
 type Font = { name: string; data: ArrayBuffer; weight: 400 | 600 | 700; style: 'normal' };
@@ -7,8 +7,8 @@ type Font = { name: string; data: ArrayBuffer; weight: 400 | 600 | 700; style: '
 async function one(family: string, weight: number, text: string): Promise<ArrayBuffer | null> {
   try {
     const url = `https://fonts.googleapis.com/css2?family=${family.replace(/ /g, '+')}:wght@${weight}&text=${encodeURIComponent(Array.from(new Set(text)).join(''))}`;
-    const css = await (await fetch(url, { headers: { 'User-Agent': 'Mozilla/4.0 (compatible; MSIE 6.0)' } })).text();
-    const m = css.match(/src:\s*url\(([^)]+)\)\s*format\(['"]?truetype/);
+    const css = await (await fetch(url, { headers: { 'User-Agent': 'Wget/1.21' } })).text();
+    const m = css.match(/src:\s*url\(([^)]+)\)/); // 只取第一个字体文件地址
     if (!m) return null;
     return await (await fetch(m[1])).arrayBuffer();
   } catch {
