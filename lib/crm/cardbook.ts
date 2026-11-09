@@ -133,7 +133,7 @@ export async function cardBook(me: string, q?: string | null) {
   const { rows: inc } = await pool.query<{ id: string; name: string; company: string | null; title: string | null; token: string | null; created_at: Date }>(
     `SELECT x.id, NULLIF(o.name, '微信用户') AS name, m.company, m.title, m.token, x.created_at
        FROM card_exchanges x JOIN contacts o ON o.id = x.requester_id LEFT JOIN member_cards m ON m.contact_id = o.id
-      WHERE x.target_id = $1 AND x.status = 'pending' ORDER BY x.created_at DESC`,
+      WHERE x.target_id = $1 AND x.status = 'pending' AND m.hidden_at IS NULL ORDER BY x.created_at DESC`,
     [me]
   );
   return { total: rows.length, groups, incoming: inc };

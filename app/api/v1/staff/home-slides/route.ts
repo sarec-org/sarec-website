@@ -5,7 +5,7 @@ import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
 import { body, handler, ok, requireStaff } from '@/lib/crm/http';
 import { actor, audit } from '@/lib/crm/staff';
-import { previewCarousel } from '@/lib/crm/home131';
+import { previewCarousel, slideCandidates } from '@/lib/crm/home131';
 import { isRegion } from '@/lib/crm/regions';
 import { hasMoney } from '@/lib/noMoney';
 export const runtime = 'nodejs';
@@ -17,7 +17,7 @@ export const GET = handler(async (req: Request) => {
     `SELECT id, action, target, kind, title, eyebrow, meta, image_url, button_text, link, audience, region, expires_at, created_by, created_at
        FROM home_slides WHERE removed_at IS NULL AND expires_at > now() ORDER BY created_at DESC`
   );
-  return ok({ overrides: rows, preview: await previewCarousel(region) });
+  return ok({ overrides: rows, preview: await previewCarousel(region), candidates: await slideCandidates() });
 });
 export const POST = handler(async (req: Request) => {
   const s = await requireStaff(req, 'ops');

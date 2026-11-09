@@ -38,6 +38,7 @@ export const GET = handler(async (req: Request, { params }: { params: { token: s
   const bg =
     tpl === 'white' ? '#FFFFFF'
     : tpl === 'estate' ? NAVY
+    : tpl === 'bilingual' ? 'linear-gradient(135deg, #0B2E35 0%, #0F4A52 55%, #0B1A28 100%)'
     : 'linear-gradient(135deg, #0F1F33 0%, #16304D 60%, #0B1A28 100%)';
 
   const body = (
@@ -49,10 +50,8 @@ export const GET = handler(async (req: Request, { params }: { params: { token: s
       <div style={{ display: 'flex', alignItems: 'center', marginTop: tpl === 'estate' ? 20 : 44 }}>
         {avatar ? <img src={avatar} width={112} height={112} style={{ borderRadius: 56, border: `2px solid ${GOLD}`, marginRight: 28, objectFit: 'cover' }} /> : null}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline' }}>
-            <div style={{ fontSize: 60, color: fg, fontFamily: 'Serif', fontWeight: 700, letterSpacing: 6 }}>{c.name}</div>
-            {tpl === 'bilingual' && c.nameEn ? <div style={{ fontSize: 30, color: GOLD, marginLeft: 20, fontFamily: 'Sans' }}>{c.nameEn}</div> : null}
-          </div>
+          <div style={{ display: 'flex', fontSize: 60, color: fg, fontFamily: 'Serif', fontWeight: 700, letterSpacing: 6 }}>{c.name}</div>
+          {tpl === 'bilingual' && c.nameEn ? <div style={{ display: 'flex', fontSize: 34, color: GOLD, marginTop: 2, fontFamily: 'Sans', letterSpacing: 2 }}>{c.nameEn}</div> : null}
           {role ? <div style={{ display: 'flex', fontSize: 28, color: GOLD, marginTop: 6, fontFamily: 'Sans' }}>{role}</div> : null}
           {tpl === 'bilingual' && roleEn ? <div style={{ display: 'flex', fontSize: 24, color: sub, marginTop: 4, fontFamily: 'Sans' }}>{roleEn}</div> : null}
         </div>
@@ -76,7 +75,8 @@ export const GET = handler(async (req: Request, { params }: { params: { token: s
     (
       <div style={{ width: W, height: H, display: 'flex', flexDirection: 'column', background: bg, border: tpl === 'white' ? `6px solid ${GOLD}` : 'none', position: 'relative' }}>
         {tpl === 'white' ? <div style={{ position: 'absolute', left: 52, right: 52, top: 112, height: 2, background: GOLD, opacity: 0.5, display: 'flex' }} /> : null}
-        {tpl !== 'white' && tpl !== 'estate' ? <div style={{ position: 'absolute', right: -160, top: -160, width: 520, height: 520, borderRadius: 260, border: '2px solid rgba(201,165,103,0.22)', display: 'flex' }} /> : null}
+        {tpl === 'bilingual' ? <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 10, background: GOLD, display: 'flex' }} /> : null}
+        {tpl === 'navy' ? <div style={{ position: 'absolute', right: -160, top: -160, width: 520, height: 520, borderRadius: 260, border: '2px solid rgba(201,165,103,0.22)', display: 'flex' }} /> : null}
         {tpl === 'estate' ? (
           <div style={{ display: 'flex', height: 210, width: W, position: 'relative', background: '#16304D' }}>
             {photo ? <img src={photo} width={W} height={210} style={{ objectFit: 'cover' }} /> : null}

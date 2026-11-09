@@ -14,11 +14,12 @@ const inDays = (n: number) => new Date(Date.now() + n * 86400_000).toISOString()
 export default function HomeSlides() {
   const [prev, setPrev] = useState<Record<string, Slide[]> | null>(null);
   const [ovs, setOvs] = useState<Ov[]>([]);
+  const [cands, setCands] = useState<{ key: string; title: string; eyebrow: string }[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [form, setForm] = useState({ action: 'add', target: '', title: '', eyebrow: '', meta: '', imageUrl: '', buttonText: '', link: '', audience: 'all', expiresAt: inDays(7) });
   const load = useCallback(async () => {
-    const r = await api<{ overrides: Ov[]; preview: Record<string, Slide[]> }>('/api/v1/staff/home-slides');
-    if (r.ok) { setOvs(r.data.overrides); setPrev(r.data.preview); } else setMsg({ ok: false, text: r.message });
+    const r = await api<{ overrides: Ov[]; preview: Record<string, Slide[]>; candidates: { key: string; title: string; eyebrow: string }[] }>('/api/v1/staff/home-slides');
+    if (r.ok) { setOvs(r.data.overrides); setPrev(r.data.preview); setCands(r.data.candidates ?? []); } else setMsg({ ok: false, text: r.message });
   }, []);
   useEffect(() => { load(); }, [load]);
   const save = async () => {
@@ -32,7 +33,7 @@ export default function HomeSlides() {
     if (r.ok) load();
   };
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const allSlides = prev ? Array.from(new Map(Object.values(prev).flat().map((s) => [s.key, s])).values()) : [];
+  const allSlides = cands.length ? cands : prev ? Array.from(new Map(Object.values(prev).flat().map((s) => [s.key, s])).values()) : [];
   return (
     <StaffGate title="首页轮播" role="ops" wide>
       {() => (

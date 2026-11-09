@@ -51,9 +51,13 @@ async function main() {
   await pool.query(`INSERT INTO registrations (event_id, contact_id, confirm_status) VALUES ($1, $2, 'none')`, [c, me[0].id]);
   const h2 = await home131(me[0].id);
   assert.equal(h2.todo.kind, 'registered');
-  assert.equal(h2.carousel[0].key, `event:${c}`);
-  assert.match(h2.carousel[0].eyebrow, /^我报名的/);
-  ok('已报名：待办卡显示已报名；轮播第一张是本人已报名的临近活动');
+  assert.ok(!h2.carousel.some((s) => s.key === `event:${c}`));
+  ok('已报名：待办卡显示已报名；轮播不再重复同一场（测试 P3）');
+  await pool.query(`INSERT INTO home_slides (action, target, expires_at, created_by) VALUES ('pin', $1, now() + interval '1 day', 'staff:DEV131')`, [`event:${c}`]);
+  const hp = await home131(null, { region: R });
+  assert.equal(hp.carousel[0].key, `event:${c}`);
+  await pool.query(`DELETE FROM home_slides WHERE target = $1 AND created_by = 'staff:DEV131'`, [`event:${c}`]);
+  ok('排第 3 的活动置顶后排第一（测试 P2-G2）');
   await pool.query(`UPDATE registrations SET confirm_status = 'asked' WHERE event_id = $1 AND contact_id = $2`, [c, me[0].id]);
   const h3 = await home131(me[0].id);
   assert.equal(h3.todo.kind, 'confirm');

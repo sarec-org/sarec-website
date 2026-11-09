@@ -103,10 +103,10 @@ async function upcomingEvents(db: Db): Promise<Ev[]> {
   return rows;
 }
 
-function eventLine(e: Ev) {
+function eventLine(e: Ev, mine = false) {
   const tz = e.timezone || 'America/Los_Angeles';
   const seat = seatStatus(e.capacity, e.registered);
-  return [e.location_name, clock(e.starts_at, tz), seat.key === 'open' ? null : seat.label].filter(Boolean).join(' · ');
+  return [e.location_name, clock(e.starts_at, tz), mine || seat.key === 'open' ? null : seat.label].filter(Boolean).join(' · ');
 }
 const isRoundtable = (e: Ev) => e.template_key === 'face';
 
@@ -117,7 +117,7 @@ function eventSlide(e: Ev, mine: boolean): Slide {
     kind: 'event',
     eyebrow: `${mine ? '我报名的' + noun(e.template_key) : '下一场' + (e.template_key === 'lecture' ? '公开讲座' : noun(e.template_key))} · ${dayWord(e.starts_at, tz)}`,
     title: e.title,
-    meta: eventLine(e),
+    meta: eventLine(e, mine),
     image: coverOf(e),
     button: { text: mine ? '查看安排' : e.registration_open ? (isRoundtable(e) ? '申请席位' : '立即报名') : '查看详情', page: `/pages/event/event?slug=${encodeURIComponent(e.slug)}` }
   };
@@ -173,7 +173,9 @@ export async function home131(contactId: string | null, opts: { region?: string 
     todo = {
       kind: 'confirm',
       title: offer ? `有名额了：${dayWord(askReg.starts_at, tz, now)}${clock(askReg.starts_at, tz).replace(' ', '')}的${noun(askReg.template_key)}` : `${dayWord(askReg.starts_at, tz, now)}${clock(askReg.starts_at, tz).replace(':00', ' 点').replace(' ', '')}的${noun(askReg.template_key)}，您来吗？`,
-      sub: `请在${dayWord(deadline, tz, now)}${clock(deadline, tz).replace(' ', '')}前确认，过时名额让给${offer ? '下一位' : '候补'}`,
+      sub: deadline.getTime() > now.getTime()
+        ? `请在${dayWord(deadline, tz, now)} ${clock(deadline, tz)} 前确认，过时名额让给${offer ? '下一位' : '候补'}`
+        : `请尽快确认，未确认的名额会让给${offer ? '下一位' : '候补'}`,
       regId: askReg.reg_id,
       slug: askReg.slug,
       actions: [{ text: '我来', action: 'confirm_yes' }, { text: '去不了', action: 'confirm_no' }]
@@ -183,7 +185,7 @@ export async function home131(contactId: string | null, opts: { region?: string 
     const tz = todayReg.timezone || 'America/Los_Angeles';
     todo = {
       kind: 'today',
-      title: `今天${clock(todayReg.starts_at, tz).replace(' ', '')} · ${todayReg.title}`,
+      title: `今天 ${clock(todayReg.starts_at, tz)} · ${todayReg.title}`,
       sub: todayReg.arrival_status === 'checked_in' ? '已签到，祝您愉快' : `${todayReg.location_name ?? '地点见活动页'} · 到场扫门口的码签到`,
       slug: todayReg.slug,
       actions: [{ text: todayReg.arrival_status === 'checked_in' ? '看安排' : '签到码', action: todayReg.arrival_status === 'checked_in' ? 'event' : 'checkin_qr' }]
@@ -198,6 +200,7 @@ export async function home131(contactId: string | null, opts: { region?: string 
       slug: nextReg.slug,
       actions: [{ text: '看安排', action: 'event' }]
     };
+    todoEventId = nextReg.id;
   } else if (albums[0]) {
     todo = { kind: 'photos', title: `新增 ${albums[0].n} 张照片`, sub: `${albums[0].title} · 相册刚刚更新`, slug: albums[0].slug, actions: [{ text: '去看', action: 'album' }] };
     todoPhotos = albums[0].slug;
@@ -211,14 +214,24 @@ export async function home131(contactId: string | null, opts: { region?: string 
   }
 
   // ── 轮播 ──
+  // 后台手动设置（都有截止时间；活动取消 / 结束优先于手动设置——已经不在自动列表里的活动置顶也不会出现）
+  const { rows: ov } = await db.query<{ id: string; action: string; target: string | null; kind: Slide['kind']; title: string | null; eyebrow: string | null; meta: string | null; image_url: string | null; button_text: string | null; link: string | null; audience: string; region: string | null }>(
+    `SELECT id, action, target, kind, title, eyebrow, meta, image_url, button_text, link, audience, region FROM home_slides
+      WHERE removed_at IS NULL AND expires_at > now() ORDER BY created_at`
+  ).catch(() => ({ rows: [] as never[] }));
+  const applies = (o: { audience: string; region: string | null }) => (o.audience === 'all' || o.audience === persona || (o.audience === 'registered' && persona === 'member')) && (!o.region || o.region === region);
+  const hidden = new Set(ov.filter(applies).filter((o) => o.action === 'hide').map((o) => o.target));
+  const pinnedIds = new Set(ov.filter(applies).filter((o) => o.action === 'pin' && o.target?.startsWith('event:')).map((o) => o.target!.slice(6)));
   const slides: Slide[] = [];
   const seen = new Set<string>();
   const pushEv = (e: Ev, isMine: boolean) => {
     const k = `event:${e.id}`;
-    if (seen.has(k) || e.id === todoEventId || slides.filter((s) => s.kind === 'event').length >= 2) return;
+    if (seen.has(k) || hidden.has(k) || e.id === todoEventId || slides.filter((s) => s.kind === 'event').length >= 2) return;
     seen.add(k);
     slides.push(eventSlide(e, isMine));
   };
+  // 测试 P2-G2：置顶的活动先排（不管它原本排第几）
+  for (const e of all) if (pinnedIds.has(e.id)) pushEv(e, mine.some((m) => m.id === e.id));
   for (const m of mine) if (m.reg_status === 'registered' && new Date(m.starts_at).getTime() - now.getTime() < 14 * 86400_000) pushEv(m, true);
   for (const e of local) pushEv(e, false);
   for (const e of national) pushEv(e, false);
@@ -232,7 +245,7 @@ export async function home131(contactId: string | null, opts: { region?: string 
         AND e.starts_at <= now() AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() - interval '7 days'
       ORDER BY e.starts_at DESC LIMIT 1`
   );
-  if (ph[0]?.thumb && ph[0].n > 0 && ph[0].slug !== todoPhotos) {
+  if (ph[0]?.thumb && ph[0].n > 0 && ph[0].slug !== todoPhotos && !seen.has(`event:${ph[0].id}`) && !hidden.has(`photos:${ph[0].id}`)) {
     slides.push({
       key: `photos:${ph[0].id}`, kind: 'photos', eyebrow: ph[0].ended ? '精彩回顾' : '现场照片', title: ph[0].title, meta: `${ph[0].n} 张照片 · 可以转发给朋友`,
       image: ph[0].thumb, button: { text: '看照片', page: `/pages/album/album?slug=${encodeURIComponent(ph[0].slug)}` }
@@ -248,12 +261,6 @@ export async function home131(contactId: string | null, opts: { region?: string 
     slides.push({ key: 'intro', kind: 'intro', eyebrow: 'SINO-AMERICAN REAL ESTATE CHAMBER', title: '中美房地产商会', meta: '连接中美资本，重构房地产项目协作', image: img('/images/la/la-skyline-marquee.jpg'), button: { text: '了解商会', page: '/pages/intro/intro' } });
   }
 
-  // 后台手动设置（都有截止时间；活动取消 / 结束优先于手动设置——已经不在自动列表里的活动置顶也不会出现）
-  const { rows: ov } = await db.query<{ id: string; action: string; target: string | null; kind: Slide['kind']; title: string | null; eyebrow: string | null; meta: string | null; image_url: string | null; button_text: string | null; link: string | null; audience: string; region: string | null }>(
-    `SELECT id, action, target, kind, title, eyebrow, meta, image_url, button_text, link, audience, region FROM home_slides
-      WHERE removed_at IS NULL AND expires_at > now() ORDER BY created_at`
-  ).catch(() => ({ rows: [] as never[] }));
-  const applies = (o: { audience: string; region: string | null }) => (o.audience === 'all' || o.audience === persona || (o.audience === 'registered' && persona === 'member')) && (!o.region || o.region === region);
   let out = slides;
   for (const o of ov.filter(applies)) {
     if (o.action === 'hide') out = out.filter((s) => s.key !== o.target);
@@ -279,7 +286,7 @@ export async function home131(contactId: string | null, opts: { region?: string 
     return {
       slug: e.slug, title: e.title, ...md(e.starts_at, tz), cover: coverOf(e),
       seat: seat.key === 'open' ? null : seat.label, full: seat.key === 'full',
-      line: [isRoundtable(e) && e.capacity ? `${e.capacity} 人闭门` : null, `${dayWord(e.starts_at, tz, now)} ${clock(e.starts_at, tz)}`].filter(Boolean).join(' · '),
+      line: [isRoundtable(e) ? '闭门交流' : null, `${dayWord(e.starts_at, tz, now)} ${clock(e.starts_at, tz)}`].filter(Boolean).join(' · '),
       tz: tzLabel(tz),
       button: m ? (m.reg_status === 'waitlisted' ? '候补中' : '已报名') : e.registration_open ? (isRoundtable(e) ? '申请席位' : seat.key === 'full' ? '排候补' : '报名') : '查看'
     };
@@ -339,6 +346,17 @@ export async function home131(contactId: string | null, opts: { region?: string 
       tools
     }
   };
+}
+
+/** 后台“首页轮播”下拉：所有可以置顶 / 隐藏 / 改的卡（不只当前预览里的） */
+export async function slideCandidates() {
+  const evs = await upcomingEvents(getPool());
+  return [
+    ...evs.map((e) => ({ key: `event:${e.id}`, title: e.title, eyebrow: `活动 · ${e.region}` })),
+    { key: 'join', title: '成为 SAREC 会员', eyebrow: '加入商会（非会员看到）' },
+    { key: 'member', title: '我的会员卡与会员权益', eyebrow: '会员服务（会员看到）' },
+    { key: 'intro', title: '中美房地产商会', eyebrow: '商会介绍（没有活动时）' }
+  ];
 }
 
 /** 后台“首页轮播”：三种人分别看到什么（预览） */

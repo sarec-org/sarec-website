@@ -198,7 +198,7 @@ export async function confirmInfo(regId: string) {
   const r = rows[0];
   if (!r) throw new CrmError('not_found', '找不到这份报名');
   const state =
-    r.event_status !== 'scheduled' ? 'closed'
+    r.event_status !== 'scheduled' || new Date(r.starts_at).getTime() <= Date.now() ? 'closed'
     : r.status === 'cancelled' ? 'cancelled'
     : r.arrival_status === 'checked_in' ? 'checked_in'
     : r.status === 'waitlisted' && r.confirm_status === 'offered' && r.offer_expires_at && r.offer_expires_at > new Date() ? 'offer'
