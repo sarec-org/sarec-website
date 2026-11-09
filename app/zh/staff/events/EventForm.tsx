@@ -48,6 +48,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     hardCapacity: initial?.hard_capacity == null ? '' : String(initial.hard_capacity),
     region: String(initial?.region ?? '洛杉矶/橙县'),
     notifyScope: String(initial?.notify_scope ?? 'local'),
+    notifyRegions: (initial?.notify_regions as string[]) ?? [],
     videoUrl: String(initial?.video_url ?? ''),
     fee: initial?.fee_cents ? String(Number(initial.fee_cents) / 100) : '0',
     topicTags: (initial?.topic_tags as string[]) ?? [],
@@ -65,6 +66,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       ...p,
       capacity: t.default_capacity == null ? p.capacity : String(t.default_capacity),
       hardCapacity: t.default_hard_capacity == null ? p.hardCapacity : String(t.default_hard_capacity),
+      notifyScope: t.key === 'summit' ? 'all' : p.notifyScope,
       fee: t.default_fee_cents == null ? p.fee : String(t.default_fee_cents / 100)
     }));
   };
@@ -98,6 +100,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       hardCapacity: f.hardCapacity === '' ? null : Number(f.hardCapacity),
       region: f.region,
       notifyScope: f.notifyScope,
+      notifyRegions: f.notifyScope === 'regions' ? f.notifyRegions : [],
       ...(initial ? { videoUrl: f.videoUrl } : {}),
       feeCents: Math.round(Number(f.fee || 0) * 100),
       topicTags: f.topicTags,
@@ -106,7 +109,12 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     const r = initial
       ? await api<{ id: string }>(`/api/v1/staff/events/${initial.id}`, { method: 'PATCH', body: payload })
       : await api<{ event: { id: string } }>('/api/v1/staff/events', { body: payload });
-    if (!r.ok) { setBusy(false); return setErr(r.message); }
+    if (!r.ok) {
+      setBusy(false);
+      setErr(r.message);
+      if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' }); // 报错在表单顶部，滚上去让人看到
+      return;
+    }
     const id = initial ? String(initial.id) : (r.data as { event: { id: string } }).event.id;
     // 封面图（可选）：和活动一起保存；没传的话首页、海报用该类型的默认图
     if (cover) {
@@ -159,8 +167,16 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
         <label className={styles.label} htmlFor="ev-scope">通知谁</label>
         <select id="ev-scope" className={styles.select} value={f.notifyScope} onChange={(e) => set('notifyScope', e.target.value)}>
           <option value="local">本地区的人（外地的人在首页公告区能看到）</option>
+          <option value="regions">本地区 + 指定几个地区</option>
           <option value="all">所有地区（高峰论坛等；只有管理员能选）</option>
         </select>
+        {f.notifyScope === 'regions' && (
+          <div className={styles.chips}>
+            {['洛杉矶/橙县', '旧金山湾区', '纽约', '美国其他', '中国大陆', '其他'].filter((r) => r !== f.region).map((r) => (
+              <button key={r} type="button" className={`${styles.chip} ${f.notifyRegions.includes(r) ? styles.chipOn : ''}`} onClick={() => set('notifyRegions', f.notifyRegions.includes(r) ? f.notifyRegions.filter((x) => x !== r) : [...f.notifyRegions, r])}>{r}</button>
+            ))}
+          </div>
+        )}
       </div>
       {input('capacity', '当前上限（报到这个数后进候补；不填 = 不限）', 'number', { min: 0, inputMode: 'numeric' })}
       {input('hardCapacity', '硬上限（场地坐得下的极限；加名额最多加到这里）', 'number', { min: 0, inputMode: 'numeric' })}

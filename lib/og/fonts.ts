@@ -17,7 +17,7 @@ async function one(family: string, weight: number, text: string): Promise<ArrayB
 }
 
 export async function ogFonts(text: string): Promise<Font[]> {
-  const t = text + '0123456789·:-()ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz SAREC';
+  const t = text + '0123456789·:-()ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz SAREC…';
   const [serif, sans, sansBold] = await Promise.all([one('Noto Serif SC', 700, t), one('Noto Sans SC', 400, t), one('Noto Sans SC', 700, t)]);
   return [
     ...(serif ? [{ name: 'Serif', data: serif, weight: 700 as const, style: 'normal' as const }] : []),
@@ -30,7 +30,7 @@ export async function ogFonts(text: string): Promise<Font[]> {
 export async function dataUri(url: string | null | undefined): Promise<string | null> {
   if (!url) return null;
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, { headers: { Accept: 'image/jpeg,image/png;q=0.9' } }); // 生成器不认 webp / avif
     if (!r.ok) return null;
     const type = r.headers.get('content-type') || 'image/png';
     return `data:${type};base64,${Buffer.from(await r.arrayBuffer()).toString('base64')}`;

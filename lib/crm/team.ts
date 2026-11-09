@@ -67,17 +67,30 @@ export async function updateMember(s: Staff, id: string, b: { roles?: unknown; r
   if (!before) throw new CrmError('not_found', '找不到这位工作人员');
   const roles = b.roles !== undefined ? cleanRoles(b.roles) : before.roles;
   const active = b.isActive !== undefined ? !!b.isActive : before.is_active;
-  // 不能把最后一个在用的管理员停掉 / 降级（避免没人能管权限）
-  if ((!roles.includes('admin') || !active) && before.roles.includes('admin') && before.is_active) {
-    const { rows: n } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM staff_roles WHERE is_active AND 'admin' = ANY(roles) AND email <> $1`, [id]);
-    if (!n[0].n) throw new CrmError('conflict', '这是最后一个在用的管理员，不能停用或降级');
-  }
+  // 不能把最后一个能登录的管理员停掉 / 降级（避免没人能管权限）
+  if ((!roles.includes('admin') || !active) && before.roles.includes('admin') && before.is_active) await assertOtherAdmin(id);
   await pool.query(
     `UPDATE staff_roles SET roles = $2, regions = $3, is_active = $4, name = coalesce($5, name), updated_at = now() WHERE email = $1`,
     [id, roles, b.regions !== undefined ? cleanRegions(b.regions) : before.regions, active, b.name ? String(b.name).trim().slice(0, 40) : null]
   );
   await audit(pool as never, s, active ? 'team_update' : 'team_disable', 'staff', id, { before, after: { roles, active, regions: b.regions } });
   return { ok: true };
+}
+
+/**
+ * 还有别的“能登录的”在用管理员吗：绑过小程序微信，或有网站登录邮箱（不是 mp: 内部编号）。
+ * 刚加完还没输绑定码的那一行不算（测试 P2）。加锁，防止两个请求同时把最后两个都停掉。
+ */
+export async function assertOtherAdmin(exceptKey: string) {
+  const { withTransaction } = await import('@/lib/db/client');
+  await withTransaction(async (db) => {
+    await db.query(`SELECT email FROM staff_roles WHERE is_active AND 'admin' = ANY(roles) FOR UPDATE`);
+    const { rows } = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM staff_roles WHERE is_active AND 'admin' = ANY(roles) AND email <> $1 AND (mp_contact_id IS NOT NULL OR email NOT LIKE 'mp:%')`,
+      [exceptKey]
+    );
+    if (!rows[0].n) throw new CrmError('conflict', '这是最后一个能登录的管理员，不能停用或降级');
+  });
 }
 
 export async function newBindCode(s: Staff, id: string) {
@@ -90,14 +103,18 @@ export async function newBindCode(s: Staff, id: string) {
 const KEY_ACTIONS = [
   'capacity_change', 'staff_admit', 'noshow_exempt', 'confirm_timeline', 'backfill_attendance', 'merge_contacts', 'undo_merge_contacts',
   'team_add', 'team_update', 'team_disable', 'team_bind_code', 'join_link_sent', 'home_slide', 'home_slide_remove', 'contact_region',
-  'checkin_questions_update', 'staff_checkin', 'onsite_register', 'newsletter_send', 'newsletter_confirm', 'event_update', 'event_create'
+  'checkin_questions_update', 'staff_checkin', 'onsite_register', 'newsletter_confirm', 'create_event', 'update_event', 'regenerate_checkin_code', 'upsert_staff'
 ];
 
 /** 操作记录（管理员）：谁、用哪个账号、什么时候、做了什么 */
 export async function teamLog(limit = 200) {
   const { rows } = await getPool().query(
     `SELECT a.created_at, a.actor, a.action, a.target_type, a.target_id, a.reason,
-            CASE WHEN a.target_type = 'contact' THEN (SELECT NULLIF(name, '微信用户') FROM contacts WHERE id::text = a.target_id) END AS target_name
+            CASE WHEN a.target_type = 'contact' THEN (SELECT NULLIF(name, '微信用户') FROM contacts WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'staff' THEN (SELECT name FROM staff_roles WHERE email = a.target_id)
+                 WHEN a.target_type = 'event' THEN (SELECT title FROM events WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'newsletter' THEN (SELECT subject FROM newsletter_issues WHERE id::text = a.target_id) END AS target_name,
+            a.before_value, a.after_value
        FROM crm_audit_log a
       WHERE a.action = ANY($1::text[]) OR a.actor LIKE 'staff:%'
       ORDER BY a.created_at DESC LIMIT $2`,

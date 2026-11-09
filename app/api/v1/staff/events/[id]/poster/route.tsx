@@ -9,7 +9,7 @@ import QRCode from 'qrcode';
 import { getPool } from '@/lib/db/client';
 import { staffCan, staffFor } from '@/lib/crm/auth';
 import { CrmError } from '@/lib/crm/events';
-import { handler, requireContact } from '@/lib/crm/http';
+import { handler, requireContact, regionScope } from '@/lib/crm/http';
 import { eventRegisterCode, wxConfigured } from '@/lib/crm/wechat';
 import { clock, defaultCover, fullDate } from '@/lib/crm/home131';
 import { tzLabel } from '@/lib/crm/regions';
@@ -26,6 +26,7 @@ const SITE = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec
 
 export const GET = handler(async (req: Request, { params }: { params: { id: string } }) => {
   const s = await staffFor(await requireContact(req));
+  await regionScope(req, s); // 1.3.1 F：地区管理员只能碰自己地区的活动
   if (!staffCan(s, 'ops') && !staffCan(s, 'checkin')) throw new CrmError('forbidden', '您没有这个操作的权限，请联系管理员开通');
   const sp = new URL(req.url).searchParams;
   const size = (sp.get('size') ?? 'moments') as keyof typeof SIZES;
@@ -40,7 +41,7 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
   if (!e) throw new CrmError('not_found', '找不到这场活动');
   const tz = e.timezone || 'America/Los_Angeles';
   const [W, H] = SIZES[size];
-  const cover = await dataUri(e.cover_url ? (e.cover_url.startsWith('http') ? e.cover_url : SITE() + e.cover_url) : `${SITE()}${defaultCover(e.template_key, e.id)}`);
+  const cover = await dataUri(e.cover_url ? (e.cover_url.startsWith('http') ? e.cover_url : SITE() + e.cover_url) : `https://sinoamericanrec.org/_next/image?url=${encodeURIComponent(defaultCover(e.template_key, e.id))}&w=1200&q=80`);
   const code = wxConfigured() ? await eventRegisterCode(e.slug) : await QRCode.toBuffer(`SAREC-TEST:pages/event/event?slug=${e.slug}`, { margin: 1, width: 400 });
   const qr = `data:image/png;base64,${code.toString('base64')}`;
   const when = `${fullDate(e.starts_at, tz)} ${clock(e.starts_at, tz)}（${tzLabel(tz)}）`;
@@ -51,7 +52,8 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
 
   const big = size === 'moments';
   const wide = size === 'oa';
-  const titleSize = big ? 92 : wide ? 46 : 70;
+  const tl = e.title.length;
+  const titleSize = Math.round((big ? 92 : wide ? 46 : 70) * (tl > 30 ? 0.68 : tl > 20 ? 0.8 : 1));
   const qrSize = big ? 240 : wide ? 150 : 200;
 
   return new ImageResponse(
@@ -64,7 +66,7 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
           <div style={{ display: 'flex', width: big ? 120 : 80, height: 4, background: GOLD, marginTop: big ? 28 : 16 }} />
         </div>
         <div style={{ position: 'absolute', left: wide ? 48 : 72, right: wide ? 300 : 72, bottom: wide ? 44 : big ? 140 : 72, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', fontFamily: 'Serif', fontWeight: 700, fontSize: titleSize, lineHeight: 1.2, color: IVORY }}>{e.title}</div>
+          <div style={{ display: 'block', fontFamily: 'Serif', fontWeight: 700, fontSize: titleSize, lineHeight: 1.2, color: IVORY, lineClamp: wide ? 2 : 3, overflow: 'hidden' }}>{e.title}</div>
           {summary && !wide ? <div style={{ display: 'flex', fontSize: big ? 36 : 28, color: 'rgba(242,234,214,0.82)', marginTop: big ? 28 : 18, lineHeight: 1.45 }}>{summary}</div> : null}
           <div style={{ display: 'flex', fontSize: big ? 38 : wide ? 22 : 30, color: GOLD, marginTop: big ? 48 : wide ? 16 : 28 }}>{when}</div>
           {place ? <div style={{ display: 'flex', fontSize: big ? 32 : wide ? 20 : 26, color: 'rgba(242,234,214,0.85)', marginTop: 10 }}>{place}</div> : null}

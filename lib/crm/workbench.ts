@@ -63,11 +63,13 @@ export async function workbenchHome(s: Staff) {
             count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted
        FROM events e LEFT JOIN registrations r ON r.event_id = e.id
       WHERE e.event_status <> 'cancelled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() - interval '2 days'
+        AND ($1::text[] IS NULL OR e.region = ANY($1::text[]))
       GROUP BY e.id
       ORDER BY CASE WHEN coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now() THEN 2
                     WHEN e.starts_at <= now() + interval '18 hours' THEN 0 ELSE 1 END,
                CASE WHEN coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now() THEN -extract(epoch FROM e.starts_at) ELSE extract(epoch FROM e.starts_at) END
-      LIMIT 10`
+      LIMIT 10`,
+    [!s.roles.includes('admin') && s.regions?.length ? s.regions : null] // 1.3.1 F：地区管理员只看自己地区
   );
   const out: Record<string, unknown> = {
     staff: { name: s.name, roles: s.roles },

@@ -6,15 +6,30 @@ import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, copyText, fmtDateTime } from '@/components/crm/client';
 
 type M = { id: string; name: string; roles: string[]; regions: string[]; phone: string | null; is_active: boolean; wechat_name: string | null; member_no: number | null; mp_bound_at: string | null; last_seen_at: string | null; email: string | null };
-type L = { created_at: string; actor: string; action: string; target_type: string; target_id: string; target_name: string | null; reason: string | null };
+type L = { created_at: string; actor: string; action: string; target_type: string; target_id: string; target_name: string | null; reason: string | null; before_value: { roles?: string[]; is_active?: boolean } | null; after_value: { roles?: string[]; active?: boolean; recipients?: number } | null };
 const ROLE: Record<string, string> = { admin: '管理员', ops: '运营', checkin: '签到员', finance: '财务' };
 const REGIONS = ['洛杉矶/橙县', '旧金山湾区', '纽约', '美国其他', '中国大陆', '其他'];
 const ACTION: Record<string, string> = {
   capacity_change: '改名额', staff_admit: '现场放人', noshow_exempt: '解除爽约候补', confirm_timeline: '确认时间线开关', backfill_attendance: '补登记到场',
   merge_contacts: '合并档案', undo_merge_contacts: '撤销合并', team_add: '加工作人员', team_update: '改权限', team_disable: '停用工作人员', team_bind_code: '生成绑定码',
   join_link_sent: '发入会链接', home_slide: '首页轮播设置', home_slide_remove: '撤掉轮播设置', contact_region: '改客户地区', checkin_questions_update: '改签到题库',
-  staff_checkin: '代签到', onsite_register: '现场登记'
+  staff_checkin: '代签到', onsite_register: '现场登记', newsletter_confirm: '确认群发邮件通讯', create_event: '新建活动', update_event: '修改活动',
+  regenerate_checkin_code: '重置签到码', upsert_staff: '改工作人员（设置页）'
 };
+const roleText = (r?: string[]) => (r ?? []).map((x) => ROLE[x] ?? x).join('、');
+function detail(l: L) {
+  if (l.action === 'team_update' || l.action === 'team_disable') {
+    const b = l.before_value ?? {};
+    const a = l.after_value ?? {};
+    const parts = [] as string[];
+    if (a.roles && roleText(b.roles) !== roleText(a.roles)) parts.push(`${roleText(b.roles)} → ${roleText(a.roles)}`);
+    if (a.active === false) parts.push('停用');
+    if (a.active === true && b.is_active === false) parts.push('恢复');
+    return parts.join('；');
+  }
+  if (l.action === 'newsletter_confirm' && l.after_value?.recipients) return `发给 ${l.after_value.recipients} 人`;
+  return l.reason ?? '';
+}
 
 export default function Team() {
   const [team, setTeam] = useState<M[]>([]);
@@ -34,7 +49,7 @@ export default function Team() {
     setMsg({ ok: true, text: okText });
     load();
   };
-  const add = () => post({ action: 'add', name: f.name, phone: f.phone, cc: f.cc, roles: [f.role === 'region' ? 'ops' : f.role], regions: f.role === 'region' ? f.regions : [] }, `已添加 ${f.name}，把绑定码发给对方`, f.name);
+  const add = () => post({ action: 'add', name: f.name, phone: f.phone, cc: f.cc, roles: f.role === 'region' ? ['ops', 'checkin'] : [f.role], regions: f.role === 'region' ? f.regions : [] }, `已添加 ${f.name}，把绑定码发给对方`, f.name);
   return (
     <StaffGate title="团队" role="admin" wide>
       {() => (
@@ -81,9 +96,19 @@ export default function Team() {
               <div className={styles.btnRow}>
                 {m.is_active ? (
                   <>
-                    <select className={styles.select} style={{ maxWidth: 140 }} value={m.roles.includes('admin') ? 'admin' : m.roles.includes('ops') ? 'ops' : 'checkin'} onChange={(e) => post({ action: 'update', id: m.id, roles: [e.target.value] }, `已改为${ROLE[e.target.value]}，立即生效`)}>
-                      <option value="admin">管理员</option><option value="ops">运营</option><option value="checkin">签到员</option>
+                    <select className={styles.select} style={{ maxWidth: 160 }} value={m.roles.includes('admin') ? 'admin' : m.regions?.length ? 'region' : m.roles.includes('ops') ? 'ops' : 'checkin'} onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === 'region') return post({ action: 'update', id: m.id, roles: ['ops', 'checkin'], regions: m.regions?.length ? m.regions : ['洛杉矶/橙县'] }, '已改为地区管理员（可在下面选地区），立即生效');
+                      post({ action: 'update', id: m.id, roles: [v], regions: [] }, `已改为${ROLE[v]}，立即生效`);
+                    }}>
+                      <option value="admin">管理员</option><option value="ops">运营</option><option value="checkin">签到员</option><option value="region">地区管理员</option>
                     </select>
+                    {m.regions?.length > 0 && !m.roles.includes('admin') && REGIONS.map((r) => (
+                      <button key={r} type="button" className={`${styles.chip} ${m.regions.includes(r) ? styles.chipOn : ''}`} onClick={() => {
+                        const next = m.regions.includes(r) ? m.regions.filter((x) => x !== r) : [...m.regions, r];
+                        if (next.length) post({ action: 'update', id: m.id, regions: next }, `地区已改为 ${next.join('、')}`);
+                      }}>{r}</button>
+                    ))}
                     <button className={styles.btnQuiet} onClick={() => post({ action: 'code', id: m.id }, '已生成新的绑定码', m.name)}>新绑定码</button>
                     {m.mp_bound_at && <button className={styles.btnQuiet} onClick={() => post({ action: 'unbind', id: m.id }, '已解绑这个微信')}>解绑微信</button>}
                     <button className={styles.btnDanger} onClick={() => post({ action: 'update', id: m.id, isActive: false }, `已停用 ${m.name}，立即生效`)}>停用</button>
@@ -100,7 +125,7 @@ export default function Team() {
             <table className={styles.table}>
               <thead><tr><th>时间</th><th>谁（哪个账号）</th><th>做了什么</th><th>对象</th></tr></thead>
               <tbody>{log.map((l, i) => (
-                <tr key={i}><td>{fmtDateTime(l.created_at)}</td><td>{l.actor.replace(/^staff:/, '')}</td><td>{ACTION[l.action] ?? l.action}{l.reason ? `（${l.reason}）` : ''}</td><td>{l.target_name ?? (l.target_type === 'contact' ? '' : l.target_type)}</td></tr>
+                <tr key={i}><td>{fmtDateTime(l.created_at)}</td><td>{l.actor.replace(/^staff:/, '')}</td><td>{ACTION[l.action] ?? '其他操作'}{detail(l) ? `（${detail(l)}）` : ''}</td><td>{l.target_name ?? ''}</td></tr>
               ))}</tbody>
             </table>
           )}

@@ -465,6 +465,11 @@ export async function confirmSend(s: Staff, id: number) {
       [id, s.name, list.length]
     );
     if (!rowCount) throw new CrmError('conflict', '这一期已经确认过了');
+    // 1.3.1 F：发通知写进操作记录（谁、什么时候、发给多少人）
+    await db.query(
+      `INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value) VALUES ($1, 'newsletter_confirm', 'newsletter', $2, $3)`,
+      [`staff:${s.name}`, String(id), JSON.stringify({ recipients: list.length })]
+    );
     for (let k = 0; k < list.length; k += 500) {
       const chunk = list.slice(k, k + 500);
       await db.query(
