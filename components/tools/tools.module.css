@@ -52,3 +52,13 @@
 .saved li:last-child { border-bottom: 0; }
 .linkBtn { background: none; border: 0; color: var(--gold); font-size: 1rem; cursor: pointer; min-height: 44px; padding: 0 0.4rem; }
 .preview { width: 100%; max-width: 360px; border-radius: 8px; border: 1px solid var(--line-3); display: block; margin: 0.75rem auto 0; }
+
+/* 工具总页 */
+.toolGrid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .toolGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1040px) { .toolGrid { grid-template-columns: repeat(3, 1fr); } }
+.toolCard { display: flex; flex-direction: column; gap: 0.5rem; text-decoration: none; color: inherit; margin: 0; min-height: 200px; transition: border-color 0.2s; }
+.toolCard:hover, .toolCard:focus-visible { border-color: var(--gold); }
+.tag { align-self: flex-start; font-size: 0.85rem; color: var(--gold-bright); border: 1px solid var(--gold-dim); border-radius: 999px; padding: 0.1rem 0.6rem; }
+.toolName { font-family: var(--serif-zh); font-size: 1.3rem; color: var(--ivory); }
+.toolGo { margin-top: auto; color: var(--gold); font-size: 1rem; }
