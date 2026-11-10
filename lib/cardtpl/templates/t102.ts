@@ -25,6 +25,6 @@ const t: CardTemplate = {
 .d13 .rowx i{background:#D9B46A}
 .d13 .ft .qr{width:11.6cqw;height:11.6cqw}
 `,
-  html: `<div class="deco md"></div><div class="deco sl">S</div><div class="in bi"><div class="hf"><p class="o1">中美房地产商会</p><p class="n1">王东</p><p class="t1">创始人　·　副会长</p><p class="a1">美国加州洛杉矶</p></div><div class="hf r"><p class="o1">Sino-American Real Estate Chamber</p><p class="n1 e">Andy Wang</p><p class="t1">Founder · Vice President</p><p class="a1">Los Angeles, California</p></div></div><div class="deco ft"><div class="ic2 rowx"><div><i>手</i>949 787 8888</div><div><i>微</i>逍遥</div><div><i>邮</i>info@sinoamericanrec.org</div></div><div class="qr">{{{qrImg}}}</div></div>`
+  html: `<div class="deco md"></div><div class="deco sl">{{mark}}</div><div class="in bi"><div class="hf">{{#company}}<p class="o1">{{company}}</p>{{/company}}<p class="n1">{{name}}</p>{{#tierTitle}}<p class="t1">{{tierTitle}}</p>{{/tierTitle}}{{#address}}<p class="a1">{{address}}</p>{{/address}}</div><div class="hf r">{{#companyEn}}<p class="o1">{{companyEn}}</p>{{/companyEn}}{{#nameEn}}<p class="n1 e">{{nameEn}}</p>{{/nameEn}}{{#titleEn}}<p class="t1">{{titleEn}}</p>{{/titleEn}}</div></div><div class="deco ft" data-fit>{{#ic3}}<div class="ic2 rowx">{{#ic3}}<div><i>{{k}}</i>{{v}}</div>{{/ic3}}</div>{{/ic3}}{{^ic3}}<span></span>{{/ic3}}<div class="qr">{{{qrImg}}}</div></div>`
 };
 export default t;

@@ -27,6 +27,8 @@ export type CardView = {
   tier: string; tierName: string; mark: string; markI: string; logoImg: string; avatarImg: string; avatar: string; logo: string;
   phone: string; wechat: string; email: string; website: string; address: string;
   ct: ContactRow[]; ic: ContactRow[]; hasCt: boolean; hasIc: boolean; qrImg: string; qr: string;
+  ic3: ContactRow[]; g3: { k: string; vb: string }[];
+  nameWide: string; companyEnUp: string; tierTitle: string; seal: boolean; seal1: string; seal2: string;
 };
 
 const cjk = (s: string) => /[㐀-鿿]/.test(s);
@@ -65,7 +67,19 @@ export function cardView(c: CardInput, qrSrc: string | null): CardView {
   const have = pairs.filter((p) => p[1]);
   const ct = have.slice(0, 4).map(([key, v, k]) => ({ key, v, k, c: '' }));
   const ic = have.map(([key, v, , k]) => ({ key, v, k, c: key === 'address' ? 'w' : '' }));
+  // 中文名印章（两字：王东 / 之印；三字：王小 / 明印；四字：欧阳 / 明远）；不是中文名就不出印章
+  const chars = cjk(name) ? Array.from(name) : [];
+  const sealParts = chars.length === 2 ? [name, '之印'] : chars.length === 3 ? [chars.slice(0, 2).join(''), chars[2] + '印'] : chars.length === 4 ? [chars.slice(0, 2).join(''), chars.slice(2).join('')] : null;
+  const ic3 = ic.filter((r) => r.key !== 'address').slice(0, 3);
+  const escH = (x: string) => x.replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m]!);
+  // 方格款：固定三格（不够的格子只留底色），邮箱在 @ 后换行
+  const g3 = [0, 1, 2].map((i) => (ic3[i] ? { k: ic3[i].k, vb: escH(ic3[i].v).replace('@', '@<br>') } : { k: '', vb: '' }));
   return {
+    ic3, g3,
+    nameWide: cjk(name) && name.length === 2 ? name.split('').join('　') : name,
+    companyEnUp: companyEn.toUpperCase(),
+    tierTitle: [tierName, title].filter(Boolean).join('　·　'),
+    seal: !!sealParts, seal1: sealParts?.[0] ?? '', seal2: sealParts?.[1] ?? '',
     name, nameSp, nameEn: enLine, nameEnUp: enLine.toUpperCase(), surname: name[0] || '', initial,
     title, titleEn, company, companyEn,
     titleLine: [title, company].filter(Boolean).join(' · '),

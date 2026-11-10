@@ -8,7 +8,7 @@ const nextConfig = {
       '/api/v1/agent/**': ['./content/**/*', './app/zh/(internal)/research/*/page.tsx'],
       // 1.4 会员下载模板（不放 public/，只经接口给会员）
       '/api/v1/tools/download/**': ['./private/tools/*'],
-      '/api/v1/cards/**': ['./node_modules/@sparticuz/chromium/bin/**']
+      '/api/v1/cards/**': ['./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**']
     }
   },
   images: {

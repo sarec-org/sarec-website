@@ -19,6 +19,6 @@ const t: CardTemplate = {
 .b2 .rl .qr{width:13cqw;height:13cqw}
 .b2 .tier{background:#C8102E;color:#fff;border-color:#C8102E}
 `,
-  html: `<div class="deco r2"></div><div class="deco r1"></div><div class="deco rl"><i>S</i><b>SAREC</b><span>中美房地产商会</span><div class="qr">{{{qrImg}}}</div></div><div class="in" style="padding-right:46cqw"><div class="top">{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<div class="sp"></div>{{#hasIc}}<div class="ic2 one">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}</div>`
+  html: `<div class="deco r2"></div><div class="deco r1"></div><div class="deco rl" data-fit>{{{markI}}}{{#company}}<b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}{{/company}}<div class="qr">{{{qrImg}}}</div></div><div class="in" style="padding-right:46cqw"><div class="top">{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<div class="sp"></div>{{#hasIc}}<div class="ic2 one">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}</div>`
 };
 export default t;

@@ -19,6 +19,6 @@ const t: CardTemplate = {
 .b22 .tt{font-size:2.8cqw;letter-spacing:.2em;color:#C8102E;font-weight:700;margin-top:1.4cqw!important}
 .b22 .qr{border:1px solid #ddd;width:12.5cqw;height:12.5cqw}
 `,
-  html: `<div class="in ctr"><p class="hh"><i>S</i>中美房地产商会</p><p class="he">SINO-AMERICAN REAL ESTATE CHAMBER</p><div class="hr"></div><div class="sp"></div><p class="nn">王　东</p><p class="tt">副会长　·　创始人</p><div class="sp"></div><div class="bot">{{#hasIc}}<div class="ic2">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="in ctr">{{#company}}<p class="hh">{{{markI}}}{{company}}</p>{{/company}}{{#companyEnUp}}<p class="he">{{companyEnUp}}</p>{{/companyEnUp}}<div class="hr"></div><div class="sp"></div><p class="nn">{{nameWide}}</p>{{#tierTitle}}<p class="tt">{{tierTitle}}</p>{{/tierTitle}}<div class="sp"></div><div class="bot">{{#hasIc}}<div class="ic2">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;
