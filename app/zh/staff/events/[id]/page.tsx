@@ -6,6 +6,7 @@ import { useQr } from '@/components/crm/staff/QrCode';
 import { api, copyText, fmtDateTime, money } from '@/components/crm/client';
 import { EventForm } from '../EventForm';
 import { checkinA4, registerPoster, saveBlob, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
+import { AiPoster } from '@/components/crm/staff/AiPoster';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
 type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; pay_link?: string | null; added_by_name?: string | null; is_placeholder?: boolean };
@@ -233,6 +234,8 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                   </div>
                   <p className={styles.small}>没传封面时用这个活动类型的默认图。海报上没有金额，也不写已报人数。</p>
                 </div>
+                {/* 东哥 11/10：AI 海报（只在网站后台生成和下载，不进小程序） */}
+                <AiPoster eventId={params.id} isAdmin={can(s, 'admin')} />
               </>
             )}
 
