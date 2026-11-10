@@ -17,7 +17,7 @@ import { fullDate } from '@/lib/crm/home131';
 import { tzLabel } from '@/lib/crm/regions';
 import { eventRegisterCode, wxConfigured } from '@/lib/crm/wechat';
 import type { Staff } from '@/lib/crm/auth';
-import { imageProvider, normalize, providerChoices, SWITCHABLE } from './providers';
+import { imageProvider, normalize, providerChoices, redactSecrets, SWITCHABLE } from './providers';
 import { suggestCopy } from './copy';
 import { composePoster, type PosterSize } from './compose';
 import { EVENT_TYPES, STYLES, buildPrompt, styleOf, typeOf } from './styles';
@@ -111,7 +111,7 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
         [id, eventId, batch, type, style, p.key, p.model, prompt, url, JSON.stringify({ seed }), p.costPerImage, s.contactId]
       );
     } catch (e) {
-      const msg = e instanceof Error ? e.message.slice(0, 300) : 'unknown';
+      const msg = redactSecrets(e instanceof Error ? e.message : 'unknown').slice(0, 300);
       await db.query(
         `INSERT INTO poster_gens (id, event_id, batch_id, kind, event_type, style, provider, model, prompt, result, cost_usd, status, error, created_by)
          VALUES ($1, $2, $3, 'image', $4, $5, $6, $7, $8, $9, 0, 'failed', $10, $11)`,

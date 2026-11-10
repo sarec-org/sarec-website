@@ -9,7 +9,8 @@
  *   pollinations 可选 POLLINATIONS_TOKEN（不填是匿名：有水印、限速、分辨率低，只适合看效果）
  */
 import sharp from 'sharp';
-import { fetchJson, type GenImage, type ImageProvider } from './types';
+import { fetchJson, redactSecrets, type GenImage, type ImageProvider } from './types';
+export { redactSecrets };
 
 const W = 1024;
 const H = 1536;
@@ -44,6 +45,17 @@ export const placeholder: ImageProvider = {
 // ── Cloudflare Workers AI ────────────────────────────────────────────────
 const CF_NEURON_USD = 0.011 / 1000;
 const cfModel = () => process.env.POSTER_CF_MODEL?.trim() || '@cf/black-forest-labs/flux-2-klein-4b';
+const cfAccount = () => process.env.CLOUDFLARE_ACCOUNT_ID?.trim() || '';
+const cfToken = () => process.env.CLOUDFLARE_AI_TOKEN?.trim() || '';
+/** 常见填错：把 Cloudflare 页面上整条 curl 测试命令（或带 “Bearer ”）一起粘贴进去 */
+function cfProblem(): string | null {
+  const a = cfAccount();
+  const t = cfToken();
+  if (!a || !t) return null;
+  if (!/^[A-Za-z0-9_-]{20,}$/.test(t)) return 'Cloudflare 的 CLOUDFLARE_AI_TOKEN 格式不对：只粘贴令牌本身（一整串字母数字），不要带 curl 命令、“Bearer”、引号或空格。';
+  if (!/^[0-9a-f]{32}$/i.test(a)) return 'Cloudflare 的 CLOUDFLARE_ACCOUNT_ID 格式不对：应是 32 位字母数字（Workers AI 页面 “Account ID” 那一串）。';
+  return null;
+}
 /** 按 Cloudflare 公布的 Neurons 价估算（832×1248 ≈ 6 个 512 小块）；免费额度内实际 0 元 */
 function cfNeurons(model: string): number {
   if (model.includes('lucid-origin')) return 6 * 636 + 30 * 12;
@@ -59,11 +71,12 @@ export const cloudflare: ImageProvider = {
   label: 'Cloudflare Workers AI',
   get model() { return cfModel(); },
   get costPerImage() { return Math.round(cfNeurons(cfModel()) * CF_NEURON_USD * 10000) / 10000; },
-  configured: () => !!(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_AI_TOKEN),
+  configured: () => !!(cfAccount() && cfToken()) && !cfProblem(),
+  problem: cfProblem,
   async generate(prompt, seed) {
     const model = cfModel();
-    const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/${model}`;
-    const auth = { Authorization: `Bearer ${process.env.CLOUDFLARE_AI_TOKEN}` };
+    const url = `https://api.cloudflare.com/client/v4/accounts/${cfAccount()}/ai/run/${model}`;
+    const auth = { Authorization: `Bearer ${cfToken()}` };
     let res: Response;
     if (model.includes('flux-2')) {
       // FLUX.2 系列要 multipart
@@ -158,7 +171,7 @@ const ALL: Record<string, ImageProvider> = { placeholder, cloudflare, gateway, g
 /** 后台可选的画图服务（只列两家正式服务 + 占位图），带“密钥填好没有” */
 export const SWITCHABLE = ['cloudflare', 'gateway', 'placeholder'] as const;
 export function providerChoices() {
-  return SWITCHABLE.map((k) => ({ key: k, label: ALL[k].label, model: ALL[k].model, costPerImage: ALL[k].costPerImage, configured: ALL[k].configured() }));
+  return SWITCHABLE.map((k) => ({ key: k, label: ALL[k].label, model: ALL[k].model, costPerImage: ALL[k].costPerImage, configured: ALL[k].configured(), problem: ALL[k].problem?.() ?? null }));
 }
 
 /** 当前用哪个：后台选的（choice）> 环境变量；选的服务密钥没填齐 → 占位图（并告诉后台为什么） */
@@ -167,6 +180,8 @@ export function imageProvider(choice?: string | null): { p: ImageProvider; note:
   if (!want) return { p: placeholder, note: '还没接画图服务，现在出的是占位图（流程可以先试）。' };
   const p = ALL[want];
   if (!p) return { p: placeholder, note: `画图服务“${want}”不认识，暂用占位图。` };
+  const bad = p.problem?.();
+  if (bad) return { p: placeholder, note: `${bad}改好后在 Vercel 重新部署一次。暂用占位图。` };
   if (!p.configured()) return { p: placeholder, note: `${p.label} 的密钥还没填到 Vercel，暂用占位图。` };
   return { p, note: null };
 }
