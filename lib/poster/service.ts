@@ -105,9 +105,11 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
       const jpg = await normalize(img);
       console.log(`[ai-poster] normalize ${Date.now() - t0}ms`);
       let url: string;
-      if (blobConfigured()) url = (await put(`${BLOB_PREFIX}/ai-poster/${eventId}/${id}.jpg`, jpg, { access: 'public', contentType: 'image/jpeg', addRandomSuffix: false })).url;
+      // 存图限时 45 秒：存储偶尔卡住时不要把整个请求拖到 300 秒超时
+      if (blobConfigured()) url = (await put(`${BLOB_PREFIX}/ai-poster/${eventId}/${id}.jpg`, jpg, { access: 'public', contentType: 'image/jpeg', addRandomSuffix: false, abortSignal: AbortSignal.timeout(45_000) })).url;
       else if (p.key === 'placeholder') url = `data:image/jpeg;base64,${jpg.toString('base64')}`; // 本地没配存储时只用于测试
       else throw new CrmError('storage_unconfigured', '图片存储还没有配置');
+      console.log(`[ai-poster] stored ${Date.now() - t0}ms`);
       await db.query(
         `INSERT INTO poster_gens (id, event_id, batch_id, kind, event_type, style, provider, model, prompt, image_url, result, cost_usd, status, created_by)
          VALUES ($1, $2, $3, 'image', $4, $5, $6, $7, $8, $9, $10, $11, 'ok', $12)`,
@@ -125,6 +127,7 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
   // 匿名 Pollinations 限速（约 15 秒一张），一张一张来；其余服务并发
   if (p.key === 'pollinations') for (const seed of seeds) await one(seed);
   else await Promise.all(seeds.map(one));
+  console.log(`[ai-poster] batch done`);
   const after = await posterState(eventId);
   const made = after.gens.filter((g) => g.batch_id === batch);
   if (!made.some((g) => g.status === 'ok')) throw new CrmError('wx_error', `这一批没画出来：${made[0]?.error ?? '画图服务没响应'}。过一会儿再试。`);
