@@ -12,6 +12,7 @@ import sharp from 'sharp';
 import { cardCodePng, publicCard } from '@/lib/crm/cards';
 import { CrmError } from '@/lib/crm/events';
 import { handler } from '@/lib/crm/http';
+import { cardImage } from '@/lib/cardtpl/serve';
 import { dataUri, ogFonts } from '@/lib/og/fonts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,7 +56,24 @@ async function qrDataUri(token: string): Promise<string | null> {
   }
 }
 
-export const GET = handler(async (req: Request, { params }: { params: { token: string } }) => {
+// 名片模板库上线后：默认走服务器出图（105 款）；出图失败时退回下面原来的画法，保证名片总能显示
+export const GET = handler(async (req: Request, ctx: { params: { token: string } }) => {
+  const token = String(ctx.params.token);
+  if (!/^[a-f0-9]{8,32}$/.test(token)) throw new CrmError('not_found', '名片不存在');
+  const sp = new URL(req.url).searchParams;
+  try {
+    const r = await cardImage(token, { tpl: sp.get('tpl'), own: sp.get('own') === '1', share: sp.get('fmt') === 'share', thumb: sp.get('thumb') === '1' });
+    return new Response(new Uint8Array(r.buf), {
+      headers: { 'Content-Type': r.type, 'Cache-Control': 'no-store', 'X-Card-Tpl': String(r.tpl), 'X-Card-Cache': r.cached ? 'hit' : 'miss', ...(r.fit && !r.fit.ok ? { 'X-Card-Fit': 'overflow' } : {}) }
+    });
+  } catch (e) {
+    if (e instanceof CrmError) throw e;
+    console.log(`[card-image] render failed, legacy fallback: ${(e as Error).message}`);
+    return legacyGet(req, ctx);
+  }
+});
+
+const legacyGet = handler(async (req: Request, { params }: { params: { token: string } }) => {
   const token = String(params.token);
   if (!/^[a-f0-9]{8,32}$/.test(token)) throw new CrmError('not_found', '名片不存在');
   const c = await publicCard(token);
