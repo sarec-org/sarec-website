@@ -99,8 +99,11 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
   const one = async (seed: number) => {
     const id = randomUUID();
     try {
+      const t0 = Date.now();
       const img = await p.generate(prompt, seed);
+      console.log(`[ai-poster] ${p.key} generate ${Date.now() - t0}ms`);
       const jpg = await normalize(img);
+      console.log(`[ai-poster] normalize ${Date.now() - t0}ms`);
       let url: string;
       if (blobConfigured()) url = (await put(`${BLOB_PREFIX}/ai-poster/${eventId}/${id}.jpg`, jpg, { access: 'public', contentType: 'image/jpeg', addRandomSuffix: false })).url;
       else if (p.key === 'placeholder') url = `data:image/jpeg;base64,${jpg.toString('base64')}`; // 本地没配存储时只用于测试
