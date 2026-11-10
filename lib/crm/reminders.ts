@@ -11,6 +11,7 @@
  * - 确认通知在报名后立即推；提醒由 /api/cron/event-reminders 每 15 分钟触发（GitHub Actions）。
  * 密钥只从环境变量读，不打日志。
  */
+import { checkinLine } from '@/lib/crm/checkinTime';
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
 import { withWxToken, wxConfigured } from './wechat';
@@ -74,7 +75,7 @@ export async function saveSubscriptions(contactId: string, slug: string, accepte
   const pool = getPool();
   const t = subscribeTemplates();
   const { rows } = await pool.query<RegRow>(
-    `SELECT e.id AS event_id, c.wechat_openid AS openid, r.status, e.slug, e.title, e.starts_at, e.timezone, e.location_name, e.address
+    `SELECT e.id AS event_id, c.wechat_openid AS openid, r.status, e.slug, e.title, e.starts_at, e.checkin_starts_at, e.timezone, e.location_name, e.address
        FROM events e JOIN registrations r ON r.event_id = e.id AND r.contact_id = $2 JOIN contacts c ON c.id = $2
       WHERE e.slug = $1`,
     [slug, contactId]
@@ -152,7 +153,7 @@ function fmtTime(d: Date, tz: string): string {
 }
 
 
-type EvInfo = { slug: string; title: string; starts_at: Date; timezone: string; location_name: string | null; address: string | null };
+type EvInfo = { slug: string; title: string; starts_at: Date; checkin_starts_at?: Date | null; timezone: string; location_name: string | null; address: string | null };
 
 /** 推一条订阅消息；失败抛错（errcode）。 */
 async function pushOne(tm: Tmpl, openid: string, ev: EvInfo, kind: SubKind): Promise<void> {
@@ -160,7 +161,8 @@ async function pushOne(tm: Tmpl, openid: string, ev: EvInfo, kind: SubKind): Pro
     title: cut(ev.title, 20),
     time: fmtTime(ev.starts_at, ev.timezone || 'America/Los_Angeles'),
     place: cut(ev.location_name || ev.address || '详见活动页', 20),
-    note: NOTES[kind]
+    // 东哥 11/9 晚：订阅消息也写“下午 1:30 签到 · 2:00 开始”（微信“时间”栏只能放标准日期时间，所以写在备注栏）
+    note: cut(checkinLine(ev, ev.timezone || 'America/Los_Angeles'), 20) || NOTES[kind]
   };
   const data: Record<string, { value: string }> = {};
   for (const [k, key] of Object.entries(tm.fields)) if (key) data[key] = { value: values[k] };
@@ -217,7 +219,7 @@ export async function savePhotoSubscription(contactId: string, slug: string, acc
   return { saved: true };
 }
 
-type Due = { id: string; kind: ReminderKind; openid: string; slug: string; title: string; starts_at: Date; timezone: string; location_name: string | null; address: string | null };
+type Due = { id: string; kind: ReminderKind; openid: string; slug: string; title: string; starts_at: Date; checkin_starts_at?: Date | null; timezone: string; location_name: string | null; address: string | null };
 
 /** 定时任务：先把错过时机的标为跳过，再发到点的。返回发送统计。 */
 export async function runEventReminders(now = new Date()): Promise<{ sent: number; failed: number; skipped: number; configured: boolean }> {
@@ -237,7 +239,7 @@ export async function runEventReminders(now = new Date()): Promise<{ sent: numbe
   const configured = wxConfigured() && !!(t.day_before || t.two_hours);
   if (!configured) return { sent: 0, failed: 0, skipped: skipped ?? 0, configured };
   const { rows: due } = await pool.query<Due>(
-    `SELECT s.id, s.kind, s.openid, e.slug, e.title, e.starts_at, e.timezone, e.location_name, e.address
+    `SELECT s.id, s.kind, s.openid, e.slug, e.title, e.starts_at, e.checkin_starts_at, e.timezone, e.location_name, e.address
        FROM event_reminder_subs s JOIN events e ON e.id = s.event_id
       WHERE s.status = 'pending'
         AND ((s.kind = 'day_before' AND $1::timestamptz >= e.starts_at - interval '24 hours')

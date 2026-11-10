@@ -4,6 +4,7 @@
  * 报名预览 / 报名提交 / 下一道选填题 / 答题 / 跳过 / 我的总览。
  * 规则全部来自 engine.ts / profile.ts / events.ts（题库 V1.1），这里只做编排与校验。
  */
+import { checkinAt, checkinLine } from '@/lib/crm/checkinTime';
 import { seatStatus, waitlistPosition } from '@/lib/crm/seats';
 import { tzLabel } from '@/lib/crm/regions';
 import { getPool, withTransaction } from '@/lib/db/client';
@@ -110,6 +111,9 @@ export function publicEvent(e: EventRow & Record<string, unknown>) {
     summary: (e.summary as string | null) ?? null,
     startsAt: e.starts_at,
     endsAt: e.ends_at,
+    // 签到开始时间（没填 = 开始前 30 分钟）和“下午 1:30 签到 · 2:00 开始”一行
+    checkinStartsAt: checkinAt(e as { starts_at: Date; checkin_starts_at?: Date | null }),
+    checkinLine: checkinLine(e as { starts_at: Date; checkin_starts_at?: Date | null }, (e.timezone as string) ?? 'America/Los_Angeles'),
     timezone: (e.timezone as string) ?? 'America/Los_Angeles',
     tzLabel: tzLabel(e.timezone as string), // 1.3.1 E：活动时间按所在地时区显示并注明
     region: (e.region as string | undefined) ?? '洛杉矶/橙县',

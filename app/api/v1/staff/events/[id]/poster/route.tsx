@@ -4,6 +4,7 @@
  * 风格同首页轮播：藏蓝渐变压在封面图上、宋体大标题、香槟金点缀、底部小程序码 + 日期地点。没传封面用该活动类型的默认图库。
  * 海报上不写金额和“已报 N 人”。
  */
+import { checkinLine } from '@/lib/crm/checkinTime';
 import { ImageResponse } from 'next/og';
 import QRCode from 'qrcode';
 import { getPool } from '@/lib/db/client';
@@ -31,8 +32,8 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
   const sp = new URL(req.url).searchParams;
   const size = (sp.get('size') ?? 'moments') as keyof typeof SIZES;
   if (!SIZES[size]) throw new CrmError('bad_request', '海报尺寸不对');
-  const { rows } = await getPool().query<{ id: string; slug: string; title: string; summary: string | null; starts_at: Date; timezone: string; location_name: string | null; address: string | null; cover_url: string | null; region: string | null; template_key: string | null }>(
-    `SELECT e.id, e.slug, e.title, e.summary, e.starts_at, e.timezone, e.location_name, e.address, e.cover_url, e.region,
+  const { rows } = await getPool().query<{ id: string; slug: string; title: string; summary: string | null; starts_at: Date; checkin_starts_at: Date | null; timezone: string; location_name: string | null; address: string | null; cover_url: string | null; region: string | null; template_key: string | null }>(
+    `SELECT e.id, e.slug, e.title, e.summary, e.starts_at, e.checkin_starts_at, e.timezone, e.location_name, e.address, e.cover_url, e.region,
             (SELECT p.template_key FROM event_prep p WHERE p.event_id = e.id LIMIT 1) AS template_key
        FROM events e WHERE e.id = $1`,
     [params.id]
@@ -44,7 +45,8 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
   const cover = await dataUri(e.cover_url ? (e.cover_url.startsWith('http') ? e.cover_url : SITE() + e.cover_url) : `https://sinoamericanrec.org/_next/image?url=${encodeURIComponent(defaultCover(e.template_key, e.id))}&w=1200&q=80`);
   const code = wxConfigured() ? await eventRegisterCode(e.slug) : await QRCode.toBuffer(`SAREC-TEST:pages/event/event?slug=${e.slug}`, { margin: 1, width: 400 });
   const qr = `data:image/png;base64,${code.toString('base64')}`;
-  const when = `${fullDate(e.starts_at, tz)} ${clock(e.starts_at, tz)}（${tzLabel(tz)}）`;
+  // 东哥 11/9 晚：海报小字行写“下午 1:30 签到 · 2:00 开始”
+  const when = `${fullDate(e.starts_at, tz)} ${checkinLine(e, tz)}（${tzLabel(tz)}）`;
   const eyebrow = `SAREC 中美房地产商会 · ${TYPE[e.template_key ?? ''] ?? '活动'}`;
   const place = [e.location_name, e.address].filter(Boolean).join(' · ');
   const summary = (e.summary ?? '').split(/\n+/)[0]?.slice(0, 60) ?? '';
