@@ -30,7 +30,7 @@ export const GET = handler(async (req: Request) => {
     photoTopic: (await getSetting<string>(pool, 'photo_topic', '')) || null,
     oaUsername: (await getSetting<string>(pool, 'oa_username', '')) || null,
     /** 1.3 H：一键填入微信手机号（后台开了、并在公众平台开通付费后才显示） */
-    phoneQuick: !!(await getSetting<boolean>(pool, 'phone_quick', false)),
+    phoneQuick: false, // 海外主体不能用微信手机号快速验证组件（东哥 11/9），永久关闭
     invitePrompts: await getSetting<Record<string, unknown>>(pool, 'invite_prompts', { enabled: true, afterRegister: true, afterPhoto: true, nextEvent: true })
   });
 });
