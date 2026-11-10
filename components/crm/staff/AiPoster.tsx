@@ -18,7 +18,8 @@ type State = {
   cap: number;
   defaultCap: number;
   spentUsd: number;
-  provider: { key: string; label: string; model: string; costPerImage: number; note: string | null };
+  provider: { key: string; label: string; model: string; costPerImage: number; note: string | null; chosen: string | null };
+  providers: { key: string; label: string; model: string; costPerImage: number; configured: boolean }[];
   types: { key: string; label: string }[];
   styles: { key: string; group: string; label: string }[];
 };
@@ -105,6 +106,14 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
         {st.provider.note ? ` ${st.provider.note}` : ''} 本场已生成 {st.used} / {st.cap} 张，记账花费 ${st.spentUsd}。
         只在网站后台生成和下载，用于朋友圈、群、公众号；不放进小程序。
       </p>
+      <p className={styles.small} style={{ marginTop: 6 }}>切换画图服务（管理员，立即生效）：</p>
+      <div className={styles.chips}>
+        {st.providers.map((p) => (
+          <button key={p.key} type="button" disabled={!!busy} className={`${styles.chip} ${st.provider.key === p.key ? styles.chipOn : ''}`} onClick={() => post('provider', { value: p.key }, '切换中', `已切换到 ${p.label}`)}>
+            {p.label}{p.key !== 'placeholder' ? (p.configured ? `（约 $${p.costPerImage}/张）` : '（密钥未填）') : ''}
+          </button>
+        ))}
+      </div>
 
       <p className={styles.label} style={{ marginTop: 12 }}>① 活动类型</p>
       <div className={styles.chips}>
