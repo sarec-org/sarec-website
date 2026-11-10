@@ -16,6 +16,6 @@ const t: CardTemplate = {
 .q21 .cn{font-family:var(--sans)!important;font-weight:900;font-size:4.6cqw!important;letter-spacing:.4em!important;margin-top:1.6cqw!important;color:#FF2D2D}
 .q21 .tier{background:#FF2D2D;color:#fff;border-color:#FF2D2D}
 `,
-  html: `<div class="deco cf"></div><div class="deco rs"></div><div class="in"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="en2">ANDY WANG</p><p class="cn">{{name}}</p>{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="deco cf"></div><div class="deco rs"></div><div class="in"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div>{{#nameEnUp}}<p class="en2">{{nameEnUp}}</p>{{/nameEnUp}}<p class="cn">{{name}}</p>{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

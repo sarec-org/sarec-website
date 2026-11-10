@@ -19,6 +19,6 @@ const t: CardTemplate = {
 .c17 .tier{background:#fff;border-color:#fff;color:#5B3FD6}
 .c17 .qr{border-radius:2.4cqw}
 `,
-  html: `<div class="deco sp1">✦</div><div class="deco sp2">✦</div><div class="deco sp3">✧</div><div class="deco bb"></div><div class="in"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="chr">ANDY WANG</p><p class="cn">{{name}}</p>{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="deco sp1">✦</div><div class="deco sp2">✦</div><div class="deco sp3">✧</div><div class="deco bb"></div><div class="in"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div>{{#nameEnUp}}<p class="chr">{{nameEnUp}}</p>{{/nameEnUp}}<p class="cn">{{name}}</p>{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

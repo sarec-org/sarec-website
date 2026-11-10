@@ -18,6 +18,6 @@ const t: CardTemplate = {
 .c2 .org{font-family:var(--en);letter-spacing:.3em}
 .c2 .qr{border:1px solid #ddd;width:12cqw;height:12cqw}
 `,
-  html: `<div class="deco pm"></div><div class="in ctr"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}</div><div class="sp"></div><p class="sc">Andy Wang</p><p class="nm">王 东　·　创始人</p><div class="rule"></div><div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="deco pm"></div><div class="in ctr"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}</div><div class="sp"></div>{{#nameEn}}<p class="sc">{{nameEn}}</p>{{/nameEn}}<p class="nm">{{nameTitle}}</p><div class="rule"></div><div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

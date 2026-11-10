@@ -14,6 +14,6 @@ const t: CardTemplate = {
 .k1 .glint{left:-20cqw;top:-40cqw;width:60cqw;height:160cqw;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);transform:rotate(24deg)}
 .k1 .cn{background:linear-gradient(180deg,#F8E6B0,#C39A4A);-webkit-background-clip:text;background-clip:text;color:transparent}
 `,
-  html: `<div class="deco sheen"></div><div class="deco glint"></div><div class="in"><div class="top"><span class="seal">S</span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="deco sheen"></div><div class="deco glint"></div><div class="in"><div class="top"><span class="seal">{{mark}}</span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

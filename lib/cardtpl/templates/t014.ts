@@ -24,6 +24,6 @@ const t: CardTemplate = {
 .q14 .tm u{display:inline-block;width:1.6cqw;height:3cqw;background:#39FF88;vertical-align:middle}
 .q14 .tq{right:5cqw;bottom:5cqw;padding:.6cqw;border:.4cqw solid #39FF88;border-radius:1.4cqw;box-shadow:0 0 3cqw rgba(57,255,136,.5)}
 `,
-  html: `<div class="deco bar"><i></i><i></i><i></i><span>sarec — card</span></div><div class="in tm"><p><b>$</b> whoami</p><p class="o big">王东 <span>Andy Wang</span></p><p><b>$</b> cat title.txt</p><p class="o">创始人 @ SAREC 中美房地产商会 <em>[副会长]</em></p><p><b>$</b> contact --all</p><p class="o">tel&nbsp;&nbsp;&nbsp; 949 787 8888<br>wechat 逍遥<br>mail&nbsp;&nbsp; info@sinoamericanrec.org</p><p><b>$</b> <u></u></p></div><div class="deco tq"><div class="qr">{{{qrImg}}}</div></div>`
+  html: `<div class="deco bar"><i></i><i></i><i></i><span>~ — card</span></div><div class="in tm"><p><b>$</b> whoami</p><p class="o big">{{name}} {{#nameEn}}<span>{{nameEn}}</span>{{/nameEn}}</p>{{#titleAt}}<p><b>$</b> cat title.txt</p><p class="o">{{titleAt}} {{#tierName}}<em>[SAREC {{tierName}}]</em>{{/tierName}}</p>{{/titleAt}}{{^titleAt}}{{#tierName}}<p><b>$</b> cat title.txt</p><p class="o"><em>[SAREC {{tierName}}]</em></p>{{/tierName}}{{/titleAt}}{{#ctLines}}<p><b>$</b> contact --all</p><p class="o">{{{ctLines}}}</p>{{/ctLines}}<p><b>$</b> <u></u></p></div><div class="deco tq"><div class="qr">{{{qrImg}}}</div></div>`
 };
 export default t;

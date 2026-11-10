@@ -16,6 +16,6 @@ const t: CardTemplate = {
 .c21 .mono{margin:1.4cqw 0 0;font-family:var(--mono);font-size:2.2cqw;line-height:1.55;white-space:nowrap}
 .c21 .qr{border:.5cqw solid #111;border-radius:0}
 `,
-  html: `<div class="deco hg"></div><div class="deco bw">WANG</div><div class="in"><div class="top"><span class="org" style="color:#111;font-family:var(--mono)">SAREC / 中美房地产商会 / 副会长</span></div><div class="sp"></div><div class="bot"><div><p class="cn">{{name}}</p><p class="mono">创始人<br>949 787 8888 · 微信 逍遥<br>info@sinoamericanrec.org</p></div><div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="deco hg"></div><div class="deco bw">{{bigWord}}</div><div class="in"><div class="top"><span class="org" style="color:#111;font-family:var(--mono)">{{slashLine}}</span></div><div class="sp"></div><div class="bot"><div><p class="cn">{{name}}</p>{{#monoLines}}<p class="mono">{{{monoLines}}}</p>{{/monoLines}}</div><div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

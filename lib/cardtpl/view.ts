@@ -28,7 +28,7 @@ export type CardView = {
   phone: string; wechat: string; email: string; website: string; address: string;
   ct: ContactRow[]; ic: ContactRow[]; hasCt: boolean; hasIc: boolean; qrImg: string; qr: string;
   ic3: ContactRow[]; hasIc3: boolean; g3: { k: string; vb: string }[];
-  nameWide: string; companyEnUp: string; tierTitle: string; seal: boolean; seal1: string; seal2: string;
+  nameWide: string; companyEnUp: string; nameFull: string; titleAt: string; titleComma: string; nameLast: string; phoneMail: string; ctLines: string; ctLinesCn: string; titleSp: string; wxMail: string; nameTitle: string; ring: string; chip: string; ctInline: string; titleTier: string; ls3: ContactRow[]; hasLs: boolean; bigWord: string; slashLine: string; monoLines: string; nameTitleCo: string; tierTitle: string; seal: boolean; seal1: string; seal2: string;
 };
 
 const cjk = (s: string) => /[㐀-鿿]/.test(s);
@@ -74,7 +74,49 @@ export function cardView(c: CardInput, qrSrc: string | null): CardView {
   const escH = (x: string) => x.replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m]!);
   // 方格款：固定三格（不够的格子只留底色），邮箱在 @ 后换行
   const g3 = [0, 1, 2].map((i) => (ic3[i] ? { k: ic3[i].k, vb: escH(ic3[i].v).replace('@', '@<br>') } : { k: '', vb: '' }));
+  // 命令行款：tel / wechat / mail / web 对齐（&nbsp; 补齐）
+  const ctLines = have
+    .filter((p) => p[0] !== 'address')
+    .slice(0, 4)
+    .map(([key, v]) => {
+      const lab = ({ phone: 'tel', wechat: 'wechat', email: 'mail', website: 'web' } as Record<string, string>)[key];
+      return lab + '&nbsp;'.repeat(7 - lab.length) + escH(v);
+    })
+    .join('<br>');
+  const ctLinesCn = have
+    .filter((p) => p[0] !== 'address')
+    .slice(0, 4)
+    .map(([key, v]) => (key === 'wechat' ? '微信 ' : '') + escH(v))
+    .join('<br>');
+  // 徽章外圈文字：公司名（或姓名）+ ★ 循环到一圈（中文按两个字宽算）
+  const ringBase = (companyEn.toUpperCase() || company || [name, enLine.toUpperCase()].filter(Boolean).join(' ')) + ' ★ ';
+  let ring = '';
+  const units = (x: string) => Array.from(x).reduce((n, ch) => n + (cjk(ch) ? 2 : 1), 0);
+  while (units(ring + ringBase) <= 50) ring += ringBase;
+  if (!ring) ring = Array.from(ringBase).reduce((acc, ch) => (units(acc + ch) <= 50 ? acc + ch : acc), '');
+  const icons: Record<string, string> = { phone: '☎', wechat: '微', email: '@', website: '网', address: '址' };
+  const ls3 = have.slice(0, 4).map(([key, v]) => ({ key, v, k: icons[key], c: '' }));
+  const tierFull = tierName ? `SAREC ${tierName}` : '';
   return {
+    chip: companyEn.toUpperCase() || company || enLine.toUpperCase() || name,
+    ctInline: have.filter((p) => p[0] !== 'address').slice(0, 3).map(([key, v]) => (key === 'wechat' ? '微信 ' : '') + v).join('　'),
+    titleTier: [title, tierFull].filter(Boolean).join(' · '),
+    ls3, hasLs: ls3.length > 0,
+    bigWord: enWords.length ? enWords[enWords.length - 1].toUpperCase() : (name[0] || ''),
+    slashLine: [company, tierFull].filter(Boolean).join(' / '),
+    monoLines: [escH(title), [phone, wechat ? `微信 ${wechat}` : ''].filter(Boolean).map(escH).join(' · '), escH(email)].filter(Boolean).join('<br>'),
+    nameTitleCo: [name, title, company].filter(Boolean).join('　·　'),
+    ctLinesCn,
+    titleSp: cjk(title) && title.length <= 4 ? Array.from(title).join(' ') : title,
+    wxMail: [wechat ? `微信 ${wechat}` : '', email].filter(Boolean).join('　·　'),
+    nameTitle: [nameSp, title].filter(Boolean).join('　·　'),
+    ring,
+    nameFull: [name, enLine.toUpperCase()].filter(Boolean).join(' '),
+    titleAt: [title, company].filter(Boolean).join(' @ '),
+    titleComma: [title, company].filter(Boolean).join('，'),
+    nameLast: cjk(name) ? Array.from(name).slice(-1)[0] : initial,
+    phoneMail: [phone, email].filter(Boolean).join('　·　'),
+    ctLines,
     ic3, hasIc3: ic3.length > 0, g3,
     nameWide: cjk(name) && name.length === 2 ? name.split('').join('　') : name,
     companyEnUp: companyEn.toUpperCase(),

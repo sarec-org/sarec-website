@@ -18,6 +18,6 @@ const t: CardTemplate = {
 .c10 .l{font-size:2.6cqw;margin-top:1.4cqw!important;white-space:nowrap}
 .c10 .l2{font-size:2.2cqw;color:#555;margin-top:.8cqw!important;white-space:nowrap}
 `,
-  html: `<div class="deco chip"><div class="qr">{{{qrImg}}}</div></div><div class="in"><div class="sp" style="flex:0 0 37cqw!important"></div><p class="h">SAREC<sup>®</sup> 经典蓝</p><p class="l"><b>王东 Andy Wang</b>　创始人 · 中美房地产商会</p><p class="l2">949 787 8888　微信 逍遥　info@sinoamericanrec.org</p></div>`
+  html: `<div class="deco chip"><div class="qr">{{{qrImg}}}</div></div><div class="in"><div class="sp" style="flex:0 0 37cqw!important"></div><p class="h">{{chip}} 经典蓝</p><p class="l"><b>{{name}}{{#nameEn}} {{nameEn}}{{/nameEn}}</b>{{#titleLine}}　{{titleLine}}{{/titleLine}}</p>{{#ctInline}}<p class="l2">{{ctInline}}</p>{{/ctInline}}</div>`
 };
 export default t;

@@ -19,6 +19,6 @@ const t: CardTemplate = {
 .c19 .lq{right:5.4cqw;bottom:5cqw;z-index:3}
 .c19 .lq .qr{background:transparent;mix-blend-mode:multiply;width:14cqw;height:14cqw}
 `,
-  html: `<div class="deco hl"></div><div class="deco stp">MEMBER<br>会员</div><div class="in lib"><p class="h">SAREC 中美房地产商会 · 会员卡</p><div class="rw"><b>姓名</b><span>王东 Andy Wang</span></div><div class="rw"><b>职务</b><span>创始人 · 副会长</span></div><div class="rw"><b>电话</b><span>949 787 8888</span></div><div class="rw"><b>微信</b><span>逍遥</span></div><div class="rw"><b>邮箱</b><span>info@sinoamericanrec.org</span></div></div><div class="deco lq"><div class="qr">{{{qrImg}}}</div></div>`
+  html: `<div class="deco hl"></div>{{#tier}}<div class="deco stp">MEMBER<br>{{tierName}}</div>{{/tier}}<div class="in lib"><p class="h">{{#company}}{{company}} · {{/company}}名片</p><div class="rw"><b>姓名</b><span>{{name}}{{#nameEn}} {{nameEn}}{{/nameEn}}</span></div>{{#titleTier}}<div class="rw"><b>职务</b><span>{{titleTier}}</span></div>{{/titleTier}}{{#phone}}<div class="rw"><b>电话</b><span>{{phone}}</span></div>{{/phone}}{{#wechat}}<div class="rw"><b>微信</b><span>{{wechat}}</span></div>{{/wechat}}{{#email}}<div class="rw"><b>邮箱</b><span>{{email}}</span></div>{{/email}}{{#website}}<div class="rw"><b>网址</b><span>{{website}}</span></div>{{/website}}</div><div class="deco lq"><div class="qr">{{{qrImg}}}</div></div>`
 };
 export default t;

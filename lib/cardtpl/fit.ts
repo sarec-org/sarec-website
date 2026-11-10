@@ -2,13 +2,14 @@
  * 出图前在页面里跑的自检（纯 JS 字符串，避免打包工具改写）：
  * 文字超出卡面、两段文字压在一起、文字压住二维码、二维码被挤出卡面 → 把那一块（以及同一行挤在一起的块）的字号缩 7%，重排再查；
  * 缩到七成仍放不下就允许这一块换行，再继续缩，最多缩到约 55%。
+ * 模板里可标 data-fit（装饰层里的文字也要查）、data-fit-group（整块一起缩）、data-nooverlap（设计上本来就叠在一起，不查重叠）、data-keep（只缩不换行）、data-minzoom（最小缩放，默认 0.56）。
  * 返回 { ok, shrunk: 缩过的块, overflow: 仍有问题的块 }。
  */
 export const FIT_JS = String.raw`(() => {
   const card = document.querySelector('.card');
   // 姓名、等级徽标不换行，只缩字
-  const KEEP = '.n2,.cn,.nn,.n1,.tier,.lg,.nm,.big';
-  const GROUP = '.ic2,.ct,.ls3,.lg,.fl,.rc,.lib,.tm,.hf,[data-fit-group]';
+  const KEEP = '.n2,.cn,.nn,.n1,.tier,.lg,.big,.sg,[data-keep]';
+  const GROUP = '.ic2,.ct,.ls3,.lg,.fl,.rc,.lib,.tm,.hf,.mh,[data-fit-group]';
   const hasText = (e) => Array.from(e.childNodes).some((n) => n.nodeType === 3 && (n.textContent || '').trim());
   const textRect = (e) => { const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect(); };
   const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
@@ -36,11 +37,16 @@ export const FIT_JS = String.raw`(() => {
     for (const b of boxes) {
       if (b.r.left < C.left + mx || b.r.right > C.right - mx || b.r.top < C.top + mx * 0.5 || b.r.bottom > C.bottom - mx * 0.5) bad.add(b.e);
       if (qr && !qr.contains(b.e) && hit(b.r, qr.getBoundingClientRect())) bad.add(b.e);
+      // 不换行的文字比自己的框还宽（模板给了 max-width 的框，比如漫画款的白框）
+      const ws = getComputedStyle(b.e);
+      if (ws.whiteSpace === 'nowrap' && ws.maxWidth !== 'none' && b.e.scrollWidth > b.e.clientWidth + 2) bad.add(b.e);
     }
     for (let i = 0; i < boxes.length; i++)
       for (let j = i + 1; j < boxes.length; j++) {
         const a = boxes[i], b = boxes[j];
         if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
+        // 设计上本来就叠在一起的（签名压线、航线大字和小字）不算压住
+        if (a.e.closest('[data-nooverlap]') || b.e.closest('[data-nooverlap]')) continue;
         if (press(a.r, b.r)) { bad.add(a.e); bad.add(b.e); }
       }
     return Array.from(bad);
@@ -72,7 +78,7 @@ export const FIT_JS = String.raw`(() => {
         [t].concat(Array.from(t.querySelectorAll('*'))).filter((k) => !k.matches(KEEP) && !k.closest(KEEP)).forEach((k) => { k.style.whiteSpace = 'normal'; k.style.overflowWrap = 'anywhere'; k.style.minWidth = '0'; });
         shrunk.add(label(t) + '(换行)');
         moved = true;
-      } else if (z > 0.56) { t.style.setProperty('zoom', String(Math.round(z * 0.93 * 1000) / 1000)); shrunk.add(label(t)); moved = true; }
+      } else if (z > Number(t.dataset.minzoom || 0.56)) { t.style.setProperty('zoom', String(Math.round(z * 0.93 * 1000) / 1000)); shrunk.add(label(t)); moved = true; }
     });
     if (!moved) break;
   }

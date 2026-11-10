@@ -16,6 +16,6 @@ const t: CardTemplate = {
 .c22 .org{color:#44506A}
 .c22 .qr{border:1px solid #ddd;width:12cqw;height:12cqw}
 `,
-  html: `<div class="in ctr"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}</div><div class="sp"></div><p class="sg">Andy Wang</p><div class="ul"></div><p class="nm">王东　·　创始人　·　中美房地产商会</p><div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="in ctr"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}</div><div class="sp"></div><p class="sg" data-nooverlap data-minzoom=".3">{{#nameEn}}{{nameEn}}{{/nameEn}}{{^nameEn}}{{name}}{{/nameEn}}</p><div class="ul"></div><p class="nm">{{nameTitleCo}}</p><div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

@@ -18,7 +18,9 @@ const t: CardTemplate = {
 .c4 .cn{font-size:7cqw}
 .c4 .tier{background:#0F2347;color:#fff;border-color:#0F2347}
 .c4 .qr{border:1px solid #D5DBE6;width:12.5cqw;height:12.5cqw}
+/* 自己的公司名比设计稿里的 SAREC 长：允许换行、两侧留白 */
+.c4 .lf b,.c4 .lf span{max-width:100%;padding:0 3cqw;box-sizing:border-box;text-align:center;line-height:1.4;letter-spacing:.12em}
 `,
-  html: `<div class="deco lf"><i>S</i><b>SAREC</b><span>中美房地产商会</span></div><div class="deco vr"></div><div class="in" style="padding-left:44cqw"><div class="top"><span></span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="deco lf" data-fit>{{{markI}}}{{#company}}<b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}{{/company}}</div><div class="deco vr"></div><div class="in" style="padding-left:44cqw"><div class="top"><span></span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}<div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

@@ -19,6 +19,6 @@ const t: CardTemplate = {
 .c12 .lbx .ti{color:#3B4466;margin-top:1.2cqw!important}
 .c12 .tier{border-color:#D9B46A;color:#D9B46A}
 `,
-  html: `<div class="deco ps"></div><div class="deco lb"></div><div class="in"><div class="top"><span></span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><div class="lbx"><p class="org">SAREC 中美房地产商会</p><p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}<p class="ti">创始人</p></div><div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
+  html: `<div class="deco ps"></div><div class="deco lb"></div><div class="in"><div class="top"><span></span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><div class="lbx">{{#company}}<p class="org">{{company}}</p>{{/company}}<p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}{{#title}}<p class="ti">{{title}}</p>{{/title}}</div><div class="sp"></div><div class="bot">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
 export default t;

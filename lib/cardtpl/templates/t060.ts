@@ -19,6 +19,6 @@ const t: CardTemplate = {
 .c16 .qr{width:12.5cqw;height:12.5cqw;background:#F4F6FA}
 .c16 .top{color:#5A6578}
 `,
-  html: `<div class="in"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}<span class="nb">S</span></div><div class="sp"></div><div class="pl"><p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}</div><div class="sp"></div><div class="bot"><div class="ins">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}</div><div class="qw"><div class="qr">{{{qrImg}}}</div></div></div></div>`
+  html: `<div class="in"><div class="top">{{#company}}<span class="org">{{company}}</span>{{/company}}{{^company}}<span></span>{{/company}}<span class="nb">{{mark}}</span></div><div class="sp"></div><div class="pl"><p class="cn">{{nameSp}}</p>{{#nameEn}}<p class="en">{{nameEn}}</p>{{/nameEn}}{{#titleLine}}<p class="ti">{{titleLine}}</p>{{/titleLine}}</div><div class="sp"></div><div class="bot"><div class="ins">{{#hasCt}}<div class="ct">{{#ct}}<div><i>{{k}}</i>{{v}}</div>{{/ct}}</div>{{/hasCt}}{{^hasCt}}<span></span>{{/hasCt}}</div><div class="qw"><div class="qr">{{{qrImg}}}</div></div></div></div>`
 };
 export default t;
