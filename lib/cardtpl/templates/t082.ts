@@ -14,6 +14,8 @@ const t: CardTemplate = {
 .b16 .av svg{display:block;width:100%;height:100%}
 .b16 .tr{margin-top:1.6cqw!important}
 .b16 .tier{color:#D9B46A;border-color:#D9B46A}
+/* 没填公司时顶部一行留出原来 logo 行的高度，下面的姓名不往上跑 */
+.b16 .top{min-height:7.6cqw}
 `,
   html: `<div class="deco av"><svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#8FA3BF"/><circle cx="50" cy="40" r="18" fill="#E6ECF4"/><path d="M14 100c0-22 16-34 36-34s36 12 36 34z" fill="#E6ECF4"/></svg></div><div class="in"><div class="top">{{#company}}<div class="lg">{{{markI}}}<div><b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}</div></div>{{/company}}{{^company}}<span></span>{{/company}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<p class="tr">{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</p><div class="sp"></div><div class="bot">{{#hasIc}}<div class="ic2">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };

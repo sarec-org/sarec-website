@@ -22,6 +22,8 @@ const t: CardTemplate = {
 .d14 .gd i{font-style:normal;width:6cqw;height:6cqw;border-radius:50%;background:rgba(255,255,255,.25);display:grid;place-items:center;font-size:3cqw;font-weight:700}
 .d14 .gd b{font-size:2cqw;font-weight:700;line-height:1.3;white-space:nowrap}
 .d14 .gd .qr{width:16cqw;height:16cqw;padding:0}
+/* 没填公司时顶部一行留出原来 logo 行的高度，下面的姓名不往上跑 */
+.d14 .top{min-height:7.6cqw}
 `,
   html: `<div class="deco lf"></div><div class="in" style="padding-right:50cqw"><div class="top">{{#company}}<div class="lg">{{{markI}}}<div><b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}</div></div>{{/company}}{{^company}}<span></span>{{/company}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<p class="tr">{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</p><div class="sp"></div>{{#address}}<div class="ad">{{address}}</div>{{/address}}</div><div class="deco gd" data-fit>{{#g3}}<div>{{#k}}<i>{{k}}</i><b>{{{vb}}}</b>{{/k}}</div>{{/g3}}<div class="q"><div class="qr">{{{qrImg}}}</div></div></div>`
 };

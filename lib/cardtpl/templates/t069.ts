@@ -14,6 +14,8 @@ const t: CardTemplate = {
 .b3 .in{padding-left:9cqw}
 .b3 .n2 b{background:linear-gradient(180deg,#F6E2A6,#C39A4A);-webkit-background-clip:text;background-clip:text;color:transparent}
 .b3 .tier{margin-right:16cqw;background:#0E0E10}
+/* 没填公司时顶部一行留出原来 logo 行的高度，下面的姓名不往上跑 */
+.b3 .top{min-height:7.6cqw}
 `,
   html: `<svg class="deco gz" viewBox="0 0 170 100" preserveAspectRatio="none"><defs><linearGradient id="gd" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6E2A6"/><stop offset=".5" stop-color="#C39A4A"/><stop offset="1" stop-color="#8D6B2B"/></linearGradient></defs><path d="M170 0V34L128 0Z" fill="url(#gd)"/><path d="M170 46L112 0M170 58L98 0" stroke="#C39A4A" stroke-width=".5" fill="none"/><path d="M0 100V72L34 100Z" fill="url(#gd)"/><path d="M0 60L50 100M0 50L62 100" stroke="#C39A4A" stroke-width=".5" fill="none"/></svg><div class="in"><div class="top">{{#company}}<div class="lg">{{{markI}}}<div><b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}</div></div>{{/company}}{{^company}}<span></span>{{/company}}{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<div class="sp"></div><div class="bot">{{#hasIc}}<div class="ic2">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };

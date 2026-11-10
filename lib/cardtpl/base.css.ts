@@ -8,7 +8,7 @@ export const BASE_CSS = `
 .in>*{margin:0;flex:none}
 .card p{margin:0}
 .sp{flex:1 1 0!important}
-.top{display:flex;justify-content:space-between;align-items:center;font-size:2.3cqw;letter-spacing:.22em;color:var(--a)}
+.top{min-height:3.4cqw;display:flex;justify-content:space-between;align-items:center;font-size:2.3cqw;letter-spacing:.22em;color:var(--a)}
 .tier{letter-spacing:.16em;padding:.7cqw 2cqw;border:1px solid currentColor;border-radius:99px;font-size:2.1cqw;white-space:nowrap}
 .cn{font-family:var(--serif);font-weight:900;font-size:8.2cqw;letter-spacing:.2em;line-height:1.1;white-space:nowrap}
 .cn.big{font-size:12cqw;letter-spacing:.06em}

@@ -13,6 +13,8 @@ const t: CardTemplate = {
 .b21 .dm{inset:0;background:repeating-linear-gradient(45deg,rgba(240,208,138,.14) 0 .2cqw,transparent .2cqw 4.4cqw),repeating-linear-gradient(-45deg,rgba(240,208,138,.14) 0 .2cqw,transparent .2cqw 4.4cqw);-webkit-mask:linear-gradient(100deg,transparent 30%,#000 90%);mask:linear-gradient(100deg,transparent 30%,#000 90%)}
 .b21 .n2 b{color:#F6E2A6}
 .b21 .tier{color:#F0D08A;border-color:#F0D08A}
+/* 没填公司时顶部一行留出原来 logo 行的高度，下面的姓名不往上跑 */
+.b21 .top{min-height:7.6cqw}
 `,
   html: `<div class="deco dm"></div><div class="in"><div class="top">{{#company}}<div class="lg">{{{markI}}}<div><b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}</div></div>{{/company}}{{^company}}<span></span>{{/company}}{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<div class="sp"></div><div class="bot">{{#hasIc}}<div class="ic2">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };

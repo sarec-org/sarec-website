@@ -15,6 +15,8 @@ const t: CardTemplate = {
 .b14 .f3{left:0;bottom:0;width:30cqw;height:1.2cqw;background:#1976D2}
 .b14 .tier{background:#fff;color:#0D47A1;border-color:#fff;position:relative;z-index:3;margin-right:-2cqw}
 .b14 .qr{border:1px solid #D5DBE6}
+/* 没填公司时顶部一行留出原来 logo 行的高度，下面的姓名不往上跑 */
+.b14 .top{min-height:7.6cqw}
 `,
   html: `<div class="deco f1"></div><div class="deco f2"></div><div class="deco f3"></div><div class="in"><div class="top">{{#company}}<div class="lg">{{{markI}}}<div><b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}</div></div>{{/company}}{{^company}}<span></span>{{/company}}{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<div class="sp"></div><div class="bot">{{#hasIc}}<div class="ic2">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };
