@@ -109,14 +109,16 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
       if (blobConfigured()) url = (await put(`${BLOB_PREFIX}/ai-poster/${eventId}/${id}.jpg`, jpg, { access: 'public', contentType: 'image/jpeg', addRandomSuffix: false, abortSignal: AbortSignal.timeout(45_000) })).url;
       else if (p.key === 'placeholder') url = `data:image/jpeg;base64,${jpg.toString('base64')}`; // 本地没配存储时只用于测试
       else throw new CrmError('storage_unconfigured', '图片存储还没有配置');
-      console.log(`[ai-poster] stored ${Date.now() - t0}ms`);
+      console.log(`[ai-poster] ${id.slice(0, 6)} stored ${Date.now() - t0}ms`);
       await db.query(
         `INSERT INTO poster_gens (id, event_id, batch_id, kind, event_type, style, provider, model, prompt, image_url, result, cost_usd, status, created_by)
          VALUES ($1, $2, $3, 'image', $4, $5, $6, $7, $8, $9, $10, $11, 'ok', $12)`,
         [id, eventId, batch, type, style, p.key, p.model, prompt, url, JSON.stringify({ seed }), p.costPerImage, s.contactId]
       );
+      console.log(`[ai-poster] ${id.slice(0, 6)} saved ${Date.now() - t0}ms`);
     } catch (e) {
       const msg = redactSecrets(e instanceof Error ? e.message : 'unknown').slice(0, 300);
+      console.log(`[ai-poster] ${id.slice(0, 6)} failed: ${msg}`);
       await db.query(
         `INSERT INTO poster_gens (id, event_id, batch_id, kind, event_type, style, provider, model, prompt, result, cost_usd, status, error, created_by)
          VALUES ($1, $2, $3, 'image', $4, $5, $6, $7, $8, $9, 0, 'failed', $10, $11)`,
