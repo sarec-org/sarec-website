@@ -33,20 +33,16 @@ export async function cardImage(token: string, o: CardImageOpts): Promise<{ buf:
   const batches = await cardTplBatches(getPool());
   let t = findTemplate(o.tpl) ?? findTemplate(c.template) ?? findTemplate(DEFAULT_TEMPLATE)!;
   if (t.batch > batches) t = findTemplate(DEFAULT_TEMPLATE)!;
-  const qr = await qrDataUri(token);
-  const v = cardView(
-    {
-      name: c.name, nameEn: c.nameEn, title: c.title, titleEn: c.titleEn, company: c.company, companyEn: c.companyEn,
-      phone: c.phone, wechatId: c.wechatId, email: c.email, website: c.website, address: c.address ?? c.region,
-      tierName: c.tierName, avatarUrl: c.avatarUrl, logoUrl: c.logoUrl
-    },
-    qr
-  );
   const type = o.share || o.thumb ? 'jpeg' : 'png';
   const opts = o.share ? { fmt: 'share' as const, type: 'jpeg' as const } : o.thumb ? { width: 510, scale: 1, type: 'jpeg' as const } : { scale: 1.25, type: 'png' as const };
-  const { qr: _q, qrImg: _qi, ...plain } = v;
+  const input = {
+    name: c.name, nameEn: c.nameEn, title: c.title, titleEn: c.titleEn, company: c.company, companyEn: c.companyEn,
+    phone: c.phone, wechatId: c.wechatId, email: c.email, website: c.website, address: c.address ?? c.region,
+    tierName: c.tierName, avatarUrl: c.avatarUrl, logoUrl: c.logoUrl
+  };
+  // 指纹只看资料、模板和尺寸（二维码只跟名片 token 有关），命中缓存时连二维码都不用取
   const key = createHash('sha256')
-    .update(JSON.stringify({ RENDER_V, id: t.id, h: templateHash(t), plain, qr: qr ? createHash('sha1').update(qr).digest('hex') : null, own: !!o.own, opts }))
+    .update(JSON.stringify({ RENDER_V, id: t.id, h: templateHash(t), input, token, wx: process.env.WX_CODE_ENV_VERSION ?? 'release', own: !!o.own, opts }))
     .digest('hex')
     .slice(0, 40);
   const path = `${BLOB_PREFIX}/cardimg/${key}.${type === 'png' ? 'png' : 'jpg'}`;
@@ -59,6 +55,8 @@ export async function cardImage(token: string, o: CardImageOpts): Promise<{ buf:
       /* 还没出过 */
     }
   }
+  const qr = await qrDataUri(token);
+  const v = cardView(input, qr);
   const { buf, fit, ms } = await renderCard(t, v, { ...opts, own: !!o.own });
   console.log(`[card-image] tpl=${t.id} ${o.share ? 'share' : o.thumb ? 'thumb' : 'card'} ${ms}ms fit=${fit.ok ? 'ok' : 'overflow:' + fit.overflow.join('|')}`);
   if (blobConfigured()) await put(path, buf, { access: 'public', contentType: `image/${type}`, addRandomSuffix: false }).catch(() => undefined);

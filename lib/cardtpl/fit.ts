@@ -1,10 +1,13 @@
 /**
  * 出图前在页面里跑的自检（纯 JS 字符串，避免打包工具改写）：
- * 文字超出卡面、两段文字压在一起、文字压住二维码、二维码被挤出卡面 → 把那一块（以及同一行挤在一起的块）的字号缩 7%，重排再查，最多缩到约 55%。
+ * 文字超出卡面、两段文字压在一起、文字压住二维码、二维码被挤出卡面 → 把那一块（以及同一行挤在一起的块）的字号缩 7%，重排再查；
+ * 缩到七成仍放不下就允许这一块换行，再继续缩，最多缩到约 55%。
  * 返回 { ok, shrunk: 缩过的块, overflow: 仍有问题的块 }。
  */
 export const FIT_JS = String.raw`(() => {
   const card = document.querySelector('.card');
+  // 姓名、等级徽标不换行，只缩字
+  const KEEP = '.n2,.cn,.nn,.n1,.tier,.lg,.nm,.big';
   const GROUP = '.ic2,.ct,.ls3,.lg,.fl,.rc,.lib,.tm,.hf,[data-fit-group]';
   const hasText = (e) => Array.from(e.childNodes).some((n) => n.nodeType === 3 && (n.textContent || '').trim());
   const textRect = (e) => { const r = document.createRange(); r.selectNodeContents(e); return r.getBoundingClientRect(); };
@@ -23,7 +26,7 @@ export const FIT_JS = String.raw`(() => {
     const texts = Array.from(card.querySelectorAll('.in *, [data-fit] *, [data-fit]')).filter(
       (e) => hasText(e) && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && !e.closest('.own-guide')
     );
-    const boxes = texts.map((e) => ({ e, r: textRect(e) })).filter((b) => b.r.width > 0);
+    const boxes = texts.map((e) => ({ e, r: e.matches('.tier') ? e.getBoundingClientRect() : textRect(e) })).filter((b) => b.r.width > 0);
     const qr = card.querySelector('.qr');
     const bad = new Set();
     if (qr) {
@@ -48,7 +51,7 @@ export const FIT_JS = String.raw`(() => {
     const cs = getComputedStyle(p);
     return cs.display.indexOf('flex') >= 0 && cs.flexDirection.indexOf('column') < 0 ? p : null;
   };
-  for (let round = 0; round < 16; round++) {
+  for (let round = 0; round < 20; round++) {
     const bad = find();
     if (!bad.length) return { ok: true, shrunk: Array.from(shrunk), overflow: [] };
     const targets = new Set();
@@ -63,7 +66,13 @@ export const FIT_JS = String.raw`(() => {
     let moved = false;
     targets.forEach((t) => {
       const z = zoomOf(t);
-      if (z > 0.56) { t.style.setProperty('zoom', String(Math.round(z * 0.93 * 1000) / 1000)); shrunk.add(label(t)); moved = true; }
+      // 缩到七成还放不下：先允许这一块换行（长英文名、长邮箱），再继续缩
+      if (z <= 0.72 && !t.dataset.wrapped && !t.matches(KEEP)) {
+        t.dataset.wrapped = '1';
+        [t].concat(Array.from(t.querySelectorAll('*'))).filter((k) => !k.matches(KEEP) && !k.closest(KEEP)).forEach((k) => { k.style.whiteSpace = 'normal'; k.style.overflowWrap = 'anywhere'; k.style.minWidth = '0'; });
+        shrunk.add(label(t) + '(换行)');
+        moved = true;
+      } else if (z > 0.56) { t.style.setProperty('zoom', String(Math.round(z * 0.93 * 1000) / 1000)); shrunk.add(label(t)); moved = true; }
     });
     if (!moved) break;
   }

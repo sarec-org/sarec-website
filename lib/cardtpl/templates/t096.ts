@@ -16,6 +16,8 @@ const t: CardTemplate = {
 .d7 .tier{background:#12305E;color:#fff;border-color:#12305E}
 .d7 .qr{width:12cqw;height:12cqw;border:1px solid #D5DBE6}
 .d7 .ic2{gap:1.05cqw}
+/* 自己的公司名：允许换行 */
+.d7 .nm{line-height:1.4;letter-spacing:.12em}
 `,
   html: `<svg class="deco sh" viewBox="0 0 60 70"><path d="M30 3L55 11V34C55 50 44 61 30 67C16 61 5 50 5 34V11Z" fill="#12305E" stroke="#C39A4A" stroke-width="2"/><path d="M30 9L50 15.5V34C50 47 41 56 30 61C19 56 10 47 10 34V15.5Z" fill="none" stroke="#C39A4A" stroke-width=".6"/><text x="30" y="43" text-anchor="middle" font-family="Playfair Display,Georgia,serif" font-weight="700" font-size="26" fill="#F1DDA6">{{mark}}</text></svg>{{#company}}<div class="deco nm" data-fit>{{company}}{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}</div>{{/company}}<div class="in" style="padding-left:40cqw"><div class="top"><span></span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<div class="sp"></div><div class="bot">{{#hasIc}}<div class="ic2 one">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}<div class="qr">{{{qrImg}}}</div></div></div>`
 };

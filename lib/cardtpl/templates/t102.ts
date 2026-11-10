@@ -25,6 +25,6 @@ const t: CardTemplate = {
 .d13 .rowx i{background:#D9B46A}
 .d13 .ft .qr{width:11.6cqw;height:11.6cqw}
 `,
-  html: `<div class="deco md"></div><div class="deco sl">{{mark}}</div><div class="in bi"><div class="hf">{{#company}}<p class="o1">{{company}}</p>{{/company}}<p class="n1">{{name}}</p>{{#tierTitle}}<p class="t1">{{tierTitle}}</p>{{/tierTitle}}{{#address}}<p class="a1">{{address}}</p>{{/address}}</div><div class="hf r">{{#companyEn}}<p class="o1">{{companyEn}}</p>{{/companyEn}}{{#nameEn}}<p class="n1 e">{{nameEn}}</p>{{/nameEn}}{{#titleEn}}<p class="t1">{{titleEn}}</p>{{/titleEn}}</div></div><div class="deco ft" data-fit>{{#ic3}}<div class="ic2 rowx">{{#ic3}}<div><i>{{k}}</i>{{v}}</div>{{/ic3}}</div>{{/ic3}}{{^ic3}}<span></span>{{/ic3}}<div class="qr">{{{qrImg}}}</div></div>`
+  html: `<div class="deco md"></div><div class="deco sl">{{mark}}</div><div class="in bi"><div class="hf">{{#company}}<p class="o1">{{company}}</p>{{/company}}<p class="n1">{{name}}</p>{{#tierTitle}}<p class="t1">{{tierTitle}}</p>{{/tierTitle}}{{#address}}<p class="a1">{{address}}</p>{{/address}}</div><div class="hf r">{{#companyEn}}<p class="o1">{{companyEn}}</p>{{/companyEn}}{{#nameEn}}<p class="n1 e">{{nameEn}}</p>{{/nameEn}}{{#titleEn}}<p class="t1">{{titleEn}}</p>{{/titleEn}}</div></div><div class="deco ft" data-fit>{{#hasIc3}}<div class="ic2 rowx">{{#ic3}}<div><i>{{k}}</i>{{v}}</div>{{/ic3}}</div>{{/hasIc3}}{{^hasIc3}}<span></span>{{/hasIc3}}<div class="qr">{{{qrImg}}}</div></div>`
 };
 export default t;

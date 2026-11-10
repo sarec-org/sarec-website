@@ -27,7 +27,7 @@ export type CardView = {
   tier: string; tierName: string; mark: string; markI: string; logoImg: string; avatarImg: string; avatar: string; logo: string;
   phone: string; wechat: string; email: string; website: string; address: string;
   ct: ContactRow[]; ic: ContactRow[]; hasCt: boolean; hasIc: boolean; qrImg: string; qr: string;
-  ic3: ContactRow[]; g3: { k: string; vb: string }[];
+  ic3: ContactRow[]; hasIc3: boolean; g3: { k: string; vb: string }[];
   nameWide: string; companyEnUp: string; tierTitle: string; seal: boolean; seal1: string; seal2: string;
 };
 
@@ -75,7 +75,7 @@ export function cardView(c: CardInput, qrSrc: string | null): CardView {
   // 方格款：固定三格（不够的格子只留底色），邮箱在 @ 后换行
   const g3 = [0, 1, 2].map((i) => (ic3[i] ? { k: ic3[i].k, vb: escH(ic3[i].v).replace('@', '@<br>') } : { k: '', vb: '' }));
   return {
-    ic3, g3,
+    ic3, hasIc3: ic3.length > 0, g3,
     nameWide: cjk(name) && name.length === 2 ? name.split('').join('　') : name,
     companyEnUp: companyEn.toUpperCase(),
     tierTitle: [tierName, title].filter(Boolean).join('　·　'),

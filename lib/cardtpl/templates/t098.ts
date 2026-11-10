@@ -18,6 +18,8 @@ const t: CardTemplate = {
 .d9 .rl{left:40cqw;top:0;bottom:0;width:.8cqw;background:#E4002B}
 .d9 .n2 span{color:#E4002B}
 .d9 .tier{background:#111;color:#fff;border-color:#111}
+/* 自己的公司名比设计稿里的 SAREC 长：允许换行、两侧留白 */
+.d9 .bk b,.d9 .bk span{max-width:100%;padding:0 3cqw;box-sizing:border-box;text-align:center;line-height:1.4;letter-spacing:.12em}
 `,
   html: `<div class="deco bk" data-fit>{{{markI}}}{{#company}}<b>{{company}}</b>{{#companyEn}}<span>{{companyEn}}</span>{{/companyEn}}{{/company}}<div class="qr">{{{qrImg}}}</div></div><div class="deco rl"></div><div class="in" style="padding-left:46cqw"><div class="top"><span></span>{{#tier}}<span class="tier">{{tier}}</span>{{/tier}}</div><div class="sp"></div><p class="n2"><b>{{name}}</b>{{#title}}<span>{{title}}</span>{{/title}}</p>{{#e2}}<p class="e2">{{e2}}</p>{{/e2}}<div class="sp"></div>{{#hasIc}}<div class="ic2 one">{{#ic}}<div class="{{c}}"><i>{{k}}</i>{{v}}</div>{{/ic}}</div>{{/hasIc}}{{^hasIc}}<span></span>{{/hasIc}}</div>`
 };
