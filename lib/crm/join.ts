@@ -15,15 +15,11 @@ import { notifyFollowup, upsertFollowup } from '@/lib/crm/followups';
 
 export const INDUSTRIES = ['开发商', '经纪', '贷款', '投资人', '律师会计', '建筑装修', '其他'];
 
-/** 会员权益：已确认的以网站会员页现有内容为准；还没上线的标“筹备中”。 */
+/** 会员权益：只列已经有的（以网站会员页现有内容为准）；还没上线的不列，不放“筹备中”占位（东哥 11/9）。 */
 export function joinBenefits() {
   return [
     ...benefitsContent.items.map((b) => ({ title: b.title, body: b.body, status: 'live' as const })),
     { title: '电子名片与名片夹', body: '一张高端电子名片，现场扫码互换，按活动分组找人。', status: 'live' as const },
-    { title: '活动优先', body: '名额紧张的活动，会员优先报名、优先递补。', status: 'soon' as const },
-    { title: '资源对接', body: '“我能提供 / 我在找”对接板，商会人工审核后撮合。', status: 'soon' as const },
-    { title: '企业家圆桌', body: '小范围深度交流；席位、同行业限额等规则正式确定后公布。', status: 'soon' as const },
-    { title: '年度对接报告', body: '每年底给每位会员一份：认识了谁、对接了什么。', status: 'soon' as const }
   ];
 }
 

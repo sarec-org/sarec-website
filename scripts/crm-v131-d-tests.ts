@@ -87,6 +87,34 @@ async function main() {
   await book.respondExchange(a, pend.id, false);
   assert.equal((await book.cardBook(d)).total, 0);
   ok('忽略请求：不互存');
+
+  // 真机修正 1：公开范围默认值、网站、地区、等级徽标
+  const e1 = await person('DEV131-戊');
+  const ce = await cards.myCard(e1);
+  assert.equal(ce.showPhone, false);
+  assert.equal(ce.showEmail, true);
+  assert.equal(ce.showWechat, true);
+  assert.equal(ce.showWebsite, true);
+  assert.equal(ce.showRegion, true);
+  assert.equal(ce.badge, '注册用户');
+  ok('新名片默认：手机不公开；邮箱、微信号、网站、地区公开；未入会显示“注册用户”');
+  await pool.query(`UPDATE contacts SET region_self = '洛杉矶/橙县' WHERE id = $1`, [e1]);
+  await cards.updateMyCard(e1, { name: 'DEV131-戊', website: 'www.dev131.example.com', wechatId: 'dev131wx' });
+  let pubE = await cards.publicCard(ce.token);
+  assert.equal(pubE.website, 'www.dev131.example.com');
+  assert.equal(pubE.region, '洛杉矶/橙县');
+  assert.equal(pubE.wechatId, 'dev131wx');
+  assert.equal(pubE.phone, null);
+  await cards.updateMyCard(e1, { showWebsite: false, showRegion: false });
+  pubE = await cards.publicCard(ce.token);
+  assert.equal(pubE.website, null);
+  assert.equal(pubE.region, null);
+  await assert.rejects(cards.updateMyCard(e1, { website: 'not a site' }), /网站格式不对/);
+  ok('网站、地区按开关公开；关掉后对方看不到；网站格式校验');
+  assert.equal(cards.tierBadge({ isMember: true, tierName: '常务副会长单位' }), '常务副会长');
+  assert.equal(cards.tierBadge({ isMember: true, tierName: '理事单位' }), '理事单位');
+  assert.equal(cards.tierBadge({ isMember: true, tierName: null }), '会员');
+  ok('等级徽标：常务副会长单位 → 常务副会长；理事单位不变；没有等级名 → 会员');
   console.log(`\n全部通过：${passed} 项`);
 }
 async function cleanup() {

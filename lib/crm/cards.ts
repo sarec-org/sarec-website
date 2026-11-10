@@ -23,6 +23,15 @@ import type { Db } from './profile';
 
 export type CardStatus = { label: string; isMember: boolean; tierName: string | null; endDate: string | null; expired: boolean };
 
+/** 1.3.1 真机修正 1：名片左上角的等级徽标（注册用户 / 会员 / 理事单位 / 常务理事 / 副会长 / 常务副会长 / 战略合作伙伴） */
+export function tierBadge(st: Pick<CardStatus, 'isMember' | 'tierName'>): string {
+  if (!st.isMember) return '注册用户';
+  const t = st.tierName ?? '';
+  if (!t) return '会员';
+  if (t === '理事单位' || t === '战略合作伙伴' || t === '会员') return t;
+  return t.replace(/单位$/, '');
+}
+
 async function statusOf(db: Db, contactId: string): Promise<CardStatus> {
   const ms = await memberStatus(db, contactId);
   if (ms.isMember) return { label: 'SAREC 正式会员', isMember: true, tierName: ms.tierName, endDate: ms.endDate, expired: false };
@@ -36,8 +45,9 @@ async function ensureCard(db: Db, contactId: string) {
     token: string; company: string | null; title: string | null; intro: string | null; wechat_id: string | null;
     show_phone: boolean; show_email: boolean; show_wechat: boolean; hidden_at: Date | null; hidden_reason: string | null;
     template: string; name_en: string | null; company_en: string | null; title_en: string | null; industry: string | null; project_photo_url: string | null;
+    website: string | null; show_website: boolean; show_region: boolean;
   }>(`SELECT token, company, title, intro, wechat_id, show_phone, show_email, show_wechat, hidden_at, hidden_reason,
-             template, name_en, company_en, title_en, industry, project_photo_url FROM member_cards WHERE contact_id = $1`, [contactId]);
+             template, name_en, company_en, title_en, industry, project_photo_url, website, show_website, show_region FROM member_cards WHERE contact_id = $1`, [contactId]);
   return rows[0];
 }
 
@@ -64,11 +74,12 @@ const TEMPLATE_KEYS = ['navy', 'white', 'bilingual', 'estate'];
 export async function myCard(contactId: string) {
   const pool = getPool();
   const card = await ensureCard(pool, contactId);
-  const { rows: c } = await pool.query<{ name: string; member_no: number; role_sub: string | null; avatar_url: string | null }>(
-    `SELECT name, member_no::int AS member_no, role_sub, avatar_url FROM contacts WHERE id = $1`,
+  const { rows: c } = await pool.query<{ name: string; member_no: number; role_sub: string | null; avatar_url: string | null; region_self: string | null }>(
+    `SELECT name, member_no::int AS member_no, role_sub, avatar_url, region_self FROM contacts WHERE id = $1`,
     [contactId]
   );
   const info = await getContactInfo(pool, contactId);
+  const status = await statusOf(pool, contactId);
   return {
     token: card.token,
     name: c[0]?.name && c[0].name !== '微信用户' ? c[0].name : '',
@@ -82,11 +93,14 @@ export async function myCard(contactId: string) {
     showPhone: card.show_phone,
     showEmail: card.show_email,
     showWechat: card.show_wechat,
+    // 1.3.1 真机修正 1：网站、地区（地区用本人在“我的”里选的常住地区）及公开开关
+    website: card.website, showWebsite: card.show_website, region: c[0]?.region_self ?? null, showRegion: card.show_region,
     phone: info.phone?.value ?? null,
     email: info.email?.value ?? null,
     // 被工作人员下架时：本人仍可修改，别人打开显示“已下架”
     hidden: card.hidden_at ? { at: card.hidden_at, reason: card.hidden_reason } : null,
-    status: await statusOf(pool, contactId),
+    status,
+    badge: tierBadge(status),
     // 1.3.1 D：4 款模板 + 中英双语 + 行业 + 项目照片（行业没填时用签到时选的职业）
     template: card.template,
     nameEn: card.name_en, companyEn: card.company_en, titleEn: card.title_en,
@@ -125,7 +139,9 @@ export async function updateMyCard(contactId: string, b: Record<string, unknown>
     name: typeof b.name === 'string' && b.name.trim() ? b.name.trim().slice(0, 100) : before?.name ?? ''
   };
   // 1.3.1 D：模板、英文、行业也走内容安全
-  const extra = [clip(b.nameEn, 60), clip(b.companyEn, 100), clip(b.titleEn, 60), clip(b.industry, 20)].filter(Boolean).join('\n');
+  const website = clip(b.website, 120);
+  if (website && !/^(https?:\/\/)?[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+(\/\S*)?$/.test(website)) throw new CrmError('bad_request', '网站格式不对，例如 www.example.com');
+  const extra = [clip(b.nameEn, 60), clip(b.companyEn, 100), clip(b.titleEn, 60), clip(b.industry, 20), website].filter(Boolean).join('\n');
   if (extra) {
     const r0 = await msgSecCheck(extra, before?.openid ?? null, 1);
     if (r0 === 'risky') throw new CrmError('content_risky', '名片内容未通过内容安全检查，请修改后再保存');
@@ -142,7 +158,9 @@ export async function updateMyCard(contactId: string, b: Record<string, unknown>
        title_en = CASE WHEN $7::boolean THEN $8 ELSE title_en END,
        industry = CASE WHEN $9::boolean THEN $10 ELSE industry END,
        project_photo_url = CASE WHEN $11::boolean THEN $12 ELSE project_photo_url END,
-       content_updated_at = CASE WHEN $13::boolean THEN now() ELSE content_updated_at END
+       content_updated_at = CASE WHEN $13::boolean THEN now() ELSE content_updated_at END,
+       website = CASE WHEN $14::boolean THEN $15 ELSE website END,
+       show_website = COALESCE($16, show_website), show_region = COALESCE($17, show_region)
      WHERE contact_id = $1`,
     [
       contactId, b.template !== undefined ? String(b.template) : null,
@@ -151,7 +169,10 @@ export async function updateMyCard(contactId: string, b: Record<string, unknown>
       b.titleEn !== undefined, clip(b.titleEn, 60) || null,
       b.industry !== undefined, clip(b.industry, 20) || null,
       b.projectPhotoUrl !== undefined, (b.projectPhotoUrl as string | null) || null,
-      !!extra || b.projectPhotoUrl !== undefined
+      !!extra || b.projectPhotoUrl !== undefined,
+      b.website !== undefined, website || null,
+      typeof b.showWebsite === 'boolean' ? b.showWebsite : null,
+      typeof b.showRegion === 'boolean' ? b.showRegion : null
     ]
   );
   const changed =
@@ -200,10 +221,11 @@ export async function publicCard(token: string) {
     contact_id: string; company: string | null; title: string | null; intro: string | null; wechat_id: string | null;
     show_phone: boolean; show_email: boolean; show_wechat: boolean; name: string; avatar_url: string | null; role_sub: string | null; member_no: number; hidden_at: Date | null;
     template: string; name_en: string | null; company_en: string | null; title_en: string | null; industry: string | null; project_photo_url: string | null;
+    website: string | null; show_website: boolean; show_region: boolean; region_self: string | null;
   }>(
     `SELECT m.contact_id, m.company, m.title, m.intro, m.wechat_id, m.show_phone, m.show_email, m.show_wechat,
-            m.template, m.name_en, m.company_en, m.title_en, m.industry, m.project_photo_url,
-            c.name, c.avatar_url, c.role_sub, c.member_no::int AS member_no, m.hidden_at
+            m.template, m.name_en, m.company_en, m.title_en, m.industry, m.project_photo_url, m.website, m.show_website, m.show_region,
+            c.name, c.avatar_url, c.role_sub, c.member_no::int AS member_no, c.region_self, m.hidden_at
        FROM member_cards m JOIN contacts c ON c.id = m.contact_id WHERE m.token = $1`,
     [token]
   );
@@ -212,6 +234,7 @@ export async function publicCard(token: string) {
   // 工作人员下架后，别人打开只显示“已下架”，不展示任何名片内容
   if (r.hidden_at) throw new CrmError('not_found', '这张名片已下架');
   const info = await getContactInfo(pool, r.contact_id);
+  const st = await statusOf(pool, r.contact_id);
   return {
     token,
     ref: r.member_no,
@@ -224,7 +247,10 @@ export async function publicCard(token: string) {
     phone: r.show_phone ? info.phone?.value ?? null : null,
     email: r.show_email ? info.email?.value ?? null : null,
     wechatId: r.show_wechat ? r.wechat_id : null,
-    status: await statusOf(pool, r.contact_id),
+    website: r.show_website ? r.website : null,
+    region: r.show_region ? r.region_self : null,
+    status: st,
+    badge: tierBadge(st),
     template: r.template, nameEn: r.name_en, companyEn: r.company_en, titleEn: r.title_en, industry: r.industry, projectPhotoUrl: r.project_photo_url,
     checkedAt: new Date().toISOString()
   };

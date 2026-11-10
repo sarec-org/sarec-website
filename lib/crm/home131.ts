@@ -204,13 +204,14 @@ export async function home131(contactId: string | null, opts: { region?: string 
   } else if (albums[0]) {
     todo = { kind: 'photos', title: `新增 ${albums[0].n} 张照片`, sub: `${albums[0].title} · 相册刚刚更新`, slug: albums[0].slug, actions: [{ text: '去看', action: 'album' }] };
     todoPhotos = albums[0].slug;
-  } else if (persona === 'new') {
+  } else if (persona === 'new' && local[0]) {
     todo = { kind: 'intro', title: '欢迎来到中美房地产商会', sub: '地产交流 · 专业分享 · 会员服务', actions: [{ text: '了解商会', action: 'intro' }] };
   } else if (local[0]) {
     const tz = local[0].timezone || 'America/Los_Angeles';
     todo = { kind: 'recommend', title: `推荐：${local[0].title}`, sub: `${dayWord(local[0].starts_at, tz, now)} ${clock(local[0].starts_at, tz)}`, slug: local[0].slug, actions: [{ text: '去看', action: 'event' }] };
   } else {
-    todo = { kind: 'intro', title: '欢迎来到中美房地产商会', sub: '地产交流 · 专业分享 · 会员服务', actions: [{ text: '了解商会', action: 'intro' }] };
+    // 东哥 11/9 真机修正 1：没有可展示的活动时只一行，不写任何占位口号
+    todo = { kind: 'none', title: '近期活动筹备中，敬请期待', sub: '', actions: [] };
   }
 
   // ── 轮播 ──
@@ -253,7 +254,7 @@ export async function home131(contactId: string | null, opts: { region?: string 
   }
   // 入会（非会员）/ 会员专属（会员）
   slides.push(isMember
-    ? { key: 'member', kind: 'member', eyebrow: 'SAREC 会员', title: '我的会员卡与会员权益', meta: '活动优先、资源对接、名片夹', image: img('/images/home/los-angeles-hero.jpg'), button: { text: '我的会员卡', page: '/pages/me/me' } }
+    ? { key: 'member', kind: 'member', eyebrow: 'SAREC 会员', title: '我的会员卡与会员权益', meta: '会员卡 · 电子名片', image: img('/images/home/los-angeles-hero.jpg'), button: { text: '我的会员卡', page: '/pages/me/me' } }
     : { key: 'join', kind: 'join', eyebrow: '加入商会', title: '成为 SAREC 会员', meta: '地产交流 · 专业分享 · 会员服务', image: img('/images/home/los-angeles-hero.jpg'), button: { text: '了解入会', page: '/pages/join/join?from=home' } });
   // 没有任何活动：品牌态（轮播只放“加入商会”和商会介绍）
   const noEvents = !slides.some((s) => s.kind === 'event' || s.kind === 'photos');

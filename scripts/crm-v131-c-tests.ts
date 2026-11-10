@@ -32,9 +32,10 @@ async function main() {
   assert.equal(pg.prefill.name, 'DEV131-想入会');
   assert.equal(pg.prefill.industry, '开发商');
   assert.ok(pg.prefill.phone);
-  assert.ok(pg.benefits.some((b) => b.status === 'soon') && pg.benefits.some((b) => b.status === 'live'));
+  assert.ok(pg.benefits.length && pg.benefits.every((b) => b.status === 'live'));
+  assert.ok(!JSON.stringify(pg.benefits).match(/筹备中|活动优先|资源对接|企业家圆桌/));
   assert.ok(!JSON.stringify(pg).match(/\$\d|美元|价格|付款|缴费/));
-  ok('权益 + 已有资料自动带入（姓名、职业、手机）；页面数据里没有金额、价格、付款字样；未上线的标“筹备中”');
+  ok('权益 + 已有资料自动带入（姓名、职业、手机）；页面数据里没有金额、价格、付款字样；不放还没上线的“筹备中”占位（东哥 11/9）');
   await assert.rejects(j.submitJoin(me, { name: '', phone: '' }), /还差：姓名、手机/);
   const r1 = await j.submitJoin(me, { ...pg.prefill, company: 'DEV131 公司', source: 'checkin' });
   assert.equal(r1.message, '已收到申请，工作人员会联系您');
