@@ -1,9 +1,10 @@
 /**
- * 画图服务（可切换）：POSTER_IMAGE_PROVIDER = cloudflare | gateway | gemini | pollinations | placeholder
+ * 画图服务（可切换）：后台 AI 海报面板里选（存在配置项 poster_image_provider，立即生效、不用重新部署）；
+ * 后台没选时用环境变量 POSTER_IMAGE_PROVIDER = cloudflare | gateway | gemini | pollinations | placeholder
  * 没配或密钥没到位 → 用占位图（placeholder，纯色渐变、无文字），整个流程照样能跑通。
  * 环境变量（只放 Vercel，不写进代码）：
  *   cloudflare   CLOUDFLARE_ACCOUNT_ID + CLOUDFLARE_AI_TOKEN（Workers AI；每天 1 万 Neurons 免费），可选 POSTER_CF_MODEL
- *   gateway      Vercel AI Gateway：在 Vercel 上自动用 OIDC，无需密钥（团队要先绑卡才放出每月 5 美元免费额度）；本地用 AI_GATEWAY_API_KEY；可选 POSTER_GATEWAY_MODEL
+ *   gateway      Vercel AI Gateway：AI_GATEWAY_API_KEY（AI Gateway → API Keys 里建，可设预算；没填时用部署自带的 OIDC 令牌；团队要先绑卡）；可选 POSTER_GATEWAY_MODEL
  *   gemini       GEMINI_API_KEY（Google AI Studio），可选 POSTER_GEMINI_MODEL
  *   pollinations 可选 POLLINATIONS_TOKEN（不填是匿名：有水印、限速、分辨率低，只适合看效果）
  */
@@ -90,6 +91,7 @@ export const cloudflare: ImageProvider = {
 // ── Vercel AI Gateway（OpenAI 兼容 /v1/images/generations）──────────────────
 const GW_PRICES: Record<string, number> = { 'bfl/flux-pro-1.1': 0.04, 'bfl/flux-pro-1.1-ultra': 0.06, 'bytedance/seedream-4.0': 0.03, 'bytedance/seedream-4.5': 0.04, 'bfl/flux-3-image': 0.048, 'bfl/flux-3-image-klein': 0.009, 'meta/muse-image-1.0': 0.01, 'spacexai/grok-imagine-image': 0.02, 'recraft/recraft-v4.1-flash': 0.007 };
 const gwModel = () => process.env.POSTER_GATEWAY_MODEL?.trim() || 'bytedance/seedream-4.0';
+// 优先用 AI Gateway 的 API Key（可设预算上限）；没填时用 Vercel 部署自带的 OIDC 令牌
 const gwKey = () => process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '';
 export const gateway: ImageProvider = {
   key: 'gateway',
@@ -153,9 +155,15 @@ export const pollinations: ImageProvider = {
 
 const ALL: Record<string, ImageProvider> = { placeholder, cloudflare, gateway, gemini, pollinations };
 
-/** 当前用哪个：环境变量指定且配置齐 → 用它；否则占位图（并告诉后台为什么） */
-export function imageProvider(): { p: ImageProvider; note: string | null } {
-  const want = (process.env.POSTER_IMAGE_PROVIDER || '').trim().toLowerCase();
+/** 后台可选的画图服务（只列两家正式服务 + 占位图），带“密钥填好没有” */
+export const SWITCHABLE = ['cloudflare', 'gateway', 'placeholder'] as const;
+export function providerChoices() {
+  return SWITCHABLE.map((k) => ({ key: k, label: ALL[k].label, model: ALL[k].model, costPerImage: ALL[k].costPerImage, configured: ALL[k].configured() }));
+}
+
+/** 当前用哪个：后台选的（choice）> 环境变量；选的服务密钥没填齐 → 占位图（并告诉后台为什么） */
+export function imageProvider(choice?: string | null): { p: ImageProvider; note: string | null } {
+  const want = (choice || process.env.POSTER_IMAGE_PROVIDER || '').trim().toLowerCase();
   if (!want) return { p: placeholder, note: '还没接画图服务，现在出的是占位图（流程可以先试）。' };
   const p = ALL[want];
   if (!p) return { p: placeholder, note: `画图服务“${want}”不认识，暂用占位图。` };

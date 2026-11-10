@@ -17,7 +17,7 @@ import { fullDate } from '@/lib/crm/home131';
 import { tzLabel } from '@/lib/crm/regions';
 import { eventRegisterCode, wxConfigured } from '@/lib/crm/wechat';
 import type { Staff } from '@/lib/crm/auth';
-import { imageProvider, normalize } from './providers';
+import { imageProvider, normalize, providerChoices, SWITCHABLE } from './providers';
 import { suggestCopy } from './copy';
 import { composePoster, type PosterSize } from './compose';
 import { EVENT_TYPES, STYLES, buildPrompt, styleOf, typeOf } from './styles';
@@ -39,6 +39,16 @@ async function eventOf(id: string): Promise<EvRow> {
   return rows[0];
 }
 
+/** 后台选的画图服务（空 = 按环境变量） */
+export async function chosenProvider(): Promise<string | null> {
+  const v = await getSetting<string | null>(getPool(), 'poster_image_provider', null);
+  return typeof v === 'string' && v ? v : null;
+}
+export async function setChosenProvider(s: Staff, value: unknown) {
+  if (!(typeof value === 'string' && (SWITCHABLE as readonly string[]).includes(value))) throw new CrmError('bad_request', '请选择画图服务');
+  await setSetting(getPool(), 'poster_image_provider', value, s.contactId);
+}
+
 export async function defaultCap(): Promise<number> {
   const v = Number(await getSetting(getPool(), 'poster_image_cap', DEFAULT_CAP));
   return Number.isFinite(v) && v > 0 ? Math.floor(v) : DEFAULT_CAP;
@@ -55,7 +65,8 @@ export async function posterState(eventId: string) {
   const poster = p[0] ?? null;
   const cap = poster?.image_cap ?? cap0;
   const images = gens.filter((g) => g.status === 'ok' && g.image_url);
-  const { p: prov, note } = imageProvider();
+  const choice = await chosenProvider();
+  const { p: prov, note } = imageProvider(choice);
   return {
     event: { id: ev.id, title: ev.title, slug: ev.slug },
     poster,
@@ -64,7 +75,8 @@ export async function posterState(eventId: string) {
     cap,
     defaultCap: cap0,
     spentUsd: Math.round(gens.reduce((s, g) => s + Number(g.cost_usd), 0) * 10000) / 10000,
-    provider: { key: prov.key, label: prov.label, model: prov.model, costPerImage: prov.costPerImage, note },
+    provider: { key: prov.key, label: prov.label, model: prov.model, costPerImage: prov.costPerImage, note, chosen: choice },
+    providers: providerChoices(),
     types: EVENT_TYPES.map(({ key, label }) => ({ key, label })),
     styles: STYLES.map(({ key, group, label }) => ({ key, group, label }))
   };
@@ -80,7 +92,7 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
   const left = st.cap - st.used;
   if (left <= 0) throw new CrmError('conflict', `这场活动已经生成了 ${st.used} 张主视觉，到上限了（${st.cap} 张）。可以在下面调高本场上限。`);
   const n = Math.min(BATCH, left);
-  const { p } = imageProvider();
+  const { p } = imageProvider(await chosenProvider());
   const prompt = buildPrompt({ type, style, subject: input.subject });
   const batch = randomUUID();
   const seeds = Array.from({ length: n }, () => Math.floor(Math.random() * 2_000_000_000));
@@ -118,7 +130,7 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
 
 export async function copyIdeas(s: Staff, eventId: string, type?: string) {
   const ev = await eventOf(eventId);
-  const r = await suggestCopy(ev, typeOf(type).label);
+  const r = await suggestCopy(ev, typeOf(type).label, await chosenProvider());
   await getPool().query(
     `INSERT INTO poster_gens (event_id, batch_id, kind, event_type, provider, model, prompt, result, cost_usd, status, error, created_by)
      VALUES ($1, $2, 'copy', $3, $4, $5, $6, $7, 0, $8, $9, $10)`,

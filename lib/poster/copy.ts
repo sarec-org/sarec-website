@@ -11,13 +11,18 @@ const SYS =
   '你是电影海报文案。为一场商会活动写 5 组海报文案，每组：片名（2 到 4 个汉字，像电影片名，有力量感）+ 宣传语（一句，12 到 20 个字，像电影海报上的 tagline）。' +
   '不要出现任何品牌名、车型名、人名、价格、“免费”、报名人数；不要标点堆砌。只输出 JSON：{"ideas":[{"title":"","tagline":""}]}';
 
-function pick(): string {
+/** 文字模型跟着画图服务走（后台选的优先）；选的那家没配好，就用另一家配好的 */
+function pick(choice?: string | null): string {
   const want = (process.env.POSTER_TEXT_PROVIDER || '').trim().toLowerCase();
   if (want) return want;
-  const img = (process.env.POSTER_IMAGE_PROVIDER || '').trim().toLowerCase();
-  if (img === 'cloudflare' && process.env.CLOUDFLARE_AI_TOKEN) return 'cloudflare';
+  const cf = !!(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_AI_TOKEN);
+  const gw = !!(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+  const img = (choice || process.env.POSTER_IMAGE_PROVIDER || '').trim().toLowerCase();
+  if (img === 'cloudflare' && cf) return 'cloudflare';
   if (img === 'gemini' && process.env.GEMINI_API_KEY) return 'gemini';
-  if (img === 'gateway') return 'gateway';
+  if (img === 'gateway' && gw) return 'gateway';
+  if (cf) return 'cloudflare';
+  if (gw) return 'gateway';
   return 'none';
 }
 
@@ -35,10 +40,10 @@ export function parseIdeas(text: string): CopyIdea[] {
   }
 }
 
-export async function suggestCopy(ev: { title: string; summary?: string | null }, typeLabel: string): Promise<{ ideas: CopyIdea[]; provider: string; model: string; note: string | null; prompt: string }> {
+export async function suggestCopy(ev: { title: string; summary?: string | null }, typeLabel: string, choice?: string | null): Promise<{ ideas: CopyIdea[]; provider: string; model: string; note: string | null; prompt: string }> {
   const user = `活动类型：${typeLabel}\n活动名：${ev.title}\n简介：${(ev.summary ?? '').slice(0, 300)}`;
   const prompt = `${SYS}\n\n${user}`;
-  const which = pick();
+  const which = pick(choice);
   try {
     if (which === 'cloudflare') {
       const model = process.env.POSTER_CF_TEXT_MODEL?.trim() || '@cf/qwen/qwen3-30b-a3b-fp8';

@@ -5,11 +5,12 @@
  *        { action: 'copy', type }                          文字模型给 5 组片名 + 宣传语
  *        { action: 'save', genId?, style?, filmTitle, tagline, host, speaker, coHost, imageCap? }
  *        { action: 'default_cap', value }                  全站默认每场上限（admin）
+ *        { action: 'provider', value }                     切换画图服务 cloudflare | gateway | placeholder（admin，立即生效）
  */
 import { CrmError } from '@/lib/crm/events';
 import { body, handler, ok, requireStaff } from '@/lib/crm/http';
 import { staffCan } from '@/lib/crm/auth';
-import { copyIdeas, generateBatch, posterState, savePoster, setDefaultCap } from '@/lib/poster/service';
+import { copyIdeas, generateBatch, posterState, savePoster, setChosenProvider, setDefaultCap } from '@/lib/poster/service';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -33,6 +34,10 @@ export const POST = handler(async (req: Request, { params }: { params: { id: str
     case 'default_cap':
       if (!staffCan(s, 'admin')) throw new CrmError('forbidden', '全站默认上限只有管理员能改');
       await setDefaultCap(s, b.value);
+      return ok({ state: await posterState(params.id) });
+    case 'provider':
+      if (!staffCan(s, 'admin')) throw new CrmError('forbidden', '切换画图服务只有管理员能改');
+      await setChosenProvider(s, b.value);
       return ok({ state: await posterState(params.id) });
     default:
       throw new CrmError('bad_request', '不认识的操作');
