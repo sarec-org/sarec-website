@@ -47,6 +47,7 @@ const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0
 // ── 活动 ────────────────────────────────────────────────────────────────
 export type EventInput = {
   title?: string;
+  checkinStartsAt?: string | null; // 签到开始时间（东哥 11/9 晚）；空 = 开始前 30 分钟
   slug?: string;
   summary?: string;
   startsAt?: string;
@@ -99,6 +100,11 @@ function eventFields(b: EventInput, partial: boolean) {
     const e = b.endsAt ? new Date(b.endsAt) : null;
     if (e && Number.isNaN(e.getTime())) throw new CrmError('bad_request', '结束时间格式不对');
     out.ends_at = e;
+  }
+  if (b.checkinStartsAt !== undefined) {
+    const c = b.checkinStartsAt ? new Date(b.checkinStartsAt) : null;
+    if (c && Number.isNaN(c.getTime())) throw new CrmError('bad_request', '签到开始时间格式不对');
+    out.checkin_starts_at = c;
   }
   if (b.summary !== undefined) out.summary = str(b.summary, 2000) || null;
   if (b.timezone !== undefined) out.timezone = str(b.timezone, 60) || 'America/Los_Angeles';
@@ -190,6 +196,7 @@ export async function createEvent(s: Staff, b: EventInput) {
   if (b.notifyScope === 'all' && !s.roles.includes('admin')) throw new CrmError('forbidden', '“全部地区”通知只有管理员能选');
   regionGuard(s, b.region ?? '洛杉矶/橙县');
   if (b.endsAt && b.startsAt && new Date(b.endsAt).getTime() <= new Date(b.startsAt).getTime()) throw new CrmError('bad_request', '结束时间要晚于开始时间');
+  if (b.checkinStartsAt && b.startsAt && new Date(b.checkinStartsAt).getTime() > new Date(b.startsAt).getTime()) throw new CrmError('bad_request', '签到开始时间不能晚于活动开始时间');
   const f = eventFields(b, false);
   const slug = str(b.slug, 80).toLowerCase().replace(/[^a-z0-9-]/g, '') || slugify(f.title as string, f.starts_at as Date);
   return withTransaction(async (db) => {
@@ -212,7 +219,7 @@ export async function updateEvent(s: Staff, id: string, b: EventInput) {
   if (b.region !== undefined) regionGuard(s, b.region);
   // 编辑时只改一个数也要守住“当前上限 ≤ 硬上限”、结束晚于开始（测试 P2）
   {
-    const { rows: cur } = await getPool().query<{ capacity: number | null; hard_capacity: number | null; starts_at: Date; ends_at: Date | null }>(`SELECT capacity, hard_capacity, starts_at, ends_at FROM events WHERE id = $1`, [id]);
+    const { rows: cur } = await getPool().query<{ capacity: number | null; hard_capacity: number | null; starts_at: Date; ends_at: Date | null; checkin_starts_at: Date | null }>(`SELECT capacity, hard_capacity, starts_at, ends_at, checkin_starts_at FROM events WHERE id = $1`, [id]);
     const c0 = cur[0];
     if (c0) {
       const cap = b.capacity !== undefined ? (b.capacity === null || b.capacity === ('' as unknown) ? null : Number(b.capacity)) : c0.capacity;
@@ -221,6 +228,8 @@ export async function updateEvent(s: Staff, id: string, b: EventInput) {
       const st = b.startsAt !== undefined ? new Date(String(b.startsAt)) : c0.starts_at;
       const en = b.endsAt !== undefined ? (b.endsAt ? new Date(b.endsAt) : null) : c0.ends_at;
       if (en && st && en.getTime() <= new Date(st).getTime()) throw new CrmError('bad_request', '结束时间要晚于开始时间');
+      const ck = b.checkinStartsAt !== undefined ? (b.checkinStartsAt ? new Date(b.checkinStartsAt) : null) : c0.checkin_starts_at;
+      if (ck && st && ck.getTime() > new Date(st).getTime()) throw new CrmError('bad_request', '签到开始时间不能晚于活动开始时间');
     }
   }
   if (s.regions?.length && !s.roles.includes('admin')) {

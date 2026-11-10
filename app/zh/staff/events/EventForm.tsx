@@ -24,6 +24,14 @@ export const REGION_TZ: Record<string, string> = { '洛杉矶/橙县': 'America/
 export const TZ_NAME: Record<string, string> = { 'America/Los_Angeles': '洛杉矶时间', 'America/New_York': '纽约时间', 'Asia/Shanghai': '北京时间' };
 const tzOf = (region: string) => REGION_TZ[region] ?? TZ;
 
+/** 签到开始时间默认 = 开始时间前 30 分钟（datetime-local 字符串直接按墙上时间算） */
+export function minus30(local: string): string {
+  if (!local) return '';
+  const t = Date.parse(`${local.slice(0, 16)}:00Z`);
+  if (Number.isNaN(t)) return '';
+  return new Date(t - 30 * 60_000).toISOString().slice(0, 16);
+}
+
 /** datetime-local（活动当地时间）⇄ ISO */
 export function toLocalInput(iso: unknown, tz: string = TZ): string {
   if (!iso) return '';
@@ -55,6 +63,9 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     summary: String(initial?.summary ?? ''),
     startsAt: toLocalInput(initial?.starts_at, String(initial?.timezone ?? TZ)),
     endsAt: toLocalInput(initial?.ends_at, String(initial?.timezone ?? TZ)),
+    // 东哥 11/9 晚：签到开始时间，默认开始前 30 分钟；手动改过就不再跟着开始时间走
+    checkinAt: initial?.checkin_starts_at ? toLocalInput(initial.checkin_starts_at, String(initial?.timezone ?? TZ)) : minus30(toLocalInput(initial?.starts_at, String(initial?.timezone ?? TZ))),
+    checkinTouched: !!initial?.checkin_starts_at,
     locationName: String(initial?.location_name ?? ''),
     address: String(initial?.address ?? ''),
     capacity: initial?.capacity == null ? '' : String(initial.capacity),
@@ -96,7 +107,8 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
   }, [initial]);
   const [err, setErr] = useState('');
   const [cover, setCover] = useState<File | null>(null);
-  const set = (k: string, v: unknown) => setF((p) => ({ ...p, [k]: v }));
+  const set = (k: string, v: unknown) =>
+    setF((p) => ({ ...p, [k]: v, ...(k === 'startsAt' && !p.checkinTouched ? { checkinAt: minus30(String(v)) } : {}) }));
 
   async function save() {
     setBusy(true);
@@ -107,6 +119,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       summary: f.summary,
       startsAt: fromLocalInput(f.startsAt, tzOf(f.region)),
       endsAt: fromLocalInput(f.endsAt, tzOf(f.region)),
+      checkinStartsAt: fromLocalInput(f.checkinAt || minus30(f.startsAt), tzOf(f.region)),
       timezone: tzOf(f.region),
       locationName: f.locationName,
       address: f.address,
@@ -169,6 +182,10 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       </div>
       {input('startsAt', `开始时间（${TZ_NAME[tzOf(f.region)] ?? '当地时间'}）*`, 'datetime-local')}
       {input('endsAt', `结束时间（${TZ_NAME[tzOf(f.region)] ?? '当地时间'}）`, 'datetime-local')}
+      <div className={styles.field}>
+        <label className={styles.label} htmlFor="ev-checkinAt">签到开始时间（{TZ_NAME[tzOf(f.region)] ?? '当地时间'}，默认开始前 30 分钟，可改）</label>
+        <input id="ev-checkinAt" className={styles.input} type="datetime-local" value={f.checkinAt} onChange={(e) => setF((p) => ({ ...p, checkinAt: e.target.value, checkinTouched: true }))} />
+      </div>
       {input('locationName', '地点名称')}
       {input('address', '地址（用于一键导航）')}
       <div className={styles.field}>
