@@ -135,7 +135,7 @@ export async function staffRecordBookingPayment(s: Staff, bookingId: string, p: 
 
 // ── 1.2 配置项（ops 可改）───────────────────────────────────────────────
 
-export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address', 'photo_topic', 'companions_max', 'invite_prompts', 'oa_username', 'channels_live', 'wecom_userids', 'wecom_enabled', 'home_recap_days', 'invite_card_text'] as const;
+export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address', 'photo_topic', 'companions_max', 'invite_prompts', 'oa_username', 'channels_live', 'wecom_userids', 'wecom_enabled', 'home_recap_days', 'invite_card_text', 'card_tpl_batches'] as const;
 export type GrowthKey = (typeof GROWTH_KEYS)[number];
 
 export async function growthSettings() {
@@ -158,6 +158,8 @@ export async function updateGrowthSetting(s: Staff, key: string, value: unknown)
   if (key === 'wecom_userids' && !(typeof value === 'string' && /^[A-Za-z0-9_.@,，\s-]{0,500}$/.test(value))) throw new CrmError('bad_request', '请填写企业微信成员的账号（userid），多个用逗号分开');
   if (key === 'wecom_enabled' && typeof value !== 'boolean') throw new CrmError('bad_request', '请选择开或关');
   // 1.3 P-4：活动结束后首页显示“上一场回顾”的天数；P-2：商会邀请卡文案（小程序里显示，不能写金额）
+  // 名片模板库分批上线：1 = 只开放第一批（67–105），2 = 全部 105 款
+  if (key === 'card_tpl_batches' && !(value === 1 || value === 2)) throw new CrmError('bad_request', '请选择开放第一批或全部');
   if (key === 'home_recap_days' && !(Number.isInteger(value) && (value as number) >= 0 && (value as number) <= 60)) throw new CrmError('bad_request', '请填 0–60 之间的整数');
   if (key === 'invite_card_text' && (typeof value !== 'object' || value === null || Array.isArray(value) || Object.values(value).some((v) => typeof v !== 'string' || v.length > 200 || MONEY_RE.test(v)))) {
     throw new CrmError('bad_request', '邀请卡文案每段不超过 200 字，不能写价格或金额');

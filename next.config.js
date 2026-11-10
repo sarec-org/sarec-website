@@ -1,11 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
+    // 名片模板库：服务器上用无头 Chrome 出图（不打包，原样随函数部署，含 chromium 压缩包）
+    serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
     // AI 助手知识库在接口里同步读取 content/（文章、活动、新闻 YAML）；确保这些文件随函数一起部署
     outputFileTracingIncludes: {
       '/api/v1/agent/**': ['./content/**/*', './app/zh/(internal)/research/*/page.tsx'],
       // 1.4 会员下载模板（不放 public/，只经接口给会员）
-      '/api/v1/tools/download/**': ['./private/tools/*']
+      '/api/v1/tools/download/**': ['./private/tools/*'],
+      '/api/v1/cards/**': ['./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**']
     }
   },
   images: {

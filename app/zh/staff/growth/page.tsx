@@ -159,6 +159,16 @@ function Growth() {
         <button className={styles.btn} style={{ marginTop: 6 }} onClick={() => save('invite_card_text', inviteText)}>保存</button>
       </div>
 
+      <h2 className={styles.h2}>电子名片模板库</h2>
+      <div className={styles.card}>
+        <p className={styles.label}>
+          现在开放：{d?.settings.card_tpl_batches === 2 ? '全部 105 款' : '第一批 39 款（商务精选 + 商务经典，67–105）'}。会员在“我的名片”里只能选已开放的模板。
+        </p>
+        <button className={`${styles.btn} ${d?.settings.card_tpl_batches === 2 ? styles.btnQuiet : ''}`} onClick={() => save('card_tpl_batches', d?.settings.card_tpl_batches === 2 ? 1 : 2)}>
+          {d?.settings.card_tpl_batches === 2 ? '收回第二批，只开放第一批' : '开放第二批（1–66），共 105 款'}
+        </button>
+      </div>
+
       <h2 className={styles.h2}>视频号</h2>
       <div className={styles.card}>
         <div className={styles.inputRow}>
