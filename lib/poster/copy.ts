@@ -3,7 +3,8 @@
  * 文字模型跟着画图服务的账号走（POSTER_TEXT_PROVIDER 可单独指定：cloudflare | gateway | gemini | none）。
  * 没有可用的文字模型时返回空列表 + 说明，不报错（后台照样能手填）。
  */
-import { fetchJson } from './providers/types';
+import { fetchJson, redactSecrets } from './providers/types';
+import { cloudflare } from './providers';
 
 export type CopyIdea = { title: string; tagline: string };
 
@@ -15,7 +16,7 @@ const SYS =
 function pick(choice?: string | null): string {
   const want = (process.env.POSTER_TEXT_PROVIDER || '').trim().toLowerCase();
   if (want) return want;
-  const cf = !!(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_AI_TOKEN);
+  const cf = cloudflare.configured();
   const gw = !!(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
   const img = (choice || process.env.POSTER_IMAGE_PROVIDER || '').trim().toLowerCase();
   if (img === 'cloudflare' && cf) return 'cloudflare';
@@ -47,9 +48,9 @@ export async function suggestCopy(ev: { title: string; summary?: string | null }
   try {
     if (which === 'cloudflare') {
       const model = process.env.POSTER_CF_TEXT_MODEL?.trim() || '@cf/qwen/qwen3-30b-a3b-fp8';
-      const j = (await fetchJson(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/ai/run/${model}`, {
+      const j = (await fetchJson(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID?.trim()}/ai/run/${model}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_AI_TOKEN}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_AI_TOKEN?.trim()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [{ role: 'system', content: SYS }, { role: 'user', content: user }], max_tokens: 800 })
       }, 60_000)) as { result?: { response?: unknown; choices?: { message?: { content?: string } }[] } };
       const r = j.result;
@@ -77,7 +78,7 @@ export async function suggestCopy(ev: { title: string; summary?: string | null }
       return { ideas: parseIdeas(j.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? ''), provider: 'gemini', model, note: null, prompt };
     }
   } catch (e) {
-    return { ideas: [], provider: which, model: '', note: `文案建议这会儿出不来（${e instanceof Error ? e.message.slice(0, 80) : '服务没响应'}），请手填。`, prompt };
+    return { ideas: [], provider: which, model: '', note: `文案建议这会儿出不来（${e instanceof Error ? redactSecrets(e.message).slice(0, 80) : '服务没响应'}），请手填。`, prompt };
   }
   return { ideas: [], provider: 'none', model: '', note: '还没接文字模型，请手填片名和宣传语（不填就用活动名）。', prompt };
 }

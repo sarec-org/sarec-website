@@ -28,7 +28,8 @@ export function getPool(): Pool {
     // max 保守：Serverless 环境避免连接爆炸；sslmode 由连接串自带（Neon 需 require）。
     // 偶发 500 的常见原因：函数实例空闲后，数据库那头已断开的旧连接被再次取用（Connection terminated）。
     // 空闲 10 秒就释放、开 keepAlive，池子出错时不让进程崩；读查询遇到断线自动重试一次。
-    const p = new Pool({ connectionString, max: 3, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 10_000, keepAlive: true });
+    // query_timeout：连接半断时查询会一直挂着（AI 海报测试站出现过整请求卡到 300 秒），限 60 秒报错而不是挂死
+    const p = new Pool({ connectionString, max: 3, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 10_000, keepAlive: true, query_timeout: 60_000 });
     p.on('error', (e) => console.error('[db] idle client error', e.message));
     const raw = p.query.bind(p) as (...a: unknown[]) => Promise<unknown>;
     (p as unknown as { query: (...a: unknown[]) => Promise<unknown> }).query = async (...a: unknown[]) => {

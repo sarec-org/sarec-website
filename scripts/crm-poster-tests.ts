@@ -59,6 +59,20 @@ async function main() {
   process.env.POSTER_IMAGE_PROVIDER = 'cloudflare';
   assert.equal(imageProvider().p.key, 'placeholder');
   assert.match(imageProvider().note ?? '', /密钥还没填/);
+  // 常见填错：整条 curl 测试命令粘贴进令牌 → 不调用、提示格式不对；报错信息里不出现令牌
+  const fakeTok = `devtok_${'x'.repeat(30)}`;
+  process.env.CLOUDFLARE_ACCOUNT_ID = '0123456789abcdef0123456789abcdef';
+  process.env.CLOUDFLARE_AI_TOKEN = `curl "https://api.cloudflare.com/client/v4/user/tokens/verify" -H "Authorization: Bearer ${fakeTok}"`;
+  assert.equal(imageProvider().p.key, 'placeholder');
+  assert.match(imageProvider().note ?? '', /格式不对/);
+  assert.ok(!(imageProvider().note ?? '').includes(fakeTok));
+  const { redactSecrets } = await import('@/lib/poster/providers');
+  const red = redactSecrets(`Headers.append: "Bearer curl ... Bearer ${fakeTok}" is invalid; cfut_abc123`);
+  assert.ok(!red.includes(fakeTok) && !red.includes('cfut_abc123'), red);
+  process.env.CLOUDFLARE_AI_TOKEN = fakeTok;
+  assert.equal(imageProvider().p.key, 'cloudflare');
+  delete process.env.CLOUDFLARE_ACCOUNT_ID;
+  delete process.env.CLOUDFLARE_AI_TOKEN;
   delete process.env.POSTER_IMAGE_PROVIDER;
   ok('画图服务可切换：没配 / 密钥没到位时自动用占位图并说明原因');
 
