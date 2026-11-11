@@ -17,9 +17,9 @@ import { fullDate } from '@/lib/crm/home131';
 import { tzLabel } from '@/lib/crm/regions';
 import { eventRegisterCode, wxConfigured } from '@/lib/crm/wechat';
 import type { Staff } from '@/lib/crm/auth';
-import { imageProvider, normalize, providerChoices, redactSecrets, SWITCHABLE } from './providers';
+import { gatewayBalance, imageProvider, normalize, providerChoices, redactSecrets, SWITCHABLE } from './providers';
 import { suggestCopy } from './copy';
-import { composePoster, type PosterSize } from './compose';
+import { composePoster, fillText, type PosterExtra, type PosterSize } from './compose';
 import { EVENT_TYPES, STYLES, buildPrompt, styleOf, typeOf } from './styles';
 
 export const DEFAULT_CAP = 12;
@@ -27,7 +27,33 @@ export const BATCH = 4;
 const SITE = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
 
 type EvRow = { id: string; slug: string; title: string; summary: string | null; starts_at: Date; checkin_starts_at: Date | null; timezone: string; location_name: string | null; address: string | null };
-export type PosterRow = { event_id: string; gen_id: string | null; style: string | null; film_title: string | null; tagline: string | null; host: string | null; speaker: string | null; co_host: string | null; speaker_photo_url: string | null; image_cap: number | null };
+export type PosterRow = { event_id: string; gen_id: string | null; style: string | null; film_title: string | null; tagline: string | null; host: string | null; speaker: string | null; co_host: string | null; speaker_photo_url: string | null; image_cap: number | null; texts?: PosterTexts | null };
+/** 海报上每一处字（后台 / 手机上直接改；空 = 按活动信息自动） + 画面上移 */
+export type PosterTexts = { tagline?: string; filmTitle?: string; filmSubtitle?: string; titleEn?: string; subtitle?: string; bigDate?: string; dateNote?: string; place?: string; billing?: string; extras?: PosterExtra[]; lift?: number };
+const TEXT_MAX: Record<Exclude<keyof PosterTexts, 'extras' | 'lift'>, number> = { tagline: 30, filmTitle: 12, filmSubtitle: 12, titleEn: 40, subtitle: 40, bigDate: 12, dateNote: 40, place: 80, billing: 140 };
+/** 校验后台传来的文字；自由加字是东哥自己写的内容，不套“免费 / 价格”的禁用词（其余字样照旧检查） */
+export function parseTexts(v: unknown): PosterTexts {
+  const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;
+  const out: PosterTexts = {};
+  for (const [k, max] of Object.entries(TEXT_MAX) as [keyof typeof TEXT_MAX, number][]) {
+    const x = typeof o[k] === 'string' ? (o[k] as string).trim().slice(0, max) : '';
+    if (x) out[k] = x;
+  }
+  const bad = forbidden(Object.values(out).join(' '));
+  if (bad) throw new CrmError('bad_request', bad);
+  if (Array.isArray(o.extras)) {
+    out.extras = (o.extras as Record<string, unknown>[]).slice(0, 2).flatMap((e) => {
+      const text = typeof e?.text === 'string' ? e.text.trim().slice(0, 24) : '';
+      if (!text) return [];
+      const pos = (['aboveTitle', 'belowSubtitle', 'bottom'] as const).find((p) => p === e.pos) ?? 'belowSubtitle';
+      const size = (['L', 'M', 'S'] as const).find((p) => p === e.size) ?? 'M';
+      return [{ text, pos, size }];
+    });
+  }
+  const lift = Number(o.lift);
+  if (Number.isFinite(lift) && lift > 0) out.lift = Math.min(0.25, Math.round(lift * 100) / 100);
+  return out;
+}
 export type GenRow = { id: string; batch_id: string; kind: string; event_type: string | null; style: string | null; provider: string; model: string | null; prompt: string; image_url: string | null; cost_usd: string; status: string; error: string | null; created_at: Date };
 
 async function eventOf(id: string): Promise<EvRow> {
@@ -67,6 +93,7 @@ export async function posterState(eventId: string) {
   const images = gens.filter((g) => g.status === 'ok' && g.image_url);
   const choice = await chosenProvider();
   const { p: prov, note } = imageProvider(choice);
+  const auto = posterText(ev, poster ? { ...poster, texts: null } : null);
   return {
     event: { id: ev.id, title: ev.title, slug: ev.slug },
     poster,
@@ -77,6 +104,9 @@ export async function posterState(eventId: string) {
     spentUsd: Math.round(gens.reduce((s, g) => s + Number(g.cost_usd), 0) * 10000) / 10000,
     provider: { key: prov.key, label: prov.label, model: prov.model, costPerImage: prov.costPerImage, note, chosen: choice },
     providers: providerChoices(),
+    /** 每一处字“自动”时是什么（后台输入框里灰字提示） */
+    textDefaults: { tagline: auto.tagline, filmTitle: auto.filmTitle, subtitle: auto.subtitle, place: auto.place, ...fillText(auto) },
+    balanceUsd: prov.key === 'gateway' ? await gatewayBalance() : null,
     types: EVENT_TYPES.map(({ key, label }) => ({ key, label })),
     styles: STYLES.map(({ key, group, label }) => ({ key, group, label }))
   };
@@ -187,6 +217,15 @@ export async function savePoster(s: Staff, eventId: string, b: Record<string, un
        image_cap = EXCLUDED.image_cap, updated_by = EXCLUDED.updated_by, updated_at = now()`,
     [eventId, genId, style, film, tagline, host, speaker, coHost, cap, s.contactId]
   );
+  if (b.texts !== undefined) {
+    const texts = parseTexts(b.texts);
+    try {
+      await db.query(`UPDATE event_posters SET texts = $2 WHERE event_id = $1`, [eventId, JSON.stringify(texts)]);
+    } catch (e) {
+      if ((e as { code?: string }).code === '42703') throw new CrmError('conflict', '数据库还差一步（迁移 0031），改字功能暂时存不了，请联系管理员');
+      throw e;
+    }
+  }
   return posterState(eventId);
 }
 
@@ -232,14 +271,21 @@ async function registerQr(slug: string): Promise<Buffer> {
 
 export function posterText(ev: EvRow, p: Partial<PosterRow> | null) {
   const tz = ev.timezone || 'America/Los_Angeles';
+  const x = p?.texts ?? {};
   return {
-    tagline: p?.tagline ?? '',
-    filmTitle: p?.film_title || ev.title,
-    subtitle: ev.title,
+    tagline: x.tagline ?? p?.tagline ?? '',
+    filmTitle: x.filmTitle || p?.film_title || ev.title,
+    filmSubtitle: x.filmSubtitle ?? null,
+    titleEn: x.titleEn ?? null,
+    subtitle: x.subtitle || ev.title,
     credits: { host: p?.host ?? 'SAREC 中美房地产商会', speaker: p?.speaker ?? null, coHost: p?.co_host ?? null },
     dateLine: fullDate(ev.starts_at, tz),
     timeLine: `${checkinLine(ev, tz)}（${tzLabel(tz)}）`,
-    place: [ev.location_name, ev.address].filter(Boolean).join(' · ')
+    place: x.place || [ev.location_name, ev.address].filter(Boolean).join(' · '),
+    bigDate: x.bigDate ?? null,
+    dateNote: x.dateNote ?? null,
+    billing: x.billing ?? null,
+    extras: x.extras ?? []
   };
 }
 
@@ -254,6 +300,6 @@ export async function renderPoster(eventId: string, size: PosterSize, genId?: st
   const { rows: g } = await db.query<GenRow>(`SELECT * FROM poster_gens WHERE id = $1 AND event_id = $2 AND status = 'ok'`, [gid, eventId]);
   if (!g[0]?.image_url) throw new CrmError('not_found', '找不到这张主视觉');
   const [bg, qr, photo] = await Promise.all([fetchBuf(g[0].image_url), registerQr(ev.slug), p?.speaker_photo_url ? fetchBuf(p.speaker_photo_url).catch(() => null) : Promise.resolve(null)]);
-  const png = await composePoster({ bg, size, style: styleOf(p?.style || g[0].style), text: posterText(ev, p), qr, speakerPhoto: photo });
+  const png = await composePoster({ bg, size, style: styleOf(p?.style || g[0].style), text: posterText(ev, p), qr, speakerPhoto: photo, lift: p?.texts?.lift ?? 0 });
   return { png, slug: ev.slug };
 }

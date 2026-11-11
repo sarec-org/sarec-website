@@ -106,9 +106,28 @@ export const cloudflare: ImageProvider = {
 
 // ── Vercel AI Gateway（OpenAI 兼容 /v1/images/generations）──────────────────
 const GW_PRICES: Record<string, number> = { 'bfl/flux-pro-1.1': 0.04, 'bfl/flux-pro-1.1-ultra': 0.06, 'bytedance/seedream-4.0': 0.03, 'bytedance/seedream-4.5': 0.04, 'bfl/flux-3-image': 0.048, 'bfl/flux-3-image-klein': 0.009, 'meta/muse-image-1.0': 0.01, 'spacexai/grok-imagine-image': 0.02, 'recraft/recraft-v4.1-flash': 0.007 };
-const gwModel = () => process.env.POSTER_GATEWAY_MODEL?.trim() || 'bytedance/seedream-4.0';
+// 东哥 11/11 定：正式出图模型用 FLUX 3 Image（约 0.048 美元 / 张）；POSTER_GATEWAY_MODEL 可另指定
+const gwModel = () => process.env.POSTER_GATEWAY_MODEL?.trim() || 'bfl/flux-3-image';
 // 优先用 AI Gateway 的 API Key（可设预算上限）；没填时用 Vercel 部署自带的 OIDC 令牌
 const gwKey = () => process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '';
+/** AI Gateway 余额（美元）：后台显示用，60 秒缓存；没配密钥或接口没响应返回 null */
+let balCache: { at: number; v: number | null } | null = null;
+export async function gatewayBalance(): Promise<number | null> {
+  if (!process.env.AI_GATEWAY_API_KEY) return null;
+  if (balCache && Date.now() - balCache.at < 60_000) return balCache.v;
+  let v: number | null = null;
+  try {
+    const r = await fetch('https://ai-gateway.vercel.sh/v1/credits', { headers: { Authorization: `Bearer ${gwKey()}` }, signal: AbortSignal.timeout(5000) });
+    if (r.ok) {
+      const j = (await r.json()) as { balance?: string | number };
+      const n = Number(j.balance);
+      v = Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+    }
+  } catch { /* 余额查不到不影响出图 */ }
+  balCache = { at: Date.now(), v };
+  return v;
+}
+
 export const gateway: ImageProvider = {
   key: 'gateway',
   label: 'Vercel AI Gateway',
