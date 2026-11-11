@@ -37,6 +37,8 @@ export type PosterStyle = {
   serif?: boolean; // 片名用宋体（否则黑体）
   brush?: boolean; // 片名用毛笔字（赌神片、国风）
   layout?: 'onesheet'; // 电影海报排法（顶部悬念语、超大片名、醒目日期、底部演职员表小字）
+  bright?: boolean; // 明亮画面：下方只压 30% 深蓝渐变，片名加深色描边
+  comp?: string; // 自带构图要求（替换默认的“下方 40% 压暗”）
 };
 
 export const STYLE_GROUPS = [
@@ -55,6 +57,7 @@ export const STYLES: PosterStyle[] = [
   { key: 'disaster', group: 'film', label: '灾难片', fx: 'steel', en: 'A SAREC PRESENTATION', scene: 'disaster movie key art, towering storm clouds, lightning strikes, cold steel blue grade, sense of impending crisis' },
   { key: 'mystery', group: 'film', label: '悬疑片', fx: 'gold', serif: true, en: 'A SAREC PRESENTATION', scene: 'neo-noir mystery thriller key art, slanted light through venetian blinds, black and gold palette, deep shadows' },
   { key: 'warm', group: 'film', label: '温情片', fx: 'gold', serif: true, en: 'A SAREC PRESENTATION', scene: 'heartwarming drama key art, soft rain at blue hour, warm glowing windows, gentle golden light against cool surroundings' },
+  { key: 'bright', group: 'film', label: '明亮未来', fx: 'gold', serif: true, layout: 'onesheet', bright: true, en: 'A SAREC PRESENTATION', scene: 'Hollywood science-fiction blockbuster theatrical one-sheet key art with monumental scale and layered depth, but a bright optimistic near-future: warm golden hour sunlight or clear blue daytime sky, soft white clouds, clean and inviting, hopeful and safe atmosphere, lush greenery and palm trees, warm gold and sky-blue palette, photorealistic, ultra detailed; no darkness, no fog, no storm clouds, no ominous mood; people only as tiny distant figures seen from behind; every vehicle has a perfectly smooth blank nose and hood with no emblem, no logo, no ornament, and plain wheel centers', comp: 'Vertical 2:3 cinematic movie poster composition. All main subjects sit in the upper 55 percent of the frame; the bottom edge of any vehicle is above the 55 percent height line. The lower part of the frame is calm sunlit ground, plaza or road that softly deepens in tone toward the bottom edge, kept bright and clean, never black. High detail, photorealistic, 8k.' },
   { key: 'scifi', group: 'film', label: '科幻大片', fx: 'gold', serif: true, layout: 'onesheet', en: 'A SAREC PRESENTATION', scene: 'Hollywood science-fiction blockbuster theatrical one-sheet key art, in the visual language of big-budget sci-fi films: monumental scale, tiny human figure against a vast world, layered depth with foreground, midground and far background, atmospheric haze, volumetric god rays, anamorphic lens flares, teal-and-amber or deep-blue-and-gold grade, subtle film grain, photorealistic, ultra detailed; the top 10 percent is a slightly darker band of sky; any vehicle rests on the ground with contact shadows' },
   { key: 'art', group: 'film', label: '艺术片', fx: 'holo', en: 'A SAREC PRESENTATION', scene: 'independent art house film poster art, bold overlapping red yellow blue geometric color fields, one neon diagonal line, risograph texture' },
   // AI 未来感（设计稿 64–71）
@@ -73,7 +76,7 @@ export const STYLES: PosterStyle[] = [
 ];
 
 /** 默认风格（东哥 11/11 定：院线大片写实） */
-export const DEFAULT_STYLE = 'cinema';
+export const DEFAULT_STYLE = 'bright';
 export const styleOf = (k: string | null | undefined): PosterStyle => STYLES.find((s) => s.key === k) ?? STYLES.find((s) => s.key === DEFAULT_STYLE) ?? STYLES[0];
 export const typeOf = (k: string | null | undefined) => EVENT_TYPES.find((t) => t.key === k) ?? EVENT_TYPES[EVENT_TYPES.length - 1];
 
@@ -107,6 +110,6 @@ export function scrubBrands(s: string): string {
 export function buildPrompt(opts: { type: string; style: string; subject?: string | null }): string {
   const st = styleOf(opts.style);
   const ty = typeOf(opts.type);
-  const subject = scrubBrands((opts.subject ?? '').slice(0, 900)) || ty.motif;
-  return [`${st.scene}.`, `Subject: ${subject}.`, st.light ? LIGHT_COMPOSITION : COMPOSITION, SAFETY].join(' ');
+  const subject = scrubBrands((opts.subject ?? '').slice(0, 1200)) || ty.motif;
+  return [`${st.scene}.`, `Subject: ${subject}.`, st.comp ?? (st.light ? LIGHT_COMPOSITION : COMPOSITION), SAFETY].join(' ');
 }
