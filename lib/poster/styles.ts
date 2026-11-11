@@ -66,6 +66,7 @@ export const STYLES: PosterStyle[] = [
   { key: 'portal', group: 'ai', label: '时空之门', fx: 'pink', en: 'THE PORTAL', scene: 'synthwave sci-fi key art, a glowing circular portal standing on a neon grid horizon, magenta and cyan glow, starry sky' },
   // 写实摄影 / 国风
   { key: 'photo', group: 'photo', label: '写实摄影', fx: 'steel', en: 'A SAREC PRESENTATION', scene: 'award-winning editorial photograph, natural light, shallow depth of field, cinematic color grade, shot on medium format' },
+  { key: 'cinema', group: 'photo', label: '院线大片写实', fx: 'gold', serif: true, en: 'A SAREC PRESENTATION', scene: 'theatrical release movie poster key art, photorealistic photography, one single hero subject filling a large part of the frame, low camera angle or strong perspective, backlight and rim light, atmospheric haze and volumetric light, restrained palette of two or three colors, subtle film grain; any vehicle rests firmly on the ground with contact shadows and ground reflections, never floating; no neural network lines, no node-and-link graphics, no holographic interfaces, no circuit board textures' },
   { key: 'guofeng', group: 'guofeng', label: '国风', fx: 'gold', brush: true, en: 'A SAREC PRESENTATION', scene: 'contemporary Chinese ink-wash painting style key art, misty layered mountains, gold leaf accents, xuan paper texture, elegant negative space' }
 ];
 
@@ -102,6 +103,6 @@ export function scrubBrands(s: string): string {
 export function buildPrompt(opts: { type: string; style: string; subject?: string | null }): string {
   const st = styleOf(opts.style);
   const ty = typeOf(opts.type);
-  const subject = scrubBrands((opts.subject ?? '').slice(0, 300)) || ty.motif;
+  const subject = scrubBrands((opts.subject ?? '').slice(0, 900)) || ty.motif;
   return [`${st.scene}.`, `Subject: ${subject}.`, st.light ? LIGHT_COMPOSITION : COMPOSITION, SAFETY].join(' ');
 }

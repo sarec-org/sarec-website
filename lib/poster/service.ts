@@ -83,7 +83,7 @@ export async function posterState(eventId: string) {
 }
 
 /** 一批 4 张（剩余额度不足 4 张时出剩下的）。失败的也记一行（不占额度、不计费） */
-export async function generateBatch(s: Staff, eventId: string, input: { type?: string; style?: string; subject?: string }) {
+export async function generateBatch(s: Staff, eventId: string, input: { type?: string; style?: string; subject?: string; count?: number }) {
   const db = getPool();
   await eventOf(eventId);
   const type = typeOf(input.type).key;
@@ -91,7 +91,8 @@ export async function generateBatch(s: Staff, eventId: string, input: { type?: s
   const st = await posterState(eventId);
   const left = st.cap - st.used;
   if (left <= 0) throw new CrmError('conflict', `这场活动已经生成了 ${st.used} 张主视觉，到上限了（${st.cap} 张）。可以在下面调高本场上限。`);
-  const n = Math.min(BATCH, left);
+  const want = Number.isInteger(input.count) && input.count! >= 1 && input.count! <= BATCH ? input.count! : BATCH;
+  const n = Math.min(want, left);
   const { p } = imageProvider(await chosenProvider());
   const prompt = buildPrompt({ type, style, subject: input.subject });
   const batch = randomUUID();
