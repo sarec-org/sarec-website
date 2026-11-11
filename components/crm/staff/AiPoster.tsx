@@ -214,11 +214,11 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
         <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, marginTop: 8 }}>
           <label className={styles.field} style={{ marginBottom: 0 }}>
             <span className={styles.label}>自由加字 {i + 1}（自己决定写什么，不填不显示）</span>
-            <input className={styles.input} value={x.text} maxLength={24} placeholder={i === 0 ? '比如：名额有限' : ''} onChange={(e) => setEx(ex.map((y, j) => (j === i ? { ...y, text: e.target.value } : y)))} />
+            <input className={styles.input} value={x.text} maxLength={24} placeholder={i === 0 ? '比如：名额有限' : ''} onChange={(e) => { const v = e.target.value; setEx((prev) => prev.map((y, j) => (j === i ? { ...y, text: v } : y))); }} />
           </label>
           <div className={styles.chips}>
-            {POS.map(([k, l]) => <button key={k} type="button" className={`${styles.chip} ${x.pos === k ? styles.chipOn : ''}`} onClick={() => setEx(ex.map((y, j) => (j === i ? { ...y, pos: k } : y)))}>{l}</button>)}
-            {SIZES.map(([k, l]) => <button key={k} type="button" className={`${styles.chip} ${x.size === k ? styles.chipOn : ''}`} onClick={() => setEx(ex.map((y, j) => (j === i ? { ...y, size: k } : y)))}>{l}</button>)}
+            {POS.map(([k, l]) => <button key={k} type="button" className={`${styles.chip} ${x.pos === k ? styles.chipOn : ''}`} onClick={() => setEx((prev) => prev.map((y, j) => (j === i ? { ...y, pos: k } : y)))}>{l}</button>)}
+            {SIZES.map(([k, l]) => <button key={k} type="button" className={`${styles.chip} ${x.size === k ? styles.chipOn : ''}`} onClick={() => setEx((prev) => prev.map((y, j) => (j === i ? { ...y, size: k } : y)))}>{l}</button>)}
           </div>
         </div>
       ))}
