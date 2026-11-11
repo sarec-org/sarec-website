@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
+import { DEFAULT_STYLE } from '@/lib/poster/styles';
 
 type Gen = { id: string; batch_id: string; kind: string; style: string | null; event_type: string | null; provider: string; model: string | null; prompt: string; image_url: string | null; cost_usd: number; status: string; error: string | null; created_at: string };
 type State = {
@@ -30,7 +31,7 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [type, setType] = useState('lecture');
-  const [style, setStyle] = useState('road');
+  const [style, setStyle] = useState(DEFAULT_STYLE);
   const [subject, setSubject] = useState('');
   const [form, setForm] = useState({ genId: '', filmTitle: '', tagline: '', host: 'SAREC 中美房地产商会', speaker: '', coHost: '', imageCap: '' });
   const [ideas, setIdeas] = useState<{ title: string; tagline: string }[]>([]);

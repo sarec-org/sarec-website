@@ -70,7 +70,9 @@ export const STYLES: PosterStyle[] = [
   { key: 'guofeng', group: 'guofeng', label: '国风', fx: 'gold', brush: true, en: 'A SAREC PRESENTATION', scene: 'contemporary Chinese ink-wash painting style key art, misty layered mountains, gold leaf accents, xuan paper texture, elegant negative space' }
 ];
 
-export const styleOf = (k: string | null | undefined): PosterStyle => STYLES.find((s) => s.key === k) ?? STYLES[0];
+/** 默认风格（东哥 11/11 定：院线大片写实） */
+export const DEFAULT_STYLE = 'cinema';
+export const styleOf = (k: string | null | undefined): PosterStyle => STYLES.find((s) => s.key === k) ?? STYLES.find((s) => s.key === DEFAULT_STYLE) ?? STYLES[0];
 export const typeOf = (k: string | null | undefined) => EVENT_TYPES.find((t) => t.key === k) ?? EVENT_TYPES[EVENT_TYPES.length - 1];
 
 /** 红线（每条指令都带）：不出现文字、真人人脸、品牌 / 车标 / 可识别车型 */
