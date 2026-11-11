@@ -82,8 +82,11 @@ export const cloudflare: ImageProvider = {
       // FLUX.2 系列要 multipart
       const fd = new FormData();
       fd.append('prompt', prompt);
-      fd.append('width', '832');
-      fd.append('height', '1248');
+      // FLUX.2 dev 按 512 小块 × 步数计价：1024×1536 与 832×1248 同为 6 块，取大的；步数固定 25（不随默认值变动，成本可控）
+      const dev = model.includes('flux-2-dev');
+      fd.append('width', dev ? '1024' : '832');
+      fd.append('height', dev ? '1536' : '1248');
+      if (dev) fd.append('steps', '25');
       fd.append('seed', String(seed));
       res = await fetch(url, { method: 'POST', headers: auth, body: fd });
     } else {

@@ -1,7 +1,7 @@
 /**
  * AI 海报（东哥 11/10），只在网站后台用，ops 权限：
  *   GET  → 当前状态（候选图、已选、文案、上限、花费、当前画图服务）
- *   POST { action: 'generate', type, style, subject? }   一批 4 张候选主视觉（“再来一批”同一个动作）
+ *   POST { action: 'generate', type, style, subject?, count? }   一批 4 张候选主视觉（count 1–4 可少出；“再来一批”同一个动作）
  *        { action: 'copy', type }                          文字模型给 5 组片名 + 宣传语
  *        { action: 'save', genId?, style?, filmTitle, tagline, host, speaker, coHost, imageCap? }
  *        { action: 'default_cap', value }                  全站默认每场上限（admin）
@@ -26,7 +26,7 @@ export const POST = handler(async (req: Request, { params }: { params: { id: str
   const str = (k: string) => (typeof b[k] === 'string' ? (b[k] as string) : undefined);
   switch (b.action) {
     case 'generate':
-      return ok({ state: await generateBatch(s, params.id, { type: str('type'), style: str('style'), subject: str('subject') }) });
+      return ok({ state: await generateBatch(s, params.id, { type: str('type'), style: str('style'), subject: str('subject'), count: typeof b.count === 'number' ? b.count : undefined }) });
     case 'copy':
       return ok(await copyIdeas(s, params.id, str('type')));
     case 'save':
