@@ -112,6 +112,23 @@ async function main() {
   assert.equal(t.credits.speaker, null);
   ok('叠字出图：竖版 1080×1620、方版 1080×1080、公众号头图 900×383；时间行“下午 1:30 签到 · 2:00 开始”；没填主讲不显示');
 
+  // 手机改字：每一处字都能改、自由加字（东哥自己写，不套禁用词）、画面上移；只重排，不新增生成记录
+  const gensBefore = st.gens.length;
+  await assert.rejects(svc.savePoster(admin, ev.id, { texts: { subtitle: '仅需 $20' } }), /不能出现价格/);
+  st = await svc.savePoster(admin, ev.id, { texts: { tagline: '这座城市的下一个房客，不需要驾照', filmTitle: '无人之境', filmSubtitle: '车位觉醒', titleEn: 'THE DRIVERLESS LANDLORD', bigDate: '11.13', billing: 'SAREC 出品 ｜ 扫码报名', extras: [{ text: '会员免费', pos: 'bottom', size: 'L' }, { text: '名额有限', pos: 'nope', size: 'XL' }, { text: '第三行不要' }], lift: 0.9 } });
+  const tx = st.poster!.texts!;
+  assert.equal(tx.filmSubtitle, '车位觉醒');
+  assert.deepEqual(tx.extras, [{ text: '会员免费', pos: 'bottom', size: 'L' }, { text: '名额有限', pos: 'belowSubtitle', size: 'M' }]);
+  assert.equal(tx.lift, 0.25);
+  const t2 = svc.posterText((await pool.query(`SELECT * FROM events WHERE id = $1`, [ev.id])).rows[0], st.poster);
+  assert.equal(t2.filmSubtitle, '车位觉醒');
+  assert.equal(t2.subtitle, st.event.title);
+  assert.equal(st.textDefaults.bigDate, '11.13');
+  const { png: p2 } = await svc.renderPoster(ev.id, 'tall');
+  assert.equal((await sharp(p2).metadata()).height, 1620);
+  assert.equal(st.gens.length, gensBefore);
+  ok('手机改字：每处字可改（空着按活动自动）、自由加字最多 2 行（位置 / 大小校验）、画面上移上限 25%；只重排不重新出图');
+
   const c = await svc.copyIdeas(admin, ev.id, 'lecture');
   assert.equal(c.ideas.length, 0);
   assert.ok(c.note);

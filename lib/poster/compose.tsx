@@ -115,6 +115,17 @@ async function frame(bg: Buffer, W: number, H: number, size: PosterSize, focus?:
 }
 
 /** 用 8 个方向的硬投影拼出描边（satori 不支持 text-stroke） */
+/** 电影海报排法要的几项：没单独给就从日期行 / 时间行 / 主办 / 地点推出来（只用真实信息，不编造）。后台“自动”占位也用它 */
+export function fillText(t: PosterText): { bigDate: string; dateNote: string; billing: string } {
+  const md = /(\d{1,2})\s*月\s*(\d{1,2})\s*日/.exec(t.dateLine);
+  const week = /周[一二三四五六日天]/.exec(t.dateLine)?.[0] ?? '';
+  return {
+    bigDate: t.bigDate || (md ? `${md[1]}.${md[2]}` : t.dateLine),
+    dateNote: t.dateNote || [week, t.timeLine].filter(Boolean).join(' '),
+    billing: t.billing || [t.credits.host ? `${t.credits.host} 出品` : '', t.credits.speaker ? `主讲 ${t.credits.speaker}` : '', t.credits.coHost ? `协办 ${t.credits.coHost}` : '', t.place ? `地点 ${t.place}` : '', '扫码报名 入场'].filter(Boolean).join(' ｜ ')
+  };
+}
+
 function outlineShadow(o: number, c: string): string {
   const d = o * 0.7071;
   return [[o, 0], [-o, 0], [0, o], [0, -o], [d, d], [-d, d], [d, -d], [-d, -d]].map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px 0 ${c}`).join(', ');
@@ -165,12 +176,7 @@ export async function composePoster(opts: {
   const qr = `data:image/png;base64,${(await sharp(opts.qr).flatten({ background: '#ffffff' }).resize(480, 480, { fit: 'contain', background: '#ffffff' }).png().toBuffer()).toString('base64')}`;
   const photo = opts.speakerPhoto ? `data:image/jpeg;base64,${(await sharp(opts.speakerPhoto, { failOn: 'none' }).rotate().resize(320, 320, { fit: 'cover' }).jpeg({ quality: 88 }).toBuffer()).toString('base64')}` : null;
   const credits = ([['主办', t.credits.host], ['主讲', t.credits.speaker], ['协办', t.credits.coHost]] as const).filter(([, v]) => v && String(v).trim());
-  // 电影海报排法要的几项：没单独给就从日期行 / 时间行 / 主办 / 地点推出来（只用真实信息，不编造）
-  const md = /(\d{1,2})\s*月\s*(\d{1,2})\s*日/.exec(t.dateLine);
-  const week = /周[一二三四五六日天]/.exec(t.dateLine)?.[0] ?? '';
-  const bigDate = t.bigDate || (md ? `${md[1]}.${md[2]}` : t.dateLine);
-  const dateNote = t.dateNote || [week, t.timeLine].filter(Boolean).join(' ');
-  const billing = t.billing || [t.credits.host ? `${t.credits.host} 出品` : '', t.credits.speaker ? `主讲 ${t.credits.speaker}` : '', t.credits.coHost ? `协办 ${t.credits.coHost}` : '', t.place ? `地点 ${t.place}` : '', '扫码报名 入场'].filter(Boolean).join(' ｜ ');
+  const { bigDate, dateNote, billing } = fillText(t);
   const onesheet = st.layout === 'onesheet' && size === 'tall';
   const extras = (t.extras ?? []).filter((x) => x && x.text && x.text.trim()).slice(0, 2);
   const fonts = await posterFonts([t.tagline, t.filmTitle, t.filmSubtitle ?? '', t.subtitle, t.dateLine, t.timeLine, t.place, st.en, ...credits.flat(), t.titleEn ?? '', bigDate, dateNote, billing, ...extras.map((x) => x.text)].join(''), !!st.brush);

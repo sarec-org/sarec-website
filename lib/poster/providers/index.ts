@@ -109,6 +109,24 @@ const GW_PRICES: Record<string, number> = { 'bfl/flux-pro-1.1': 0.04, 'bfl/flux-
 const gwModel = () => process.env.POSTER_GATEWAY_MODEL?.trim() || 'bytedance/seedream-4.0';
 // 优先用 AI Gateway 的 API Key（可设预算上限）；没填时用 Vercel 部署自带的 OIDC 令牌
 const gwKey = () => process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || '';
+/** AI Gateway 余额（美元）：后台显示用，60 秒缓存；没配密钥或接口没响应返回 null */
+let balCache: { at: number; v: number | null } | null = null;
+export async function gatewayBalance(): Promise<number | null> {
+  if (!process.env.AI_GATEWAY_API_KEY) return null;
+  if (balCache && Date.now() - balCache.at < 60_000) return balCache.v;
+  let v: number | null = null;
+  try {
+    const r = await fetch('https://ai-gateway.vercel.sh/v1/credits', { headers: { Authorization: `Bearer ${gwKey()}` }, signal: AbortSignal.timeout(5000) });
+    if (r.ok) {
+      const j = (await r.json()) as { balance?: string | number };
+      const n = Number(j.balance);
+      v = Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+    }
+  } catch { /* 余额查不到不影响出图 */ }
+  balCache = { at: Date.now(), v };
+  return v;
+}
+
 export const gateway: ImageProvider = {
   key: 'gateway',
   label: 'Vercel AI Gateway',
