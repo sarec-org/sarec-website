@@ -28,12 +28,12 @@ async function main() {
 
   // 1. 指令：每条都带红线和构图；品牌、车型被去掉
   assert.equal(EVENT_TYPES.length, 13);
-  assert.equal(STYLES.filter((s) => s.group === 'film').length, 9);
+  assert.equal(STYLES.filter((s) => s.group === 'film').length, 10);
   assert.equal(STYLES.filter((s) => s.group === 'ai').length, 8);
   for (const st of STYLES) {
     const p = buildPrompt({ type: 'lecture', style: st.key, subject: 'Tesla Cybercab robotaxi 特斯拉' });
     assert.ok(p.includes(SAFETY), st.key);
-    assert.ok(/no text/i.test(p) && /2:3/.test(p) && /lower 40 percent/.test(p), st.key);
+    assert.ok(/no text/i.test(p) && /2:3/.test(p) && (st.comp ? /upper 55 percent/ : /lower 40 percent/).test(p), st.key);
     assert.ok(!/tesla|cybercab|特斯拉/i.test(p), st.key);
   }
   assert.equal(scrubBrands('a Waymo and a BMW'), 'a generic and a generic');
