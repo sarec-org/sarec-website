@@ -36,6 +36,7 @@ export type PosterStyle = {
   en: string; // 片名上方英文小字
   serif?: boolean; // 片名用宋体（否则黑体）
   brush?: boolean; // 片名用毛笔字（赌神片、国风）
+  layout?: 'onesheet'; // 电影海报排法（顶部悬念语、超大片名、醒目日期、底部演职员表小字）
 };
 
 export const STYLE_GROUPS = [
@@ -54,6 +55,7 @@ export const STYLES: PosterStyle[] = [
   { key: 'disaster', group: 'film', label: '灾难片', fx: 'steel', en: 'A SAREC PRESENTATION', scene: 'disaster movie key art, towering storm clouds, lightning strikes, cold steel blue grade, sense of impending crisis' },
   { key: 'mystery', group: 'film', label: '悬疑片', fx: 'gold', serif: true, en: 'A SAREC PRESENTATION', scene: 'neo-noir mystery thriller key art, slanted light through venetian blinds, black and gold palette, deep shadows' },
   { key: 'warm', group: 'film', label: '温情片', fx: 'gold', serif: true, en: 'A SAREC PRESENTATION', scene: 'heartwarming drama key art, soft rain at blue hour, warm glowing windows, gentle golden light against cool surroundings' },
+  { key: 'scifi', group: 'film', label: '科幻大片', fx: 'gold', serif: true, layout: 'onesheet', en: 'A SAREC PRESENTATION', scene: 'Hollywood science-fiction blockbuster theatrical one-sheet key art, in the visual language of big-budget sci-fi films: monumental scale, tiny human figure against a vast world, layered depth with foreground, midground and far background, atmospheric haze, volumetric god rays, anamorphic lens flares, teal-and-amber or deep-blue-and-gold grade, subtle film grain, photorealistic, ultra detailed; the top 10 percent is a slightly darker band of sky; any vehicle rests on the ground with contact shadows' },
   { key: 'art', group: 'film', label: '艺术片', fx: 'holo', en: 'A SAREC PRESENTATION', scene: 'independent art house film poster art, bold overlapping red yellow blue geometric color fields, one neon diagonal line, risograph texture' },
   // AI 未来感（设计稿 64–71）
   { key: 'neural', group: 'ai', label: '神经网络', fx: 'cyan', en: 'NEURAL ESTATE', scene: 'futuristic sci-fi key art, a vast glowing neural network of nodes and light filaments floating in deep navy space, cyan and violet glow' },
@@ -66,7 +68,7 @@ export const STYLES: PosterStyle[] = [
   { key: 'portal', group: 'ai', label: '时空之门', fx: 'pink', en: 'THE PORTAL', scene: 'synthwave sci-fi key art, a glowing circular portal standing on a neon grid horizon, magenta and cyan glow, starry sky' },
   // 写实摄影 / 国风
   { key: 'photo', group: 'photo', label: '写实摄影', fx: 'steel', en: 'A SAREC PRESENTATION', scene: 'award-winning editorial photograph, natural light, shallow depth of field, cinematic color grade, shot on medium format' },
-  { key: 'cinema', group: 'photo', label: '院线大片写实', fx: 'gold', serif: true, en: 'A SAREC PRESENTATION', scene: 'theatrical release movie poster key art, photorealistic photography, one single hero subject filling a large part of the frame, low camera angle or strong perspective, backlight and rim light, atmospheric haze and volumetric light, restrained palette of two or three colors, subtle film grain; any vehicle rests firmly on the ground with contact shadows and ground reflections, never floating; no neural network lines, no node-and-link graphics, no holographic interfaces, no circuit board textures' },
+  { key: 'cinema', group: 'photo', label: '院线大片写实', fx: 'gold', serif: true, layout: 'onesheet', en: 'A SAREC PRESENTATION', scene: 'theatrical release movie poster key art, photorealistic photography, one single hero subject filling a large part of the frame, low camera angle or strong perspective, backlight and rim light, atmospheric haze and volumetric light, restrained palette of two or three colors, subtle film grain; any vehicle rests firmly on the ground with contact shadows and ground reflections, never floating; no neural network lines, no node-and-link graphics, no holographic interfaces, no circuit board textures' },
   { key: 'guofeng', group: 'guofeng', label: '国风', fx: 'gold', brush: true, en: 'A SAREC PRESENTATION', scene: 'contemporary Chinese ink-wash painting style key art, misty layered mountains, gold leaf accents, xuan paper texture, elegant negative space' }
 ];
 

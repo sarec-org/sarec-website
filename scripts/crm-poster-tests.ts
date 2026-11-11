@@ -28,7 +28,7 @@ async function main() {
 
   // 1. 指令：每条都带红线和构图；品牌、车型被去掉
   assert.equal(EVENT_TYPES.length, 13);
-  assert.equal(STYLES.filter((s) => s.group === 'film').length, 8);
+  assert.equal(STYLES.filter((s) => s.group === 'film').length, 9);
   assert.equal(STYLES.filter((s) => s.group === 'ai').length, 8);
   for (const st of STYLES) {
     const p = buildPrompt({ type: 'lecture', style: st.key, subject: 'Tesla Cybercab robotaxi 特斯拉' });

@@ -22,6 +22,11 @@ export type PosterText = {
   dateLine: string; // 11 月 13 日 周五
   timeLine: string; // 下午 1:30 签到 · 2:00 开始（洛杉矶时间）
   place: string;
+  /** 电影海报排法用（不给就从上面几项推出来） */
+  titleEn?: string | null; // 片名下的英文小字
+  bigDate?: string | null; // 11.13
+  dateNote?: string | null; // 周五 下午 2:00 · 1:30 签到 · 洛杉矶
+  billing?: string | null; // 底部演职员表那一行（只用真实信息）
 };
 
 const FX: Record<TitleFx, { grad?: string; color?: string; glow?: string }> = {
@@ -134,13 +139,51 @@ export async function composePoster(opts: {
   const qr = `data:image/png;base64,${(await sharp(opts.qr).flatten({ background: '#ffffff' }).resize(480, 480, { fit: 'contain', background: '#ffffff' }).png().toBuffer()).toString('base64')}`;
   const photo = opts.speakerPhoto ? `data:image/jpeg;base64,${(await sharp(opts.speakerPhoto, { failOn: 'none' }).rotate().resize(320, 320, { fit: 'cover' }).jpeg({ quality: 88 }).toBuffer()).toString('base64')}` : null;
   const credits = ([['主办', t.credits.host], ['主讲', t.credits.speaker], ['协办', t.credits.coHost]] as const).filter(([, v]) => v && String(v).trim());
-  const fonts = await posterFonts([t.tagline, t.filmTitle, t.subtitle, t.dateLine, t.timeLine, t.place, st.en, ...credits.flat()].join(''), !!st.brush);
+  // 电影海报排法要的几项：没单独给就从日期行 / 时间行 / 主办 / 地点推出来（只用真实信息，不编造）
+  const md = /(\d{1,2})\s*月\s*(\d{1,2})\s*日/.exec(t.dateLine);
+  const week = /周[一二三四五六日天]/.exec(t.dateLine)?.[0] ?? '';
+  const bigDate = t.bigDate || (md ? `${md[1]}.${md[2]}` : t.dateLine);
+  const dateNote = t.dateNote || [week, t.timeLine].filter(Boolean).join(' ');
+  const billing = t.billing || [t.credits.host ? `${t.credits.host} 出品` : '', t.credits.speaker ? `主讲 ${t.credits.speaker}` : '', t.credits.coHost ? `协办 ${t.credits.coHost}` : '', t.place ? `地点 ${t.place}` : '', '扫码报名 入场'].filter(Boolean).join(' ｜ ');
+  const onesheet = st.layout === 'onesheet' && size === 'tall';
+  const fonts = await posterFonts([t.tagline, t.filmTitle, t.subtitle, t.dateLine, t.timeLine, t.place, st.en, ...credits.flat(), t.titleEn ?? '', bigDate, dateNote, billing].join(''), !!st.brush);
   const vignette = light
     ? 'linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 25%, rgba(255,255,255,0) 52%, rgba(255,255,255,0.9) 82%, #ffffff 100%)'
     : 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.88) 80%, #000000 100%)';
 
   let body: JSX.Element;
-  if (size === 'oa') {
+  if (onesheet) {
+    // 电影海报排法：最顶上一行很小的 A SAREC PRESENTATION + 悬念语；中下部超大片名（横向镜头光晕划过）+ 英文小字 + 副标题；
+    // 醒目“上映日期”；最底一行窄而密的演职员表小字；二维码缩小放右下角，细金边。信息量只留画面、片名、日期。
+    const ts = fitSize(t.filmTitle, 88 * u, (st.brush ? 24 : 21) * u);
+    const flare = 'linear-gradient(90deg, rgba(255,214,150,0) 0%, rgba(255,214,150,0.15) 18%, rgba(255,244,220,0.95) 50%, rgba(255,214,150,0.15) 82%, rgba(255,214,150,0) 100%)';
+    body = (
+      <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: `${2.6 * u}px ${5 * u}px ${2.6 * u}px` }}>
+        <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 500, fontSize: 1.45 * u, letterSpacing: 0.7 * 1.45 * u, color: sub, opacity: 0.85 }}>{st.en}</div>
+        {t.tagline ? <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(t.tagline, 80 * u, 2.5 * u, 0.45), letterSpacing: 0.45 * 2.5 * u, color: ink, marginTop: 1.6 * u, textShadow: '0 2px 10px rgba(0,0,0,0.8)' }}>{t.tagline}</div> : null}
+        <div style={{ display: 'flex', flex: 1 }} />
+        <div style={{ display: 'flex', position: 'relative', justifyContent: 'center', alignItems: 'center', width: W }}>
+          <Title text={t.filmTitle} size={ts} st={st} fx={st.fx} />
+          <div style={{ display: 'flex', position: 'absolute', left: 0, top: ts * 0.6, width: W, height: 0.45 * u, background: flare, boxShadow: `0 0 ${3 * u}px ${0.9 * u}px rgba(255,205,130,0.5)` }} />
+        </div>
+        {t.titleEn ? <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 500, fontSize: 1.9 * u, letterSpacing: 0.75 * 1.9 * u, color: gold, marginTop: 1.2 * u }}>{t.titleEn}</div> : null}
+        <div style={{ display: 'flex', fontFamily: 'Sans', fontWeight: 700, fontSize: fitSize(t.subtitle, 80 * u, 2.9 * u, 0.12), letterSpacing: 0.12 * 2.9 * u, color: ink, marginTop: 2 * u }}>{t.subtitle}</div>
+        <div style={{ display: 'flex', alignItems: 'center', marginTop: 3.2 * u }}>
+          <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 700, fontSize: 9 * u, lineHeight: 1, letterSpacing: 0.04 * 9 * u, backgroundImage: FX.gold.grad, backgroundClip: 'text', color: 'transparent' }}>{bigDate}</div>
+          <div style={{ display: 'flex', width: 0.2 * u, height: 6 * u, background: gold, opacity: 0.7, margin: `0 ${2.2 * u}px` }} />
+          <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(dateNote, 46 * u, 2.3 * u, 0.04), letterSpacing: 0.04 * 2.3 * u, color: ink, maxWidth: 46 * u }}>{dateNote}</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%', marginTop: 3.4 * u }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, paddingRight: 2 * u }}>
+            <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(billing, 74 * u, 1.55 * u, 0), letterSpacing: 0.01 * u, color: sub, opacity: 0.9, whiteSpace: 'nowrap' }}>{billing}</div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <img src={qr} width={9.5 * u} height={9.5 * u} style={{ background: '#fff', padding: 0.45 * u, border: `${0.22 * u}px solid ${gold}`, borderRadius: 0.6 * u }} />
+          </div>
+        </div>
+      </div>
+    );
+  } else if (size === 'oa') {
     // 公众号头图：字和二维码全在左半边（压暗），右半边整张留给主体（见 SUBJECT_AREA.oa）
     const colW = W * 0.44;
     const ts = fitSize(t.filmTitle, colW, H * 0.26);
