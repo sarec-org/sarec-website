@@ -64,13 +64,22 @@ const SUBJECT_AREA: Record<'square' | 'oa', FocusBox> = {
  * 把整张图按比例缩放，让主体（加一圈留白）整个落在留给它的区域里；图盖不到的地方
  * 用同一张图放大、模糊、压暗后的底色补上，原图边缘羽化过渡。主体不会被切掉。
  */
-async function frame(bg: Buffer, W: number, H: number, size: PosterSize, focus?: FocusBox | null): Promise<string> {
+async function frame(bg: Buffer, W: number, H: number, size: PosterSize, focus?: FocusBox | null, lift = 0): Promise<string> {
   const img = sharp(bg, { failOn: 'none' });
   const m = await img.metadata();
   const sw = m.width ?? 1024;
   const sh = m.height ?? 1536;
   if (size === 'tall') {
-    const out = await img.resize(W, H, { fit: 'cover', position: 'centre' }).jpeg({ quality: 88 }).toBuffer();
+    const full = await img.resize(W, H, { fit: 'cover', position: 'centre' }).jpeg({ quality: 90 }).toBuffer();
+    const dy = Math.round(Math.max(0, Math.min(0.25, lift)) * H);
+    if (!dy) return `data:image/jpeg;base64,${full.toString('base64')}`;
+    // 画面上移：整张图往上挪 dy（顶部天空裁掉一点），底下空出来的用同一张图模糊压暗补上（反正压在深色渐变下），交界处羽化
+    const base = await sharp(full).blur(W / 30).modulate({ brightness: 0.45 }).toBuffer();
+    const keep = H - dy;
+    const fe = Math.round(H * 0.05);
+    const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${keep}"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="${((keep - fe) / keep).toFixed(4)}" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><rect width="${W}" height="${keep}" fill="url(#g)"/></svg>`);
+    const top = await sharp(full).extract({ left: 0, top: dy, width: W, height: keep }).ensureAlpha().composite([{ input: mask, blend: 'dest-in' }]).png().toBuffer();
+    const out = await sharp(base).composite([{ input: top, left: 0, top: 0 }]).jpeg({ quality: 90 }).toBuffer();
     return `data:image/jpeg;base64,${out.toString('base64')}`;
   }
   const f = focus ?? DEFAULT_FOCUS;
@@ -142,6 +151,8 @@ export async function composePoster(opts: {
   speakerPhoto?: Buffer | null;
   /** 主体位置（方版 / 横版按它重新构图；不给用默认范围） */
   focus?: FocusBox | null;
+  /** 竖版“画面上移”（0–0.25，占画面高度的比例）：车被片名压住时往上挪 */
+  lift?: number | null;
 }): Promise<Buffer> {
   const { size, style: st, text: t } = opts;
   const [W, H] = POSTER_SIZES[size];
@@ -150,7 +161,7 @@ export async function composePoster(opts: {
   const ink = light ? '#1B1440' : '#FFFFFF';
   const sub = light ? 'rgba(27,20,64,0.78)' : 'rgba(255,255,255,0.86)';
   const gold = light ? '#8A6A2F' : '#E3C57A';
-  const bg = await frame(opts.bg, W, H, size, opts.focus);
+  const bg = await frame(opts.bg, W, H, size, opts.focus, opts.lift ?? 0);
   const qr = `data:image/png;base64,${(await sharp(opts.qr).flatten({ background: '#ffffff' }).resize(480, 480, { fit: 'contain', background: '#ffffff' }).png().toBuffer()).toString('base64')}`;
   const photo = opts.speakerPhoto ? `data:image/jpeg;base64,${(await sharp(opts.speakerPhoto, { failOn: 'none' }).rotate().resize(320, 320, { fit: 'cover' }).jpeg({ quality: 88 }).toBuffer()).toString('base64')}` : null;
   const credits = ([['主办', t.credits.host], ['主讲', t.credits.speaker], ['协办', t.credits.coHost]] as const).filter(([, v]) => v && String(v).trim());
@@ -189,7 +200,7 @@ export async function composePoster(opts: {
     body = (
       <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: `${2.6 * u}px ${5 * u}px ${2.6 * u}px` }}>
         <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 500, fontSize: 1.45 * u, letterSpacing: 0.7 * 1.45 * u, color: sub, opacity: 0.85 }}>{st.en}</div>
-        {t.tagline ? <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(t.tagline, 80 * u, 2.5 * u, 0.45), letterSpacing: 0.45 * 2.5 * u, color: ink, marginTop: 1.6 * u, textShadow: shadow }}>{t.tagline}</div> : null}
+        {t.tagline ? <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(t.tagline, 80 * u, 2.5 * u, 0.45), letterSpacing: 0.45 * 2.5 * u, color: ink, marginTop: 1.6 * u, textShadow: bright ? outlineShadow(2, 'rgba(10,24,50,0.8)') + ', ' + shadow : shadow }}>{t.tagline}</div> : null}
         <div style={{ display: 'flex', flex: 1 }} />
         {extra('aboveTitle')}
         <div style={{ display: 'flex', position: 'relative', justifyContent: 'center', alignItems: 'center', width: W }}>
@@ -204,8 +215,8 @@ export async function composePoster(opts: {
             <div style={{ display: 'flex', width: 8 * u, height: 0.25 * u, background: gold, opacity: 0.85, marginLeft: 2 * u }} />
           </div>
         ) : null}
-        {t.titleEn ? <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 500, fontSize: 1.9 * u, letterSpacing: 0.75 * 1.9 * u, color: gold, marginTop: 1.2 * u, textShadow: bright ? shadow : undefined }}>{t.titleEn}</div> : null}
-        <div style={{ display: 'flex', fontFamily: 'Sans', fontWeight: 700, fontSize: fitSize(t.subtitle, 80 * u, 2.9 * u, 0.12), letterSpacing: 0.12 * 2.9 * u, color: ink, marginTop: 2 * u, textShadow: bright ? shadow : undefined }}>{t.subtitle}</div>
+        {t.titleEn ? <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 500, fontSize: 1.9 * u, letterSpacing: 0.75 * 1.9 * u, color: gold, marginTop: 1.2 * u, textShadow: bright ? outlineShadow(2, 'rgba(10,24,50,0.85)') + ', ' + shadow : undefined }}>{t.titleEn}</div> : null}
+        <div style={{ display: 'flex', fontFamily: 'Sans', fontWeight: 700, fontSize: fitSize(t.subtitle, 80 * u, 2.9 * u, 0.12), letterSpacing: 0.12 * 2.9 * u, color: ink, marginTop: 2 * u, textShadow: bright ? outlineShadow(2, 'rgba(10,24,50,0.85)') + ', ' + shadow : undefined }}>{t.subtitle}</div>
         {extra('belowSubtitle')}
         <div style={{ display: 'flex', alignItems: 'center', marginTop: (tight ? 2 : 3.2) * u }}>
           <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 700, fontSize: (tight ? 7.5 : 9) * u, lineHeight: 1, letterSpacing: 0.04 * 9 * u, backgroundImage: FX.gold.grad, backgroundClip: 'text', color: 'transparent' }}>{bigDate}</div>

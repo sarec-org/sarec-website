@@ -110,6 +110,6 @@ export function scrubBrands(s: string): string {
 export function buildPrompt(opts: { type: string; style: string; subject?: string | null }): string {
   const st = styleOf(opts.style);
   const ty = typeOf(opts.type);
-  const subject = scrubBrands((opts.subject ?? '').slice(0, 900)) || ty.motif;
+  const subject = scrubBrands((opts.subject ?? '').slice(0, 1200)) || ty.motif;
   return [`${st.scene}.`, `Subject: ${subject}.`, st.comp ?? (st.light ? LIGHT_COMPOSITION : COMPOSITION), SAFETY].join(' ');
 }
