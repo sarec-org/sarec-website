@@ -304,6 +304,13 @@ export async function home131(contactId: string | null, opts: { region?: string 
       ORDER BY e.starts_at DESC, p.sort_order, p.created_at LIMIT 9`
   ).catch(() => ({ rows: [] as { thumb: string; slug: string; title: string }[] }));
 
+  // 1.3.3 修正：首页“活动相册”在没有公开照片时，进最近一场已结束活动的相册（没有就由小程序显示提示，不再跳到缺参数页面）
+  const { rows: ended } = await db.query<{ slug: string; title: string }>(
+    `SELECT slug, title FROM events
+      WHERE is_listed AND event_status <> 'cancelled' AND coalesce(ends_at, starts_at + interval '3 hours') < now()
+      ORDER BY starts_at DESC LIMIT 1`
+  ).catch(() => ({ rows: [] as { slug: string; title: string }[] }));
+
   // ── 会员企业与合作伙伴（展示审核通过、会籍有效） ──
   const { rows: partners } = await db.query<{ name: string; logo: string | null }>(
     `SELECT DISTINCT ON (coalesce(company_name, contact_name)) coalesce(company_name, contact_name) AS name, logo_url AS logo
@@ -326,8 +333,9 @@ export async function home131(contactId: string | null, opts: { region?: string 
   const toolsLive = !!(await getSetting<boolean>(db, 'web_tools_live', false));
   const tools = toolsLive
     ? [
-        { title: '月供与现金流计算器', sub: '在浏览器打开，输入房价、利率、租金直接算', url: `${SITE()}/zh/tools/mortgage` },
-        { title: '1031 换房税务速算', sub: '在浏览器打开，粗算应税和递延额（以会计师为准）', url: `${SITE()}/zh/tools/1031` }
+        // 小程序里显示：不写房价、利率、贷款、金额这类字样
+        { title: '月供与现金流计算器', sub: '在浏览器打开，估算每月支出和出租后的现金流', url: `${SITE()}/zh/tools/mortgage` },
+        { title: '1031 换房税务速算', sub: '在浏览器打开，理一理哪些税可以往后放（以会计师为准）', url: `${SITE()}/zh/tools/1031` }
       ]
     : [];
 
@@ -340,6 +348,7 @@ export async function home131(contactId: string | null, opts: { region?: string 
     upcoming: cards,
     elsewhere: away,
     photos: wall.map((w) => ({ thumb: w.thumb, slug: w.slug, title: w.title })),
+    lastEnded: ended[0] ? { slug: ended[0].slug, title: ended[0].title } : null,
     partners: partners.map((p) => ({ name: p.name, logo: p.logo })),
     knowledge: {
       lectures: lectures.map((l) => ({ title: l.title, sub: `${parts(l.starts_at, l.timezone || 'America/Los_Angeles').m}/${parts(l.starts_at, l.timezone || 'America/Los_Angeles').d} · ${l.n} 张照片`, image: l.thumb, page: `/pages/album/album?slug=${encodeURIComponent(l.slug)}` })),
