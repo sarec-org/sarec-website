@@ -168,7 +168,7 @@ async function pushOne(tm: Tmpl, openid: string, ev: EvInfo, kind: SubKind): Pro
   for (const [k, key] of Object.entries(tm.fields)) if (key) data[key] = { value: values[k] };
   const j = await withWxToken(async (token) => {
     const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${token}`, {
-      method: 'POST',
+      method: 'POST', cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/event/event?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
     });
@@ -189,7 +189,7 @@ export async function pushPhotosNotice(tm: Tmpl, openid: string, ev: EvInfo): Pr
   for (const [k, key] of Object.entries(tm.fields)) if (key) data[key] = { value: values[k] };
   const j = await withWxToken(async (token) => {
     const res = await fetch(`https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token=${token}`, {
-      method: 'POST',
+      method: 'POST', cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ touser: openid, template_id: tm.id, page: `pages/album/album?slug=${encodeURIComponent(ev.slug)}`, data, miniprogram_state: 'formal', lang: 'zh_CN' })
     });

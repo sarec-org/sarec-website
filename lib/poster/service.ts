@@ -6,7 +6,7 @@
  * 生成的图存自己的 Blob（正式站 prod/、预览 test/）。AI 海报只在网站后台生成和下载，不进小程序。
  */
 import { randomUUID } from 'node:crypto';
-import { put } from '@vercel/blob';
+import { head, put } from '@vercel/blob';
 import QRCode from 'qrcode';
 import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
@@ -267,12 +267,30 @@ async function fetchBuf(url: string): Promise<Buffer> {
   return Buffer.from(await r.arrayBuffer());
 }
 
-/** 报名码：配了微信用正式版小程序码，否则用网页报名页二维码 */
+/**
+ * 报名码：配了微信就必须是正式版小程序码。
+ * 生成成功的码存一份到 Blob；微信接口出错时用存好的那份；两样都没有就报错、不出图
+ * （以前会悄悄换成网页码，海报印出去扫到的是网页，11/12 测试发现）。
+ * 没配微信（本地 / 测试站）才用网页报名页二维码。
+ */
+const regQrPath = (slug: string) => `${BLOB_PREFIX}/wxacode/register/${encodeURIComponent(slug)}.png`;
 async function registerQr(slug: string): Promise<Buffer> {
-  if (wxConfigured()) {
-    try { return await eventRegisterCode(slug); } catch { /* 微信接口没响应就退回网页码 */ }
+  if (!wxConfigured()) return QRCode.toBuffer(`${SITE()}/zh/e/${slug}`, { margin: 1, width: 480 });
+  try {
+    const buf = await eventRegisterCode(slug);
+    if (blobConfigured()) await put(regQrPath(slug), buf, { access: 'public', contentType: 'image/png', addRandomSuffix: false }).catch((e) => console.log('[wxacode] cache put failed', (e as Error).message));
+    return buf;
+  } catch (e) {
+    if (blobConfigured()) {
+      const cached = await head(regQrPath(slug)).then((h) => fetch(h.url)).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+      if (cached) {
+        console.log(`[wxacode] register slug=${slug} wechat failed, using cached code`);
+        return Buffer.from(cached);
+      }
+    }
+    const why = e instanceof CrmError ? e.message : '微信接口没响应';
+    throw new CrmError('wx_error', `小程序报名码这会儿生成不了（${why.replace(/，请稍后再试$/, '')}），海报没有出图，免得印成网页码。请稍后再试；一直不行请找技术。`);
   }
-  return QRCode.toBuffer(`${SITE()}/zh/e/${slug}`, { margin: 1, width: 480 });
 }
 
 export function posterText(ev: EvRow, p: Partial<PosterRow> | null) {
