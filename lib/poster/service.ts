@@ -17,17 +17,20 @@ import { fullDate } from '@/lib/crm/home131';
 import { tzLabel } from '@/lib/crm/regions';
 import { eventRegisterCode, wxConfigured } from '@/lib/crm/wechat';
 import type { Staff } from '@/lib/crm/auth';
+import { audit } from '@/lib/crm/staff';
 import { gatewayBalance, imageProvider, normalize, providerChoices, redactSecrets, SWITCHABLE } from './providers';
 import { suggestCopy } from './copy';
-import { composePoster, fillText, type PosterExtra, type PosterSize } from './compose';
-import { EVENT_TYPES, STYLES, buildPrompt, styleOf, typeOf } from './styles';
+import { composeCover, composePoster, defaultCoverPos, fillText, markPng, type PosterExtra, type PosterSize } from './compose';
+import { DEFAULT_STYLE, EVENT_TYPES, STYLES, buildPrompt, styleOf, typeOf } from './styles';
 
 export const DEFAULT_CAP = 12;
 export const BATCH = 4;
 const SITE = () => (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
 
-type EvRow = { id: string; slug: string; title: string; summary: string | null; starts_at: Date; checkin_starts_at: Date | null; timezone: string; location_name: string | null; address: string | null };
-export type PosterRow = { event_id: string; gen_id: string | null; style: string | null; film_title: string | null; tagline: string | null; host: string | null; speaker: string | null; co_host: string | null; speaker_photo_url: string | null; image_cap: number | null; texts?: PosterTexts | null };
+type EvRow = { id: string; slug: string; title: string; summary: string | null; starts_at: Date; checkin_starts_at: Date | null; timezone: string; location_name: string | null; address: string | null; cover_url?: string | null };
+export type PosterRow = { event_id: string; gen_id: string | null; style: string | null; film_title: string | null; tagline: string | null; host: string | null; speaker: string | null; co_host: string | null; speaker_photo_url: string | null; image_cap: number | null; texts?: PosterTexts | null; official?: Official | null; cover_pos?: number | null; prev_cover_url?: string | null };
+/** 官方海报快照：主视觉 + 全部排字 + 画面上移；日期地点仍随活动信息自动更新 */
+export type Official = { genId: string; style: string | null; texts: PosterTexts; filmTitle: string | null; tagline: string | null; host: string | null; speaker: string | null; coHost: string | null; speakerPhotoUrl: string | null; lift: number; ai: boolean; setAt: string; setBy: string };
 /** 海报上每一处字（后台 / 手机上直接改；空 = 按活动信息自动） + 画面上移 */
 export type PosterTexts = { tagline?: string; filmTitle?: string; filmSubtitle?: string; titleEn?: string; subtitle?: string; bigDate?: string; dateNote?: string; place?: string; billing?: string; extras?: PosterExtra[]; lift?: number };
 const TEXT_MAX: Record<Exclude<keyof PosterTexts, 'extras' | 'lift'>, number> = { tagline: 30, filmTitle: 12, filmSubtitle: 12, titleEn: 40, subtitle: 40, bigDate: 12, dateNote: 40, place: 80, billing: 140 };
@@ -54,11 +57,11 @@ export function parseTexts(v: unknown): PosterTexts {
   if (Number.isFinite(lift) && lift > 0) out.lift = Math.min(0.25, Math.round(lift * 100) / 100);
   return out;
 }
-export type GenRow = { id: string; batch_id: string; kind: string; event_type: string | null; style: string | null; provider: string; model: string | null; prompt: string; image_url: string | null; cost_usd: string; status: string; error: string | null; created_at: Date };
+export type GenRow = { id: string; batch_id: string; kind: string; event_type: string | null; style: string | null; provider: string; model: string | null; prompt: string; image_url: string | null; cost_usd: string; status: string; error: string | null; created_at: Date; ai_generated?: boolean };
 
 async function eventOf(id: string): Promise<EvRow> {
   const { rows } = await getPool().query<EvRow>(
-    `SELECT id, slug, title, summary, starts_at, checkin_starts_at, timezone, location_name, address FROM events WHERE id = $1`,
+    `SELECT id, slug, title, summary, starts_at, checkin_starts_at, timezone, location_name, address, cover_url FROM events WHERE id = $1`,
     [id]
   );
   if (!rows[0]) throw new CrmError('not_found', '找不到这场活动');
@@ -85,19 +88,22 @@ export async function posterState(eventId: string) {
   const ev = await eventOf(eventId);
   const [{ rows: p }, { rows: gens }, cap0] = await Promise.all([
     db.query<PosterRow>(`SELECT * FROM event_posters WHERE event_id = $1`, [eventId]),
-    db.query<GenRow>(`SELECT id, batch_id, kind, event_type, style, provider, model, prompt, image_url, cost_usd, status, error, created_at FROM poster_gens WHERE event_id = $1 ORDER BY created_at DESC`, [eventId]),
+    db.query<GenRow>(`SELECT * FROM poster_gens WHERE event_id = $1 ORDER BY created_at DESC`, [eventId]),
     defaultCap()
   ]);
   const poster = p[0] ?? null;
   const cap = poster?.image_cap ?? cap0;
-  const images = gens.filter((g) => g.status === 'ok' && g.image_url);
+  // 上传的图不占“每场上限”（不花钱）
+  const images = gens.filter((g) => g.status === 'ok' && g.image_url && g.provider !== 'upload');
   const choice = await chosenProvider();
   const { p: prov, note } = imageProvider(choice);
   const auto = posterText(ev, poster ? { ...poster, texts: null } : null);
   return {
     event: { id: ev.id, title: ev.title, slug: ev.slug },
     poster,
-    gens: gens.map((g) => ({ ...g, cost_usd: Number(g.cost_usd) })),
+    gens: gens.map((g) => ({ id: g.id, batch_id: g.batch_id, kind: g.kind, event_type: g.event_type, style: g.style, provider: g.provider, model: g.model, prompt: g.prompt, image_url: g.image_url, cost_usd: Number(g.cost_usd), status: g.status, error: g.error, created_at: g.created_at, ai: g.ai_generated !== false })),
+    official: poster?.official ? { genId: poster.official.genId, setAt: poster.official.setAt, setBy: poster.official.setBy, ai: poster.official.ai } : null,
+    cover: { url: ev.cover_url ?? null, pos: poster?.cover_pos ?? null, autoPos: defaultCoverPos() },
     used: images.length,
     cap,
     defaultCap: cap0,
@@ -300,6 +306,138 @@ export async function renderPoster(eventId: string, size: PosterSize, genId?: st
   const { rows: g } = await db.query<GenRow>(`SELECT * FROM poster_gens WHERE id = $1 AND event_id = $2 AND status = 'ok'`, [gid, eventId]);
   if (!g[0]?.image_url) throw new CrmError('not_found', '找不到这张主视觉');
   const [bg, qr, photo] = await Promise.all([fetchBuf(g[0].image_url), registerQr(ev.slug), p?.speaker_photo_url ? fetchBuf(p.speaker_photo_url).catch(() => null) : Promise.resolve(null)]);
-  const png = await composePoster({ bg, size, style: styleOf(p?.style || g[0].style), text: posterText(ev, p), qr, speakerPhoto: photo, lift: p?.texts?.lift ?? 0 });
-  return { png, slug: ev.slug };
+  const ai = g[0].ai_generated !== false;
+  const png = await composePoster({ bg, size, style: styleOf(p?.style || g[0].style), text: posterText(ev, p), qr, speakerPhoto: photo, lift: p?.texts?.lift ?? 0, aiLabel: ai });
+  return { png: ai ? markPng(png, g[0].id) : png, slug: ev.slug };
+}
+
+// ── 上传自己的图（ChatGPT 等别处生成的也行）：不花钱、不占每场上限；默认算 AI 生成 ──────────
+export async function uploadMainImage(s: Staff, eventId: string, data: Buffer, ai: boolean) {
+  await eventOf(eventId);
+  if (!blobConfigured()) throw new CrmError('storage_unconfigured', '图片存储还没有配置');
+  const sharp = (await import('sharp')).default;
+  const jpg = await sharp(data, { failOn: 'none' }).rotate().resize(1536, 2304, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 90 }).toBuffer();
+  const m = await sharp(jpg).metadata();
+  if ((m.width ?? 0) < 500 || (m.height ?? 0) < 500) throw new CrmError('bad_request', '图片太小了，请用宽和高都在 500 像素以上的图');
+  const id = randomUUID();
+  const url = (await put(`${BLOB_PREFIX}/ai-poster/${eventId}/upload-${id}.jpg`, jpg, { access: 'public', contentType: 'image/jpeg', addRandomSuffix: false })).url;
+  const db = getPool();
+  await db.query(
+    `INSERT INTO poster_gens (id, event_id, batch_id, kind, style, provider, model, prompt, image_url, result, cost_usd, status, created_by, ai_generated)
+     VALUES ($1, $2, $3, 'image', $4, 'upload', NULL, '后台上传的图片', $5, $6, 0, 'ok', $7, $8)`,
+    [id, eventId, randomUUID(), DEFAULT_STYLE, url, JSON.stringify({ width: m.width, height: m.height }), s.contactId, ai]
+  );
+  await db.query(
+    `INSERT INTO event_posters (event_id, gen_id, style, updated_by, updated_at) VALUES ($1, $2, $3, $4, now())
+     ON CONFLICT (event_id) DO UPDATE SET gen_id = EXCLUDED.gen_id, style = COALESCE(event_posters.style, EXCLUDED.style), updated_by = EXCLUDED.updated_by, updated_at = now()`,
+    [eventId, id, DEFAULT_STYLE, s.contactId]
+  );
+  return posterState(eventId);
+}
+
+// ── 官方海报：每场一张；设了之后活动封面、“活动海报”三个下载、小程序邀请海报都用它 ──────────
+function officialAsRow(o: Official): Partial<PosterRow> {
+  return { texts: o.texts, film_title: o.filmTitle, tagline: o.tagline, host: o.host, speaker: o.speaker, co_host: o.coHost, speaker_photo_url: o.speakerPhotoUrl };
+}
+async function officialOf(eventId: string): Promise<{ ev: EvRow; p: PosterRow; o: Official; gen: GenRow } | null> {
+  const db = getPool();
+  const ev = await eventOf(eventId);
+  const { rows } = await db.query<PosterRow>(`SELECT * FROM event_posters WHERE event_id = $1`, [eventId]);
+  const p = rows[0];
+  if (!p?.official?.genId) return null;
+  const { rows: g } = await db.query<GenRow>(`SELECT * FROM poster_gens WHERE id = $1 AND event_id = $2 AND status = 'ok'`, [p.official.genId, eventId]);
+  if (!g[0]?.image_url) return null;
+  return { ev, p, o: p.official, gen: g[0] };
+}
+async function makeCover(eventId: string, imageUrl: string, ai: boolean, pos: number | null | undefined, id: string): Promise<string> {
+  const jpg = await composeCover(await fetchBuf(imageUrl), { pos, ai, id });
+  return (await put(`${BLOB_PREFIX}/cover/official-${eventId}-${Date.now()}.jpg`, jpg, { access: 'public', contentType: 'image/jpeg', addRandomSuffix: false })).url;
+}
+
+export async function setOfficial(s: Staff, eventId: string, on: boolean) {
+  const db = getPool();
+  const ev = await eventOf(eventId);
+  const { rows } = await db.query<PosterRow>(`SELECT * FROM event_posters WHERE event_id = $1`, [eventId]);
+  const p = rows[0];
+  if (!on) {
+    if (p?.official) {
+      await db.query(`UPDATE events SET cover_url = $2, updated_at = now() WHERE id = $1`, [eventId, p.prev_cover_url ?? null]);
+      await db.query(`UPDATE event_posters SET official = NULL, prev_cover_url = NULL, updated_by = $2, updated_at = now() WHERE event_id = $1`, [eventId, s.contactId]);
+      await audit(db, s, 'poster_official_off', 'event', eventId, { before: { genId: p.official.genId } });
+    }
+    return posterState(eventId);
+  }
+  if (!blobConfigured()) throw new CrmError('storage_unconfigured', '图片存储还没有配置');
+  if (!p?.gen_id) throw new CrmError('bad_request', '先在候选图里点选一张主视觉');
+  const { rows: g } = await db.query<GenRow>(`SELECT * FROM poster_gens WHERE id = $1 AND event_id = $2 AND status = 'ok'`, [p.gen_id, eventId]);
+  if (!g[0]?.image_url) throw new CrmError('not_found', '找不到这张主视觉');
+  const ai = g[0].ai_generated !== false;
+  const o: Official = {
+    genId: g[0].id, style: p.style || g[0].style, texts: p.texts ?? {}, filmTitle: p.film_title, tagline: p.tagline, host: p.host, speaker: p.speaker, coHost: p.co_host,
+    speakerPhotoUrl: p.speaker_photo_url, lift: p.texts?.lift ?? 0, ai, setAt: new Date().toISOString(), setBy: s.name || s.email
+  };
+  const cover = await makeCover(eventId, g[0].image_url, ai, p.cover_pos, g[0].id);
+  await db.query(
+    `UPDATE event_posters SET official = $2, prev_cover_url = CASE WHEN official IS NULL THEN $3 ELSE prev_cover_url END, updated_by = $4, updated_at = now() WHERE event_id = $1`,
+    [eventId, JSON.stringify(o), ev.cover_url ?? null, s.contactId]
+  );
+  await db.query(`UPDATE events SET cover_url = $2, updated_at = now() WHERE id = $1`, [eventId, cover]);
+  await audit(db, s, 'poster_official_on', 'event', eventId, { after: { genId: o.genId, cover } });
+  return posterState(eventId);
+}
+
+/** 封面取景位置（0–1）；设了官方海报的立刻按新位置重出封面 */
+export async function setCoverPos(s: Staff, eventId: string, v: unknown) {
+  const pos = v === null || v === '' ? null : Number(v);
+  if (pos !== null && !(Number.isFinite(pos) && pos >= 0 && pos <= 1)) throw new CrmError('bad_request', '封面位置不对');
+  const db = getPool();
+  await db.query(`UPDATE event_posters SET cover_pos = $2, updated_by = $3, updated_at = now() WHERE event_id = $1`, [eventId, pos, s.contactId]);
+  const off = await officialOf(eventId);
+  if (off) {
+    const cover = await makeCover(eventId, off.gen.image_url!, off.o.ai, pos, off.gen.id);
+    await db.query(`UPDATE events SET cover_url = $2, updated_at = now() WHERE id = $1`, [eventId, cover]);
+  }
+  return posterState(eventId);
+}
+
+/** 封面预览（不保存）：后台拖动位置时看效果 */
+export async function previewCover(eventId: string, pos: number | null): Promise<Buffer> {
+  const db = getPool();
+  const { rows } = await db.query<PosterRow>(`SELECT * FROM event_posters WHERE event_id = $1`, [eventId]);
+  const gid = rows[0]?.official?.genId || rows[0]?.gen_id;
+  if (!gid) throw new CrmError('bad_request', '先在候选图里点选一张主视觉');
+  const { rows: g } = await db.query<GenRow>(`SELECT * FROM poster_gens WHERE id = $1 AND event_id = $2 AND status = 'ok'`, [gid, eventId]);
+  if (!g[0]?.image_url) throw new CrmError('not_found', '找不到这张主视觉');
+  return composeCover(await fetchBuf(g[0].image_url), { pos, ai: g[0].ai_generated !== false, id: g[0].id });
+}
+
+/**
+ * 官方海报出图（“活动海报”三个下载、小程序邀请海报共用）。没设官方海报返回 null（调用方退回老样式）。
+ * inviter 给了就是邀请海报：右下角换成这位会员的专属码，片名和日期之间加“某某 邀请您”。
+ */
+export async function renderOfficial(eventId: string, size: PosterSize, invite?: { qr: Buffer; name: string; label?: string | null; avatar?: Buffer | null } | null): Promise<{ png: Buffer; slug: string; ai: boolean } | null> {
+  const off = await officialOf(eventId);
+  if (!off) return null;
+  const { ev, o, gen } = off;
+  const row = officialAsRow(o);
+  const [bg, qr, photo] = await Promise.all([
+    fetchBuf(gen.image_url!),
+    invite ? Promise.resolve(invite.qr) : registerQr(ev.slug),
+    o.speakerPhotoUrl && !invite ? fetchBuf(o.speakerPhotoUrl).catch(() => null) : Promise.resolve(null)
+  ]);
+  const png = await composePoster({
+    bg, size, style: styleOf(o.style || gen.style), text: posterText(ev, row), qr, speakerPhoto: photo, lift: o.lift ?? 0, aiLabel: o.ai,
+    inviter: invite ? { name: invite.name, label: invite.label, avatar: invite.avatar } : null
+  });
+  return { png: o.ai ? markPng(png, gen.id) : png, slug: ev.slug, ai: o.ai };
+}
+/** 官方海报的版本指纹（邀请海报缓存用：换图 / 改字 / 改活动信息都会变） */
+export async function officialVersion(eventId: string): Promise<string | null> {
+  const { rows } = await getPool().query<{ official: Official | null; updated_at: Date; ev_updated: Date }>(
+    `SELECT p.official, p.updated_at, e.updated_at AS ev_updated FROM event_posters p JOIN events e ON e.id = p.event_id WHERE p.event_id = $1`,
+    [eventId]
+  );
+  const r = rows[0];
+  if (!r?.official) return null;
+  return `${r.official.genId}:${r.official.setAt}:${new Date(r.ev_updated).getTime()}`;
 }

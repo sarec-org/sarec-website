@@ -8,6 +8,7 @@
 import React from 'react'; // 脚本（tsx）里用经典 JSX 运行时，需要显式引入
 import { ImageResponse } from 'next/og';
 import sharp from 'sharp';
+import { crc32 } from 'node:zlib';
 import { posterFonts } from './fonts';
 import type { PosterStyle, TitleFx } from './styles';
 
@@ -164,6 +165,10 @@ export async function composePoster(opts: {
   focus?: FocusBox | null;
   /** 竖版“画面上移”（0–0.25，占画面高度的比例）：车被片名压住时往上挪 */
   lift?: number | null;
+  /** AI 画的主视觉：右上角加“AI 生成”小字（《人工智能生成合成内容标识办法》显式标识） */
+  aiLabel?: boolean;
+  /** 小程序邀请海报：片名和日期之间加一行“某某 邀请您”（头像 + 姓名 + 身份） */
+  inviter?: { name: string; label?: string | null; avatar?: Buffer | null } | null;
 }): Promise<Buffer> {
   const { size, style: st, text: t } = opts;
   const [W, H] = POSTER_SIZES[size];
@@ -179,7 +184,10 @@ export async function composePoster(opts: {
   const { bigDate, dateNote, billing } = fillText(t);
   const onesheet = st.layout === 'onesheet' && size === 'tall';
   const extras = (t.extras ?? []).filter((x) => x && x.text && x.text.trim()).slice(0, 2);
-  const fonts = await posterFonts([t.tagline, t.filmTitle, t.filmSubtitle ?? '', t.subtitle, t.dateLine, t.timeLine, t.place, st.en, ...credits.flat(), t.titleEn ?? '', bigDate, dateNote, billing, ...extras.map((x) => x.text)].join(''), !!st.brush);
+  const inv = opts.inviter && opts.inviter.name ? opts.inviter : null;
+  const invAvatar = inv?.avatar ? `data:image/jpeg;base64,${(await sharp(inv.avatar, { failOn: 'none' }).rotate().resize(160, 160, { fit: 'cover' }).jpeg({ quality: 86 }).toBuffer()).toString('base64')}` : null;
+  const invText = inv ? `${inv.name} 邀请您` : '';
+  const fonts = await posterFonts([t.tagline, t.filmTitle, t.filmSubtitle ?? '', t.subtitle, t.dateLine, t.timeLine, t.place, st.en, ...credits.flat(), t.titleEn ?? '', bigDate, dateNote, billing, ...extras.map((x) => x.text), invText, inv?.label ?? '', 'AI 生成'].join(''), !!st.brush);
   const bright = !!st.bright;
   const vignette = bright
     ? 'linear-gradient(180deg, rgba(8,22,48,0.45) 0%, rgba(8,22,48,0) 12%, rgba(8,22,48,0) 70%, rgba(8,22,48,0.78) 85%, rgba(6,16,36,0.94) 100%)'
@@ -192,8 +200,9 @@ export async function composePoster(opts: {
     // 电影海报排法：最顶上一行很小的 A SAREC PRESENTATION + 悬念语；中下部超大片名（横向镜头光晕划过）+ 英文小字 + 副标题；
     // 醒目“上映日期”；最底一行窄而密的演职员表小字；二维码缩小放右下角，细金边。信息量只留画面、片名、日期。
     // 明亮款片名收一点、整块字压在画面 55% 以下（车在上面）；加了自由字再收一点
-    const ts = fitSize(t.filmTitle, 88 * u, (st.brush ? 24 : bright ? [16.5, 13.5, 12][extras.length] : 21) * u);
-    const tight = bright && extras.length > 0; // 有自由字时日期和间距也收一点
+    // 邀请海报多一行邀请人，片名再收一点
+    const ts = fitSize(t.filmTitle, 88 * u, (st.brush ? 24 : bright ? [16.5, 13.5, 12][Math.min(2, extras.length + (inv ? 1 : 0))] : inv ? 17 : 21) * u);
+    const tight = (bright && extras.length > 0) || !!inv; // 有自由字 / 邀请人时日期和间距也收一点
     const sub2 = t.filmSubtitle?.trim() || '';
     const ss = sub2 ? fitSize(sub2, 60 * u, (bright ? 6 : 7.5) * u, 0.3) : 0;
     const shadow = bright ? '0 2px 8px rgba(6,16,36,0.9), 0 0 2px rgba(6,16,36,0.9)' : '0 2px 10px rgba(0,0,0,0.8)';
@@ -224,6 +233,17 @@ export async function composePoster(opts: {
         {t.titleEn ? <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 500, fontSize: 1.9 * u, letterSpacing: 0.75 * 1.9 * u, color: gold, marginTop: 1.2 * u, textShadow: bright ? outlineShadow(2, 'rgba(10,24,50,0.85)') + ', ' + shadow : undefined }}>{t.titleEn}</div> : null}
         <div style={{ display: 'flex', fontFamily: 'Sans', fontWeight: 700, fontSize: fitSize(t.subtitle, 80 * u, 2.9 * u, 0.12), letterSpacing: 0.12 * 2.9 * u, color: ink, marginTop: 2 * u, textShadow: bright ? outlineShadow(2, 'rgba(10,24,50,0.85)') + ', ' + shadow : undefined }}>{t.subtitle}</div>
         {extra('belowSubtitle')}
+        {inv ? (
+          <div style={{ display: 'flex', alignItems: 'center', marginTop: 2 * u, padding: `${0.8 * u}px ${2.2 * u}px ${0.8 * u}px ${0.8 * u}px`, borderRadius: 6 * u, background: 'rgba(6,16,36,0.55)', border: `1px solid rgba(227,197,122,0.45)` }}>
+            {invAvatar ? <img src={invAvatar} width={6.4 * u} height={6.4 * u} style={{ borderRadius: 3.2 * u, border: `${0.25 * u}px solid ${gold}` }} /> : (
+              <div style={{ display: 'flex', width: 6.4 * u, height: 6.4 * u, borderRadius: 3.2 * u, background: '#15293D', border: `${0.25 * u}px solid ${gold}`, alignItems: 'center', justifyContent: 'center', fontFamily: 'Serif', fontWeight: 900, fontSize: 3 * u, color: gold }}>{inv.name.slice(0, 1)}</div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', marginLeft: 1.6 * u, alignItems: 'flex-start' }}>
+              <div style={{ display: 'flex', fontFamily: 'Sans', fontWeight: 700, fontSize: fitSize(invText, 56 * u, 3 * u, 0.06), color: ink }}>{invText}</div>
+              {inv.label ? <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(inv.label, 56 * u, 1.9 * u, 0.02), color: sub, marginTop: 0.3 * u }}>{inv.label}</div> : null}
+            </div>
+          </div>
+        ) : null}
         <div style={{ display: 'flex', alignItems: 'center', marginTop: (tight ? 2 : 3.2) * u }}>
           <div style={{ display: 'flex', fontFamily: 'Num', fontWeight: 700, fontSize: (tight ? 7.5 : 9) * u, lineHeight: 1, letterSpacing: 0.04 * 9 * u, backgroundImage: FX.gold.grad, backgroundClip: 'text', color: 'transparent' }}>{bigDate}</div>
           <div style={{ display: 'flex', width: 0.2 * u, height: 6 * u, background: gold, opacity: 0.7, margin: `0 ${2.2 * u}px` }} />
@@ -309,9 +329,73 @@ export async function composePoster(opts: {
         <img src={bg} width={W} height={H} style={{ position: 'absolute', left: 0, top: 0 }} />
         <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, display: 'flex', background: size === 'oa' ? 'transparent' : vignette }} />
         {body}
+        {opts.aiLabel ? <AiBadge W={W} H={H} /> : null}
       </div>
     ),
     { width: W, height: H, fonts }
   );
   return Buffer.from(await res.arrayBuffer());
+}
+
+/** 右上角“AI 生成”小字：半透明底，不抢画面 */
+function AiBadge({ W, H }: { W: number; H: number }) {
+  const k = Math.min(W, H * 1.6) / 100;
+  return (
+    <div style={{ position: 'absolute', right: 1.6 * k, top: 1.6 * k, display: 'flex', alignItems: 'center', padding: `${0.35 * k}px ${0.9 * k}px`, borderRadius: 0.6 * k, background: 'rgba(0,0,0,0.38)', color: 'rgba(255,255,255,0.88)', fontFamily: 'Sans', fontSize: Math.max(12, 1.45 * k), letterSpacing: 1 }}>AI 生成</div>
+  );
+}
+
+/**
+ * 隐式标识（《人工智能生成合成内容标识办法》/ GB 45438-2025 元数据）：
+ * PNG 写一个 tEXt 块 AIGC={JSON}；JPEG 写 EXIF ImageDescription / UserComment。能做到的程度。
+ */
+export function aigcMeta(id: string): string {
+  return JSON.stringify({ Label: '1', ContentProducer: 'SAREC 中美房地产商会', ProduceID: id, ReservedCode1: '', ContentPropagator: 'SAREC 中美房地产商会', PropagateID: id, ReservedCode2: '' });
+}
+export function markPng(png: Buffer, id: string): Buffer {
+  const sig = 8;
+  if (png.length < sig + 12 || png.readUInt32BE(0) !== 0x89504e47) return png;
+  const body = Buffer.concat([Buffer.from('AIGC\0', 'latin1'), Buffer.from(aigcMeta(id), 'utf8')]);
+  const type = Buffer.from('tEXt', 'latin1');
+  const len = Buffer.alloc(4);
+  len.writeUInt32BE(body.length);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(Buffer.concat([type, body])) >>> 0);
+  // 插在 IHDR 后面（第一个块：8 字节签名 + 4 长度 + 4 类型 + 13 数据 + 4 CRC）
+  const ihdrEnd = sig + 4 + 4 + png.readUInt32BE(sig) + 4;
+  return Buffer.concat([png.subarray(0, ihdrEnd), len, type, body, crc, png.subarray(ihdrEnd)]);
+}
+export async function toJpegMarked(img: Buffer, id: string | null, quality = 88): Promise<Buffer> {
+  const s = sharp(img).flatten({ background: '#000' }).jpeg({ quality, mozjpeg: true });
+  if (!id) return s.toBuffer();
+  const meta = aigcMeta(id);
+  return s.withMetadata({ exif: { IFD0: { ImageDescription: `AIGC ${meta}`, Software: 'SAREC AI poster' } } }).toBuffer();
+}
+
+/** 活动封面（横版 1600×860）：从主视觉里取一条横带，位置 pos（0 = 最上，1 = 最下；不给按主体在上中部取），AI 图右上角加“AI 生成” */
+export const COVER_SIZE = [1600, 860] as const;
+export function defaultCoverPos(): number {
+  const [W, H] = COVER_SIZE;
+  const full = W * 1.5; // 主视觉是 2:3
+  return Math.max(0, Math.min(1, (0.42 * full - H / 2) / (full - H)));
+}
+export async function composeCover(bg: Buffer, o: { pos?: number | null; ai: boolean; id: string }): Promise<Buffer> {
+  const [W, H] = COVER_SIZE;
+  const m = await sharp(bg, { failOn: 'none' }).metadata();
+  const rh = Math.round(((m.height ?? 1536) / (m.width ?? 1024)) * W);
+  const pos = typeof o.pos === 'number' && Number.isFinite(o.pos) ? Math.max(0, Math.min(1, o.pos)) : defaultCoverPos();
+  const top = Math.round(Math.max(0, rh - H) * pos);
+  const band = await sharp(bg, { failOn: 'none' }).resize(W, rh).extract({ left: 0, top: Math.min(top, Math.max(0, rh - H)), width: W, height: Math.min(H, rh) }).resize(W, H, { fit: 'cover' }).jpeg({ quality: 90 }).toBuffer();
+  if (!o.ai) return toJpegMarked(band, null);
+  const fonts = await posterFonts('AI 生成', false);
+  const res = new ImageResponse(
+    (
+      <div style={{ width: W, height: H, display: 'flex', position: 'relative' }}>
+        <img src={`data:image/jpeg;base64,${band.toString('base64')}`} width={W} height={H} style={{ position: 'absolute', left: 0, top: 0 }} />
+        <AiBadge W={W} H={H} />
+      </div>
+    ),
+    { width: W, height: H, fonts }
+  );
+  return toJpegMarked(Buffer.from(await res.arrayBuffer()), o.id);
 }

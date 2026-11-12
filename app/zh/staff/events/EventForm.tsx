@@ -2,6 +2,13 @@
 import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
+
+/** 1.3.3：一句话介绍会显示在小程序里，这些词可能影响小程序审核（只提醒，不拦截） */
+const MP_SENSITIVE = ['德州扑克', '扑克', '麻将', '赌', '博彩', '彩票', '筹码', '现金', '奖金', '赢钱'];
+export function summaryWarn(text: string): string {
+  const hits = MP_SENSITIVE.filter((w) => text.includes(w)).filter((w, _i, arr) => !(w === '扑克' && arr.includes('德州扑克')));
+  return hits.join('、');
+}
 import { laWallToIso } from '@/lib/laDate';
 
 export const TOPICS: Record<string, string> = {
@@ -179,6 +186,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       <div className={styles.field}>
         <label className={styles.label} htmlFor="ev-summary">一句话介绍（首页轮播、海报、报名页都用它）</label>
         <textarea id="ev-summary" className={styles.textarea} value={f.summary} onChange={(e) => set('summary', e.target.value)} />
+        {summaryWarn(f.summary) && <p className={styles.notice}>这段文字会显示在小程序里，「{summaryWarn(f.summary)}」这些词可能影响审核，建议只写在海报上（只是提醒，照样能保存）。</p>}
       </div>
       {input('startsAt', `开始时间（${TZ_NAME[tzOf(f.region)] ?? '当地时间'}）*`, 'datetime-local')}
       {input('endsAt', `结束时间（${TZ_NAME[tzOf(f.region)] ?? '当地时间'}）`, 'datetime-local')}

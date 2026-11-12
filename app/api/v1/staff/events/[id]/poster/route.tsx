@@ -15,10 +15,12 @@ import { eventRegisterCode, wxConfigured } from '@/lib/crm/wechat';
 import { clock, defaultCover, fullDate } from '@/lib/crm/home131';
 import { tzLabel } from '@/lib/crm/regions';
 import { dataUri, ogFonts } from '@/lib/og/fonts';
+import { renderOfficial } from '@/lib/poster/service';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const SIZES = { moments: [1080, 1920], square: [1080, 1080], oa: [900, 500] } as const;
+const OFFICIAL_SIZE = { moments: 'tall', square: 'square', oa: 'oa' } as const;
 const NAVY = '#0F1F33';
 const GOLD = '#C9A567';
 const IVORY = '#F2EAD6';
@@ -32,6 +34,13 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
   const sp = new URL(req.url).searchParams;
   const size = (sp.get('size') ?? 'moments') as keyof typeof SIZES;
   if (!SIZES[size]) throw new CrmError('bad_request', '海报尺寸不对');
+  // 1.3.3：设了官方海报的活动，三个下载改用官方海报的主视觉和排字（方版、横版按主体重新构图，不硬裁）
+  const off = await renderOfficial(params.id, OFFICIAL_SIZE[size]);
+  if (off) {
+    return new Response(new Uint8Array(off.png), {
+      headers: { 'Content-Type': 'image/png', 'Cache-Control': 'no-store', ...(sp.get('inline') ? {} : { 'Content-Disposition': `attachment; filename="poster-${size}-${off.slug}.png"` }) }
+    });
+  }
   const { rows } = await getPool().query<{ id: string; slug: string; title: string; summary: string | null; starts_at: Date; checkin_starts_at: Date | null; timezone: string; location_name: string | null; address: string | null; cover_url: string | null; region: string | null; template_key: string | null }>(
     `SELECT e.id, e.slug, e.title, e.summary, e.starts_at, e.checkin_starts_at, e.timezone, e.location_name, e.address, e.cover_url, e.region,
             (SELECT p.template_key FROM event_prep p WHERE p.event_id = e.id LIMIT 1) AS template_key
