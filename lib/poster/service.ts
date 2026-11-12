@@ -20,7 +20,7 @@ import type { Staff } from '@/lib/crm/auth';
 import { audit } from '@/lib/crm/staff';
 import { gatewayBalance, imageProvider, normalize, providerChoices, redactSecrets, SWITCHABLE } from './providers';
 import { suggestCopy } from './copy';
-import { composeCover, composePoster, defaultCoverPos, fillText, markPng, type PosterExtra, type PosterSize } from './compose';
+import { composeCover, composePoster, defaultCoverPos, fillText, focusFromCoverPos, markPng, type PosterExtra, type PosterSize } from './compose';
 import { DEFAULT_STYLE, EVENT_TYPES, STYLES, buildPrompt, styleOf, typeOf } from './styles';
 
 export const DEFAULT_CAP = 12;
@@ -307,7 +307,7 @@ export async function renderPoster(eventId: string, size: PosterSize, genId?: st
   if (!g[0]?.image_url) throw new CrmError('not_found', '找不到这张主视觉');
   const [bg, qr, photo] = await Promise.all([fetchBuf(g[0].image_url), registerQr(ev.slug), p?.speaker_photo_url ? fetchBuf(p.speaker_photo_url).catch(() => null) : Promise.resolve(null)]);
   const ai = g[0].ai_generated !== false;
-  const png = await composePoster({ bg, size, style: styleOf(p?.style || g[0].style), text: posterText(ev, p), qr, speakerPhoto: photo, lift: p?.texts?.lift ?? 0, aiLabel: ai });
+  const png = await composePoster({ bg, size, style: styleOf(p?.style || g[0].style), text: posterText(ev, p), qr, speakerPhoto: photo, lift: p?.texts?.lift ?? 0, aiLabel: ai, focus: focusFromCoverPos(p?.cover_pos) });
   return { png: ai ? markPng(png, g[0].id) : png, slug: ev.slug };
 }
 
@@ -426,7 +426,7 @@ export async function renderOfficial(eventId: string, size: PosterSize, invite?:
     o.speakerPhotoUrl && !invite ? fetchBuf(o.speakerPhotoUrl).catch(() => null) : Promise.resolve(null)
   ]);
   const png = await composePoster({
-    bg, size, style: styleOf(o.style || gen.style), text: posterText(ev, row), qr, speakerPhoto: photo, lift: o.lift ?? 0, aiLabel: o.ai,
+    bg, size, style: styleOf(o.style || gen.style), text: posterText(ev, row), qr, speakerPhoto: photo, lift: o.lift ?? 0, aiLabel: o.ai, focus: focusFromCoverPos(off.p.cover_pos),
     inviter: invite ? { name: invite.name, label: invite.label, avatar: invite.avatar } : null
   });
   return { png: o.ai ? markPng(png, gen.id) : png, slug: ev.slug, ai: o.ai };

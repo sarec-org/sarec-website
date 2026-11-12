@@ -267,7 +267,7 @@ export async function composePoster(opts: {
     body = (
       <div style={{ position: 'absolute', left: 0, top: 0, width: W, height: H, display: 'flex', alignItems: 'center', padding: `0 ${4 * u}px`, background: light ? 'linear-gradient(90deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 38%, rgba(255,255,255,0) 58%)' : 'linear-gradient(90deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.8) 38%, rgba(0,0,0,0) 58%)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', width: colW }}>
-          {t.tagline ? <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(t.tagline, colW, 2.2 * u, 0.3), letterSpacing: 0.3 * 2.2 * u, color: sub }}>{t.tagline}</div> : null}
+          {t.tagline ? <div style={{ display: 'flex', fontFamily: 'Sans', fontSize: fitSize(t.tagline, colW * 0.92, 2.2 * u, 0.15), letterSpacing: 0.15 * 2.2 * u, color: sub, whiteSpace: 'nowrap' }}>{t.tagline}</div> : null}
           <div style={{ display: 'flex', marginTop: 1 * u }}><Title text={t.filmTitle} size={ts} st={st} fx={st.fx} /></div>
           <div style={{ display: 'flex', fontFamily: 'Sans', fontWeight: 700, fontSize: fitSize(t.subtitle, colW, 2.6 * u, 0.15), letterSpacing: 1, color: ink, marginTop: 1 * u }}>{t.subtitle}</div>
           <div style={{ display: 'flex', alignItems: 'center', marginTop: 1.8 * u }}>
@@ -350,7 +350,7 @@ function AiBadge({ W, H }: { W: number; H: number }) {
  * PNG 写一个 tEXt 块 AIGC={JSON}；JPEG 写 EXIF ImageDescription / UserComment。能做到的程度。
  */
 export function aigcMeta(id: string): string {
-  return JSON.stringify({ Label: '1', ContentProducer: 'SAREC 中美房地产商会', ProduceID: id, ReservedCode1: '', ContentPropagator: 'SAREC 中美房地产商会', PropagateID: id, ReservedCode2: '' });
+  return JSON.stringify({ Label: '1', ContentProducer: 'SAREC Sino-American Real Estate Chamber', ProduceID: id, ReservedCode1: '', ContentPropagator: 'SAREC Sino-American Real Estate Chamber', PropagateID: id, ReservedCode2: '' });
 }
 export function markPng(png: Buffer, id: string): Buffer {
   const sig = 8;
@@ -374,6 +374,14 @@ export async function toJpegMarked(img: Buffer, id: string | null, quality = 88)
 
 /** 活动封面（横版 1600×860）：从主视觉里取一条横带，位置 pos（0 = 最上，1 = 最下；不给按主体在上中部取），AI 图右上角加“AI 生成” */
 export const COVER_SIZE = [1600, 860] as const;
+/** 封面取景那条横带（后台可拖动调整，用来框住车和人）也当方版 / 横版的主体范围 */
+export function focusFromCoverPos(pos: number | null | undefined): FocusBox {
+  const [W, H] = COVER_SIZE;
+  const frac = H / (W * 1.5);
+  const p = typeof pos === 'number' && Number.isFinite(pos) ? Math.max(0, Math.min(1, pos)) : defaultCoverPos();
+  const y0 = p * (1 - frac);
+  return { x0: 0.04, y0, x1: 0.96, y1: y0 + frac };
+}
 export function defaultCoverPos(): number {
   const [W, H] = COVER_SIZE;
   const full = W * 1.5; // 主视觉是 2:3
@@ -385,7 +393,9 @@ export async function composeCover(bg: Buffer, o: { pos?: number | null; ai: boo
   const rh = Math.round(((m.height ?? 1536) / (m.width ?? 1024)) * W);
   const pos = typeof o.pos === 'number' && Number.isFinite(o.pos) ? Math.max(0, Math.min(1, o.pos)) : defaultCoverPos();
   const top = Math.round(Math.max(0, rh - H) * pos);
-  const band = await sharp(bg, { failOn: 'none' }).resize(W, rh).extract({ left: 0, top: Math.min(top, Math.max(0, rh - H)), width: W, height: Math.min(H, rh) }).resize(W, H, { fit: 'cover' }).jpeg({ quality: 90 }).toBuffer();
+  const scaled = await sharp(bg, { failOn: 'none' }).resize(W, rh).toBuffer();
+  const cut = await sharp(scaled).extract({ left: 0, top: Math.min(top, Math.max(0, rh - H)), width: W, height: Math.min(H, rh) }).toBuffer();
+  const band = await sharp(cut).resize(W, H, { fit: 'cover' }).jpeg({ quality: 90 }).toBuffer();
   if (!o.ai) return toJpegMarked(band, null);
   const fonts = await posterFonts('AI 生成', false);
   const res = new ImageResponse(
