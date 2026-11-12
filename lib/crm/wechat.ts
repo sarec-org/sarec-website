@@ -2,7 +2,11 @@
  * 微信服务端接口：access_token（stable_token，进程内缓存）+ 小程序码。
  * 密钥只从环境变量 WX_APPID / WX_SECRET 读，不打日志、不返回给前端。
  */
+import { createHash } from 'node:crypto';
 import { CrmError } from './events';
+
+/** 日志里只记凭证的指纹（sha256 前 8 位），用来看重试拿到的是不是同一个凭证；不记凭证本身 */
+const fp = (t: string) => createHash('sha256').update(t).digest('hex').slice(0, 8);
 
 let cachedToken: { token: string; exp: number } | null = null;
 
@@ -12,6 +16,7 @@ export function wxConfigured(): boolean {
 
 export async function wxAccessToken(forceRefresh = false): Promise<string> {
   if (!forceRefresh && cachedToken && cachedToken.exp > Date.now() + 60_000) return cachedToken.token;
+  const old = cachedToken;
   if (forceRefresh) cachedToken = null;
   const res = await fetch('https://api.weixin.qq.com/cgi-bin/stable_token', {
     method: 'POST',
@@ -19,7 +24,11 @@ export async function wxAccessToken(forceRefresh = false): Promise<string> {
     body: JSON.stringify({ grant_type: 'client_credential', appid: process.env.WX_APPID, secret: process.env.WX_SECRET, force_refresh: forceRefresh })
   });
   const d = (await res.json()) as { access_token?: string; expires_in?: number; errcode?: number };
-  if (!d.access_token) throw new Error(`wechat token error ${d.errcode ?? ''}`);
+  if (!d.access_token) {
+    console.log(`[wx] stable_token force=${forceRefresh} errcode=${d.errcode ?? 'none'}`);
+    throw new Error(`wechat token error ${d.errcode ?? ''}`);
+  }
+  console.log(`[wx] stable_token force=${forceRefresh} fp=${fp(d.access_token)} expires_in=${d.expires_in ?? 'none'} prev=${old ? fp(old.token) : 'none'}`);
   cachedToken = { token: d.access_token, exp: Date.now() + (d.expires_in ?? 7200) * 1000 };
   return d.access_token;
 }
