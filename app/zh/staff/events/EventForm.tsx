@@ -3,12 +3,7 @@ import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
 
-/** 1.3.3：一句话介绍会显示在小程序里，这些词可能影响小程序审核（只提醒，不拦截） */
-const MP_SENSITIVE = ['德州扑克', '扑克', '麻将', '赌', '博彩', '彩票', '筹码', '现金', '奖金', '赢钱'];
-export function summaryWarn(text: string): string {
-  const hits = MP_SENSITIVE.filter((w) => text.includes(w)).filter((w, _i, arr) => !(w === '扑克' && arr.includes('德州扑克')));
-  return hits.join('、');
-}
+import { summaryWarn } from '@/lib/crm/mpSensitive';
 import { laWallToIso } from '@/lib/laDate';
 
 export const TOPICS: Record<string, string> = {
