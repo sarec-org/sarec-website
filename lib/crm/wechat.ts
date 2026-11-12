@@ -18,8 +18,10 @@ export async function wxAccessToken(forceRefresh = false): Promise<string> {
   if (!forceRefresh && cachedToken && cachedToken.exp > Date.now() + 60_000) return cachedToken.token;
   const old = cachedToken;
   if (forceRefresh) cachedToken = null;
+  // 11/12 线上 42001：凭证请求一律不走 Next 数据缓存（排除一直拿到同一个已过期旧凭证、强刷也没用的可能）
   const res = await fetch('https://api.weixin.qq.com/cgi-bin/stable_token', {
     method: 'POST',
+    cache: 'no-store',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ grant_type: 'client_credential', appid: process.env.WX_APPID, secret: process.env.WX_SECRET, force_refresh: forceRefresh })
   });
@@ -61,7 +63,7 @@ async function miniProgramCode(r: CodeReq): Promise<Buffer> {
     const [url, payload] = r.scene
       ? [`https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`, { ...common, scene: r.scene, page: r.page, check_path: env === 'release' && r.checkPath !== false }]
       : [`https://api.weixin.qq.com/wxa/getwxacode?access_token=${token}`, { ...common, path: r.path }];
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch(url, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     const b = Buffer.from(await res.arrayBuffer());
     return { buf: b, json: (res.headers.get('content-type') || '').includes('json') || b[0] === 0x7b };
   }, jsonCode);
