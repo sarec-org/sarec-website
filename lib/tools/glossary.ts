@@ -133,3 +133,28 @@ export const GLOSSARY: Term[] = [
   T('Rent Control', '租金管制', 'ops', '地方法规限制租金涨幅和驱逐理由。', 'Local rules limiting rent increases and evictions.'),
   T('Triple Net Lease (NNN)', '三净租约', 'ops', '商业租约中租客承担房产税、保险和维修。', 'A commercial lease where the tenant pays taxes, insurance and maintenance.')
 ];
+
+/**
+ * 1.3.3 小程序版术语速查：小程序里不出现金额、利率等具体数字。解释里带数字的这几条换成不带数字的说法（网站版不变）。
+ * 以后加词：如果解释里有数字，在这里补一条小程序说法，否则接口会自动略过这一条（不让带数字的上小程序）。
+ */
+const MP_SAFE: Record<string, { dz?: string; de?: string }> = {
+  'Earnest Money Deposit (EMD)': { dz: '签约后买方存入托管账户的保证金，金额按合同约定，过户时抵作房款。' },
+  'Adjustable-Rate Mortgage (ARM)': { dz: '初始固定若干年后，按市场指数定期调整利率的贷款。' },
+  'PMI (Private Mortgage Insurance)': { dz: '首付比例较低时，贷款方通常要求借款人购买、用来保护贷款方的保险。', de: 'Insurance usually required when the down payment is small.' },
+  Points: { dz: '为降低利率在过户时预付的费用，按贷款额的一定比例计算。', de: 'Prepaid interest, priced as a share of the loan amount.' },
+  'DSCR (Debt Service Coverage Ratio)': { dz: 'NOI ÷ 年还款；数值越高，说明租金越能覆盖还款，贷款机构有最低要求。' },
+  'Property Tax': { dz: '按评估价值每年缴纳的地方税，各地税率不同。' },
+  'Prop 13': { dz: '限制加州房产税基每年的上调幅度，房产过户时重新评估。', de: 'California rule limiting yearly increases in assessed value.' },
+  Depreciation: { dz: '出租房产的建筑部分可按规定年限逐年抵税，住宅和商业的年限不同。' },
+  'Depreciation Recapture': { dz: '出售房产时，对之前已提的折旧部分按规定征税。' },
+  'Property Management': { dz: '代房东收租、维修、招租的服务，通常按租金的一定比例收费。' }
+};
+const HAS_NUM = /[0-9０-９%％$＄]|美元|万元|\d元/;
+export const termId = (en: string) => en.toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+export function glossaryForMp() {
+  const terms = GLOSSARY.map((t) => ({ ...t, ...(MP_SAFE[t.en] ?? {}) }))
+    .filter((t) => !HAS_NUM.test(t.dz) && !HAS_NUM.test(t.de))
+    .map((t) => ({ id: termId(t.en), en: t.en, zh: t.zh, cat: t.cat, catZh: GLOSSARY_CATS[t.cat].zh, dz: t.dz, de: t.de, letter: /^[A-Za-z]/.test(t.en) ? t.en[0].toUpperCase() : '#' }));
+  return { terms, cats: (Object.keys(GLOSSARY_CATS) as GlossaryCat[]).map((k) => ({ key: k, zh: GLOSSARY_CATS[k].zh, n: terms.filter((t) => t.cat === k).length })) };
+}
