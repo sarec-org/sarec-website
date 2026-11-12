@@ -82,7 +82,7 @@ export default function StaffCheckin() {
             <label className={styles.label} htmlFor="ev">当前活动</label>
             <select id="ev" className={styles.select} value={eventId} onChange={(e) => { setEventId(e.target.value); setPeople(null); setResult(null); }}>
               {events.map((e) => (
-                <option key={e.id} value={e.id}>{fmtDateTime(e.starts_at)} {e.title}{e.fee_cents ? '（收费）' : ''}</option>
+                <option key={e.id} value={e.id}>{fmtDateTime(e.starts_at)} {e.title}{e.fee_cents && !e.title.includes('收费') ? '（收费）' : ''}</option>
               ))}
             </select>
           </div>

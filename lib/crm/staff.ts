@@ -144,6 +144,8 @@ function eventFields(b: EventInput, partial: boolean) {
   if (b.eventStatus !== undefined) {
     if (!['scheduled', 'completed', 'postponed', 'cancelled'].includes(String(b.eventStatus))) throw new CrmError('bad_request', '活动状态不对');
     out.event_status = b.eventStatus;
+    // 标记已结束 / 取消时同时关闭报名（除非这次请求里明确给了报名开关）
+    if ((b.eventStatus === 'completed' || b.eventStatus === 'cancelled') && b.registrationOpen === undefined) out.registration_open = false;
   }
   return out;
 }

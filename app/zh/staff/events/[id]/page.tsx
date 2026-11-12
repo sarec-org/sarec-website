@@ -205,12 +205,17 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                     {data.event.is_listed ? '设为不公开' : '设为公开'}
                   </button>
                   {data.event.event_status === 'scheduled' && (
-                    <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => patch({ eventStatus: 'completed' }, '已标记为已结束')}>
+                    <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { if (window.confirm(`确定把「${data.event.title}」标记为已结束？报名会同时关闭。点错了可以“撤回结束”。`)) patch({ eventStatus: 'completed' }, '已标记为已结束，报名已关闭（点错了可以“撤回结束”）'); }}>
                       标记已结束
                     </button>
                   )}
+                  {data.event.event_status === 'completed' && (
+                    <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => patch({ eventStatus: 'scheduled' }, '已撤回结束。报名还是关闭的，需要的话点“重新开放报名”')}>
+                      撤回结束
+                    </button>
+                  )}
                   {data.event.event_status === 'scheduled' && (
-                    <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => patch({ eventStatus: 'cancelled' }, '活动已取消')}>
+                    <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => { if (window.confirm(`确定取消「${data.event.title}」？已报名的人会看到活动取消。`)) patch({ eventStatus: 'cancelled' }, '活动已取消'); }}>
                       取消活动
                     </button>
                   )}
