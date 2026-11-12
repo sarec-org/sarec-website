@@ -1,14 +1,22 @@
+// 商会资料 PDF 原件：小程序下载只能走本站域名 → /files/* 直接转到图片存储（不经函数，不受 4.5MB 限制）
+const BLOB_HOST = (() => {
+  const m = /^vercel_blob_rw_([A-Za-z0-9]+)_/.exec(process.env.BLOB_READ_WRITE_TOKEN || '');
+  return m ? `${m[1].toLowerCase()}.public.blob.vercel-storage.com` : null;
+})();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
     // 名片模板库：服务器上用无头 Chrome 出图（不打包，原样随函数部署，含 chromium 压缩包）
-    serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+    serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mupdf'],
     // AI 助手知识库在接口里同步读取 content/（文章、活动、新闻 YAML）；确保这些文件随函数一起部署
     outputFileTracingIncludes: {
       '/api/v1/agent/**': ['./content/**/*', './app/zh/(internal)/research/*/page.tsx'],
       // 1.4 会员下载模板（不放 public/，只经接口给会员）
       '/api/v1/tools/download/**': ['./private/tools/*'],
-      '/api/v1/cards/**': ['./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**']
+      '/api/v1/cards/**': ['./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**'],
+      // 商会资料：PDF 逐页转图用 MuPDF（WebAssembly）
+      '/api/v1/staff/docs/**': ['./node_modules/.pnpm/mupdf@*/node_modules/mupdf/dist/**']
     }
   },
   images: {
@@ -18,6 +26,9 @@ const nextConfig = {
       // 1.2：活动相册、封面、头像、商会微信二维码（Vercel Blob）
       { protocol: 'https', hostname: '*.public.blob.vercel-storage.com', pathname: '/**' }
     ]
+  },
+  async rewrites() {
+    return BLOB_HOST ? [{ source: '/files/:path*', destination: `https://${BLOB_HOST}/:path*` }] : [];
   },
   async redirects() {
     return [

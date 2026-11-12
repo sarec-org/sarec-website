@@ -11,7 +11,7 @@ import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
 import { DEFAULT_STYLE } from '@/lib/poster/styles';
 
-type Gen = { id: string; batch_id: string; kind: string; style: string | null; event_type: string | null; provider: string; model: string | null; prompt: string; image_url: string | null; cost_usd: number; status: string; error: string | null; created_at: string };
+type Gen = { id: string; batch_id: string; kind: string; style: string | null; event_type: string | null; provider: string; model: string | null; prompt: string; image_url: string | null; cost_usd: number; status: string; error: string | null; created_at: string; ai?: boolean };
 type State = {
   event: { id: string; title: string; slug: string };
   poster: { gen_id: string | null; style: string | null; film_title: string | null; tagline: string | null; host: string | null; speaker: string | null; co_host: string | null; speaker_photo_url: string | null; image_cap: number | null; texts?: Texts | null } | null;
@@ -23,6 +23,8 @@ type State = {
   provider: { key: string; label: string; model: string; costPerImage: number; note: string | null; chosen: string | null };
   providers: { key: string; label: string; model: string; costPerImage: number; configured: boolean; problem?: string | null }[];
   textDefaults: Record<string, string>;
+  official: { genId: string; setAt: string; setBy: string; ai: boolean } | null;
+  cover: { url: string | null; pos: number | null; autoPos: number };
   balanceUsd: number | null;
   types: { key: string; label: string }[];
   styles: { key: string; group: string; label: string }[];
@@ -53,6 +55,8 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
   const [tx, setTx] = useState<Texts>({});
   const [ex, setEx] = useState<Extra[]>([EMPTY_EX, EMPTY_EX]);
   const [lift, setLift] = useState(0);
+  const [aiUp, setAiUp] = useState(true);
+  const [coverPos, setCoverPos] = useState<number | null>(null);
 
   const apply = useCallback((s: State) => {
     setSt(s);
@@ -71,6 +75,7 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
     setTx({ ...t, tagline: t.tagline ?? p?.tagline ?? '', filmTitle: t.filmTitle ?? p?.film_title ?? '' });
     setEx([0, 1].map((i) => ({ ...EMPTY_EX, ...(t.extras?.[i] ?? {}) })));
     setLift(Math.round((t.lift ?? 0) * 100));
+    setCoverPos(s.cover?.pos ?? null);
     setVer((v) => v + 1);
   }, []);
   const load = useCallback(async () => {
@@ -108,6 +113,31 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
     const j = (await res?.json().catch(() => null)) as { ok: boolean; state?: State; error?: { message: string } } | null;
     setBusy(null);
     if (j?.ok && j.state) { apply(j.state); setMsg({ ok: true, text: file ? '主讲人照片已上传' : '已去掉主讲人照片' }); }
+    else setMsg({ ok: false, text: j?.error?.message ?? '上传没成功，请再试一次' });
+  }
+
+  /** 上传自己的图当主视觉：手机上先缩到 2048 以内再传（不花钱、不占上限） */
+  async function uploadMain(file: File | null) {
+    if (!file) return;
+    setBusy('main');
+    setMsg(null);
+    let blob: Blob = file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 2048 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * k);
+      c.height = Math.round(bmp.height * k);
+      c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+      blob = await new Promise<Blob>((res) => c.toBlob((b) => res(b ?? file), 'image/jpeg', 0.9));
+    } catch { /* 浏览器不支持就原图上传 */ }
+    const fd = new FormData();
+    fd.append('file', blob, 'main.jpg');
+    fd.append('ai', aiUp ? '1' : '0');
+    const res = await fetch(`/api/v1/staff/events/${eventId}/ai-poster/upload`, { method: 'POST', body: fd, credentials: 'same-origin' }).catch(() => null);
+    const j = (await res?.json().catch(() => null)) as { ok: boolean; state?: State; error?: { message: string } } | null;
+    setBusy(null);
+    if (j?.ok && j.state) { apply(j.state); setMsg({ ok: true, text: '已上传并选中这张图（没有花钱）' }); }
     else setMsg({ ok: false, text: j?.error?.message ?? '上传没成功，请再试一次' });
   }
 
@@ -169,6 +199,15 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
         </button>
       </div>
       <p className={styles.small}>{costNote}。本场还能出 {left} 张（上限 {st.cap} 张，防止点多了）。</p>
+      <div className={styles.btnRow}>
+        <label className={`${styles.btn} ${styles.btnGhost}`} style={{ cursor: 'pointer' }}>
+          {busy === 'main' ? '上传中…' : '上传自己的图（不花钱）'}
+          <input type="file" accept="image/*" hidden onChange={(e) => { uploadMain(e.target.files?.[0] ?? null); e.target.value = ''; }} />
+        </label>
+        <label className={styles.small} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <input type="checkbox" checked={aiUp} onChange={(e) => setAiUp(e.target.checked)} /> 这是 AI 生成的图（海报上会标“AI 生成”）
+        </label>
+      </div>
       {lastImg?.status === 'failed' && <p className={styles.error}>最近一张没画出来：{lastImg.error}</p>}
 
       {batches.map((b) => (
@@ -179,7 +218,7 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
               style={{ padding: 0, border: chosen === g.id ? '3px solid var(--gold)' : '3px solid transparent', borderRadius: 8, background: 'none', cursor: 'pointer' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={g.image_url!} alt="候选主视觉" style={{ display: 'block', width: '100%', aspectRatio: '2 / 3', borderRadius: 6, objectFit: 'cover' }} loading="lazy" />
-              <span className={styles.small}>{st.styles.find((s) => s.key === g.style)?.label ?? ''}{chosen === g.id ? ' · 已选' : ''}</span>
+              <span className={styles.small}>{g.provider === 'upload' ? '上传' : st.styles.find((s) => s.key === g.style)?.label ?? ''}{g.ai === false ? ' · 非AI' : ''}{st.official?.genId === g.id ? ' · 官方' : chosen === g.id ? ' · 已选' : ''}</span>
             </button>
           ))}
         </div>
@@ -256,6 +295,30 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
             {([['tall', '下载竖版'], ['square', '下载方版'], ['oa', '下载公众号头图']] as const).map(([k, label]) => (
               <a key={k} className={`${styles.btn} ${k === 'tall' ? '' : styles.btnQuiet}`} href={`/api/v1/staff/events/${eventId}/ai-poster/render?size=${k}&v=${v}`} download>{label}</a>
             ))}
+          </div>
+
+          <p className={styles.label} style={{ marginTop: 16 }}>⑤ 本场官方海报</p>
+          <p className={styles.small}>
+            {st.official ? `已设（${new Date(st.official.setAt).toLocaleString('zh-CN')} · ${st.official.setBy}）。` : '还没设。'}
+            设了之后：活动封面自动用这张图的横版；上面「活动海报（自动生成）」三个下载和小程序里会员的邀请海报，都用这套图和字。
+            改了字或换了图，要再点一次「更新官方海报」才会同步过去。
+          </p>
+          <div className={styles.btnRow}>
+            <button className={styles.btn} disabled={!!busy} onClick={() => post('official', { on: true }, 'official', '已设为本场官方海报，封面也换好了')}>
+              {busy === 'official' ? '处理中…' : st.official ? '更新官方海报（用现在这张图和字）' : '设为本场官方海报'}
+            </button>
+            {st.official && <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={!!busy} onClick={() => post('official', { on: false }, 'official', '已取消官方海报，封面恢复原样')}>取消官方海报</button>}
+          </div>
+          <p className={styles.label} style={{ marginTop: 12 }}>活动封面（横版，从主视觉里取一条；车和人别切掉）</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/api/v1/staff/events/${eventId}/ai-poster/cover?pos=${coverPos ?? st.cover.autoPos}&v=${v}`} alt="封面预览" style={{ display: 'block', width: '100%', maxWidth: 520, aspectRatio: '1600 / 860', objectFit: 'cover', borderRadius: 8, background: '#102234' }} />
+          <label className={styles.field} style={{ marginTop: 8 }}>
+            <span className={styles.label}>上下位置（往左 = 取上面，往右 = 取下面）</span>
+            <input type="range" min={0} max={100} step={1} value={Math.round((coverPos ?? st.cover.autoPos) * 100)} onChange={(e) => setCoverPos(Number(e.target.value) / 100)} style={{ width: '100%' }} />
+          </label>
+          <div className={styles.btnRow}>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={!!busy} onClick={() => post('cover_pos', { value: coverPos }, 'cover', st.official ? '封面位置已保存，封面已更新' : '封面位置已保存（设为官方海报时生效）')}>保存封面位置</button>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={!!busy} onClick={() => { setCoverPos(null); post('cover_pos', { value: null }, 'cover', '已恢复自动位置'); }}>恢复自动</button>
           </div>
         </>
       )}

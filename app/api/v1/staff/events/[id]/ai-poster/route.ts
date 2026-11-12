@@ -6,11 +6,13 @@
  *        { action: 'save', genId?, style?, filmTitle, tagline, host, speaker, coHost, imageCap? }
  *        { action: 'default_cap', value }                  全站默认每场上限（admin）
  *        { action: 'provider', value }                     切换画图服务 cloudflare | gateway | placeholder（admin，立即生效）
+ *        { action: 'official', on }                        设 / 取消本场官方海报（封面、活动海报下载、小程序邀请海报都用它）
+ *        { action: 'cover_pos', value }                    活动封面取景位置 0–1（空 = 自动）
  */
 import { CrmError } from '@/lib/crm/events';
 import { body, handler, ok, requireStaff } from '@/lib/crm/http';
 import { staffCan } from '@/lib/crm/auth';
-import { copyIdeas, generateBatch, posterState, savePoster, setChosenProvider, setDefaultCap } from '@/lib/poster/service';
+import { copyIdeas, generateBatch, posterState, savePoster, setChosenProvider, setCoverPos, setDefaultCap, setOfficial } from '@/lib/poster/service';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -39,6 +41,10 @@ export const POST = handler(async (req: Request, { params }: { params: { id: str
       if (!staffCan(s, 'admin')) throw new CrmError('forbidden', '切换画图服务只有管理员能改');
       await setChosenProvider(s, b.value);
       return ok({ state: await posterState(params.id) });
+    case 'official':
+      return ok({ state: await setOfficial(s, params.id, b.on !== false) });
+    case 'cover_pos':
+      return ok({ state: await setCoverPos(s, params.id, b.value ?? null) });
     default:
       throw new CrmError('bad_request', '不认识的操作');
   }

@@ -325,6 +325,17 @@ function testCode(text: string): Promise<Buffer> {
   return QRCode.toBuffer(`SAREC-TEST:${text}`, { margin: 1, width: 600, color: { dark: '#06111E', light: '#F2EAD6' } });
 }
 
+/** 1.3.3 邀请海报（服务器出图）上的邀请人：姓名、头像、身份（会员写等级，非会员只写名片里公开的公司 / 职位，不出现“注册用户”） */
+export async function inviterInfo(contactId: string): Promise<{ name: string; memberNo: number; avatarUrl: string | null; label: string }> {
+  const pool = getPool();
+  const { rows: c } = await pool.query<{ name: string; member_no: number; avatar_url: string | null }>(`SELECT name, member_no::int AS member_no, avatar_url FROM contacts WHERE id = $1`, [contactId]);
+  const card = await ensureCard(pool, contactId);
+  const st = await statusOf(pool, contactId);
+  const name = c[0]?.name && c[0].name !== '微信用户' ? c[0].name : '';
+  const parts = [st.isMember ? `SAREC ${tierBadge(st)}` : '', card.company ?? '', card.title ?? ''].filter(Boolean);
+  return { name, memberNo: c[0]?.member_no, avatarUrl: c[0]?.avatar_url ?? null, label: parts.join(' · ') };
+}
+
 export async function inviteCodePng(slug: string, memberNo: number): Promise<Buffer> {
   if (!wxConfigured()) return testCode(`pages/event/event?slug=${slug}&ref=${memberNo}&channel=poster`);
   return cached(`invite:${ENV_VERSION}:${slug}:${memberNo}`, () => inviteCode(slug, memberNo, ENV_VERSION));
@@ -403,6 +414,8 @@ export async function posterData(contactId: string, slug: string, base: string) 
       label: `${st.isMember ? 'SAREC 会员' : 'SAREC 注册用户'}${card.company ? ' · ' + card.company : ''}${card.title ? ' · ' + card.title : ''}`
     },
     codeUrl: `${b}/api/v1/codes/invite/${encodeURIComponent(ev[0].slug)}/${c[0]?.member_no}.png`,
-    isTestCode: !wxConfigured()
+    isTestCode: !wxConfigured(),
+    // 1.3.3：活动有官方海报时，小程序改用服务器出图（imageUrl 带登录头下载；version 变了才重新下载）
+    official: await import('./invitePoster').then((m) => m.inviteVersion(contactId, ev[0].slug)).then((v) => (v ? { version: v, imageUrl: `${b}/api/v1/poster/${encodeURIComponent(ev[0].slug)}/image` } : null)).catch(() => null)
   };
 }

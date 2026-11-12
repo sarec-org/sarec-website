@@ -20,6 +20,7 @@ const STATUS_BY_CODE: Record<string, number> = {
   unauthorized: 401,
   forbidden: 403,
   not_found: 404,
+  no_official: 404,
   too_soon: 429,
   too_many_attempts: 429,
   sms_unavailable: 503,

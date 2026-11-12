@@ -222,9 +222,9 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                 )}
                 {/* 补充 3：保存后自动出 3 款海报，一键下载；改了标题 / 时间 / 封面会自动更新 */}
                 <div className={styles.card} style={{ marginTop: '1rem' }}>
-                  <p className={styles.cardTitle}>活动海报（自动生成，直接用）</p>
+                  <p className={styles.cardTitle}>活动海报（自动生成，直接用；设了「官方海报」就用官方海报的图和字）</p>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                    {([['moments', '朋友圈竖版 1080×1920', 120], ['square', '群聊方版 1080×1080', 160], ['oa', '公众号横版 900×500', 240]] as const).map(([k, label, w]) => (
+                    {([['moments', '朋友圈竖版', 120], ['square', '群聊方版', 160], ['oa', '公众号横版', 240]] as const).map(([k, label, w]) => (
                       <a key={k} href={`/api/v1/staff/events/${params.id}/poster?size=${k}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={`/api/v1/staff/events/${params.id}/poster?size=${k}&inline=1&v=${encodeURIComponent(String(data.event.updated_at ?? ''))}`} alt={label} width={w} style={{ borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} loading="lazy" />
