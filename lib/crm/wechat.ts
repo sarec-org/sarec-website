@@ -50,9 +50,48 @@ export const SCENE_OK = /^[0-9A-Za-z!#$&'()*+,/:;=?@\-._~]{1,32}$/;
 
 type CodeReq = { page: string; scene?: string; path?: string; tag: string; envVersion?: 'release' | 'trial' | 'develop'; checkPath?: boolean };
 
-/** 调微信生成正式版小程序码：有 scene 用 wxacode.getUnlimited（数量不限），否则 wxacode.get（带完整 path，总量有限） */
+/**
+ * 东哥 11/12 定：所有小程序码生成成功后永久存一份（Blob），以后同一个码直接用存好的（不再调微信、不占总量）；
+ * 微信出错时也用存好的。都没有才报错。任何情况下都不换成网页码。
+ */
+const CODE_PREFIX = () => `${process.env.VERCEL_ENV === 'production' ? 'prod' : 'test'}/wxacode/all`;
+function codeKey(r: CodeReq): string {
+  return createHash('sha256').update(JSON.stringify([r.envVersion ?? 'release', r.page, r.scene ?? '', r.path ?? ''])).digest('hex').slice(0, 40);
+}
+async function storedCode(key: string): Promise<Buffer | null> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  try {
+    const { head } = await import('@vercel/blob');
+    const h = await head(`${CODE_PREFIX()}/${key}.png`);
+    const res = await fetch(h.url, { cache: 'no-store' });
+    return res.ok ? Buffer.from(await res.arrayBuffer()) : null;
+  } catch { return null; }
+}
+async function storeCode(key: string, buf: Buffer) {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return;
+  try {
+    const { put } = await import('@vercel/blob');
+    await put(`${CODE_PREFIX()}/${key}.png`, buf, { access: 'public', contentType: 'image/png', addRandomSuffix: false });
+  } catch (e) { console.log('[wxacode] store failed', (e as Error).message); }
+}
 async function miniProgramCode(r: CodeReq): Promise<Buffer> {
   if (!wxConfigured()) throw new CrmError('wechat_unconfigured', '后台还没有配置小程序 AppID / AppSecret');
+  const key = codeKey(r);
+  const stored = await storedCode(key);
+  if (stored) return stored;
+  try {
+    const buf = await freshCode(r);
+    await storeCode(key, buf);
+    return buf;
+  } catch (e) {
+    const again = await storedCode(key); // 并发时别的请求可能刚存好
+    if (again) return again;
+    throw e;
+  }
+}
+
+/** 调微信生成正式版小程序码：有 scene 用 wxacode.getUnlimited（数量不限），否则 wxacode.get（带完整 path，总量有限） */
+async function freshCode(r: CodeReq): Promise<Buffer> {
   const env = r.envVersion ?? 'release';
   const common = { width: 1280, auto_color: false, line_color: { r: 4, g: 20, b: 33 }, is_hyaline: false, env_version: env };
   const jsonCode = (b: { buf: Buffer; json: boolean }) => {
