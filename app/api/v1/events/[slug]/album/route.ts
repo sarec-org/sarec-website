@@ -13,9 +13,10 @@ export const GET = handler(async (req: Request, { params }: { params: { slug: st
   );
   const ev = rows[0];
   if (!ev) throw new CrmError('not_found', '找不到这场活动');
-  // 工作人员的照片在“发布相册”后显示；客户自己放进相册、审核通过的照片马上显示（1.3）
+  // 东哥 11/12 定：首页和相册页口径统一——工作人员“发布相册”（审核公开）后才显示，客户放进相册的照片也一样；
+  // 自己传的照片在小程序“我的照片”里随时看得到
   const photos = (await listEventPhotos(ev.id))
-    .filter((p) => ev.album_published_at || p.by_customer)
+    .filter(() => !!ev.album_published_at)
     .map((p) => ({ id: p.id, url: p.url, thumb: p.thumb_url, w: p.width, h: p.height, caption: p.caption, byGuest: !!p.by_customer }));
   const { rows: next } = await pool.query(
     `SELECT slug, title, starts_at, timezone, location_name, fee_cents, cover_url FROM events
