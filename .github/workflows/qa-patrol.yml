@@ -1,0 +1,22 @@
+# 线上只读巡检：正式站每次部署成功后跑一次（每天的那次由 Vercel cron 跑）。
+# 只调网站自己的巡检接口（只发 GET 查线上），结果存库、后台首页红条；邮件默认关。
+# 密钥 REMINDER_CRON_SECRET 已在仓库 Secrets 里（活动提醒用的同一个），不写进代码。
+name: qa-patrol
+on:
+  deployment_status:
+permissions: {}
+jobs:
+  patrol:
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Trigger patrol
+        env:
+          SECRET: ${{ secrets.REMINDER_CRON_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then echo "REMINDER_CRON_SECRET not set"; exit 0; fi
+          sleep 30
+          code=$(curl -s -m 300 -o /tmp/out.json -w '%{http_code}' -X POST -H "Authorization: Bearer $SECRET" "https://sinoamericanrec.org/api/cron/qa-patrol?trigger=deploy")
+          cat /tmp/out.json; echo
+          test "$code" = "200"
