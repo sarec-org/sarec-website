@@ -13,9 +13,6 @@ export const POST = handler(async (req: Request, { params }: { params: { id: str
   const r = await fetch(b.url);
   if (!r.ok) throw new CrmError('bad_request', 'PDF 取不到，请重新上传');
   const pdf = Buffer.from(await r.arrayBuffer());
-  if (b.pagesFromPdf === false) {
-    await setPdfOnly(params.id, b.url, pdf.length);
-    return ok({});
-  }
+  if (b.pagesFromPdf === false) return ok({ doc: await setPdfOnly(params.id, pdf, b.url) });
   return ok({ doc: await processPdf(params.id, pdf, b.url) });
 });

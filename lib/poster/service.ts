@@ -301,7 +301,8 @@ export function posterText(ev: EvRow, p: Partial<PosterRow> | null) {
     filmTitle: x.filmTitle || p?.film_title || ev.title,
     filmSubtitle: x.filmSubtitle ?? null,
     titleEn: x.titleEn ?? null,
-    subtitle: x.subtitle || ev.title,
+    // 没填主片名时主片名就是活动名，副标题不再重复一遍活动名
+    subtitle: x.subtitle || (x.filmTitle || p?.film_title ? ev.title : ''),
     credits: { host: p?.host ?? 'SAREC 中美房地产商会', speaker: p?.speaker ?? null, coHost: p?.co_host ?? null },
     dateLine: fullDate(ev.starts_at, tz),
     timeLine: `${checkinLine(ev, tz)}（${tzLabel(tz)}）`,

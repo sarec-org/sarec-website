@@ -21,7 +21,8 @@ export type DocRow = {
 /** 小程序审核红线字样（只提醒） */
 const RED: [RegExp, string][] = [
   [/US\$|\$\s?\d|\$/, '$'], [/美元/, '美元'], [/\d\s*万?元|元\s*\/|人民币/, '元'], [/会费|年费/, '会费'], [/价格|定价|报价/, '价格'],
-  [/收益率|回报率|年化/, '收益率'], [/保本|保证收益|承诺收益/, '收益承诺'], [/收款|付款方式|转账|汇款/, '收款方式']
+  [/收益率|回报率|年化/, '收益率'], [/保本|保证.{0,8}收益|承诺.{0,8}收益|稳赚|零风险/, '收益承诺'],
+  [/收款|付款|转账|汇款|Zelle|Venmo|PayPal|支付宝|微信支付|银行账号|账户名/i, '收款方式']
 ];
 export function redWords(text: string): string[] {
   return RED.filter(([re]) => re.test(text)).map(([, w]) => w);
@@ -143,14 +144,37 @@ export async function setImagePages(docId: string, images: Buffer[]): Promise<Do
     const m = await sharp(jpg).metadata();
     pages.push({ url: await putPage(docId, i + 1, jpg), w: m.width ?? 0, h: m.height ?? 0 });
   }
-  const { rows } = await getPool().query<DocRow>(`UPDATE chamber_docs SET pages = $2, red_flags = '[]'::jsonb, text_readable = false, updated_at = now() WHERE id = $1 RETURNING *`, [docId, JSON.stringify(pages)]);
+  // 页面换成图片后，原来的 PDF 原件和这组页面不再对应（也可能还带着红线字样），一并去掉；需要的话再“只换 PDF 原件”
+  const { rows } = await getPool().query<DocRow>(`UPDATE chamber_docs SET pages = $2, red_flags = '[]'::jsonb, text_readable = false, pdf_url = NULL, pdf_bytes = NULL, updated_at = now() WHERE id = $1 RETURNING *`, [docId, JSON.stringify(pages)]);
   if (!rows[0]) throw new CrmError('not_found', '找不到这份资料');
   return rows[0];
 }
 
 /** 只换 PDF 原件（页面图片已经有了，比如逐页图片另外传的） */
-export async function setPdfOnly(docId: string, pdfUrl: string, bytes: number) {
-  await getPool().query(`UPDATE chamber_docs SET pdf_url = $2, pdf_bytes = $3, updated_at = now() WHERE id = $1`, [docId, pdfUrl, bytes]);
+export async function setPdfOnly(docId: string, pdf: Buffer, pdfUrl: string): Promise<DocRow> {
+  // 只换 PDF 原件也要查红线字样（原件在小程序里能看、能转发）
+  const mupdf = await import('mupdf');
+  let flags: RedFlag[] = [];
+  let readable = false;
+  try {
+    const doc = mupdf.Document.openDocument(pdf, 'application/pdf');
+    let chars = 0;
+    const n = doc.countPages();
+    for (let i = 0; i < n; i++) {
+      const text = doc.loadPage(i).toStructuredText('preserve-whitespace').asText();
+      chars += text.replace(/\s/g, '').length;
+      const w = redWords(text);
+      if (w.length) flags.push({ page: i + 1, words: w });
+    }
+    readable = chars > n * 20;
+  } catch { throw new CrmError('bad_request', '这个 PDF 打不开，请在 PowerPoint 里重新“导出为 PDF”再传'); }
+  const { rows } = await getPool().query<DocRow>(
+    `UPDATE chamber_docs SET pdf_url = $2, pdf_bytes = $3, red_flags = $4, text_readable = CASE WHEN $5 THEN true ELSE text_readable END, updated_at = now() WHERE id = $1 RETURNING *`,
+    [docId, pdfUrl, pdf.length, JSON.stringify(flags), readable]
+  );
+  if (!rows[0]) throw new CrmError('not_found', '找不到这份资料');
+  flags = rows[0].red_flags;
+  return rows[0];
 }
 
 export async function docStats(docId: string) {

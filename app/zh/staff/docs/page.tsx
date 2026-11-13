@@ -96,7 +96,7 @@ export default function StaffDocs() {
       setMsg({ ok: true, text: '正在整理页面…' });
       const r = await api<{ doc: Doc }>(`/api/v1/staff/docs/${d.id}/images`, { body: { urls } });
       if (!r.ok) throw new Error(r.message);
-      setMsg({ ok: true, text: `已设好 ${r.data.doc.pages.length} 页（按文件名顺序）。图片读不到字，请自己核一遍有没有金额、会费、收款方式、收益承诺。` });
+      setMsg({ ok: true, text: `已设好 ${r.data.doc.pages.length} 页（按文件名顺序）。原来的 PDF 原件已去掉（和新页面对不上了），需要的话点“只换 PDF 原件”重新传。图片读不到字，请自己核一遍有没有金额、会费、收款方式、收益承诺。` });
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message || '上传没成功，请再试一次' });
     }
@@ -108,9 +108,10 @@ export default function StaffDocs() {
     setBusy(d.id);
     try {
       const b = await putFile(d, f, (p) => setMsg({ ok: true, text: `正在上传 PDF 原件… ${p}%` }));
-      const r = await api(`/api/v1/staff/docs/${d.id}/pdf`, { body: { url: b.url, pagesFromPdf: false } });
+      const r = await api<{ doc: Doc }>(`/api/v1/staff/docs/${d.id}/pdf`, { body: { url: b.url, pagesFromPdf: false } });
       if (!r.ok) throw new Error(r.message);
-      setMsg({ ok: true, text: 'PDF 原件已换好（页面图片没动）' });
+      const fl = r.data.doc.red_flags;
+      setMsg({ ok: !fl.length, text: 'PDF 原件已换好（页面图片没动）。' + (fl.length ? `注意：原件里有可能影响审核的字样——${fl.map((x) => `第 ${x.page} 页：${x.words.join('、')}`).join('；')}` : '') });
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message || '上传没成功，请再试一次' });
     }
