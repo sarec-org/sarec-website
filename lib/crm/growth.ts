@@ -232,7 +232,7 @@ export async function homeData(contactId: string | null, opts: { base: string; w
         phase,
         event: evCard(m),
         registration: { id: m.reg_id, status: m.reg_status, arrival: m.arrival_status },
-        checkinQr: !ended && m.reg_status === 'registered' && opts.withQr !== false ? await personalCheckinQr(opts.base, m.reg_id) : null,
+        checkinQr: null, // 个人签到码已停用，到场扫门口的码
         albumPublished: !!m.album_published_at
       };
     }
