@@ -1,8 +1,7 @@
-/** GET /api/v1/me/checkin-qr?slug= —— 我的个人签到码（工作人员扫码核验；图片为 data URL） */
+/** GET /api/v1/me/checkin-qr?slug= —— 个人签到码已停用：qr 恒为 null（老客户端拿到空就不显示码），只返回报名状态 */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
-import { personalCheckinQr } from '@/lib/crm/growth';
-import { handler, ok, requireContact, siteUrl } from '@/lib/crm/http';
+import { handler, ok, requireContact } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
@@ -13,5 +12,5 @@ export const GET = handler(async (req: Request) => {
     [slug, me]
   );
   if (!rows[0]) throw new CrmError('not_registered', '没有找到您这场的报名');
-  return ok({ qr: await personalCheckinQr(siteUrl(req), rows[0].id), status: rows[0].status });
+  return ok({ qr: null, status: rows[0].status });
 });

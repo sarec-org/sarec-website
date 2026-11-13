@@ -188,7 +188,8 @@ export async function home131(contactId: string | null, opts: { region?: string 
       title: `今天 ${clock(todayReg.starts_at, tz)} · ${todayReg.title}`,
       sub: todayReg.arrival_status === 'checked_in' ? '已签到，祝您愉快' : `${todayReg.location_name ?? '地点见活动页'} · 到场扫门口的码签到`,
       slug: todayReg.slug,
-      actions: [{ text: todayReg.arrival_status === 'checked_in' ? '看安排' : '签到码', action: todayReg.arrival_status === 'checked_in' ? 'event' : 'checkin_qr' }]
+      // 不再出个人签到码：微信扫它会打开网站后台签到台（客人和没登录后台的工作人员都会看到后台页）。到场只扫门口的码。
+      actions: [{ text: '看安排', action: 'event' }]
     };
     todoEventId = todayReg.id;
   } else if (nextReg) {
