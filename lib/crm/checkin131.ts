@@ -235,7 +235,7 @@ export async function wxPhoneFromCode(code: string): Promise<string> {
   const d = await withWxToken(
     async (token) => {
       const res = await fetch(`https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${token}`, {
-        method: 'POST',
+        method: 'POST', cache: 'no-store',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code })
       });
