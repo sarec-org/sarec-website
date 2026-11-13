@@ -14,6 +14,7 @@ const SECTIONS: { href: string; title: string; desc: string; role: string }[] = 
   { href: '/zh/staff/join-requests', title: '入会申请', desc: '小程序“加入商会”提交的申请：一键发网站缴费链接（短信 / 邮件 / 复制发微信），满 7 天没入会提醒跟进', role: 'ops' },
   { href: '/zh/staff/payments', title: '核款工作台', desc: '核对 Zelle 到账，一键确认或标记未到账', role: 'finance' },
   { href: '/zh/staff/docs', title: '商会资料', desc: '公司 PPT 介绍等：上传 PDF（自动逐页转图）或一组图片，小程序里能看、能转发、能看 PDF 原件；看打开 / 转发次数', role: 'admin' },
+  { href: '/zh/staff/client-errors', title: '线上报错', desc: '小程序里出现报错时自动上报，按天汇总；红色是新出现的错误类型（不带个人信息）', role: 'ops' },
   { href: '/zh/staff/home-slides', title: '首页轮播', desc: '系统自动排；只处理例外：置顶、隐藏、改文案 / 换图、手动加一张（都要截止时间）；预览新人 / 已报名 / 会员分别看到什么', role: 'ops' },
   { href: '/zh/staff/events', title: '活动管理', desc: '新建、编辑、关闭报名、下载签到码', role: 'ops' },
   { href: '/zh/staff/contacts', title: '客户查询', desc: '档案、时间线、积分、标签、导出', role: 'ops' },
