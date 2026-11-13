@@ -111,6 +111,12 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
   if (full && data && (mpCode || qr)) {
     return (
       <div onClick={() => setFull(false)} style={{ position: 'fixed', inset: 0, zIndex: 100, background: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem', color: '#0A1730', textAlign: 'center' }}>
+        {(showWeb || !mpCode) && (
+          // 东哥 11/12 定：签到不能卡，保留网页码兜底；但要明显告诉工作人员现在是应急码
+          <p style={{ background: '#C0392B', color: '#fff', fontSize: 'clamp(1rem, 2.2vw, 1.5rem)', padding: '0.5rem 1rem', borderRadius: 6, margin: '0 0 1rem' }}>
+            工作人员注意：现在显示的是应急网页码（小程序码{showWeb ? '' : '这会儿生成不了'}），扫开是网页，客人要填姓名、手机才能签到
+          </p>
+        )}
         <p style={{ fontSize: 'clamp(1.5rem, 4vw, 3rem)', fontFamily: 'var(--serif-zh)', margin: '0 0 1rem' }}>打开微信「扫一扫」，扫码签到</p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={(showWeb ? qr : mpCode) || qr || ''} alt="签到码" style={{ width: 'min(80vw, 62vh)', height: 'auto' }} />
