@@ -39,6 +39,8 @@ export function handler<A extends unknown[]>(fn: (...args: A) => Promise<Respons
       return await fn(...args);
     } catch (e) {
       if (e instanceof CrmError) return fail(e.code, e.message, STATUS_BY_CODE[e.code] ?? 400);
+      // 链接里的编号是乱码（不是合法 uuid）：Postgres 22P02，按“找不到”处理，不报 500
+      if ((e as { code?: string })?.code === '22P02') return fail('not_found', '链接有误，找不到对应的内容', 404);
       console.error('[api/v1]', e instanceof Error ? e.message : 'unknown error');
       return fail('server_error', '系统忙，请稍后再试。您填写的内容还在页面上，不会丢。', 500);
     }
