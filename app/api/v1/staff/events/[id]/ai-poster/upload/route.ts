@@ -12,6 +12,9 @@ export const POST = handler(async (req: Request, { params }: { params: { id: str
   const f = form?.get('file');
   if (!f || typeof f === 'string') throw new CrmError('bad_request', '请选择一张图片');
   if (f.size > 4_200_000) throw new CrmError('bad_request', '图片太大了（超过 4MB），请换一张或先压缩一下');
-  const ai = String(form?.get('ai') ?? '1') !== '0';
+  // 东哥 11/12 定：必须明确说是不是 AI 生成，不给默认值
+  const aiRaw = String(form?.get('ai') ?? '');
+  if (aiRaw !== '1' && aiRaw !== '0') throw new CrmError('bad_request', '请先选：这张图是不是 AI 生成的');
+  const ai = aiRaw === '1';
   return ok({ state: await uploadMainImage(s, params.id, Buffer.from(await f.arrayBuffer()), ai) });
 });

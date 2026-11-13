@@ -55,7 +55,8 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
   const [tx, setTx] = useState<Texts>({});
   const [ex, setEx] = useState<Extra[]>([EMPTY_EX, EMPTY_EX]);
   const [lift, setLift] = useState(0);
-  const [aiUp, setAiUp] = useState(true);
+  // 东哥 11/12 定：不给默认值，必须二选一（真实照片被默认标成“AI 生成”会误导）
+  const [aiUp, setAiUp] = useState<boolean | null>(null);
   const [coverPos, setCoverPos] = useState<number | null>(null);
 
   const apply = useCallback((s: State) => {
@@ -119,6 +120,7 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
   /** 上传自己的图当主视觉：手机上先缩到 2048 以内再传（不花钱、不占上限） */
   async function uploadMain(file: File | null) {
     if (!file) return;
+    if (aiUp === null) { setMsg({ ok: false, text: '请先选：这张图是不是 AI 生成的' }); return; }
     setBusy('main');
     setMsg(null);
     let blob: Blob = file;
@@ -134,6 +136,7 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
     const fd = new FormData();
     fd.append('file', blob, 'main.jpg');
     fd.append('ai', aiUp ? '1' : '0');
+    setAiUp(null); // 每次上传都重新选，避免沿用上一张的选择
     const res = await fetch(`/api/v1/staff/events/${eventId}/ai-poster/upload`, { method: 'POST', body: fd, credentials: 'same-origin' }).catch(() => null);
     const j = (await res?.json().catch(() => null)) as { ok: boolean; state?: State; error?: { message: string } } | null;
     setBusy(null);
@@ -200,12 +203,16 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
       </div>
       <p className={styles.small}>{costNote}。本场还能出 {left} 张（上限 {st.cap} 张，防止点多了）。</p>
       <div className={styles.btnRow}>
-        <label className={`${styles.btn} ${styles.btnGhost}`} style={{ cursor: 'pointer' }}>
-          {busy === 'main' ? '上传中…' : '上传自己的图（不花钱）'}
-          <input type="file" accept="image/*" hidden onChange={(e) => { uploadMain(e.target.files?.[0] ?? null); e.target.value = ''; }} />
+        <span className={styles.small}>上传自己的图，先选一项：</span>
+        <label className={styles.small} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <input type="radio" name="ai-up" checked={aiUp === true} onChange={() => setAiUp(true)} /> AI 生成的图（海报上标“AI 生成”）
         </label>
         <label className={styles.small} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <input type="checkbox" checked={aiUp} onChange={(e) => setAiUp(e.target.checked)} /> 这是 AI 生成的图（海报上会标“AI 生成”）
+          <input type="radio" name="ai-up" checked={aiUp === false} onChange={() => setAiUp(false)} /> 真实照片 / 自己做的图（不标）
+        </label>
+        <label className={`${styles.btn} ${styles.btnGhost}`} style={{ cursor: aiUp === null ? 'not-allowed' : 'pointer', opacity: aiUp === null ? 0.5 : 1 }} onClick={(e) => { if (aiUp === null) { e.preventDefault(); setMsg({ ok: false, text: '请先选：这张图是不是 AI 生成的' }); } }}>
+          {busy === 'main' ? '上传中…' : '上传自己的图（不花钱）'}
+          <input type="file" accept="image/*" hidden disabled={aiUp === null} onChange={(e) => { uploadMain(e.target.files?.[0] ?? null); e.target.value = ''; }} />
         </label>
       </div>
       {lastImg?.status === 'failed' && <p className={styles.error}>最近一张没画出来：{lastImg.error}</p>}
