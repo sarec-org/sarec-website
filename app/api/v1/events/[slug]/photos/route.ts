@@ -3,12 +3,12 @@
  *  GET  /api/v1/events/:slug/photos —— 我在这场活动上传的照片 */
 import { listMyPhotos, uploadMyPhoto } from '@/lib/crm/customerPhotos';
 import { CrmError } from '@/lib/crm/events';
-import { handler, isMp14, ok, requireContact } from '@/lib/crm/http';
+import { handler, isMp14, isMpOlderThan, mpVersion, ok, requireContact } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 export const GET = handler(async (req: Request, { params }: { params: { slug: string } }) =>
-  ok({ photos: await listMyPhotos(await requireContact(req), decodeURIComponent(params.slug)) })
+  ok({ photos: await listMyPhotos(await requireContact(req), decodeURIComponent(params.slug), !!mpVersion(req) && !isMpOlderThan(req, [1, 5, 0])) })
 );
 export const POST = handler(async (req: Request, { params }: { params: { slug: string } }) => {
   const me = await requireContact(req);

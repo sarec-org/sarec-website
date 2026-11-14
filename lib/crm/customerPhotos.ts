@@ -32,10 +32,12 @@ async function dHash(buf: Buffer): Promise<string> {
   return BigInt('0b' + bits).toString(16).padStart(16, '0');
 }
 
-export type MyPhoto = { id: string; url: string; thumb: string; visibility: string; review: string; hasOriginal: boolean; duplicate?: boolean };
+export type MyPhoto = { id: string; url: string; thumb: string; visibility: string; review: string; hasOriginal: boolean; duplicate?: boolean; withdrawn?: string };
 
-const toMine = (r: { id: string; url: string; thumb_url: string; visibility: string; review_status: string; original_url: string | null }, duplicate = false): MyPhoto => ({
-  id: r.id, url: r.url, thumb: r.thumb_url, visibility: r.visibility, review: r.review_status, hasOriginal: !!r.original_url, ...(duplicate ? { duplicate: true } : {})
+const toMine = (r: { id: string; url: string; thumb_url: string; visibility: string; review_status: string; original_url: string | null; is_hidden?: boolean }, duplicate = false): MyPhoto => ({
+  id: r.id, url: r.url, thumb: r.thumb_url, visibility: r.visibility, review: r.review_status, hasOriginal: !!r.original_url, ...(duplicate ? { duplicate: true } : {}),
+  // 1.5.0 先发后管：微信图片检测不通过、自动撤下的（is_hidden + rejected），本人还看得到并知道原因
+  ...(r.is_hidden && r.review_status === 'rejected' ? { withdrawn: PHOTO_MACHINE_REASON } : {})
 });
 
 /**
@@ -144,24 +146,27 @@ export async function setMyPhotoVisibility(contactId: string, photoId: string, t
   return toMine(rows[0]);
 }
 
-export async function listMyPhotos(contactId: string, slug: string): Promise<MyPhoto[]> {
+export const PHOTO_MACHINE_REASON = '这张没通过微信内容检测，已自动撤下，别人看不到。';
+
+/** withdrawn = true（1.5.0 起的小程序）：机器撤下的也列出来，带原因；老版本照旧不列 */
+export async function listMyPhotos(contactId: string, slug: string, withdrawn = false): Promise<MyPhoto[]> {
   const ev = await eventBySlug(slug);
   const { rows } = await getPool().query(
-    `SELECT id, url, thumb_url, visibility, review_status, original_url FROM event_photos
-      WHERE event_id = $1 AND uploader_contact_id = $2 AND variant_of IS NULL AND NOT is_hidden ORDER BY created_at DESC LIMIT 200`,
-    [ev.id, contactId]
+    `SELECT id, url, thumb_url, visibility, review_status, original_url, is_hidden FROM event_photos
+      WHERE event_id = $1 AND uploader_contact_id = $2 AND variant_of IS NULL AND (NOT is_hidden OR ($3 AND review_status = 'rejected')) ORDER BY created_at DESC LIMIT 200`,
+    [ev.id, contactId, withdrawn]
   );
   return rows.map((r) => toMine(r));
 }
 
 /** 1.4.0「我的照片」：我在所有活动传的照片，按活动分组（最新的活动在上） */
-export async function listAllMyPhotos(contactId: string) {
-  const { rows } = await getPool().query<{ id: string; url: string; thumb_url: string; visibility: string; review_status: string; original_url: string | null; slug: string; title: string; starts_at: Date }>(
-    `SELECT p.id, p.url, p.thumb_url, p.visibility, p.review_status, p.original_url, e.slug, e.title, e.starts_at
+export async function listAllMyPhotos(contactId: string, withdrawn = false) {
+  const { rows } = await getPool().query<{ id: string; url: string; thumb_url: string; visibility: string; review_status: string; original_url: string | null; is_hidden: boolean; slug: string; title: string; starts_at: Date }>(
+    `SELECT p.id, p.url, p.thumb_url, p.visibility, p.review_status, p.original_url, p.is_hidden, e.slug, e.title, e.starts_at
        FROM event_photos p JOIN events e ON e.id = p.event_id
-      WHERE p.uploader_contact_id = $1 AND p.variant_of IS NULL AND NOT p.is_hidden
+      WHERE p.uploader_contact_id = $1 AND p.variant_of IS NULL AND (NOT p.is_hidden OR ($2 AND p.review_status = 'rejected'))
       ORDER BY e.starts_at DESC, p.created_at DESC LIMIT 500`,
-    [contactId]
+    [contactId, withdrawn]
   );
   const groups: { slug: string; title: string; startsAt: Date; photos: MyPhoto[] }[] = [];
   for (const r of rows) {
