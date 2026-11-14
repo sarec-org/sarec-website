@@ -171,7 +171,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
             <div className={styles.card}>
               <div className={styles.row}><span className={styles.rowLabel}>时间</span><span className={styles.rowValue}>{fmtDateTime(String(data.event.starts_at))}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>费用</span><span className={styles.rowValue}>{data.event.fee_cents ? money(data.event.fee_cents) : '免费'}</span></div>
-              <div className={styles.row}><span className={styles.rowLabel}>报名页</span><span className={`${styles.rowValue} ${styles.mono}`}>/zh/e/{data.event.slug}</span></div>
+              <div className={styles.row}><span className={styles.rowLabel}>网页报名页</span><span className={styles.rowValue} style={{ wordBreak: 'break-all' }}><a href={`/zh/e/${data.event.slug}`} target="_blank" rel="noreferrer">打开看看 ›</a></span></div>
               <div className={styles.row}><span className={styles.rowLabel}>公开</span><span className={styles.rowValue}>{data.event.is_listed ? '公开（出现在活动列表）' : '不公开（只凭链接或二维码进入）'}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>报名</span><span className={styles.rowValue}>{data.event.registration_open ? '开放中' : '已关闭'}</span></div>
             </div>
