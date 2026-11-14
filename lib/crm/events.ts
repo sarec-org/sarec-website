@@ -131,7 +131,13 @@ export async function startRegistration(
     // 1.3.1 B：先把空位按候补顺序补上（不让后来的人插队），再按“已报名 + 递补确认中”算满没满
     const { fillSeats, takenSeats } = await import('@/lib/crm/seats');
     if (!onsite && ev.capacity != null) await fillSeats(db, ev.id);
-    const full = !onsite && ev.capacity != null && (await takenSeats(db, ev.id)) >= ev.capacity;
+    let full = !onsite && ev.capacity != null && (await takenSeats(db, ev.id)) >= ev.capacity;
+    // 1.4.1 会员保留座位（东哥已点头，默认 0 = 和以前一样）：还没被会员用掉的保留座位，非会员不能占
+    if (!full && !onsite && ev.capacity != null) {
+      const { reservedForMembersLeft } = await import('@/lib/crm/seats');
+      const left = await reservedForMembersLeft(db, ev.id, contactId);
+      if (left > 0 && (await takenSeats(db, ev.id)) >= ev.capacity - left) full = true;
+    }
     const status = full ? 'waitlisted' : 'registered';
     const { rows } = await db.query<Registration>(
       reg

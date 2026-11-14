@@ -16,6 +16,8 @@ export type DocRow = {
   id: string; slug: string; title: string; summary: string | null; cover_url: string | null; sort_order: number; is_public: boolean;
   pdf_url: string | null; pdf_bytes: number | null; pages: DocPage[]; red_flags: RedFlag[]; text_readable: boolean | null;
   open_count: number; share_count: number; pdf_count: number; created_at: Date; updated_at: Date;
+  // 1.4.1 讲座资料分级（迁移 0036）
+  audience?: 'all' | 'members'; event_id?: string | null; preview_pages?: number;
 };
 
 /** 小程序审核红线字样（只提醒） */
@@ -35,23 +37,40 @@ export function siteFileUrl(blobUrl: string | null, base: string): string | null
   return m ? `${base.replace(/\/$/, '')}/files/${m[1]}` : blobUrl;
 }
 
-function publicView(d: DocRow, base: string) {
+/**
+ * 1.4.1 会员特权（东哥已点头）：“仅会员”的讲座资料，会员看全部、可下载转发；
+ * 注册用户 / 没登录的只看前 N 页预览（默认 3），后面写“会员可看完整版”，不给 PDF 原件。
+ */
+function publicView(d: DocRow, base: string, isMember = false) {
+  const locked = d.audience === 'members' && !isMember;
+  const n = Math.max(1, d.preview_pages ?? 3);
+  const pages = locked ? d.pages.slice(0, n) : d.pages;
   return {
     slug: d.slug, title: d.title, summary: d.summary, cover: d.cover_url || d.pages[0]?.url || null,
-    pages: d.pages.map((p) => ({ url: p.url, w: p.w, h: p.h })), pageCount: d.pages.length,
-    pdfUrl: siteFileUrl(d.pdf_url, base), pdfBytes: d.pdf_bytes
+    pages: pages.map((p) => ({ url: p.url, w: p.w, h: p.h })), pageCount: d.pages.length,
+    pdfUrl: locked ? null : siteFileUrl(d.pdf_url, base), pdfBytes: locked ? null : d.pdf_bytes,
+    membersOnly: d.audience === 'members', locked, previewPages: locked ? pages.length : d.pages.length
   };
 }
 
-export async function listPublic(base: string) {
-  const { rows } = await getPool().query<DocRow>(`SELECT * FROM chamber_docs WHERE is_public AND jsonb_array_length(pages) > 0 ORDER BY sort_order, created_at`);
-  return rows.map((d) => { const v = publicView(d, base); return { slug: v.slug, title: v.title, summary: v.summary, cover: v.cover, pageCount: v.pageCount }; });
+export async function listPublic(base: string, opts: { eventSlug?: string | null } = {}) {
+  // 商会介绍等通用资料（不挂活动的）在前；?event=slug 只列那场的讲座资料
+  const { rows } = await getPool().query<DocRow & { event_slug: string | null; event_title: string | null }>(
+    `SELECT d.*, e.slug AS event_slug, e.title AS event_title FROM chamber_docs d LEFT JOIN events e ON e.id = d.event_id
+      WHERE d.is_public AND jsonb_array_length(d.pages) > 0 AND ($1::text IS NULL OR e.slug = $1)
+      ORDER BY (d.event_id IS NOT NULL), d.sort_order, d.created_at`,
+    [opts.eventSlug ?? null]
+  );
+  return rows.map((d) => {
+    const v = publicView(d, base, true);
+    return { slug: v.slug, title: v.title, summary: v.summary, cover: v.cover, pageCount: v.pageCount, membersOnly: v.membersOnly, eventSlug: d.event_slug, eventTitle: d.event_title };
+  });
 }
-export async function getPublic(slug: string, base: string, staffPreview = false) {
+export async function getPublic(slug: string, base: string, staffPreview = false, isMember = false) {
   const { rows } = await getPool().query<DocRow>(`SELECT * FROM chamber_docs WHERE slug = $1`, [slug]);
   const d = rows[0];
   if (!d || (!d.is_public && !staffPreview) || !d.pages.length) throw new CrmError('not_found', '这份资料不存在或还没公开');
-  return publicView(d, base);
+  return publicView(d, base, isMember || staffPreview);
 }
 
 export async function track(slug: string, kind: 'open' | 'share' | 'pdf', who: { contactId?: string | null; ref?: string | null; channel?: string | null }) {
@@ -78,10 +97,15 @@ export async function saveDoc(s: Staff, id: string | null, b: Record<string, unk
   const sort = Number.isFinite(Number(b.sortOrder)) ? Math.floor(Number(b.sortOrder)) : 0;
   const isPublic = b.isPublic === true;
   const cover = clean(b.coverUrl, 500) || null;
+  // 1.4.1：谁能看全部（所有人 / 仅会员）、挂到哪场活动（讲座资料）、注册用户能看前几页
+  const audience = b.audience === 'members' ? 'members' : 'all';
+  const eventId = typeof b.eventId === 'string' && /^[0-9a-f-]{36}$/.test(b.eventId) ? b.eventId : null;
+  const previewPages = Math.min(20, Math.max(1, Math.floor(Number(b.previewPages) || 3)));
   if (id) {
     const { rows } = await db.query<DocRow>(
-      `UPDATE chamber_docs SET title = $2, summary = $3, sort_order = $4, is_public = $5, cover_url = COALESCE($6, cover_url), updated_at = now() WHERE id = $1 RETURNING *`,
-      [id, title, summary, sort, isPublic, cover]
+      `UPDATE chamber_docs SET title = $2, summary = $3, sort_order = $4, is_public = $5, cover_url = COALESCE($6, cover_url),
+              audience = $7, event_id = $8, preview_pages = $9, updated_at = now() WHERE id = $1 RETURNING *`,
+      [id, title, summary, sort, isPublic, cover, audience, eventId, previewPages]
     );
     if (!rows[0]) throw new CrmError('not_found', '找不到这份资料');
     if (isPublic && !rows[0].pages.length) throw new CrmError('bad_request', '先上传 PDF 或页面图片，再设为公开');
@@ -89,8 +113,8 @@ export async function saveDoc(s: Staff, id: string | null, b: Record<string, unk
   }
   const slug = clean(b.slug, 40).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || `doc-${randomUUID().slice(0, 6)}`;
   const { rows } = await db.query<DocRow>(
-    `INSERT INTO chamber_docs (slug, title, summary, sort_order, is_public, cover_url, created_by) VALUES ($1, $2, $3, $4, false, $5, $6) RETURNING *`,
-    [slug, title, summary, sort, cover, s.contactId]
+    `INSERT INTO chamber_docs (slug, title, summary, sort_order, is_public, cover_url, created_by, audience, event_id, preview_pages) VALUES ($1, $2, $3, $4, false, $5, $6, $7, $8, $9) RETURNING *`,
+    [slug, title, summary, sort, cover, s.contactId, audience, eventId, previewPages]
   ).catch((e) => { if ((e as { code?: string }).code === '23505') throw new CrmError('conflict', '这个英文短名已经有了，换一个'); throw e; });
   return rows[0];
 }

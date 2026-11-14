@@ -119,8 +119,26 @@ export async function myCard(contactId: string) {
     projectPhotoUrl: card.project_photo_url,
     // 名片模板库：地址、公司 logo；会员等级（非会员为空，卡面不出现任何等级字样）
     address: card.address, showAddress: card.show_address, logoUrl: card.logo_url,
-    tierName: status.isMember ? tierBadge(status) : null
+    tierName: status.isMember ? tierBadge(status) : null,
+    // 1.4.1 找人：让商会里的人能搜到我（null = 还没问过）
+    searchable: await cardSearchable(contactId)
   };
+}
+
+/** 1.4.1 “让商会里的人能搜到我”：null = 还没问过；没有这一列（迁移 0036 没跑）时也当没问过 */
+export async function cardSearchable(contactId: string): Promise<boolean | null> {
+  try {
+    const { rows } = await getPool().query<{ searchable: boolean | null }>(`SELECT searchable FROM member_cards WHERE contact_id = $1`, [contactId]);
+    return rows[0]?.searchable ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setCardSearchable(contactId: string, on: boolean) {
+  const { rowCount } = await getPool().query(`UPDATE member_cards SET searchable = $2, updated_at = now() WHERE contact_id = $1`, [contactId, on]);
+  if (!rowCount) throw new CrmError('no_card', '先做一张电子名片，别人才能搜到您');
+  return { searchable: on };
 }
 
 /** 头像换了：名片重新进入待审核 */

@@ -2,13 +2,15 @@
 import { staffCan, staffFor } from '@/lib/crm/auth';
 import { handler, ok, optionalContact, siteUrl } from '@/lib/crm/http';
 import { getPublic } from '@/lib/docs/service';
+import { memberStatus } from '@/lib/crm/membership';
+import { getPool } from '@/lib/db/client';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request, { params }: { params: { slug: string } }) => {
   let preview = false;
-  if (new URL(req.url).searchParams.get('preview')) {
-    const id = await optionalContact(req);
-    preview = !!id && staffCan(await staffFor(id), 'admin');
-  }
-  return ok({ doc: await getPublic(decodeURIComponent(params.slug), siteUrl(req), preview) });
+  const me = await optionalContact(req);
+  if (new URL(req.url).searchParams.get('preview')) preview = !!me && staffCan(await staffFor(me), 'admin');
+  // 1.4.1：会员看“仅会员”资料的全部；注册用户看前几页（工作人员也按全部看）
+  const isMember = !!me && ((await memberStatus(getPool(), me)).isMember || !!(await staffFor(me)));
+  return ok({ doc: await getPublic(decodeURIComponent(params.slug), siteUrl(req), preview, isMember) });
 });

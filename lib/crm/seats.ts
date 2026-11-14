@@ -52,6 +52,30 @@ export async function takenSeats(db: Db, eventId: string): Promise<number> {
   return rows[0].n;
 }
 
+/**
+ * 1.4.1 会员保留座位：返回“还留给会员、非会员不能占的座位数”。
+ * 报名的人自己是会员 → 0（会员不受限制）；活动没设保留（0 或没有这一列）→ 0。
+ */
+export async function reservedForMembersLeft(db: Db, eventId: string, contactId: string): Promise<number> {
+  let reserved = 0;
+  try {
+    const { rows } = await db.query<{ n: number }>(`SELECT member_reserved_seats AS n FROM events WHERE id = $1`, [eventId]);
+    reserved = rows[0]?.n ?? 0;
+  } catch {
+    return 0; // 迁移 0036 还没跑
+  }
+  if (reserved <= 0) return 0;
+  const { memberStatus } = await import('./membership');
+  if ((await memberStatus(db, contactId)).isMember) return 0;
+  const { rows: regs } = await db.query<{ contact_id: string }>(
+    `SELECT contact_id FROM registrations WHERE event_id = $1 AND (status = 'registered' OR (status = 'waitlisted' AND confirm_status = 'offered' AND offer_expires_at > now()))`,
+    [eventId]
+  );
+  let members = 0;
+  for (const r of regs) if ((await memberStatus(db, r.contact_id)).isMember) members++;
+  return Math.max(0, reserved - members);
+}
+
 export async function waitlistPosition(db: Db, eventId: string, contactId: string): Promise<number | null> {
   const { rows } = await db.query<{ pos: number }>(
     `SELECT pos FROM (SELECT contact_id, row_number() OVER (ORDER BY coalesce(waitlisted_at, created_at), created_at)::int AS pos
@@ -241,6 +265,36 @@ export async function answerConfirm(regId: string, yes: boolean) {
 // ── 递补 ───────────────────────────────────────────────────────────────
 
 /** 空出的名额按候补顺序发递补邀请（同一座位不同时发给多人；刚被转候补的人 1 小时内不拿回自己刚释放的名额）。 */
+/**
+ * 1.4.1 会员保留座位：从候补里挑人补空位时，保留给会员的座位只给会员。
+ * cands 按候补顺序；返回能补进去的 id（会员任何空位都能补；非会员只能补“空位 − 还没用掉的保留座位”）。
+ */
+async function pickRespectingReserve(db: Db, eventId: string, cands: { id: string; contact_id: string }[], free: number): Promise<string[]> {
+  let reserved = 0;
+  try {
+    const { rows } = await db.query<{ n: number }>(`SELECT member_reserved_seats AS n FROM events WHERE id = $1`, [eventId]);
+    reserved = rows[0]?.n ?? 0;
+  } catch { reserved = 0; }
+  if (reserved <= 0) return cands.slice(0, Math.max(0, free)).map((c) => c.id);
+  const { memberStatus } = await import('./membership');
+  const { rows: regs } = await db.query<{ contact_id: string }>(
+    `SELECT contact_id FROM registrations WHERE event_id = $1 AND (status = 'registered' OR (status = 'waitlisted' AND confirm_status = 'offered' AND offer_expires_at > now()))`,
+    [eventId]
+  );
+  let membersIn = 0;
+  for (const r of regs) if ((await memberStatus(db, r.contact_id)).isMember) membersIn++;
+  let reserveLeft = Math.max(0, reserved - membersIn);
+  let left = free;
+  const out: string[] = [];
+  for (const c of cands) {
+    if (left <= 0) break;
+    const isMember = (await memberStatus(db, c.contact_id)).isMember;
+    if (isMember) { out.push(c.id); left--; reserveLeft = Math.max(0, reserveLeft - 1); }
+    else if (left - reserveLeft > 0) { out.push(c.id); left--; }
+  }
+  return out;
+}
+
 export async function fillSeats(db: Db, eventId: string, now = new Date(), force = false): Promise<number> {
   // 锁活动行：同一个空位不会同时发给两个人（定时任务和“去不了”同时发生时排队）
   const { rows: ev } = await db.query<{ capacity: number | null; starts_at: Date; event_status: string }>(`SELECT capacity, starts_at, event_status FROM events WHERE id = $1 FOR UPDATE`, [eventId]);
@@ -250,13 +304,19 @@ export async function fillSeats(db: Db, eventId: string, now = new Date(), force
     if (!e0 || e0.capacity == null || e0.event_status !== 'scheduled') return 0;
     const free0 = e0.capacity - (await takenSeats(db, eventId));
     if (free0 <= 0) return 0;
+    const { rows: cands0 } = await db.query<{ id: string; contact_id: string }>(
+      `SELECT id, contact_id FROM registrations WHERE event_id = $1 AND status = 'waitlisted' AND NOT noshow_waitlisted
+        ORDER BY coalesce(waitlisted_at, created_at), created_at LIMIT 200`,
+      [eventId]
+    );
+    const ids0 = await pickRespectingReserve(db, eventId, cands0, free0);
+    if (!ids0.length) return 0;
     const { rows: up } = await db.query(
       `UPDATE registrations SET status = 'registered', confirm_status = CASE WHEN confirm_status IN ('offered','offer_expired') THEN 'none' ELSE confirm_status END,
               offer_expires_at = NULL, updated_at = now()
-        WHERE id IN (SELECT id FROM registrations WHERE event_id = $1 AND status = 'waitlisted' AND NOT noshow_waitlisted
-                      ORDER BY coalesce(waitlisted_at, created_at), created_at LIMIT $2)
+        WHERE id = ANY($1::uuid[])
         RETURNING id`,
-      [eventId, free0]
+      [ids0]
     );
     return up.length;
   }
@@ -269,15 +329,17 @@ export async function fillSeats(db: Db, eventId: string, now = new Date(), force
   const hoursLeft = (startMs - now.getTime()) / 3600_000;
   const windowH = hoursLeft < OFFER_H ? SHORT_OFFER_H : OFFER_H;
   const expires = new Date(Math.min(now.getTime() + windowH * 3600_000, startMs));
-  const { rows: next } = await db.query<{ id: string }>(
-    `SELECT id FROM registrations
+  const { rows: cands } = await db.query<{ id: string; contact_id: string }>(
+    `SELECT id, contact_id FROM registrations
       WHERE event_id = $1 AND status = 'waitlisted'
         AND confirm_status NOT IN ('offered')
-        AND NOT (confirm_status = 'released' AND released_at > $3::timestamptz - interval '1 hour')
+        AND NOT (confirm_status = 'released' AND released_at > $2::timestamptz - interval '1 hour')
         AND NOT (confirm_status = 'offer_expired')
-      ORDER BY coalesce(waitlisted_at, created_at), created_at LIMIT $2 FOR UPDATE SKIP LOCKED`,
-    [eventId, free, now]
+      ORDER BY coalesce(waitlisted_at, created_at), created_at LIMIT 200 FOR UPDATE SKIP LOCKED`,
+    [eventId, now]
   );
+  const pick = await pickRespectingReserve(db, eventId, cands, free);
+  const next = pick.map((id) => ({ id }));
   for (const r of next) {
     await db.query(`UPDATE registrations SET confirm_status = 'offered', offer_expires_at = $2, updated_at = now() WHERE id = $1`, [r.id, expires]);
     await notify(db, r.id, 'offer');
