@@ -189,7 +189,7 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
         </div>
       )}
       <p className={styles.small} style={{ marginTop: 0 }}>
-        现有的「<Link href="/zh/staff/newsletter" style={{ color: 'var(--gold)' }}>邮件通讯</Link>」（/zh/staff/newsletter）以后作为群发的邮件渠道并进来，名字和入口等东哥定；现在两个页面都能用。
+        现有的「<Link href="/zh/staff/newsletter" style={{ color: 'var(--gold)' }}>邮件通讯</Link>」以后作为群发的邮件渠道并进来，名字和入口等东哥定；现在两个页面都能用。
       </p>
       <Toast m={msg} onClose={closeMsg} />
 
