@@ -217,7 +217,10 @@ export async function home131(contactId: string | null, opts: { region?: string 
     todo = { kind: 'recommend', title: `推荐：${local[0].title}`, sub: `${dayWord(local[0].starts_at, tz, now)} ${clock(local[0].starts_at, tz)}`, slug: local[0].slug, actions: [{ text: '去看', action: 'event' }] };
   } else {
     // 东哥 11/9 真机修正 1：没有可展示的活动时只一行，不写任何占位口号
-    todo = { kind: 'none', title: '近期活动筹备中，敬请期待', sub: '', actions: [] };
+    // 1.4.0（交互总则第 8 条：给出路）：没有活动时给一个「加商会微信」按钮；1.3.x 不认识这个按钮，保持原样
+    todo = opts.client14
+      ? { kind: 'none', title: '下一场还在筹备', sub: '加商会微信，开放报名第一时间通知您', actions: [{ text: '加商会微信', action: 'wechat' }] }
+      : { kind: 'none', title: '近期活动筹备中，敬请期待', sub: '', actions: [] };
   }
 
   // ── 轮播 ──
