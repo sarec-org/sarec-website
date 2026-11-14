@@ -45,7 +45,7 @@ export async function ensureClubsSeeded() {
 }
 
 async function clubByKey(key: string): Promise<Club> {
-  const { rows } = await getPool().query<Club>(`SELECT * FROM clubs WHERE key = $1`, [key]);
+  const { rows } = await getPool().query<Club>(`SELECT *, to_char(group_qr_expires, 'YYYY-MM-DD') AS group_qr_expires FROM clubs WHERE key = $1`, [key]);
   if (!rows[0] || rows[0].closed_at) throw new CrmError('not_found', '这个俱乐部不存在或已经关闭了');
   return rows[0];
 }
@@ -265,13 +265,13 @@ export async function setGroupQr(actor: string, key: string, url: string, expire
 export async function staffClubs() {
   await ensureClubsSeeded();
   const { rows } = await getPool().query(
-    `SELECT c.*, NULLIF(l.name, '微信用户') AS leader_name,
+    `SELECT c.*, to_char(c.group_qr_expires, 'YYYY-MM-DD') AS group_qr_expires, NULLIF(l.name, '微信用户') AS leader_name, l.member_no::int AS leader_member_no,
             (SELECT count(*)::int FROM club_members m WHERE m.club_id = c.id AND m.left_at IS NULL) AS members,
             (SELECT count(*)::int FROM club_meetups u WHERE u.club_id = c.id AND u.status = 'open' AND u.starts_at > now()) AS open_meetups
        FROM clubs c LEFT JOIN contacts l ON l.id = c.leader_contact_id ORDER BY c.closed_at NULLS FIRST, c.sort_order, c.created_at`
   );
   const { rows: meetups } = await getPool().query(
-    `SELECT u.id, u.title, u.starts_at, u.location, u.capacity, u.note, u.status, u.sec_status, c.name AS club, c.key AS club_key,
+    `SELECT u.id, u.title, u.starts_at, u.location, u.capacity, u.note, u.status, u.sec_status, u.taken_down_by, u.taken_down_reason, c.name AS club, c.key AS club_key,
             NULLIF(ct.name, '微信用户') AS creator, u.creator_id,
             (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined
        FROM club_meetups u JOIN clubs c ON c.id = u.club_id JOIN contacts ct ON ct.id = u.creator_id

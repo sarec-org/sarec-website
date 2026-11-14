@@ -70,7 +70,8 @@ async function targetSummary(kind: string, id: string): Promise<{ text: string; 
 
 export async function handleReport(s: Staff, id: string, status: 'done' | 'dismissed', note?: string | null) {
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new CrmError('bad_request', '找不到这条举报');
-  await getPool().query(`UPDATE ugc_reports SET status = $2, handled_by = $3, handled_at = now() WHERE id = $1`, [id, status, s.name || s.email]);
+  const { rowCount } = await getPool().query(`UPDATE ugc_reports SET status = $2, handled_by = $3, handled_at = now() WHERE id = $1`, [id, status, s.name || s.email]);
+  if (!rowCount) throw new CrmError('not_found', '找不到这条举报');
   await log(s.name || s.email, 'report', id, status, note ?? null);
   return { message: status === 'done' ? '已标为处理完' : '已标为不用处理' };
 }
@@ -234,14 +235,15 @@ export const SHOWCASE_KIND_LABEL: Record<string, string> = { vice_president: '�
 
 export async function listShowcase(includeHidden = false) {
   const { rows } = await getPool().query(
-    `SELECT o.*, NULLIF(c.name, '微信用户') AS contact_name, m.token AS contact_token, m.title AS contact_title
+    `SELECT o.*, NULLIF(c.name, '微信用户') AS contact_name, c.member_no::int AS contact_member_no, m.token AS contact_token, m.title AS contact_title
        FROM showcase_orgs o LEFT JOIN contacts c ON c.id = o.contact_contact_id LEFT JOIN member_cards m ON m.contact_id = o.contact_contact_id AND m.hidden_at IS NULL
       WHERE $1 OR NOT o.hidden ORDER BY o.kind = 'partner', o.sort_order, o.created_at`,
     [includeHidden]
   );
   return rows.map((o: Record<string, unknown>) => ({
     id: o.id, kind: o.kind, kindLabel: SHOWCASE_KIND_LABEL[o.kind as string], name: o.name, logoUrl: o.logo_url, intro: o.intro, projects: o.projects,
-    contact: o.contact_name ? { name: o.contact_name, token: o.contact_token, title: o.contact_title } : null, sortOrder: o.sort_order, hidden: o.hidden
+    contact: o.contact_name ? { name: o.contact_name, token: o.contact_token, title: o.contact_title } : null,
+    contactMemberNo: includeHidden ? o.contact_member_no ?? null : undefined, sortOrder: o.sort_order, hidden: o.hidden
   }));
 }
 
@@ -255,15 +257,16 @@ export async function saveShowcase(s: Staff, b: Record<string, unknown>) {
     text: String((p as Record<string, unknown>).text ?? '').trim().slice(0, 500),
     images: (Array.isArray((p as Record<string, unknown>).images) ? ((p as Record<string, unknown>).images as unknown[]).map(String) : []).slice(0, 6)
   })).filter((p) => p.title);
-  let contactId: string | null = null;
+  // 没传 contactMemberNo（undefined）= 联系人不改；传空字符串 / null = 去掉联系人
+  let contactId: string | null | undefined = b.contactMemberNo === undefined ? undefined : null;
   if (b.contactMemberNo) {
     const { rows } = await pool.query<{ id: string }>(`SELECT id FROM contacts WHERE member_no = $1`, [Number(b.contactMemberNo)]);
     if (!rows[0]) throw new CrmError('bad_request', '没找到这个联系人会员号');
     contactId = rows[0].id;
   }
   const id = typeof b.id === 'string' && /^[0-9a-f-]{36}$/.test(b.id) ? b.id : null;
-  const vals = [kind, name, String(b.logoUrl ?? '') || null, String(b.intro ?? '').trim().slice(0, 600) || null, JSON.stringify(projects), contactId, Math.floor(Number(b.sortOrder) || 0), b.hidden === true];
-  if (id) await pool.query(`UPDATE showcase_orgs SET kind = $2, name = $3, logo_url = $4, intro = $5, projects = $6::jsonb, contact_contact_id = $7, sort_order = $8, hidden = $9, updated_at = now() WHERE id = $1`, [id, ...vals]);
+  const vals = [kind, name, String(b.logoUrl ?? '') || null, String(b.intro ?? '').trim().slice(0, 600) || null, JSON.stringify(projects), contactId ?? null, Math.floor(Number(b.sortOrder) || 0), b.hidden === true];
+  if (id) await pool.query(`UPDATE showcase_orgs SET kind = $2, name = $3, logo_url = $4, intro = $5, projects = $6::jsonb, contact_contact_id = CASE WHEN $10 THEN contact_contact_id ELSE $7 END, sort_order = $8, hidden = $9, updated_at = now() WHERE id = $1`, [id, ...vals, contactId === undefined]);
   else await pool.query(`INSERT INTO showcase_orgs (kind, name, logo_url, intro, projects, contact_contact_id, sort_order, hidden) VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)`, vals);
   await log(s.name || s.email, 'showcase', id ?? name, id ? 'update' : 'create');
   return { message: `已保存「${name}」` };

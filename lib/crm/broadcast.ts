@@ -25,8 +25,7 @@ type FieldDef = { key: string; label: string; options: { value: string; label: s
 /** 条件目录：固定的 + 题库里的单选 / 多选题（自动） */
 export async function conditionCatalog(): Promise<FieldDef[]> {
   const pool = getPool();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const q = async <T extends Record<string, any>>(sql: string): Promise<T[]> => (await pool.query<T>(sql).catch(() => ({ rows: [] as T[] }))).rows;
+  const q = async <T extends Record<string, unknown>>(sql: string): Promise<T[]> => (await pool.query<T>(sql).catch(() => ({ rows: [] as T[] }))).rows;
   const events = await q<{ id: string; title: string; d: string }>(`SELECT id, title, to_char(starts_at, 'YYYY-MM-DD') AS d FROM events WHERE starts_at < now() + interval '60 days' ORDER BY starts_at DESC LIMIT 60`);
   const clubs = await q<{ key: string; name: string }>(`SELECT key, name FROM clubs WHERE closed_at IS NULL ORDER BY sort_order`);
   const tags = await q<{ tag: string }>(`SELECT tag FROM contact_tags GROUP BY tag ORDER BY count(*) DESC LIMIT 60`);
@@ -183,8 +182,8 @@ export async function previewToOwner(s: Staff, id: string) {
   const ownerNo = await getSetting<number | null>(getPool(), 'broadcast_preview_member_no', null);
   const { rows } = ownerNo ? await getPool().query<{ id: string; name: string }>(`SELECT id, name FROM contacts WHERE member_no = $1`, [ownerNo]) : { rows: [] as { id: string; name: string }[] };
   await getPool().query(`UPDATE broadcasts SET status = 'previewed', previewed_at = now() WHERE id = $1`, [id]);
-  const to = rows[0]?.name ?? '（还没在设置里指定预览人，默认发给点按钮的人）' + (s.name || s.email);
-  return { message: `演练：预览本来会发给 ${to}（${(b.channels as string[]).map((c) => ({ sms: '短信', email: '邮件', wechat: '微信服务通知' }[c])).join('、')} 各一条）。现在没有真的发出。东哥看过后再点「确认群发」。` };
+  const to = rows[0]?.name ? `东哥本人（${rows[0].name}）` : `点按钮的您（${s.name || s.email}）——还没指定固定的预览人`;
+  return { message: `演练：预览本来会发给${to}（${(b.channels as string[]).map((c) => ({ sms: '短信', email: '邮件', wechat: '微信服务通知' }[c])).join('、')} 各一条）。现在没有真的发出。东哥看过后再点「确认群发」。` };
 }
 
 /** 确认群发：必须先预览过；演练模式只把“本来会发给谁”写进记录 */
