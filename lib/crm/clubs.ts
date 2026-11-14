@@ -6,7 +6,7 @@
  * - 每个俱乐部一位负责人（后台指定），可下架组局、移出成员。后台可禁人（不能发起、不能参加，可解除）、下架组局、关掉俱乐部；都有记录。
  * - 默认注册用户都能加入，可按俱乐部设“仅会员”。
  * - 组局文字先过微信文本安全检测再显示；检测不通（没配置 / 出错 / 需复核）时先不显示，告诉发起人“稍后显示”，后台可放行。
- * - 牌类只写“掼蛋局 / 牌局”，不出现输赢、金额、奖励——写了就提示改掉。
+ * - 组局只写玩什么、什么时间；拦词（MONEY_GAMBLE）命中就提示改，提示里不复述被拦的词（测试窗口 Q14）。
  */
 import { getPool, withTransaction } from '@/lib/db/client';
 import { CrmError } from './events';
@@ -158,7 +158,9 @@ async function listMeetups(c: Club, contactId: string | null, canSee: boolean) {
        FROM club_meetups u JOIN contacts ct ON ct.id = u.creator_id
       WHERE u.club_id = $1 AND u.status <> 'taken_down' AND u.starts_at > now() - interval '3 hours'
         AND (u.sec_status = 'ok' OR u.creator_id = $2)
-      ORDER BY u.starts_at`,
+        -- 测试窗口 Q12：已取消的排最后，取消一天后收起
+        AND NOT (u.status = 'cancelled' AND u.updated_at < now() - interval '1 day')
+      ORDER BY (u.status = 'cancelled'), u.starts_at`,
     [c.id, contactId]
   );
   const { geocode } = await import('./geo');
@@ -167,7 +169,7 @@ async function listMeetups(c: Club, contactId: string | null, canSee: boolean) {
     id: u.id, title: u.title, startsAt: u.starts_at, location: u.location, address: u.address, geo: geos[i], capacity: u.capacity, note: u.note,
     joined: u.joined, full: u.joined >= u.capacity, iJoined: u.mine, mineCreated: u.creator_id === contactId,
     creator: u.creator_name ?? 'SAREC 用户', cancelled: u.status === 'cancelled',
-    pending: u.sec_status === 'pending' ? '内容检测中，稍后显示（只有您自己看得到）' : u.sec_status === 'rejected' ? '内容没通过检测，别人看不到，请修改后重新发起' : null
+    pending: u.status === 'cancelled' ? null : u.sec_status === 'pending' ? '内容检测中，稍后显示（只有您自己看得到）' : u.sec_status === 'rejected' ? '内容没通过检测，别人看不到，请修改后重新发起' : null
   }));
 }
 
@@ -185,7 +187,8 @@ export async function createMeetup(contactId: string, key: string, b: Record<str
   if (!Number.isFinite(starts.getTime()) || starts.getTime() < Date.now() - 60e3) throw new CrmError('bad_request', '请选一个还没到的时间');
   if (!(capacity >= 2 && capacity <= 200)) throw new CrmError('bad_request', '人数上限请填 2 到 200');
   const bad = gambleWords(`${title} ${note}`);
-  if (bad) throw new CrmError('bad_words', `组局里不能出现“${bad}”这类输赢、金额、奖励的字样，请改一下（例如写“掼蛋局”“牌局”就好）`);
+  // 测试窗口 Q14：提示不复述被拦的词，也不自己写出“输赢、金额”这类字
+  if (bad) throw new CrmError('bad_words', '这段文字不能发，请只写活动内容和时间，例如“周六下午掼蛋”');
   // 文本安全检测：通过才直接显示；不通 / 需复核 → 先不显示，告诉发起人“稍后显示”
   const sec = await msgSecCheck(`${title}\n${note}\n${location ?? ''}`, await openidOf(contactId), 3);
   if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再发');
