@@ -190,7 +190,7 @@ export type RegisterPreview = {
   /** 1.2 一步报名：老用户资料已齐（姓名、手机、行业），点报名直接成功 */
   oneStepReady: boolean;
   /** 1.2 新用户只填三项：姓名、手机、行业 */
-  profile: { name: string | null; phoneMasked: string | null; roleLabel: string | null } | null;
+  profile: { name: string | null; phoneMasked: string | null; roleLabel: string | null; knownIndustry?: string | null } | null;
   photoConsent: boolean;
   registrationId: string | null;
   /** 1.3：收费活动已付款（报名结果页显示“已确认”，不再显示“收费待确认”） */
@@ -235,8 +235,10 @@ export async function previewRegistration(slug: string, contactId: string | null
   const name = c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null;
   const phoneKnown = !!(contactInfo.phone?.value || c[0]?.phone_e164);
   const role = findRoleSub(c[0]?.role_sub);
-  const { rows: extra } = await pool.query<{ paid: boolean; collect: boolean; has_intro: boolean; roster: boolean }>(
+  const { rows: extra } = await pool.query<{ paid: boolean; collect: boolean; has_intro: boolean; roster: boolean; known_industry: string | null }>(
     `SELECT EXISTS (SELECT 1 FROM orders o WHERE o.contact_id = $1 AND o.related_id = $2 AND o.purpose = 'event_fee' AND o.status = 'paid') AS paid,
+            COALESCE((SELECT a.value->>'choice' FROM profile_answers a WHERE a.contact_id = $1 AND a.item_code = 'CK:profession' AND a.status = 'current' LIMIT 1),
+                     (SELECT NULLIF(trim(mc.industry), '') FROM member_cards mc WHERE mc.contact_id = $1)) AS known_industry,
             COALESCE((SELECT (p.settings->>'collectIntro')::boolean FROM event_prep p WHERE p.event_id = $2), false) AS collect,
             EXISTS (SELECT 1 FROM member_cards m WHERE m.contact_id = $1 AND coalesce(m.intro, '') <> '') AS has_intro,
             EXISTS (SELECT 1 FROM event_rosters r WHERE r.event_id = $2) AS roster`,
@@ -257,7 +259,8 @@ export async function previewRegistration(slug: string, contactId: string | null
     identity: { email: c[0]?.email ?? null, phone: c[0]?.phone_e164 ?? null },
     contactInfo,
     oneStepReady: !firstTime && !!name && phoneKnown,
-    profile: { name, phoneMasked: contactInfo.phone?.masked ?? null, roleLabel: role?.label ?? null },
+    // 1.4.0（交互总则第 6 条）：签到时选过的职业 / 名片上的行业也算“已知行业”，报名表不再要求重选
+    profile: { name, phoneMasked: contactInfo.phone?.masked ?? null, roleLabel: role?.label ?? null, knownIndustry: extra[0]?.known_industry ?? null },
     photoConsent: !!reg[0]?.photo_consent,
     registrationId: reg[0] && reg[0].status !== 'cancelled' ? reg[0].id : null
   };

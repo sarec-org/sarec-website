@@ -48,6 +48,8 @@ export async function workbenchAccess(contactId: string | null) {
   if (!contactId) return null;
   const s = await staffFor(contactId);
   if (!s) return null;
+  // 1.4.0：只有财务角色的人用不了工作台（工作台要签到 / 运营 / 管理员），不给他显示「工作台」入口，免得点进去说没权限
+  if (!['admin', 'ops', 'checkin'].some((r) => s.roles.includes(r as Staff['roles'][number]))) return null;
   return { name: s.name, roles: s.roles };
 }
 
