@@ -149,6 +149,9 @@ export async function saveProfile(contactId: string, b: Record<string, unknown>)
 export async function saveProject(contactId: string, b: Record<string, unknown>) {
   if (await isProfileBanned(contactId)) throw new CrmError('profile_banned', '您的个人主页暂时不能修改。有疑问请在「联系商会」里找工作人员。');
   const pool = getPool();
+  // 测试窗口 Q10：和简介一样，先有电子名片（项目挂在名片下面给别人看）
+  const { rows: card } = await pool.query(`SELECT 1 FROM member_cards WHERE contact_id = $1`, [contactId]);
+  if (!card[0]) throw new CrmError('no_card', '先做一张电子名片，再加个人主页');
   const lim = profileLimits((await memberStatus(pool, contactId)).isMember);
   const title = String(b.title ?? '').trim().slice(0, 30);
   const body = String(b.body ?? '').trim().slice(0, 500);
