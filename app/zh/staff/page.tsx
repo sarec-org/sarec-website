@@ -154,7 +154,7 @@ function MpBind({ admin }: { admin: boolean }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {b.qr ? <img src={b.qr} alt="我的工作台绑定码" className={styles.qrImg} style={{ width: 200 }} /> : null}
           <p className={b.qr ? styles.small : styles.notice}>
-            {b.qr ? '扫不了的：' : '小程序码这会儿生成不了。请'}打开小程序「我的」→「工作人员绑定码」，输入 8 位码：
+            {b.qr ? '扫不了的：' : '小程序码这会儿生成不了。请'}打开小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里），输入 8 位码：
             <b className={styles.mono} style={{ fontSize: '1.3rem', letterSpacing: 3, marginLeft: 6 }}>{b.code}</b>
           </p>
           <p className={styles.small}>10 分钟内有效，只能用一次。过期了再点一次生成。</p>

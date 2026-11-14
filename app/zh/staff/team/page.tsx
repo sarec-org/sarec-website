@@ -35,21 +35,21 @@ function detail(l: L) {
 
 /** 1.4.0（改动单 B1）：出码结果——小程序码（微信一扫即绑定）+ 8 位码备用 + 复制发微信 + 存图 */
 type Code = { code: string; expiresAt: string; who: string; qr: string | null };
-const BIND_TIP = '让同事用微信扫这个码，扫完就绑定好了；扫不了的：小程序「我的」→「工作人员绑定码」输入 8 位码';
+const BIND_TIP = '让同事用微信扫这个码，扫完就绑定好了；扫不了的：小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里）输入 8 位码';
 function CodeCard({ c, onMsg, onClose }: { c: Code; onMsg: (m: { ok: boolean; text: string }) => void; onClose: () => void }) {
   return (
     <div className={styles.card} style={{ borderLeft: '4px solid #C9A567', marginTop: '0.75rem' }}>
       <p className={styles.cardTitle}>{c.who ? `${c.who} 的绑定码` : '绑定码'}</p>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {c.qr && <img src={c.qr} alt={`${c.who} 的工作台绑定小程序码`} className={styles.qrImg} style={{ width: 220 }} />}
-      <p style={{ margin: '0.6rem 0' }}>{c.qr ? BIND_TIP : '小程序码这会儿生成不了，请让同事打开小程序「我的」→「工作人员绑定码」，输入下面 8 位码。'}</p>
+      <p style={{ margin: '0.6rem 0' }}>{c.qr ? BIND_TIP : '小程序码这会儿生成不了，请让同事打开小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里），输入下面 8 位码。'}</p>
       <p className={styles.mono} style={{ fontSize: 28, letterSpacing: 4, margin: '0 0 0.4rem', color: 'var(--gold-bright)' }}>{c.code}</p>
       <p className={styles.small}>{fmtDateTime(c.expiresAt)} 前有效（24 小时），只能用一次。</p>
       <div className={styles.btnRow}>
         <button
           className={styles.btn}
           onClick={async () => {
-            const ok = await copyText(`SAREC 工作台绑定码：${c.code}（24 小时内有效）。打开商会小程序 →「我的」→「工作人员绑定码」，输入这 8 位码，手机工作台就开了。`);
+            const ok = await copyText(`SAREC 工作台绑定码：${c.code}（24 小时内有效）。打开商会小程序 →「我的」→「工作人员绑定码」（旧版在「我的 → 设置」里），输入这 8 位码，手机工作台就开了。`);
             onMsg(ok ? { ok: true, text: `已复制${c.who ? ` ${c.who} 的` : ''}绑定码和打开方法，粘到微信发给对方` } : { ok: false, text: '复制没成功，请手动抄下 8 位码发给对方' });
           }}
         >
