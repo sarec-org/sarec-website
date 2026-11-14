@@ -6,12 +6,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
-import { api, fmtDateTime } from '@/components/crm/client';
+import Link from 'next/link';
+import { api, copyText, fmtDateTime } from '@/components/crm/client';
 import { laToday } from '@/lib/laDate';
 
 type F = {
   id: string; source: string; name: string | null; contact_text: string | null; need: string | null; draft: string | null; draft_by: string;
-  status: string; owner: string | null; next_date: string | null; created_at: string; notified_at: string | null; event_title: string | null; member_no: number | null;
+  status: string; owner: string | null; next_date: string | null; created_at: string; notified_at: string | null; event_title: string | null; member_no: number | null; contact_id?: string | null;
 };
 type X = { id: string; kind: string; ref: string | null; error: string | null; attempts: number; status: string; created_at: string; updated_at: string };
 type Log = { actor: string; from_status: string | null; to_status: string | null; note: string | null; created_at: string };
@@ -67,7 +68,7 @@ function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
             <div className={styles.notice}>
               <p className={styles.small} style={{ margin: '0 0 6px' }}>建议联系内容（{f.draft_by === 'ai' ? 'AI 草稿' : '模板草稿'}，请人工确认后再发）</p>
               <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{f.draft}</p>
-              <button className={`${styles.btn} ${styles.btnQuiet}`} style={{ marginTop: 8 }} onClick={() => navigator.clipboard?.writeText(f.draft ?? '')}>复制草稿</button>
+              <button className={`${styles.btn} ${styles.btnQuiet}`} style={{ marginTop: 8 }} onClick={async () => setMsg((await copyText(f.draft ?? '')) ? '已复制联系内容草稿，可以粘到微信 / 短信里改一改再发' : '复制没成功，请长按上面的文字手动复制')}>复制草稿</button>
             </div>
           )}
           <div className={styles.grid2}>
@@ -92,9 +93,10 @@ function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
           </div>
           <div className={styles.btnRow}>
             <button className={styles.btn} onClick={save}>保存</button>
-            {f.member_no ? <a className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/contacts?q=${f.member_no}`}>查看客户档案</a> : null}
+            {/* 改动单 D1：直接打开这个人的档案（原来打开的是全部客户） */}
+            {f.contact_id ? <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/contacts/${f.contact_id}`}>查看客户档案</Link> : f.member_no ? <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/contacts?q=${f.member_no}`}>查看客户档案</Link> : null}
           </div>
-          {msg && <p className={msg === '已保存' ? styles.success : styles.error}>{msg}</p>}
+          {msg && <p className={msg === '已保存' || msg.startsWith('已复制') ? styles.success : styles.error}>{msg}</p>}
           {log && log.length > 0 && (
             <div className={styles.list}>
               {log.map((l, i) => (
@@ -111,7 +113,11 @@ function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
 }
 
 function Followups() {
+  // 改动单 D9：首页“N 条失败 / 异常”带 ?tab=exceptions，直接打开“待处理”页签
   const [tab, setTab] = useState<'tasks' | 'exceptions'>('tasks');
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('tab') === 'exceptions') setTab('exceptions');
+  }, []);
   const [status, setStatus] = useState('todo');
   const [source, setSource] = useState('');
   const [q, setQ] = useState('');
@@ -196,23 +202,18 @@ function Followups() {
         <>
           <p className={styles.small}>发送失败、上传失败等都在这里。点“重试”会再执行一次，已经成功的部分不会重复发送、重复报名或重复计分。</p>
           {ex === null ? <p className={styles.muted}>加载中…</p> : ex.length === 0 ? <p className={styles.success}>没有待处理的异常。</p> : (
-            <table className={styles.table}>
-              <thead><tr><th>类型</th><th>说明</th><th>次数</th><th>最近</th><th /></tr></thead>
-              <tbody>
-                {ex.map((x) => (
-                  <tr key={x.id}>
-                    <td>{KIND[x.kind] ?? x.kind}</td>
-                    <td className={styles.small}>{x.error}</td>
-                    <td>{x.attempts}</td>
-                    <td className={styles.small}>{fmtDateTime(x.updated_at)}</td>
-                    <td>
-                      <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => exAction(x.id, 'retry')}>重试</button>{' '}
-                      <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => exAction(x.id, 'ignore')}>不处理</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            // 1.4.0：手机上表格要横滑才看得到按钮，改成一条一张卡片
+            ex.map((x) => (
+              <div key={x.id} className={styles.card}>
+                <p className={styles.cardTitle}>{KIND[x.kind] ?? x.kind}</p>
+                <p className={styles.small} style={{ margin: '0 0 0.4rem' }}>{x.error}</p>
+                <p className={styles.small} style={{ margin: '0 0 0.6rem' }}>试过 {x.attempts} 次 · 最近 {fmtDateTime(x.updated_at)}</p>
+                <div className={styles.btnRow}>
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => exAction(x.id, 'retry')}>重试</button>
+                  <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => exAction(x.id, 'ignore')}>不处理</button>
+                </div>
+              </div>
+            ))
           )}
         </>
       )}
@@ -222,7 +223,7 @@ function Followups() {
 
 export default function Page() {
   return (
-    <StaffGate role="ops" title="待跟进任务" wide>
+    <StaffGate role="ops" title="待跟进" wide>
       {() => <Followups />}
     </StaffGate>
   );

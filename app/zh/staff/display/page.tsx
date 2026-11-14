@@ -24,7 +24,7 @@ export default function StaffDisplay() {
     load();
   }
   return (
-    <StaffGate title="官网展示审核" role="ops">
+    <StaffGate title="官网展示" role="ops">
       {() => (
         <>
           <div className={styles.notice}>这里只决定会员资料能否在商会官网公开展示，<strong>不影响会员身份</strong>。会员付款后即已生效。</div>

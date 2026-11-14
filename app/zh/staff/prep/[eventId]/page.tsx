@@ -59,7 +59,11 @@ export default function PrepPage({ params }: { params: { eventId: string } }) {
       {(s) => (
         <>
           <Msg m={msg} />
-          {!p && <p className={styles.muted}>这场活动还没有筹备清单。到活动详情页选活动类型生成。</p>}
+          {!p && (
+            <p className={styles.muted}>
+              这场活动还没有筹备清单。到这场活动的<a href={`/zh/staff/events/${params.eventId}#prep`} style={{ color: 'var(--gold)' }}>详情页</a>，选活动类型，点「生成筹备清单」。
+            </p>
+          )}
           {p && (
             <>
               <p className={styles.small}>{fmt(p.starts_at)} 开始 · 已完成 {p.items.filter((i) => i.done_at).length} / {p.items.length}</p>

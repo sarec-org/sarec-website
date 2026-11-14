@@ -48,8 +48,8 @@ export default function Duplicates() {
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}><Side p={x.a} /><Side p={x.b} /></div>
               <div className={styles.btnRow}>
                 <button className={styles.btn} onClick={() => act({ action: 'merge', keptId: x.a.id, mergedId: x.b.id }, `已合并，保留 ${who(x.a)}`)}>保留 {who(x.a)}，合并另一份</button>
-                <button className={styles.btnQuiet} onClick={() => act({ action: 'merge', keptId: x.b.id, mergedId: x.a.id }, `已合并，保留 ${who(x.b)}`)}>保留 {who(x.b)}</button>
-                <button className={styles.btnQuiet} onClick={() => act({ action: 'not_dup', a: x.a.id, b: x.b.id }, '已标记不是同一人，以后不再提示')}>不是同一人</button>
+                <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ action: 'merge', keptId: x.b.id, mergedId: x.a.id }, `已合并，保留 ${who(x.b)}`)}>保留 {who(x.b)}</button>
+                <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ action: 'not_dup', a: x.a.id, b: x.b.id }, '已标记不是同一人，以后不再提示')}>不是同一人</button>
               </div>
             </div>
           ))}
@@ -61,7 +61,7 @@ export default function Duplicates() {
               <tbody>{merges.map((m) => (
                 <tr key={m.id}>
                   <td>{fmtDateTime(m.created_at)}</td><td>#{m.kept_no} {m.kept_name}</td><td>#{m.merged_no} {m.merged_name}</td><td>{m.merged_by.replace(/^staff:/, '')}</td>
-                  <td>{m.undone_at ? <span className={styles.small}>已撤销</span> : <button className={styles.btnQuiet} onClick={() => act({ action: 'undo', mergeId: m.id }, '已撤销合并，两份档案恢复独立')}>撤销</button>}</td>
+                  <td>{m.undone_at ? <span className={styles.small}>已撤销</span> : <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ action: 'undo', mergeId: m.id }, '已撤销合并，两份档案恢复独立')}>撤销</button>}</td>
                 </tr>
               ))}</tbody>
             </table>

@@ -1,17 +1,17 @@
 'use client';
+import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api } from '@/components/crm/client';
+import { WechatQr } from '@/components/crm/staff/WechatQr';
 
 type S = {
   settings: { key: string; value: unknown; updated_by: string | null }[];
   rooms: { id: number; name: string; hourly_cents: number; is_active: boolean }[];
   offers: { id: string; merchant: string; category: string | null; offer: string; conditions: string | null; contact: string | null; valid_until: string | null; is_active: boolean }[];
-  staff: { email: string; name: string; roles: string[]; is_active: boolean; mp_bound?: boolean }[];
 };
 const TIERS: [string, string][] = [['none', '注册用户'], ['member', '普通会员'], ['board', '理事'], ['exec_board', '常务理事'], ['vp', '副会长'], ['strategic_partner', '战略伙伴']];
-const ROLES: [string, string][] = [['checkin', '现场签到'], ['finance', '财务核款'], ['ops', '运营'], ['admin', '管理员']];
 
 export default function StaffSettings() {
   const [d, setD] = useState<S | null>(null);
@@ -21,8 +21,8 @@ export default function StaffSettings() {
   const [ppd, setPpd] = useState('');
   const [pass, setPass] = useState('');
   const [offer, setOffer] = useState({ merchant: '', category: '', offer: '', conditions: '', contact: '', validUntil: '' });
-  const [st, setSt] = useState({ email: '', name: '', roles: [] as string[] });
   const [tl, setTl] = useState<boolean | null>(null);
+  const [quota, setQuota] = useState({ monthly: '', daily: '' });
 
   const val = (data: S, k: string) => data.settings.find((x) => x.key === k)?.value;
   const load = useCallback(async () => {
@@ -35,6 +35,8 @@ export default function StaffSettings() {
     setFee(Object.fromEntries(Object.entries(ff).map(([k, v]) => [k, String(v / 100)])));
     setPpd(String(val(r.data, 'points_per_dollar') ?? 10));
     setPass(String(Number(val(r.data, 'room_pass_cents') ?? 29900) / 100));
+    // 没设过时显示代码里的默认值（lib/crm/newsletter.ts quotaState：每月 3000、每天 100）
+    setQuota({ monthly: String(val(r.data, 'resend_monthly_quota') ?? 3000), daily: String(val(r.data, 'resend_daily_quota') ?? 100) });
     const t = await api<{ timelineEnabled: boolean }>('/api/v1/workbench/seats');
     setTl(t.ok ? !!t.data.timelineEnabled : null);
   }, []);
@@ -73,6 +75,10 @@ export default function StaffSettings() {
         d && (
           <>
             <Msg m={msg} />
+            {/* 1.4.0：从「增长与设置」挪过来（东哥已点头） */}
+            <h2 className={styles.h2} id="wechat-qr">换商会微信二维码</h2>
+            <WechatQr />
+
             <h2 className={styles.h2}>活动确认时间线</h2>
             <div className={styles.card}>
               <p>
@@ -134,6 +140,18 @@ export default function StaffSettings() {
               </div>
             </div>
 
+            {/* 1.4.0（改动单 D2）：邮件通讯页说“额度在设置里按套餐改”，这里补上 */}
+            <h2 className={styles.h2} id="email-quota">邮件通讯发信额度</h2>
+            <div className={styles.card}>
+              <p className={styles.small} style={{ marginTop: 0 }}>按邮件服务（Resend）套餐填。当天额度用完时，剩下的第二天自动接着发；群发前本月剩余额度不够会拦下，并发邮件提醒。</p>
+              <div className={styles.row}><span className={styles.rowLabel}>每月最多发（封）</span><input className={styles.input} style={{ maxWidth: 140 }} inputMode="numeric" aria-label="每月最多发多少封" value={quota.monthly} onChange={(e) => setQuota({ ...quota, monthly: e.target.value })} /></div>
+              <div className={styles.row}><span className={styles.rowLabel}>每天最多发（封）</span><input className={styles.input} style={{ maxWidth: 140 }} inputMode="numeric" aria-label="每天最多发多少封" value={quota.daily} onChange={(e) => setQuota({ ...quota, daily: e.target.value })} /></div>
+              <div className={styles.btnRow}>
+                <button className={styles.btn} onClick={() => post({ kind: 'setting', key: 'resend_monthly_quota', value: Number(quota.monthly) }, `每月发信额度已改为 ${quota.monthly} 封`)}>保存每月额度</button>
+                <button className={styles.btn} onClick={() => post({ kind: 'setting', key: 'resend_daily_quota', value: Number(quota.daily) }, `每天发信额度已改为 ${quota.daily} 封`)}>保存每天额度</button>
+              </div>
+            </div>
+
             <h2 className={styles.h2}>会议室标准价</h2>
             {d.rooms.map((r) => (
               <RoomRow key={r.id} r={r} onSave={(body) => post({ kind: 'room', ...body }, '会议室已保存')} />
@@ -167,43 +185,11 @@ export default function StaffSettings() {
               <button className={styles.btn} onClick={saveOffer}>添加</button>
             </div>
 
+            {/* 1.4.0：工作人员（按邮箱）并到「团队」页（东哥已点头），这里只留一个链接 */}
             <h2 className={styles.h2}>工作人员与权限</h2>
-            <div style={{ overflowX: 'auto' }}>
-              <table className={styles.table}>
-                <thead><tr><th>姓名</th><th>邮箱</th><th>权限</th><th /></tr></thead>
-                <tbody>
-                  {d.staff.map((x) => (
-                    <tr key={x.email} style={x.is_active ? undefined : { opacity: 0.5 }}>
-                      <td>{x.name}</td>
-                      <td className={styles.small}>{x.email}</td>
-                      <td className={styles.small}>{x.roles.map((r) => ROLES.find(([k]) => k === r)?.[1] ?? r).join('、')}</td>
-                      <td>
-                        <button className={styles.copyBtn} onClick={() => setSt({ email: x.email, name: x.name, roles: x.roles })}>修改</button>{' '}
-                        <button className={styles.copyBtn} onClick={() => post({ kind: 'staff', email: x.email, name: x.name, roles: x.roles, isActive: !x.is_active }, x.is_active ? '已停用' : '已启用')}>{x.is_active ? '停用' : '启用'}</button>{' '}
-                        {x.mp_bound ? <button className={styles.copyBtn} onClick={() => post({ kind: 'staff_unbind', email: x.email }, '已解绑小程序工作台')}>解绑小程序</button> : <span className={styles.small}>小程序未绑定</span>}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className={styles.card} style={{ marginTop: '1rem' }}>
-              <p className={styles.cardTitle}>添加 / 修改工作人员</p>
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="st-email">邮箱（用它收验证码登录）</label>
-                <input id="st-email" className={styles.input} type="email" value={st.email} onChange={(e) => setSt({ ...st, email: e.target.value })} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label} htmlFor="st-name">姓名</label>
-                <input id="st-name" className={styles.input} value={st.name} onChange={(e) => setSt({ ...st, name: e.target.value })} />
-              </div>
-              <div className={styles.chips} style={{ marginBottom: '1rem' }}>
-                {ROLES.map(([k, l]) => {
-                  const on = st.roles.includes(k);
-                  return <button key={k} type="button" className={`${styles.chip} ${on ? styles.chipOn : ''}`} onClick={() => setSt({ ...st, roles: on ? st.roles.filter((r) => r !== k) : [...st.roles, k] })}>{l}</button>;
-                })}
-              </div>
-              <button className={styles.btn} disabled={!st.email || !st.roles.length} onClick={() => post({ kind: 'staff', ...st, isActive: true }, '工作人员已保存')}>保存</button>
+            <div className={styles.card}>
+              <p style={{ marginTop: 0 }}>加人、出码（手机工作台）、改角色、停用、网站登录邮箱，都在「团队」页一处管。</p>
+              <Link href="/zh/staff/team" className={styles.btn}>去团队 ›</Link>
             </div>
           </>
         )
