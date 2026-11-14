@@ -53,23 +53,26 @@ function publicView(d: DocRow, base: string, isMember = false) {
   };
 }
 
-export async function listPublic(base: string, opts: { eventSlug?: string | null } = {}) {
+export async function listPublic(base: string, opts: { eventSlug?: string | null; oldClient?: boolean } = {}) {
   // 商会介绍等通用资料（不挂活动的）在前；?event=slug 只列那场的讲座资料
   const { rows } = await getPool().query<DocRow & { event_slug: string | null; event_title: string | null }>(
     `SELECT d.*, e.slug AS event_slug, e.title AS event_title FROM chamber_docs d LEFT JOIN events e ON e.id = d.event_id
       WHERE d.is_public AND jsonb_array_length(d.pages) > 0 AND ($1::text IS NULL OR e.slug = $1)
+        AND NOT ($2::boolean AND d.audience = 'members')
       ORDER BY (d.event_id IS NOT NULL), d.sort_order, d.created_at`,
-    [opts.eventSlug ?? null]
+    [opts.eventSlug ?? null, !!opts.oldClient]
   );
   return rows.map((d) => {
     const v = publicView(d, base, true);
     return { slug: v.slug, title: v.title, summary: v.summary, cover: v.cover, pageCount: v.pageCount, membersOnly: v.membersOnly, eventSlug: d.event_slug, eventTitle: d.event_title };
   });
 }
-export async function getPublic(slug: string, base: string, staffPreview = false, isMember = false) {
+export async function getPublic(slug: string, base: string, staffPreview = false, isMember = false, oldClient = false) {
   const { rows } = await getPool().query<DocRow>(`SELECT * FROM chamber_docs WHERE slug = $1`, [slug]);
   const d = rows[0];
   if (!d || (!d.is_public && !staffPreview) || !d.pages.length) throw new CrmError('not_found', '这份资料不存在或还没公开');
+  // 1.4.0 及更早的小程序不会显示“会员可看完整版”，给它截了页它也说不清——直接请它更新（会员 / 工作人员照常看全部）
+  if (oldClient && d.audience === 'members' && !isMember && !staffPreview) throw new CrmError('update_needed', '这是会员资料。请先更新小程序（关掉小程序重新打开），再看预览和完整版。');
   return publicView(d, base, isMember || staffPreview);
 }
 
