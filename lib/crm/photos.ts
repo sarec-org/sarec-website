@@ -1,14 +1,13 @@
 /**
  * 活动相册（SAREC 1.2 第 C 节）
  * ------------------------------------------------------------------
- * - 工作人员在后台上传现场照片 → 自动转正方向、压缩、右下角加商会印章水印 → 存 Vercel Blob（大图 + 缩略图）。
+ * - 工作人员在后台上传现场照片 → 自动转正方向、压缩 → 存 Vercel Blob（大图 + 缩略图）。1.4.0：不再加商会水印（东哥定）。
+ * - 1.4.0：上传 = 进相册，大家立刻能看到；不再需要“发布”。“通知到场的人：照片出来了”是单独的一个动作。
  *   正式站存 prod/，预览 / 本地存 test/（测试数据方便清理，永远不混进正式相册）。
  * - 发布相册后：到场的人生成“照片已上传”通知。授权过订阅消息（photos 模板已配置）的推送服务通知；
  *   没授权或模板未配置的，在首页状态卡看到。重复发布、重试都不会重复推送。
  * - 照片授权：签到时勾选“同意现场照片用于商会宣传”（默认不勾），后台上传页显示谁同意了。
  */
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { put, del } from '@vercel/blob';
 import sharp from 'sharp';
@@ -24,35 +23,13 @@ export function blobConfigured(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
-let sealCache: Buffer | null = null;
-async function seal(): Promise<Buffer> {
-  if (!sealCache) sealCache = await readFile(path.join(process.cwd(), 'public', 'brand', 'sarec-seal-wm.png')); // 透明底（白底版会在照片上留一块白方块）
-  return sealCache;
-}
-
-/** 加水印 + 压缩：长边 2000，JPEG q82；缩略图长边 640 */
+/** 压缩：转正方向、长边 2000，JPEG q82；缩略图长边 640。1.4.0 起不加水印（函数名保留，调用处不用改） */
 export async function watermark(input: Buffer): Promise<{ full: Buffer; thumb: Buffer; width: number; height: number }> {
-  const base = sharp(input, { failOn: 'none' }).rotate();
-  const { data: big, info } = await base.resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
-  const markW = Math.max(90, Math.round(Math.min(info.width, info.height) * 0.16));
-  const sized = await sharp(await seal()).resize({ width: markW }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  const markH = sized.info.height;
-  const pad = Math.round(markW * 0.18);
-  const left = Math.max(0, info.width - markW - pad);
-  const top = Math.max(0, info.height - markH - pad);
-  // 看右下角这块照片的亮度：偏暗（晚上活动照片常见）用象牙白印章，否则用深蓝印章
-  const corner = await sharp(big).extract({ left, top, width: Math.min(markW, info.width - left), height: Math.min(markH, info.height - top) }).greyscale().stats();
-  const dark = (corner.channels[0]?.mean ?? 255) < 120;
-  const px = Buffer.from(sized.data);
-  for (let i = 0; i < px.length; i += 4) {
-    if (dark) { px[i] = 245; px[i + 1] = 238; px[i + 2] = 222; }
-    px[i + 3] = Math.round(px[i + 3] * (dark ? 0.8 : 0.72));
-  }
-  const mark = await sharp(px, { raw: { width: markW, height: markH, channels: 4 } }).png().toBuffer();
-  const full = await sharp(big)
-    .composite([{ input: mark, left, top }])
+  const { data: full, info } = await sharp(input, { failOn: 'none' })
+    .rotate()
+    .resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true })
     .jpeg({ quality: 82, mozjpeg: true })
-    .toBuffer();
+    .toBuffer({ resolveWithObject: true });
   const thumb = await sharp(full).resize({ width: 640, height: 640, fit: 'inside' }).jpeg({ quality: 76, mozjpeg: true }).toBuffer();
   return { full, thumb, width: info.width, height: info.height };
 }
@@ -104,7 +81,8 @@ export async function listEventPhotos(eventId: string, includeHidden = false) {
   const { rows } = await getPool().query(
     // 1.3：客户上传的照片默认不公开；只有“放进活动相册”且审核通过的才进相册；美颜版永远不进相册
     `SELECT id, url, thumb_url, width, height, caption, sort_order, is_hidden, created_at,
-            uploader_contact_id IS NOT NULL AS by_customer, visibility, review_status
+            uploader_contact_id IS NOT NULL AS by_customer, uploader_contact_id, visibility, review_status, uploaded_by,
+            (SELECT NULLIF(c.name, '微信用户') FROM contacts c WHERE c.id = event_photos.uploader_contact_id) AS uploader_name
        FROM event_photos
       WHERE event_id = $1 AND variant_of IS NULL AND ($2 OR (NOT is_hidden AND visibility = 'album' AND review_status = 'ok'))
       ORDER BY sort_order, created_at`,
@@ -136,11 +114,17 @@ export async function consentSummary(eventId: string) {
   return { agreed: rows.filter((r) => r.photo_consent).map((r) => r.name), notAgreed: rows.filter((r) => !r.photo_consent).length };
 }
 
-/** 发布相册：记录发布时间 → 为到场的人生成通知 → 推送（幂等） */
+/**
+ * 通知到场的人：照片出来了（1.4.0 起只是“通知”，和照片能不能看到无关）。
+ * album_published_at 现在只表示“通知过了”，用来不重复推送；相册里的照片上传后就能看到。
+ */
 export async function publishAlbum(eventId: string, recap?: string | null) {
   const pool = getPool();
-  const { rows } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM event_photos WHERE event_id = $1 AND NOT is_hidden`, [eventId]);
-  if (!rows[0].n) throw new CrmError('no_photos', '还没有可发布的照片');
+  const { rows } = await pool.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM event_photos WHERE event_id = $1 AND NOT is_hidden AND visibility = 'album' AND review_status = 'ok' AND variant_of IS NULL`,
+    [eventId]
+  );
+  if (!rows[0].n) throw new CrmError('no_photos', '相册里还没有照片，传了照片再通知');
   await pool.query(
     `UPDATE events SET album_published_at = COALESCE(album_published_at, now()), recap = COALESCE($2, recap), updated_at = now() WHERE id = $1`,
     [eventId, recap?.trim() || null]
@@ -244,4 +228,36 @@ export async function setPhotoConsent(contactId: string, slug: string, consent: 
   );
   if (!rowCount) throw new CrmError('not_registered', '没有找到您这场的报名');
   return { consent };
+}
+
+// ── 1.4.0 事后管理：禁止某人上传照片（记录在 crm_settings.photo_upload_bans，带谁、什么时候）──
+export type PhotoBan = { contactId: string; name: string | null; by: string; at: string };
+
+export async function photoBans(): Promise<PhotoBan[]> {
+  const { rows } = await getPool().query<{ value: PhotoBan[] }>(`SELECT value FROM crm_settings WHERE key = 'photo_upload_bans'`);
+  return Array.isArray(rows[0]?.value) ? rows[0].value : [];
+}
+
+export async function isPhotoBanned(contactId: string): Promise<boolean> {
+  return (await photoBans()).some((b) => b.contactId === contactId);
+}
+
+export async function setPhotoBan(actor: string, contactId: string, ban: boolean): Promise<PhotoBan[]> {
+  if (!/^[0-9a-f-]{36}$/.test(contactId)) throw new CrmError('bad_request', '找不到这个人');
+  const pool = getPool();
+  const { rows } = await pool.query<{ name: string | null }>(`SELECT NULLIF(name, '微信用户') AS name FROM contacts WHERE id = $1`, [contactId]);
+  if (!rows[0]) throw new CrmError('not_found', '找不到这个人');
+  const list = (await photoBans()).filter((b) => b.contactId !== contactId);
+  if (ban) list.push({ contactId, name: rows[0].name, by: actor, at: new Date().toISOString() });
+  await pool.query(
+    `INSERT INTO crm_settings (key, value, updated_at) VALUES ('photo_upload_bans', $1::jsonb, now())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [JSON.stringify(list)]
+  );
+  await pool.query(
+    `INSERT INTO crm_settings (key, value, updated_at) VALUES ('photo_upload_ban_log', jsonb_build_array($1::jsonb), now())
+     ON CONFLICT (key) DO UPDATE SET value = (crm_settings.value || EXCLUDED.value), updated_at = now()`,
+    [JSON.stringify({ contactId, ban, by: actor, at: new Date().toISOString() })]
+  );
+  return list;
 }

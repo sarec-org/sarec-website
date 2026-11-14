@@ -242,13 +242,13 @@ export async function home131(contactId: string | null, opts: { region?: string 
   for (const m of mine) if (m.reg_status === 'registered' && new Date(m.starts_at).getTime() - now.getTime() < 14 * 86400_000) pushEv(m, true);
   for (const e of local) pushEv(e, false);
   for (const e of national) pushEv(e, false);
-  // 照片 / 回顾：本场第一张允许公开的照片发布后生成；进行中“现场照片”，结束 7 天内“精彩回顾”
+  // 照片 / 回顾：本场有公开照片就生成（1.4.0 起上传即公开，不再等“发布”）；进行中“现场照片”，结束 7 天内“精彩回顾”
   const { rows: ph } = await db.query<{ id: string; slug: string; title: string; ended: boolean; thumb: string; n: number }>(
     `SELECT e.id, e.slug, e.title, coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now() AS ended,
             (SELECT p.url FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL AND coalesce(p.review_status, 'ok') = 'ok' ORDER BY p.sort_order, p.created_at LIMIT 1) AS thumb,
             (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL AND coalesce(p.review_status, 'ok') = 'ok') AS n
        FROM events e
-      WHERE e.is_listed AND e.event_status <> 'cancelled' AND e.album_published_at IS NOT NULL
+      WHERE e.is_listed AND e.event_status <> 'cancelled' AND EXISTS (SELECT 1 FROM event_photos p0 WHERE p0.event_id = e.id AND NOT p0.is_hidden AND coalesce(p0.visibility, 'album') = 'album' AND p0.variant_of IS NULL AND coalesce(p0.review_status, 'ok') = 'ok')
         AND e.starts_at <= now() AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() - interval '7 days'
       ORDER BY e.starts_at DESC LIMIT 1`
   );
@@ -303,10 +303,10 @@ export async function home131(contactId: string | null, opts: { region?: string 
     return { slug: e.slug, line: `${e.region} · ${p.m} 月 ${p.d} 日 · ${e.title}` };
   });
 
-  // ── 现场与回顾（只显示已发布的照片） ──
+  // ── 现场与回顾（大家传的公开照片；1.4.0 起不再等“发布”） ──
   const { rows: wall } = await db.query<{ thumb: string; slug: string; title: string }>(
     `SELECT p.thumb_url AS thumb, e.slug, e.title FROM event_photos p JOIN events e ON e.id = p.event_id
-      WHERE e.album_published_at IS NOT NULL AND e.is_listed AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL AND coalesce(p.review_status, 'ok') = 'ok'
+      WHERE e.is_listed AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL AND coalesce(p.review_status, 'ok') = 'ok'
       ORDER BY e.starts_at DESC, p.sort_order, p.created_at LIMIT 9`
   ).catch(() => ({ rows: [] as { thumb: string; slug: string; title: string }[] }));
 
@@ -329,12 +329,12 @@ export async function home131(contactId: string | null, opts: { region?: string 
   // ── 知识与工具 ──
   const { contentResearchList } = await import('@/lib/mpContent');
   const briefs = contentResearchList().items.slice(0, 4).map((c) => ({ title: c.title, sub: (c as { summary?: string }).summary ?? '', image: (c as { image?: string }).image ?? null, page: `/pages/article/article?slug=${encodeURIComponent((c as { slug: string }).slug)}` }));
-  // 讲座回顾：已发布相册的活动（不放自动生成的回顾文字，小程序里不出现 AI 生成内容）
+  // 讲座回顾：有公开照片的活动（不放自动生成的回顾文字，小程序里不出现 AI 生成内容）
   const { rows: lectures } = await db.query<{ slug: string; title: string; starts_at: Date; timezone: string; n: number; thumb: string | null }>(
     `SELECT e.slug, e.title, e.starts_at, e.timezone,
             (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL AND coalesce(p.review_status, 'ok') = 'ok') AS n,
             (SELECT p.thumb_url FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND coalesce(p.review_status, 'ok') = 'ok' ORDER BY p.sort_order LIMIT 1) AS thumb
-       FROM events e WHERE e.is_listed AND e.album_published_at IS NOT NULL ORDER BY e.starts_at DESC LIMIT 4`
+       FROM events e WHERE e.is_listed AND EXISTS (SELECT 1 FROM event_photos p0 WHERE p0.event_id = e.id AND NOT p0.is_hidden AND coalesce(p0.visibility, 'album') = 'album' AND p0.variant_of IS NULL AND coalesce(p0.review_status, 'ok') = 'ok') ORDER BY e.starts_at DESC LIMIT 4`
   ).catch(() => ({ rows: [] as never[] }));
   const toolsLive = !!(await getSetting<boolean>(db, 'web_tools_live', false));
   const tools = toolsLive
