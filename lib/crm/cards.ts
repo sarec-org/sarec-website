@@ -361,7 +361,8 @@ export async function chamberInviteData(contactId: string, base: string) {
       memberNo: c[0]?.member_no,
       avatarUrl: proxied(c[0]?.avatar_url ?? null),
       company: card.company ?? null,
-      label: `${st.isMember ? 'SAREC 会员' : 'SAREC 注册用户'}${card.company ? ' · ' + card.company : ''}${card.title ? ' · ' + card.title : ''}`
+      // 1.4.0：和活动邀请海报口径一致，非会员不印“注册用户”字样
+      label: [st.isMember ? 'SAREC 会员' : '', card.company ?? '', card.title ?? ''].filter(Boolean).join(' · ')
     },
     title: texts.title?.trim() || '邀请你认识中美房地产商会',
     intro: texts.intro?.trim() || '连接中美资本，重构房地产项目协作。商会定期举办讲座和企业家交流活动，扫码了解商会和近期活动。',
@@ -411,7 +412,8 @@ export async function posterData(contactId: string, slug: string, base: string) 
       memberNo: c[0]?.member_no,
       avatarUrl: proxied(c[0]?.avatar_url ?? null),
       // 1.3 D：海报同时展示本人在名片里公开的公司、职位（名片本身就是对外展示的资料）
-      label: `${st.isMember ? 'SAREC 会员' : 'SAREC 注册用户'}${card.company ? ' · ' + card.company : ''}${card.title ? ' · ' + card.title : ''}`
+      // 1.4.0：和活动邀请海报口径一致，非会员不印“注册用户”字样
+      label: [st.isMember ? 'SAREC 会员' : '', card.company ?? '', card.title ?? ''].filter(Boolean).join(' · ')
     },
     codeUrl: `${b}/api/v1/codes/invite/${encodeURIComponent(ev[0].slug)}/${c[0]?.member_no}.png`,
     isTestCode: !wxConfigured(),
