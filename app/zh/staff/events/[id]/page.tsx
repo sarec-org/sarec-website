@@ -5,10 +5,14 @@ import { Msg, StaffGate, can } from '@/components/crm/staff/StaffGate';
 import { useQr } from '@/components/crm/staff/QrCode';
 import { api, copyText, fmtDateTime, money } from '@/components/crm/client';
 import { EventForm } from '../EventForm';
-import { checkinA4, registerPoster, saveBlob, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
+import Link from 'next/link';
+import { checkinA4, registerPoster, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
+import { saveImage, savedText } from '@/components/crm/staff/SaveImage';
 import { AiPoster } from '@/components/crm/staff/AiPoster';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
+type PrepRow = { event_id: string; total: number; done: number; overdue: number };
+type Tpl = { key: string; name: string };
 type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; pay_link?: string | null; added_by_name?: string | null; is_placeholder?: boolean };
 
 export default function StaffEventDetail({ params }: { params: { id: string } }) {
@@ -22,6 +26,28 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [origin, setOrigin] = useState('');
   const [making, setMaking] = useState<string | null>(null);
+  // 1.4.0（改动单 D4）：筹备清单——有就显示进度并能打开，没有就在这里直接生成
+  const [prep, setPrep] = useState<PrepRow | null | undefined>(undefined);
+  const [tpls, setTpls] = useState<Tpl[]>([]);
+  const [tpl, setTpl] = useState('');
+  const loadPrep = useCallback(async () => {
+    const r = await api<{ preps: PrepRow[] }>('/api/v1/staff/prep');
+    setPrep(r.ok ? r.data.preps.find((x) => x.event_id === params.id) ?? null : null);
+  }, [params.id]);
+  useEffect(() => {
+    loadPrep();
+    api<{ templates: Tpl[] }>('/api/v1/staff/prep/templates').then((r) => {
+      if (r.ok) {
+        setTpls(r.data.templates);
+        setTpl((x) => x || r.data.templates[0]?.key || '');
+      }
+    });
+  }, [loadPrep]);
+  async function genPrep() {
+    const r = await api('/api/v1/staff/prep', { body: { eventId: params.id, template: tpl } });
+    setMsg(r.ok ? { ok: true, text: `筹备清单已生成（${tpls.find((t) => t.key === tpl)?.name ?? tpl}），点「打开筹备清单」分工、打勾` } : { ok: false, text: r.message });
+    loadPrep();
+  }
   const load = useCallback(async () => {
     const r = await api<{ event: Ev; registrations: Reg[] }>(`/api/v1/staff/events/${params.id}`);
     if (r.ok) setData(r.data);
@@ -69,6 +95,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     const ev = data.event as unknown as MaterialEvent;
     setMaking(kind);
     setMsg(null);
+    let how: 'download' | 'sheet' = 'download';
     try {
       if (kind === 'a4') {
         // 只用签到小程序码（微信扫一扫直接进小程序，按微信身份认人）。生成不了就明说，不悄悄换成网页码
@@ -79,23 +106,23 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
         }
         const url = URL.createObjectURL(code);
         try {
-          saveBlob(await checkinA4(ev, { codeSrc: url }), `门口签到码-A4-${ev.slug}.png`);
+          how = await saveImage(await checkinA4(ev, { codeSrc: url }), `门口签到码-A4-${ev.slug}.png`);
         } finally {
           URL.revokeObjectURL(url);
         }
       } else if (kind === 'a4web') {
         if (!link) return;
-        saveBlob(await checkinA4(ev, { url: link }), `网页版签到码-A4-${ev.slug}.png`);
+        how = await saveImage(await checkinA4(ev, { url: link }), `网页版签到码-A4-${ev.slug}.png`);
       } else {
         const code = await fetchCode();
         if (!code) return;
-        if (kind === 'code') saveBlob(code, `报名小程序码-${ev.slug}.png`);
+        if (kind === 'code') how = await saveImage(code, `报名小程序码-${ev.slug}.png`);
         else {
           const url = URL.createObjectURL(code);
-          try { saveBlob(await registerPoster(ev, url), `报名海报-${ev.slug}.png`); } finally { URL.revokeObjectURL(url); }
+          try { how = await saveImage(await registerPoster(ev, url), `报名海报-${ev.slug}.png`); } finally { URL.revokeObjectURL(url); }
         }
       }
-      setMsg({ ok: true, text: '已开始下载' });
+      setMsg({ ok: true, text: savedText(how) });
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : '生成失败，请稍后再试' });
     } finally {
@@ -103,6 +130,8 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
     }
   }
   async function regen() {
+    // 1.4.0：后果先说清（旧码全部失效），确认了再作废
+    if (!window.confirm('作废旧码后，已经打印、贴出去的门口签到码全部扫不了，要重新下载打印。确定作废？')) return;
     const r = await api(`/api/v1/staff/events/${params.id}`, { body: { action: 'regenerate_code' } });
     setMsg(r.ok ? { ok: true, text: '已生成新签到码，旧码已失效，请重新打印' } : { ok: false, text: r.message });
     load();
@@ -133,6 +162,12 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
         data && (
           <>
             <Msg m={msg} />
+            {/* 1.4.0（改动单 C6）：本场相册、筹备清单、活动回顾放在最上面 */}
+            <div className={styles.btnRow} style={{ marginBottom: '1rem' }}>
+              {can(s, 'ops') && <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/album?event=${params.id}`}>本场相册</Link>}
+              <Link className={`${styles.btn} ${styles.btnGhost}`} href={prep ? `/zh/staff/prep/${params.id}` : '#prep'}>筹备清单</Link>
+              {can(s, 'ops') && <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/recaps?event=${params.id}`}>活动回顾</Link>}
+            </div>
             <div className={styles.card}>
               <div className={styles.row}><span className={styles.rowLabel}>时间</span><span className={styles.rowValue}>{fmtDateTime(String(data.event.starts_at))}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>费用</span><span className={styles.rowValue}>{data.event.fee_cents ? money(data.event.fee_cents) : '免费'}</span></div>
@@ -182,6 +217,30 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                   </button>
                 </div>
               </details>
+            </div>
+
+            <h2 className={styles.h2} id="prep">筹备清单</h2>
+            <div className={styles.card}>
+              {prep === undefined ? (
+                <p className={styles.muted} style={{ margin: 0 }}>正在读取…</p>
+              ) : prep ? (
+                <>
+                  <p style={{ marginTop: 0 }}>已完成 {prep.done} / {prep.total}{prep.overdue ? <span style={{ color: '#f3a1a1' }}> · {prep.overdue} 项已过截止</span> : null}</p>
+                  <Link className={styles.btn} href={`/zh/staff/prep/${params.id}`}>打开筹备清单</Link>
+                </>
+              ) : can(s, 'ops') ? (
+                <>
+                  <p className={styles.small} style={{ marginTop: 0 }}>这场还没有筹备清单。选活动类型，点「生成筹备清单」：按模板自动列出要做的事、负责人和截止时间。</p>
+                  <div className={styles.inputRow}>
+                    <select className={styles.select} aria-label="活动类型（筹备模板）" value={tpl} onChange={(e) => setTpl(e.target.value)}>
+                      {tpls.map((t) => <option key={t.key} value={t.key}>{t.name}</option>)}
+                    </select>
+                    <button className={styles.btn} disabled={!tpl} onClick={genPrep}>生成筹备清单</button>
+                  </div>
+                </>
+              ) : (
+                <p className={styles.small} style={{ margin: 0 }}>这场还没有筹备清单，请运营或管理员在这里生成。</p>
+              )}
             </div>
 
             <h2 className={styles.h2}>活动物料</h2>
@@ -236,11 +295,23 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                   <p className={styles.cardTitle}>活动海报（自动生成，直接用；设了「官方海报」就用官方海报的图和字）</p>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                     {([['moments', '朋友圈竖版', 120], ['square', '群聊方版', 160], ['oa', '公众号横版', 240]] as const).map(([k, label, w]) => (
-                      <a key={k} href={`/api/v1/staff/events/${params.id}/poster?size=${k}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const how = await saveImage(`/api/v1/staff/events/${params.id}/poster?size=${k}&inline=1&v=${encodeURIComponent(String(data.event.updated_at ?? ''))}`, `活动海报-${label}-${data.event.slug}.png`);
+                            setMsg({ ok: true, text: savedText(how, `「${label}」海报`) });
+                          } catch (e) {
+                            setMsg({ ok: false, text: e instanceof Error ? e.message : '海报这会儿生成不了，请稍后再试' });
+                          }
+                        }}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: 'none', border: 0, padding: 0, cursor: 'pointer', color: 'inherit', maxWidth: '100%' }}
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/v1/staff/events/${params.id}/poster?size=${k}&inline=1&v=${encodeURIComponent(String(data.event.updated_at ?? ''))}`} alt={label} width={w} style={{ borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} loading="lazy" />
-                        <span className={styles.small}>下载 · {label}</span>
-                      </a>
+                        <img src={`/api/v1/staff/events/${params.id}/poster?size=${k}&inline=1&v=${encodeURIComponent(String(data.event.updated_at ?? ''))}`} alt={label} width={w} style={{ borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', maxWidth: '100%', height: 'auto' }} loading="lazy" />
+                        <span className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`}>存图 · {label}</span>
+                      </button>
                     ))}
                   </div>
                   <p className={styles.small}>没传封面时用这个活动类型的默认图。海报上没有金额，也不写已报人数。</p>
@@ -258,7 +329,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
               const unpaid = live.length - paid - onsite;
               return <p className={styles.notice}>收费：已付 <strong>{paid}</strong> · 未付 <strong>{unpaid}</strong> · 现场付 <strong>{onsite}</strong>。没付的，系统已在报名后、活动前 5 天各发过一次付款链接；到场没付的签到台现场 Zelle 扫码。</p>;
             })()}
-            <div style={{ overflowX: 'auto' }}>
+            <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead><tr><th>姓名</th><th>联系方式</th><th>报名</th><th>到场</th><th>付款</th></tr></thead>
                 <tbody>
@@ -270,7 +341,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                       <td>{({ none: '—', checked_in: '已签到', arrived_pending_payment: '到场待核款' } as Record<string, string>)[r.arrival_status]}</td>
                       <td>{r.order_status ? (r.order_status === 'paid' ? (r.paid_when === 'onsite' ? '现场付' : '已付') : ({ pending_payment: '未付', payment_submitted: '已提交，待核款' } as Record<string, string>)[r.order_status] ?? r.order_status) : '—'}
                         {r.pay_link && (
-                          <button className={`${styles.btn} ${styles.btnQuiet}`} style={{ marginLeft: 6, padding: '2px 8px' }} onClick={async () => setMsg({ ok: await copyText(r.pay_link!), text: `${r.name} 的付款链接已复制，可以直接发给本人` })}>
+                          <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} style={{ marginLeft: 6 }} onClick={async () => setMsg({ ok: await copyText(r.pay_link!), text: `${r.name} 的付款链接已复制，可以直接发给本人` })}>
                             复制付款链接
                           </button>
                         )}

@@ -28,6 +28,39 @@ function show(v: unknown): string {
   return Object.values(o).filter(Boolean).join(' ');
 }
 
+// 和 lib/crm/regions.ts 的 REGIONS 一致（那个文件连数据库，不能在浏览器里引）
+const REGIONS = ['洛杉矶/橙县', '旧金山湾区', '纽约', '美国其他', '中国大陆', '其他'];
+
+/** 1.4.0（改动单 D6）：客户档案里改常住地区（接口 /api/v1/staff/contact-region 早就有，页面原来没接） */
+function RegionEdit({ id, self, inferred, onDone }: { id: string; self: string | null; inferred: string | null; onDone: (m: { ok: boolean; text: string }) => void }) {
+  const [v, setV] = useState(self ?? '');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setV(self ?? ''), [self]);
+  return (
+    <div className={styles.row} style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+      <span className={styles.rowLabel}>常住地区</span>
+      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: '1 1 220px', justifyContent: 'flex-end' }}>
+        <select className={styles.select} style={{ width: 'auto', flex: '1 1 150px', maxWidth: 220 }} aria-label="常住地区" value={v} onChange={(e) => setV(e.target.value)}>
+          <option value="">没填（按参加的活动推断{inferred ? `：${inferred}` : ''}）</option>
+          {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <button
+          className={`${styles.btn} ${styles.btnGhost}`}
+          disabled={busy || v === (self ?? '')}
+          onClick={async () => {
+            setBusy(true);
+            const r = await api('/api/v1/staff/contact-region', { body: { contactId: id, region: v || null } });
+            setBusy(false);
+            onDone(r.ok ? { ok: true, text: v ? `常住地区已改为「${v}」，活动推广按这个地区算` : '已清空常住地区，改回按参加的活动推断' } : { ok: false, text: r.message });
+          }}
+        >
+          {busy ? '保存中…' : '保存地区'}
+        </button>
+      </span>
+    </div>
+  );
+}
+
 export default function StaffContactDetail({ params }: { params: { id: string } }) {
   const [d, setD] = useState<Detail | null>(null);
   const [tab, setTab] = useState<'timeline' | 'answers' | 'points' | 'methods'>('timeline');
@@ -82,6 +115,7 @@ export default function StaffContactDetail({ params }: { params: { id: string } 
                 })}
                 <div className={styles.row}><span className={styles.rowLabel}>登录身份</span><span className={styles.rowValue}>{[c.email_verified_at ? c.email : null, c.phone_verified_at ? c.phone_e164 : null].filter(Boolean).join('、') || '无（不能登录网站）'}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>微信</span><span className={styles.rowValue}>{c.wechat_openid ? '已绑定' : '—'}</span></div>
+                <RegionEdit id={params.id} self={(c.region_self as string | null) ?? null} inferred={(c.region_inferred as string | null) ?? null} onDone={(m) => { setMsg(m); load(); }} />
                 <div className={styles.row}><span className={styles.rowLabel}>主要行业</span><span className={styles.rowValue}>{d.roleLabel ?? '—'}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>来源</span><span className={styles.rowValue}>{c.acquisition_source ?? '—'}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>积分余额</span><span className={styles.rowValue}>{d.points.balance}</span></div>
