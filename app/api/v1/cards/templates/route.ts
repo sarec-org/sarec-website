@@ -5,11 +5,12 @@
 import { getPool } from '@/lib/db/client';
 import { cardTplBatches } from '@/lib/crm/cards';
 import { handler, ok } from '@/lib/crm/http';
-import { catalog } from '@/lib/cardtpl/registry';
+import { catalog, featured } from '@/lib/cardtpl/registry';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export const GET = handler(async () => {
   const batches = await cardTplBatches(getPool());
-  return ok({ batches, groups: catalog(batches) });
+  // 1.4.0：featured = 默认显示的精选；groups = 「更多样式」里按风格分组的全部（老版本小程序只认 groups）
+  return ok({ batches, featured: featured(batches), groups: catalog(batches) });
 });
