@@ -1,4 +1,6 @@
 'use client';
+// 来源的中文说法（以前直接显示英文 miniprogram 等）
+const SOURCE_LABEL: Record<string, string> = { miniprogram: '小程序', web: '网站', website: '网站', import: '导入', staff: '工作人员登记', onsite: '现场登记', registration: '活动报名', referral: '朋友推荐', join: '入会申请', checkin: '现场签到' };
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate, can } from '@/components/crm/staff/StaffGate';
@@ -117,7 +119,7 @@ export default function StaffContactDetail({ params }: { params: { id: string } 
                 <div className={styles.row}><span className={styles.rowLabel}>微信</span><span className={styles.rowValue}>{c.wechat_openid ? '已绑定' : '—'}</span></div>
                 <RegionEdit id={params.id} self={(c.region_self as string | null) ?? null} inferred={(c.region_inferred as string | null) ?? null} onDone={(m) => { setMsg(m); load(); }} />
                 <div className={styles.row}><span className={styles.rowLabel}>主要行业</span><span className={styles.rowValue}>{d.roleLabel ?? '—'}</span></div>
-                <div className={styles.row}><span className={styles.rowLabel}>来源</span><span className={styles.rowValue}>{c.acquisition_source ?? '—'}</span></div>
+                <div className={styles.row}><span className={styles.rowLabel}>来源</span><span className={styles.rowValue}>{SOURCE_LABEL[c.acquisition_source ?? ''] ?? c.acquisition_source ?? '—'}</span></div>
                 <div className={styles.row}><span className={styles.rowLabel}>积分余额</span><span className={styles.rowValue}>{d.points.balance}</span></div>
               </div>
               <div className={styles.card}>

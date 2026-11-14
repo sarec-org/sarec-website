@@ -244,3 +244,15 @@
   .page img, .page iframe, .page pre { max-width: 100%; }
   .page pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 }
+
+/* 1.4.0 总验收 Q3：手机上的小毛病 */
+@media (max-width: 760px) {
+  /* 勾选框、单选框太小（13px）→ 放大到 22px */
+  .page input[type='checkbox'], .page input[type='radio'] { width: 22px; height: 22px; }
+  /* 下拉框不超出屏幕 */
+  .page select { max-width: 100%; }
+  /* 列表里的姓名链接、表格里的链接：点击区域至少 40px 高 */
+  .page td a, .page li a { display: inline-block; min-height: 40px; line-height: 40px; }
+  /* 顶部标签条能横划：右边渐隐提示还有内容 */
+  .tabs { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); padding-right: 24px; }
+}
