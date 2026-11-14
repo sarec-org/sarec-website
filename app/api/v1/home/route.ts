@@ -22,6 +22,8 @@ export const GET = handler(async (req: Request) => {
   if (sp.get('v') === '131') {
     const { home131 } = await import('@/lib/crm/home131');
     out.h131 = await home131(me, { region: sp.get('region'), client14: isMp14(req) });
+    // 1.5.0：首页「商会风采」入口还没点头——后台开关，默认关
+    out.showcaseEntry = (await getSetting<boolean>(getPool(), 'showcase_home_entry', false)) === true;
   }
   const safe = (await isMp12(req)) ? noMoneySummaries(out) : out;
   return ok(isMp131(req) ? mp131Safe(safe) : safe);
