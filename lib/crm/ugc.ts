@@ -1,13 +1,15 @@
 /**
  * 1.5.0 用户内容：举报、个人主页（在电子名片上加）、商会风采（官方）。
- * 个人主页的文字先过微信文本安全检测；图片在没配好微信图片检测（要在小程序后台配消息推送）之前一律先审后发——工作人员在后台「主页审核」里放行。
- * 后台可下架、可禁人（不能再改个人主页），都有记录（ugc_actions）。
+ * 东哥 11/14 定：个人主页（含带图的）**先发后管**——保存后立刻公开，不等工作人员放行（和 1.4.0 照片一致）。
+ * 文字照旧过微信文本检测（明显违规的直接不让存）；图片提交微信图片自动检测，结果回来前照常显示，不通过的自动撤下并告诉本人原因。
+ * 消息推送没配好之前，就是纯事后管理：后台「内容管理」可下架、恢复、禁人，都有记录（ugc_actions）。
  */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
 import { memberStatus } from './membership';
 import { msgSecCheck } from './contentSec';
 import type { Staff } from './auth';
+import { MACHINE_REASON, submitImageChecks } from './mediaCheck';
 
 async function log(actor: string, kind: string, targetId: string | null, action: string, note?: string | null) {
   await getPool().query(`INSERT INTO ugc_actions (kind, target_id, action, actor, note) VALUES ($1, $2, $3, $4, $5)`, [kind, targetId, action, actor, note ?? null]);
@@ -34,7 +36,7 @@ export async function report(contactId: string, b: Record<string, unknown>) {
   // 同一个人同一条内容一天内只记一次
   const { rows: dup } = await getPool().query(`SELECT 1 FROM ugc_reports WHERE kind = $1 AND target_id = $2 AND reporter_id = $3 AND created_at > now() - interval '1 day'`, [kind, target, contactId]);
   if (!dup[0]) await getPool().query(`INSERT INTO ugc_reports (kind, target_id, reporter_id, reason, detail) VALUES ($1, $2, $3, $4, $5)`, [kind, target, contactId, reason, detail]);
-  return { message: '收到了，工作人员会尽快查看处理。谢谢您。' };
+  return { message: '已收到，工作人员会处理' };
 }
 
 export async function staffReports(status: string) {
@@ -60,7 +62,7 @@ async function targetSummary(kind: string, id: string): Promise<{ text: string; 
     }
     if (kind === 'profile' || kind === 'card') {
       const { rows } = await pool.query<{ name: string | null; bio: string | null; company: string | null }>(`SELECT NULLIF(c.name, '微信用户') AS name, m.bio, m.company FROM contacts c LEFT JOIN member_cards m ON m.contact_id = c.id WHERE c.id::text = $1 OR m.token = $1`, [id]);
-      return rows[0] ? { text: `${rows[0].name ?? 'SAREC 用户'} 的${kind === 'card' ? '名片' : '个人主页'}${rows[0].company ? '（' + rows[0].company + '）' : ''}${rows[0].bio ? '：' + rows[0].bio.slice(0, 60) : ''}`, link: kind === 'card' ? '/zh/staff/cards' : '/zh/staff/profiles' } : { text: '（已删除）', link: null };
+      return rows[0] ? { text: `${rows[0].name ?? 'SAREC 用户'} 的${kind === 'card' ? '名片' : '个人主页'}${rows[0].company ? '（' + rows[0].company + '）' : ''}${rows[0].bio ? '：' + rows[0].bio.slice(0, 60) : ''}`, link: kind === 'card' ? '/zh/staff/cards' : '/zh/staff/content' } : { text: '（已删除）', link: null };
     }
     if (kind === 'club_member') {
       const [ck, mid] = id.split(':');
@@ -103,7 +105,8 @@ export async function myProfile(contactId: string) {
     `SELECT bio, company_intro, offers, seeks, profile_status FROM member_cards WHERE contact_id = $1`, [contactId]
   );
   const { rows: projects } = await pool.query(
-    `SELECT id, title, body, images, status FROM profile_projects WHERE contact_id = $1 AND status <> 'taken_down' ORDER BY sort_order, created_at`, [contactId]
+    `SELECT id, title, body, images, status, CASE WHEN status = 'rejected' THEN $2 WHEN status = 'taken_down' THEN '已被工作人员下架，别人看不到；有疑问请联系商会' END AS reason
+       FROM profile_projects WHERE contact_id = $1 ORDER BY sort_order, created_at`, [contactId, MACHINE_REASON]
   );
   return {
     hasCard: !!rows[0], bio: rows[0]?.bio ?? '', companyIntro: rows[0]?.company_intro ?? '', offers: rows[0]?.offers ?? [], seeks: rows[0]?.seeks ?? [],
@@ -126,12 +129,14 @@ export async function saveProfile(contactId: string, b: Record<string, unknown>)
   if (!rows[0]) throw new CrmError('no_card', '先做一张电子名片，再加个人主页');
   const sec = await msgSecCheck(`${bio}\n${companyIntro}`, await openidOf(contactId), 1);
   if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再保存');
-  const status = sec === 'pass' || (!bio && !companyIntro) ? 'ok' : 'pending';
+  // 先发后管：通过、需复核、检测不通都照常公开；需复核的记一行，后台「内容管理 → 机器拦下的」里能看到
+  const status = 'ok';
+  if (sec === 'review') await log('machine', 'profile', contactId, 'machine_review', '微信文本检测建议人工看一眼（照常显示）');
   await pool.query(
     `UPDATE member_cards SET bio = $2, company_intro = $3, offers = $4, seeks = $5, profile_status = $6, updated_at = now() WHERE contact_id = $1`,
     [contactId, bio || null, companyIntro || null, offers, seeks, status]
   );
-  return { message: status === 'ok' ? '个人主页已保存' : '已保存。简介在内容检测中，稍后对别人显示（您自己现在就能看到）', status };
+  return { message: '个人主页已保存，大家现在就能看到', status };
 }
 
 export async function saveProject(contactId: string, b: Record<string, unknown>) {
@@ -144,23 +149,24 @@ export async function saveProject(contactId: string, b: Record<string, unknown>)
   if (!title) throw new CrmError('bad_request', '请写一个项目名称');
   const id = typeof b.id === 'string' && /^[0-9a-f-]{36}$/.test(b.id) ? b.id : null;
   if (!id) {
-    const { rows } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM profile_projects WHERE contact_id = $1 AND status <> 'taken_down'`, [contactId]);
+    const { rows } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM profile_projects WHERE contact_id = $1 AND status = 'ok'`, [contactId]);
     if (rows[0].n >= lim.projects) throw new CrmError('limit', lim.projects >= 6 ? `最多展示 ${lim.projects} 个项目` : `注册用户最多展示 ${lim.projects} 个项目，会员可以展示 6 个`);
   }
   const sec = await msgSecCheck(`${title}\n${body}`, await openidOf(contactId), 1);
   if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再保存');
-  // 有图片的一律先审后发（微信图片检测要在后台配消息推送，配好前由工作人员看）；纯文字检测通过直接显示
-  const status = sec === 'pass' && images.length === 0 ? 'ok' : 'pending';
+  // 先发后管：保存就公开；图片提交微信自动检测，不通过的自动撤下（配好消息推送之前就是纯事后管理）
+  const status = 'ok';
   if (id) {
     const { rowCount } = await pool.query(
       `UPDATE profile_projects SET title = $3, body = $4, images = $5, status = $6, updated_at = now() WHERE id = $1 AND contact_id = $2 AND status <> 'taken_down'`,
       [id, contactId, title, body || null, images, status]
     );
     if (!rowCount) throw new CrmError('not_found', '找不到这个项目');
-  } else {
-    await pool.query(`INSERT INTO profile_projects (contact_id, title, body, images, status) VALUES ($1, $2, $3, $4, $5)`, [contactId, title, body || null, images, status]);
   }
-  return { message: status === 'ok' ? '项目已保存' : '已保存，工作人员看过后对别人显示（一般一个工作日内）', status };
+  const pid = id ?? (await pool.query<{ id: string }>(`INSERT INTO profile_projects (contact_id, title, body, images, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`, [contactId, title, body || null, images, status])).rows[0].id;
+  if (sec === 'review') await log('machine', 'profile_project', pid, 'machine_review', '微信文本检测建议人工看一眼（照常显示）');
+  if (images.length) await submitImageChecks('project:' + pid, contactId, images);
+  return { message: '项目已保存，大家现在就能看到', status };
 }
 
 export async function deleteProject(contactId: string, id: string) {

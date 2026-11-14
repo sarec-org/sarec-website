@@ -38,9 +38,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/zh/staff/newsletter', label: '邮件通讯', role: 'ops', group: '内容', words: ['邮件', '群发', '通讯', '发邮件', 'newsletter'] },
   { href: '/zh/staff/home-slides', label: '首页轮播', role: 'ops', group: '内容', words: ['轮播', 'banner', '横幅', '置顶'] },
   { href: '/zh/staff/docs', label: '商会资料', role: 'admin', group: '内容', words: ['资料', 'PPT', 'PDF', '介绍'] },
-  { href: '/zh/staff/cards', label: '内容审核', role: 'ops', group: '内容', words: ['审核', '名片', '电子名片', '客户照片', '下架'] },
-  { href: '/zh/staff/reports', label: '举报', role: 'ops', group: '内容', words: ['举报', '投诉', '用户举报', '违规'] },
-  { href: '/zh/staff/profiles', label: '主页审核', role: 'ops', group: '内容', words: ['主页审核', '个人主页', '项目', '案例', '个人简介', '公司介绍', '禁止修改'] },
+  { href: '/zh/staff/content', label: '内容管理', role: 'ops', group: '内容', words: ['内容管理', '内容审核', '审核', '举报', '投诉', '违规', '下架', '恢复', '禁止', '个人主页', '项目', '案例', '名片', '电子名片', '客户照片', '机器拦下', '主页审核'] },
   { href: '/zh/staff/showcase', label: '商会风采', role: 'ops', group: '内容', words: ['商会风采', '风采', '副会长单位', '合作方', '战略合作方', '标志', 'logo'] },
   { href: '/zh/staff/agent', label: 'AI 助手', role: 'ops', group: '内容', primary: true, words: ['AI', '人工智能', '机器人', '常见问题', 'FAQ', '对话'] },
   // 设置与团队

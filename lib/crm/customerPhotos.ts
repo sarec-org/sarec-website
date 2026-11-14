@@ -14,6 +14,7 @@ import sharp from 'sharp';
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
 import { BLOB_PREFIX, blobConfigured, isPhotoBanned, watermark } from './photos';
+import { submitImageChecks } from './mediaCheck';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
@@ -78,7 +79,11 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
      RETURNING id, url, thumb_url, visibility, review_status, original_url`,
     [id, ev.id, full.url, thumb.url, w.width, w.height, contactId, hash, ph, opts.toAlbum ? 'album' : 'private']
   );
-  if (rows[0]) return toMine(rows[0]);
+  if (rows[0]) {
+    // 1.5.0：进了相册的照片提交微信图片自动检测，不通过的自动撤下（配好消息推送前不起作用）
+    if (opts.toAlbum) await submitImageChecks('photo:' + rows[0].id, contactId, [full.url]).catch(() => undefined);
+    return toMine(rows[0]);
+  }
   // 并发上传同一张：另一条请求先存进去了
   const { rows: again } = await pool.query(
     `SELECT id, url, thumb_url, visibility, review_status, original_url FROM event_photos WHERE event_id = $1 AND content_hash = $2 AND variant_of IS NULL`,
