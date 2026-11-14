@@ -19,13 +19,19 @@ export const GET = handler(async (req: Request, { params }: { params: { slug: st
     id: p.id, url: p.url, thumb: p.thumb_url, w: p.width, h: p.height, caption: p.caption, byGuest: !!p.by_customer,
     mine: !!me && p.uploader_contact_id === me, by: p.uploader_name ?? null
   }));
+  // 1.4.0：能不能往这场相册传照片（报过名或到过场、活动已开始）——小程序据此显示 / 收起「上传我拍的照片」
+  let canUpload = false;
+  if (me && new Date(ev.starts_at).getTime() <= Date.now()) {
+    const { rows: r } = await pool.query(`SELECT 1 FROM registrations WHERE event_id = $1 AND contact_id = $2 AND (status <> 'cancelled' OR arrival_status = 'checked_in')`, [ev.id, me]);
+    canUpload = !!r[0];
+  }
   const { rows: next } = await pool.query(
     `SELECT slug, title, starts_at, timezone, location_name, fee_cents, cover_url FROM events
       WHERE is_listed AND event_status = 'scheduled' AND registration_open AND starts_at > now() ORDER BY starts_at LIMIT 1`
   );
   if (me && photos.length) await markAlbumSeen(me, ev.slug);
   return ok({
-    event: { slug: ev.slug, title: ev.title, startsAt: ev.starts_at, timezone: (ev as { timezone?: string }).timezone, recap: ev.recap, published: photos.length > 0, coverUrl: ev.cover_url },
+    event: { slug: ev.slug, title: ev.title, startsAt: ev.starts_at, timezone: (ev as { timezone?: string }).timezone, recap: ev.recap, published: photos.length > 0, canUpload, coverUrl: ev.cover_url },
     photos,
     next: next[0] ? { slug: next[0].slug, title: next[0].title, startsAt: next[0].starts_at, timezone: (next[0] as { timezone?: string }).timezone, locationName: next[0].location_name, feeCents: next[0].fee_cents, coverUrl: next[0].cover_url } : null
   });

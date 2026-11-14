@@ -47,6 +47,15 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
   if (data.length > MAX_BYTES) throw new CrmError('too_large', '这张照片太大了，请换一张');
   const ev = await eventBySlug(slug);
   if (await isPhotoBanned(contactId)) throw new CrmError('photo_banned', '您暂时不能上传照片。有疑问请在「联系商会」里找工作人员。');
+  if (opts.toAlbum) {
+    // 1.4.0 上传即公开：只让这场报过名或到过场的人传，而且活动开始以后才能传（测试窗口 Q4）
+    if (new Date(ev.starts_at).getTime() > Date.now()) throw new CrmError('not_started', '活动还没开始，开始以后再传现场照片');
+    const { rows: reg } = await getPool().query(
+      `SELECT 1 FROM registrations WHERE event_id = $1 AND contact_id = $2 AND (status <> 'cancelled' OR arrival_status = 'checked_in')`,
+      [ev.id, contactId]
+    );
+    if (!reg[0]) throw new CrmError('not_participant', '只有报名或到场的人能往这场相册传照片。您可以在「我的照片」里看自己传过的照片。');
+  }
   const pool = getPool();
   const hash = createHash('sha256').update(data).digest('hex');
   // 完全相同的照片：直接返回已有那张（谁传的都算，不重复存）

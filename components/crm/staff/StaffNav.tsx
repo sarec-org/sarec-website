@@ -29,7 +29,7 @@ function NavSearch({ items, onGo, autoFocus }: { items: NavItem[]; onGo: (href: 
         className={css.searchInput}
         type="search"
         enterKeyHint="go"
-        placeholder="搜页面：团队、相册、签到…"
+        placeholder="搜页面"
         aria-label="搜索后台页面"
         value={q}
         autoFocus={autoFocus}

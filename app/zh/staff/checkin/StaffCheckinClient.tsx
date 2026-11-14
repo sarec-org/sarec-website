@@ -78,7 +78,7 @@ export default function StaffCheckin() {
   }
 
   return (
-    <StaffGate title="现场签到台" role="checkin">
+    <StaffGate title="签到台" role="checkin">
       {() => (
         <>
           <Ready onReady={() => setReady(true)} />

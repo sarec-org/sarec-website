@@ -49,9 +49,9 @@ export function StaffGate({
 
   return (
     <div className={`${styles.page} ${wide ? styles.pageWide : ''}`}>
-      <Link href="/zh/staff" className={styles.back}>
+      {title !== '工作人员后台' && <Link href="/zh/staff" className={styles.back}>
         ‹ 返回后台首页
-      </Link>
+      </Link>}
       <h1 className={styles.h1}>{title}</h1>
       {state === 'loading' && <p className={styles.muted}>正在加载…</p>}
       {state === 'login' && <StaffLogin onDone={() => { notifyStaffChanged(); load(); }} />}
