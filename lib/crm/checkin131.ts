@@ -48,6 +48,7 @@ export type Welcome = {
   greetName: string | null;
   already: boolean; // 这一场之前已经签过
   points: number; // 这次扫码新得的积分（签到 + 答题）
+  consent?: boolean; // 1.4.0：已经同意过照片用于宣传
   showJoin: boolean; // “了解入会”：非会员，同一场只出现一次
 };
 
@@ -117,7 +118,9 @@ async function welcome(db: Db, ev: EventRow, contactId: string, already: boolean
     );
     showJoin = !!rows[0];
   }
-  return { kind: 'welcome', greetName: await greetName(db, contactId), already, points, showJoin };
+  // 1.4.0：带出本人已经做过的“照片用于宣传”选择（交互总则第 6 条）
+  const { rows: cr } = await db.query<{ photo_consent: boolean }>(`SELECT photo_consent FROM registrations WHERE event_id = $1 AND contact_id = $2`, [ev.id, contactId]);
+  return { kind: 'welcome', greetName: await greetName(db, contactId), already, points, showJoin, consent: !!cr[0]?.photo_consent };
 }
 
 /** 记到场（复用原来的入场判断：候补转正、收费活动找工作人员）。返回新得积分。 */
