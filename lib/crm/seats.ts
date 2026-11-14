@@ -52,6 +52,30 @@ export async function takenSeats(db: Db, eventId: string): Promise<number> {
   return rows[0].n;
 }
 
+/**
+ * 1.4.1 会员保留座位：返回“还留给会员、非会员不能占的座位数”。
+ * 报名的人自己是会员 → 0（会员不受限制）；活动没设保留（0 或没有这一列）→ 0。
+ */
+export async function reservedForMembersLeft(db: Db, eventId: string, contactId: string): Promise<number> {
+  let reserved = 0;
+  try {
+    const { rows } = await db.query<{ n: number }>(`SELECT member_reserved_seats AS n FROM events WHERE id = $1`, [eventId]);
+    reserved = rows[0]?.n ?? 0;
+  } catch {
+    return 0; // 迁移 0036 还没跑
+  }
+  if (reserved <= 0) return 0;
+  const { memberStatus } = await import('./membership');
+  if ((await memberStatus(db, contactId)).isMember) return 0;
+  const { rows: regs } = await db.query<{ contact_id: string }>(
+    `SELECT contact_id FROM registrations WHERE event_id = $1 AND (status = 'registered' OR (status = 'waitlisted' AND confirm_status = 'offered' AND offer_expires_at > now()))`,
+    [eventId]
+  );
+  let members = 0;
+  for (const r of regs) if ((await memberStatus(db, r.contact_id)).isMember) members++;
+  return Math.max(0, reserved - members);
+}
+
 export async function waitlistPosition(db: Db, eventId: string, contactId: string): Promise<number | null> {
   const { rows } = await db.query<{ pos: number }>(
     `SELECT pos FROM (SELECT contact_id, row_number() OVER (ORDER BY coalesce(waitlisted_at, created_at), created_at)::int AS pos
