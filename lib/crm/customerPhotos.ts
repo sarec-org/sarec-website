@@ -2,8 +2,8 @@
  * 1.3 C：客户上传照片（秒级分享 + 去重 + 默认不公开）。
  * - 小程序先在手机上生成“分享成片”直接给用户转发（不等服务器）；同时后台上传压缩版（长边 1600），原图稍后再传。
  * - 去重：完全相同的照片（内容哈希）不重复存，直接返回已有那张；相似照片记 phash，后台分组、精选时用，不挡分享。
- * - 公开范围：默认只有上传者和工作人员可见；上传者勾选“放进活动相册”才公开——
- *   本场已报名 / 已签到的人自动通过，直接进相册；其他情况进后台“内容审核”待办。
+ * - 1.4.0（东哥定）：上传 = 进本场活动相册，所有人立刻能看到，不用工作人员批准、不用再点“放进相册”。
+ *   管理改成事后：工作人员可下架某张、禁止某人上传；上传的人可以删自己的。（1.3.x 以前传的“只有自己看得见”的照片不动。）
  * - 美颜版：只作为本人的分享版存一份（variant_of 指向原照片），不覆盖相册原图，去重时不当成两张。
  * - 服务器单次请求上限约 4.5MB：所谓“原图”是手机端压到长边 2560、质量 0.9 的高清版。
  */
@@ -12,7 +12,7 @@ import { put } from '@vercel/blob';
 import sharp from 'sharp';
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
-import { BLOB_PREFIX, blobConfigured, watermark } from './photos';
+import { BLOB_PREFIX, blobConfigured, isPhotoBanned, watermark } from './photos';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
@@ -41,6 +41,7 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
   if (!data.length) throw new CrmError('bad_request', '没有收到照片，请再试一次');
   if (data.length > MAX_BYTES) throw new CrmError('too_large', '这张照片太大了，请换一张');
   const ev = await eventBySlug(slug);
+  if (await isPhotoBanned(contactId)) throw new CrmError('photo_banned', '您暂时不能上传照片。有疑问请在「联系商会」里找工作人员。');
   const pool = getPool();
   const hash = createHash('sha256').update(data).digest('hex');
   // 完全相同的照片：直接返回已有那张（谁传的都算，不重复存）
@@ -58,7 +59,7 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
   ]);
   const { rows } = await pool.query(
     `INSERT INTO event_photos (id, event_id, url, thumb_url, width, height, sort_order, uploaded_by, uploader_contact_id, visibility, review_status, content_hash, phash)
-     VALUES ($1, $2, $3, $4, $5, $6, 100000, 'customer', $7, 'private', 'ok', $8, $9)
+     VALUES ($1, $2, $3, $4, $5, $6, 100000, 'customer', $7, 'album', 'ok', $8, $9)
      ON CONFLICT (event_id, content_hash) WHERE content_hash IS NOT NULL AND variant_of IS NULL DO NOTHING
      RETURNING id, url, thumb_url, visibility, review_status, original_url`,
     [id, ev.id, full.url, thumb.url, w.width, w.height, contactId, hash, ph]
@@ -132,6 +133,24 @@ export async function listMyPhotos(contactId: string, slug: string): Promise<MyP
     [ev.id, contactId]
   );
   return rows.map((r) => toMine(r));
+}
+
+/** 1.4.0「我的照片」：我在所有活动传的照片，按活动分组（最新的活动在上） */
+export async function listAllMyPhotos(contactId: string) {
+  const { rows } = await getPool().query<{ id: string; url: string; thumb_url: string; visibility: string; review_status: string; original_url: string | null; slug: string; title: string; starts_at: Date }>(
+    `SELECT p.id, p.url, p.thumb_url, p.visibility, p.review_status, p.original_url, e.slug, e.title, e.starts_at
+       FROM event_photos p JOIN events e ON e.id = p.event_id
+      WHERE p.uploader_contact_id = $1 AND p.variant_of IS NULL AND NOT p.is_hidden
+      ORDER BY e.starts_at DESC, p.created_at DESC LIMIT 500`,
+    [contactId]
+  );
+  const groups: { slug: string; title: string; startsAt: Date; photos: MyPhoto[] }[] = [];
+  for (const r of rows) {
+    let g = groups.find((x) => x.slug === r.slug);
+    if (!g) groups.push((g = { slug: r.slug, title: r.title, startsAt: r.starts_at, photos: [] }));
+    g.photos.push(toMine(r));
+  }
+  return groups;
 }
 
 export async function deleteMyPhoto(contactId: string, photoId: string) {

@@ -130,7 +130,15 @@ export default function StaffCards() {
             <button className={`${styles.tab} ${tab === 'cards' ? styles.tabOn : ''}`} onClick={() => setTab('cards')}>名片</button>
             <button className={`${styles.tab} ${tab === 'photos' ? styles.tabOn : ''}`} onClick={() => setTab('photos')}>客户照片</button>
           </div>
-          {tab === 'photos' ? <PhotoReview /> : <>
+          {tab === 'photos' ? (
+            <>
+              <div className={styles.notice}>
+                1.4.0 起会员传的照片直接进相册，不用在这里审了。下架照片、禁止某人上传，都在「相册」页里按活动管。
+              </div>
+              <p><a className={styles.btn} href="/zh/staff/album">去「相册」</a></p>
+              <details style={{ marginTop: 16 }}><summary className={styles.small}>以前留下的待审照片（1.4 以前传的）</summary><PhotoReview /></details>
+            </>
+          ) : <>
           <div className={styles.notice}>
             会员自己填写、对外展示的电子名片（姓名、公司、职位、业务介绍、微信号、头像）。<strong>先发后审</strong>：文字保存前已过微信内容安全检查，明显违规的不能保存；这里逐条人工查看。
             下架后别人打开名片只显示“已下架”，本人仍可修改，改好后在这里恢复。
