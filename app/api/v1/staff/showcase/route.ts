@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   await requireStaff(req, 'ops');
-  return ok({ orgs: await listShowcase(true), homeEntry: (await getSetting<boolean>(getPool(), 'showcase_home_entry', false)) === true });
+  return ok({ orgs: await listShowcase(true), homeEntry: (await getSetting<boolean>(getPool(), 'showcase_home_entry', true)) === true });
 });
 export const POST = handler(async (req: Request) => {
   const s = await requireStaff(req, 'ops');

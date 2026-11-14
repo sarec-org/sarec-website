@@ -22,8 +22,9 @@ export const GET = handler(async (req: Request) => {
   if (sp.get('v') === '131') {
     const { home131 } = await import('@/lib/crm/home131');
     out.h131 = await home131(me, { region: sp.get('region'), client14: isMp14(req) });
-    // 1.5.0：首页「商会风采」入口还没点头——后台开关，默认关
-    out.showcaseEntry = (await getSetting<boolean>(getPool(), 'showcase_home_entry', false)) === true;
+    // 1.5.0：首页「商会风采」入口（东哥 11/14 10:55 点头）——后台开关默认开；还没有一家可展示的单位时不显示（免得点进去是空页）
+    out.showcaseEntry = (await getSetting<boolean>(getPool(), 'showcase_home_entry', true)) === true
+      && ((await getPool().query(`SELECT 1 FROM showcase_orgs WHERE NOT hidden LIMIT 1`)).rowCount ?? 0) > 0;
   }
   const safe = (await isMp12(req)) ? noMoneySummaries(out) : out;
   return ok(isMp131(req) ? mp131Safe(safe) : safe);

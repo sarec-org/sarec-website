@@ -31,11 +31,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/zh/staff/duplicates', label: '合并重复档案', role: 'ops', group: '会员与客户', words: ['重复', '合并', '去重'] },
   { href: '/zh/staff/display', label: '官网展示', role: 'ops', group: '会员与客户', primary: true, words: ['官网展示审核', '官网', '展示'] },
   { href: '/zh/staff/channels', label: '渠道码', role: 'ops', group: '会员与客户', words: ['渠道', '合作商家', '专属码', '推广码'] },
-  // 1.5.0 新页面（名字等东哥点头后进冻结清单）
+  // 1.5.0 新页面（名字东哥 11/14 已点头）
   { href: '/zh/staff/clubs', label: '俱乐部', role: 'ops', group: '会员与客户', words: ['俱乐部', '专委会', '组局', '掼蛋', '牌局', '群二维码', '负责人', '禁止名单'] },
-  { href: '/zh/staff/broadcast', label: '群发', role: 'ops', group: '会员与客户', words: ['群发', '发短信', '发通知', '服务通知', '选人', '按条件选人', '常用人群', '短信'] },
+  { href: '/zh/staff/broadcast', label: '群发', role: 'ops', group: '会员与客户', words: ['群发', '发短信', '发通知', '服务通知', '选人', '按条件选人', '常用人群', '短信', '邮件通讯', '邮件', '通讯', '发邮件', 'newsletter', '退订', '打开率'] },
   // 内容
-  { href: '/zh/staff/newsletter', label: '邮件通讯', role: 'ops', group: '内容', words: ['邮件', '群发', '通讯', '发邮件', 'newsletter'] },
   { href: '/zh/staff/home-slides', label: '首页轮播', role: 'ops', group: '内容', words: ['轮播', 'banner', '横幅', '置顶'] },
   { href: '/zh/staff/docs', label: '商会资料', role: 'admin', group: '内容', words: ['资料', 'PPT', 'PDF', '介绍'] },
   { href: '/zh/staff/content', label: '内容管理', role: 'ops', group: '内容', words: ['内容管理', '内容审核', '审核', '举报', '投诉', '违规', '下架', '恢复', '禁止', '个人主页', '项目', '案例', '名片', '电子名片', '客户照片', '机器拦下', '主页审核'] },

@@ -1,7 +1,7 @@
 'use client';
 /**
  * 1.5.0 商会风采（运营）：副会长单位、战略合作方，每家：名称、标志、简介、项目图文、联系人（会员号）、排序、下架。
- * 最上面一个开关：小程序首页显示不显示「商会风采」入口（默认关；入口名字和位置等东哥点头）。
+ * 最上面一个开关：小程序首页显示不显示「商会风采」入口（东哥 11/14 点头：默认开，在“商会”组第二个；还没有一家可展示的单位时自动不显示）。
  * 图片先传到 /api/v1/staff/showcase/image 拿到地址，点「保存」才写进这家单位。
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -116,7 +116,7 @@ function Showcase() {
         <button className={`${styles.btn} ${homeEntry ? styles.btnGhost : ''}`} role="switch" aria-checked={homeEntry} disabled={busy === 'home'} onClick={toggleHome}>
           {homeEntry ? '关掉：首页不显示入口' : '打开：首页显示入口'}
         </button>
-        <p className={styles.small} style={{ marginBottom: 0 }}>默认关；入口名字和位置等东哥点头。关着的时候单位页仍可以先编辑好。</p>
+        <p className={styles.small} style={{ marginBottom: 0 }}>默认开（东哥 11/14 点头），在小程序首页“商会”组第二个、「商会介绍」后面。还没有一家可展示的单位时自动不显示；关掉开关就不显示。</p>
       </div>
       <Toast m={msg} onClose={closeMsg} />
       {busy && busy.startsWith('正在') && <p className={styles.notice} role="status">{busy}</p>}

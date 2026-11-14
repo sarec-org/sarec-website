@@ -6,10 +6,10 @@
  * 3) 先发一条给东哥本人预览 → 预览过才出现「确认群发」（只有管理员能点）。
  * 这一版服务器一律演练：只记录“本来会发给谁”，不会真的发出任何消息。
  */
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate, can, type StaffInfo } from '@/components/crm/staff/StaffGate';
+import { NewsletterIssues } from '@/components/crm/staff/NewsletterIssues';
 import { api, fmtDateTime } from '@/components/crm/client';
 import { Toast } from '@/components/crm/staff/ugcShared';
 
@@ -185,11 +185,11 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
     <>
       {dryRun && (
         <div role="alert" style={{ background: '#8a5a00', color: '#fff', padding: '0.9rem 1rem', borderRadius: 8, margin: '0 0 1rem', fontWeight: 600, lineHeight: 1.6 }}>
-          现在是演练模式：只记录本来会发给谁，不会真的发出任何短信、邮件、微信通知
+          「按条件选人群发」现在是演练模式：只记录本来会发给谁，不会真的发出任何短信、邮件、微信通知（下面的「邮件通讯」照常，仍要东哥确认才发）
         </div>
       )}
       <p className={styles.small} style={{ marginTop: 0 }}>
-        现有的「<Link href="/zh/staff/newsletter" style={{ color: 'var(--gold)' }}>邮件通讯</Link>」以后作为群发的邮件渠道并进来，名字和入口等东哥定；现在两个页面都能用。
+        两种发法：上面<b>按条件选人群发</b>（短信 / 邮件 / 微信服务通知，现在是演练）；下面<a href="#newsletter" style={{ color: 'var(--gold)' }}>「邮件通讯」</a>按期发邮件（原来的邮件通讯，照常能用）。两种都要先发东哥预览，东哥确认才发。
       </p>
       <Toast m={msg} onClose={closeMsg} />
 
@@ -406,7 +406,16 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
 export default function Page() {
   return (
     <StaffGate role="ops" title="群发" wide>
-      {(s) => <BroadcastDesk staff={s} />}
+      {(s) => (
+        <>
+          <BroadcastDesk staff={s} />
+          {/* 东哥 11/14 定：「邮件通讯」并进群发，作为邮件渠道（按期发的通讯）；旧网址 /zh/staff/newsletter 跳到这里 */}
+          <section id="newsletter" style={{ marginTop: 40, paddingTop: 16, borderTop: '1px solid var(--line-2)' }}>
+            <h2 className={styles.h2}>邮件通讯（按期发的邮件）</h2>
+            <NewsletterIssues />
+          </section>
+        </>
+      )}
     </StaffGate>
   );
 }
