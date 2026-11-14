@@ -167,14 +167,14 @@ export async function homeData(contactId: string | null, opts: { base: string; w
   );
   const { rows: past } = await pool.query<EvRow & { photo_count: number }>(
     `SELECT e.*, 0 AS registered,
-            (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden) AS photo_count
+            (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND p.visibility = 'album' AND p.review_status = 'ok' AND p.variant_of IS NULL) AS photo_count
        FROM events e WHERE e.is_listed AND e.event_status <> 'cancelled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now()
-      ORDER BY (e.album_published_at IS NOT NULL) DESC, e.starts_at DESC LIMIT 1`
+      ORDER BY e.starts_at DESC LIMIT 1`
   );
   let lastEvent = null as null | Record<string, unknown>;
   if (past[0]) {
     const { rows: photos } = await pool.query<{ thumb_url: string; url: string }>(
-      `SELECT thumb_url, url FROM event_photos WHERE event_id = $1 AND NOT is_hidden ORDER BY sort_order, created_at LIMIT 3`,
+      `SELECT thumb_url, url FROM event_photos WHERE event_id = $1 AND NOT is_hidden AND visibility = 'album' AND review_status = 'ok' AND variant_of IS NULL ORDER BY sort_order, created_at LIMIT 3`,
       [past[0].id]
     );
     lastEvent = {
@@ -184,8 +184,8 @@ export async function homeData(contactId: string | null, opts: { base: string; w
       recap: past[0].recap,
       // 首页回顾小修：客户端不显示到场人数（到场人数只在工作台 / 后台看）
       photoCount: past[0].photo_count,
-      albumPublished: !!past[0].album_published_at,
-      photos: past[0].album_published_at ? photos.map((p) => ({ thumb: p.thumb_url, url: p.url })) : []
+      albumPublished: photos.length > 0,
+      photos: photos.map((p) => ({ thumb: p.thumb_url, url: p.url }))
     };
   }
 
