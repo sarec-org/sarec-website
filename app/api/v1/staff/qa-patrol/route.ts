@@ -12,7 +12,7 @@ async function state() {
   const r = await latestRun();
   return {
     run: r ? { at: r.created_at, trigger: r.trigger, total: r.total, failed: r.failed, bad: r.results.filter((x) => !x.ok) } : null,
-    email: { on: await getSetting<boolean>(getPool(), 'patrol_email_enabled', false), to: process.env.ALERT_EMAIL ? '已设置' : '还没设置收件邮箱（请开发窗口配置）' }
+    email: { on: await getSetting<boolean>(getPool(), 'patrol_email_enabled', false), to: process.env.ALERT_EMAIL ? '已设置' : '还没设置收件邮箱（请联系管理员）' }
   };
 }
 export const GET = handler(async (req: Request) => {
