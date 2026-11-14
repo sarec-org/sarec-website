@@ -122,9 +122,16 @@ export async function saveProfile(contactId: string, b: Record<string, unknown>)
   const lim = profileLimits(isMember);
   const bio = String(b.bio ?? '').trim().slice(0, 300);
   const companyIntro = String(b.companyIntro ?? '').trim().slice(0, 300);
-  const pick = (v: unknown) => (Array.isArray(v) ? v.map(String).filter((x) => PROFILE_TAGS.includes(x)) : []).slice(0, lim.tags);
-  const offers = pick(b.offers);
-  const seeks = pick(b.seeks);
+  // 测试窗口 Q7：不在固定标签里的、超过上限的，直接说清楚，不悄悄丢
+  const pick = (v: unknown, what: string) => {
+    const arr = Array.isArray(v) ? Array.from(new Set(v.map((x) => String(x).trim()).filter(Boolean))) : [];
+    const bad = arr.filter((x) => !PROFILE_TAGS.includes(x));
+    if (bad.length) throw new CrmError('bad_request', `「${what}」只能从给出的标签里选，「${bad[0]}」不在里面`);
+    if (arr.length > lim.tags) throw new CrmError('bad_request', `「${what}」最多选 ${lim.tags} 个（注册用户 4 个，会员 8 个）`);
+    return arr;
+  };
+  const offers = pick(b.offers, '我能提供');
+  const seeks = pick(b.seeks, '我在找');
   const { rows } = await pool.query(`SELECT 1 FROM member_cards WHERE contact_id = $1`, [contactId]);
   if (!rows[0]) throw new CrmError('no_card', '先做一张电子名片，再加个人主页');
   const sec = await msgSecCheck(`${bio}\n${companyIntro}`, await openidOf(contactId), 1);

@@ -21,7 +21,7 @@ export type Club = {
 };
 
 /** 赌博 / 金钱类字样：组局标题和一句话里出现就请发起人改掉 */
-const MONEY_GAMBLE = /输赢|赢钱|输钱|赌|下注|押注|筹码|彩头|奖金|奖品|奖励|红包|抽水|带钱|输了.{0,4}钱|赢了.{0,4}钱|\$|美元|美金|人民币|\d+\s*(元|块|刀)/;
+const MONEY_GAMBLE = /输赢|赢钱|输钱|赌|下注|押注|筹码|彩头|奖金|奖品|奖励|红包|抽水|带钱|输了.{0,4}钱|赢了.{0,4}钱|\$|美元|美金|人民币|\d+\s*(元(?![旦宵])|块|刀)/;
 
 export function gambleWords(text: string): string | null {
   const m = MONEY_GAMBLE.exec(text);
