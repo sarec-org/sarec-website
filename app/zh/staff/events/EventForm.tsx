@@ -198,12 +198,14 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
         </select>
       </div>
       <div className={styles.field}>
-        <label className={styles.label} htmlFor="ev-scope">通知谁</label>
+        {/* 1.4.0（改动单 D5，东哥已点头）：原名「通知谁」，实际只决定小程序首页把活动放在哪一栏，不发通知；真通知并入第二批群发 */}
+        <label className={styles.label} htmlFor="ev-scope">在小程序首页显示在</label>
         <select id="ev-scope" className={styles.select} value={f.notifyScope} onChange={(e) => set('notifyScope', e.target.value)}>
-          <option value="local">本地区的人（外地的人在首页公告区能看到）</option>
+          <option value="local">本地区（外地的人在首页公告区能看到）</option>
           <option value="regions">本地区 + 指定几个地区</option>
           <option value="all">所有地区（高峰论坛等；只有管理员能选）</option>
         </select>
+        <p className={styles.small} style={{ margin: 0 }}>只决定小程序首页把这场活动放在哪个地区的栏目里，不会给任何人发通知。</p>
         {f.notifyScope === 'regions' && (
           <div className={styles.chips}>
             {['洛杉矶/橙县', '旧金山湾区', '纽约', '美国其他', '中国大陆', '其他'].filter((r) => r !== f.region).map((r) => (
@@ -218,7 +220,11 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       {initial && initial.slug ? <p className={styles.small}>网站回顾页：<a href={`/zh/e/${String(initial.slug)}/recap`} target="_blank" rel="noreferrer">/zh/e/{String(initial.slug)}/recap</a>（照片发布、回顾审核后自动有内容）</p> : null}
       <div className={styles.field}>
         <label className={styles.label} htmlFor="ev-cover">封面图（选填；不传就用这个类型的默认图）</label>
-        <input id="ev-cover" type="file" accept="image/*" onChange={(e) => setCover(e.target.files?.[0] ?? null)} />
+        {/* 1.4.0：原生文件框不像按钮，改成按钮样子 */}
+        <label className={`${styles.btn} ${styles.btnGhost}`} style={{ cursor: 'pointer', position: 'relative', alignSelf: 'flex-start' }}>
+          {cover ? `已选：${cover.name}（点这里换一张）` : '选封面图'}
+          <input id="ev-cover" type="file" accept="image/*" style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }} onChange={(e) => setCover(e.target.files?.[0] ?? null)} />
+        </label>
       </div>
       {input('fee', '费用（美元，0 = 免费）', 'number', { min: 0, step: '0.01', inputMode: 'decimal' })}
       <div className={styles.field}>

@@ -1,0 +1,158 @@
+/* 1.4.0 后台导航：电脑上导航条 +「更多」下拉；手机上「菜单」按钮展开按分组的全部页面 */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--ink-deepest);
+  border-bottom: 1px solid var(--line-3);
+  padding: 0.6rem 1rem;
+}
+.top {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.brand { color: var(--gold); text-decoration: none; font-family: var(--serif-zh); font-size: 1.05rem; white-space: nowrap; }
+.topRight { display: flex; align-items: center; gap: 0.75rem; }
+.home { color: var(--ivory-mute); text-decoration: none; font-size: 0.95rem; min-height: 44px; display: inline-flex; align-items: center; white-space: nowrap; }
+.home:hover { color: var(--gold); }
+
+.bar {
+  max-width: 1080px;
+  margin: 0.5rem auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  position: relative;
+}
+.tab {
+  min-height: 44px;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-3);
+  color: var(--ivory-warm, var(--ivory));
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.tab:hover { border-color: var(--gold-dim); color: var(--gold-bright); }
+.tabOn { border-color: var(--gold); background: var(--gold-faint); color: var(--gold-bright); font-weight: 600; }
+
+.moreWrap { position: static; }
+/* 下拉以整条导航为基准，靠左对齐，不会伸出屏幕 */
+.morePanel {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  width: min(620px, 100%);
+  max-height: 75vh;
+  overflow-y: auto;
+  background: var(--ink-deepest);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  padding: 0.75rem 1rem 1rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  z-index: 40;
+}
+
+.group { margin-top: 0.75rem; }
+.groupTitle { margin: 0 0 0.4rem; font-size: 0.85rem; color: var(--gold); letter-spacing: 0.08em; }
+.groupGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.45rem; }
+.item {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--line-3);
+  border-radius: 6px;
+  color: var(--ivory);
+  text-decoration: none;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+.item:hover { border-color: var(--gold-dim); color: var(--gold-bright); }
+.itemOn { border-color: var(--gold); background: var(--gold-faint); color: var(--gold-bright); font-weight: 600; }
+
+.search { position: relative; }
+.searchInput {
+  width: 240px;
+  min-height: 44px;
+  font-size: 1rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 6px;
+  border: 1px solid var(--line-3);
+  background: rgba(2, 6, 16, 0.6);
+  color: var(--ivory);
+  box-sizing: border-box;
+}
+.searchInput:focus { outline: 2px solid var(--gold); outline-offset: 1px; border-color: var(--gold); }
+.searchList {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 240px;
+  background: var(--ink-deepest);
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  z-index: 50;
+  overflow: hidden;
+}
+.searchItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 46px;
+  padding: 0.5rem 0.8rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ivory);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+.searchItem:hover, .searchItem:focus { background: var(--gold-faint); color: var(--gold-bright); }
+.searchGroup { font-size: 0.82rem; color: var(--ivory-mute); white-space: nowrap; }
+.searchEmpty { margin: 0; padding: 0.7rem 0.8rem; font-size: 0.92rem; color: var(--ivory-mute); }
+
+.menuBtn {
+  min-height: 44px;
+  min-width: 72px;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mobilePanel {
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: 0.75rem 0 1rem;
+}
+.mobilePanel .searchInput { width: 100%; }
+
+.mobileOnly { display: none; }
+
+@media (max-width: 760px) {
+  .desktopOnly { display: none !important; }
+  .mobileOnly { display: block; }
+  button.mobileOnly { display: inline-flex; align-items: center; justify-content: center; }
+  .groupGrid { grid-template-columns: 1fr 1fr; }
+  .item { font-size: 1rem; }
+}

@@ -224,3 +224,23 @@
   .card { overflow-wrap: anywhere; }
   .card img { max-width: 100%; height: auto; }
 }
+
+/* 1.4.0（改动单 D8）：页面里用到但原来没定义的类——小标题 .h、小按钮 .btnSmall、横滑表格外框 .tableWrap */
+.h {
+  font-family: var(--serif-zh);
+  font-size: 1.2rem;
+  margin: 1.75rem 0 0.6rem;
+  color: var(--ivory);
+}
+.btnSmall { min-height: 44px; padding: 0.4rem 0.9rem; font-size: 0.98rem; }
+.tableWrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* 1.4.0（改动单 5.6）：手机 375px —— 按钮至少 44px 高、不出现整页横滑、表格在自己的框里横滑 */
+@media (max-width: 760px) {
+  .btnRow > * { min-width: 0; }
+  .btnRow .btn { white-space: normal; text-align: center; }
+  .inputRow .select { min-width: 0; }
+  .tableWrap .table { display: table; }
+  .page img, .page iframe, .page pre { max-width: 100%; }
+  .page pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+}
