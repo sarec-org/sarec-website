@@ -7,7 +7,7 @@ function when(d: Date, tz: string) {
   return new Intl.DateTimeFormat('zh-CN', { timeZone: tz, month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(d));
 }
 
-export function CheckinCodeNote({ ev }: { ev: CodeEvent | null }) {
+export function CheckinCodeNote({ ev, reg }: { ev: CodeEvent | null; reg?: string }) {
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '32px 16px 64px' }}>
       <h1 className={s.h1}>这是您的个人签到码</h1>
@@ -31,9 +31,15 @@ export function CheckinCodeNote({ ev }: { ev: CodeEvent | null }) {
             <Link href={`/zh/e/${ev.slug}`} className={s.btn}>看活动详情</Link>
           </div>
         </div>
-      ) : (
+      ) : null}
+      {ev && reg ? (
+        // 工作人员没登录时扫到客人的个人码：登录后自动回到签到台的这条报名
+        <p style={{ marginTop: 32, fontSize: 14, color: '#5B6B7F' }}>
+          <a href={`/zh/staff/checkin?reg=${reg}&staff=1`} style={{ color: '#5B6B7F', textDecoration: 'underline' }}>我是工作人员 → 登录后台</a>
+        </p>
+      ) : !ev ? (
         <p style={{ marginTop: 24 }}>没有找到这条报名，可能链接不完整。可以在小程序「我的 → 我的报名」里重新打开签到码。</p>
-      )}
+      ) : null}
     </div>
   );
 }

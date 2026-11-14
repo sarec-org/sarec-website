@@ -14,5 +14,5 @@ export const dynamic = 'force-dynamic';
 
 export default async function Page({ params }: { params: { reg: string } }) {
   if (REG_UUID.test(params.reg) && (await isCheckinStaff())) redirect(`/zh/staff/checkin?reg=${params.reg}`);
-  return <CheckinCodeNote ev={await loadCodeEvent(params.reg)} />;
+  return <CheckinCodeNote ev={await loadCodeEvent(params.reg)} reg={REG_UUID.test(params.reg) ? params.reg : undefined} />;
 }
