@@ -1,7 +1,7 @@
-/** GET /api/v1/me/checkin-qr?slug= —— 我的个人签到码（工作人员扫码核验；图片为 data URL） */
+/** GET /api/v1/me/checkin-qr?slug= —— 我的个人签到码（图片为 data URL；码里是公开中转网址 /zh/c/<报名编号>） */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
-import { personalCheckinQr } from '@/lib/crm/growth';
+import { personalCheckinQr } from '@/lib/crm/checkinCode';
 import { handler, ok, requireContact, siteUrl } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

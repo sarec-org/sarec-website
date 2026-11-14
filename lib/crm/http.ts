@@ -192,6 +192,11 @@ export async function requireStaffAny(req: Request, roles: StaffRole[]): Promise
 }
 
 /** 1.3.1 及以后的小程序（X-Sarec-Client: mp-1.3.1 …）：不给任何人数、金额（只给“名额状态”和“免费 / 收费”） */
+/** 1.4 及以后的小程序（X-Sarec-Client: mp-1.4.0 …）：新的首页待办按钮等 */
+const MP14 = /^mp-(1\.([4-9]|\d{2,})|[2-9])(\b|\.|$)/;
+export function isMp14(req: Request): boolean {
+  return MP14.test((req.headers.get('x-sarec-client') ?? '').toLowerCase());
+}
 const MP131 = /^mp-1\.(3\.[1-9]\d*|[4-9]|\d{2,})(\b|$)/;
 export function isMp131(req: Request): boolean {
   return MP131.test((req.headers.get('x-sarec-client') ?? '').toLowerCase());

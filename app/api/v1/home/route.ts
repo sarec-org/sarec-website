@@ -1,6 +1,6 @@
 /** GET /api/v1/home —— 1.2 首页服务台（小程序首页、网站手机版共用）：状态卡、近期活动、上一场回顾、研究与动态、相册通知 */
 import { homeData } from '@/lib/crm/growth';
-import { handler, isMp12, isMp131, mp131Safe, ok, optionalContact, siteUrl } from '@/lib/crm/http';
+import { handler, isMp12, isMp131, isMp14, mp131Safe, ok, optionalContact, siteUrl } from '@/lib/crm/http';
 import { noMoneySummaries } from '@/lib/noMoney';
 import { homeEntriesOrder } from '@/lib/crm/features';
 import { contentResearchList, setContentVisibility, type Visibility } from '@/lib/mpContent';
@@ -21,7 +21,7 @@ export const GET = handler(async (req: Request) => {
   // 1.3.1 G：新首页（轮播、待办卡、近期活动、外地公告、照片墙、会员企业、知识与工具）；1.3.0 不带 v=131，不受影响
   if (sp.get('v') === '131') {
     const { home131 } = await import('@/lib/crm/home131');
-    out.h131 = await home131(me, { region: sp.get('region') });
+    out.h131 = await home131(me, { region: sp.get('region'), client14: isMp14(req) });
   }
   const safe = (await isMp12(req)) ? noMoneySummaries(out) : out;
   return ok(isMp131(req) ? mp131Safe(safe) : safe);

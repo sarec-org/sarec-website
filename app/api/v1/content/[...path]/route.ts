@@ -14,8 +14,10 @@ import {
   contentServices,
   scrubMp,
   setContentVisibility,
-  type Visibility
+  type Visibility,
+  SAREC_OFFICE_ADDRESS
 } from '@/lib/mpContent';
+import { geocode } from '@/lib/crm/geo';
 import { getPool } from '@/lib/db/client';
 import { getSetting } from '@/lib/crm/orders';
 
@@ -48,6 +50,6 @@ export async function GET(_req: Request, { params }: { params: { path: string[] 
   else if (a === 'research' && !b) data = contentResearchList();
   else if (a === 'research' && b) data = contentResearch(b);
   else if (a === 'benefits' && !b) data = contentBenefits();
-  else if (a === 'contact' && !b) data = contentContact();
+  else if (a === 'contact' && !b) data = { ...contentContact(), geo: await geocode(SAREC_OFFICE_ADDRESS) };
   return data ? json(scrubMp(data)) : json(null, 404);
 }
