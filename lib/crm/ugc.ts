@@ -19,7 +19,8 @@ async function openidOf(contactId: string): Promise<string | null> {
 }
 
 // ── 举报 ─────────────────────────────────────────────────────────────
-export const REPORT_REASONS = ['广告推销', '色情低俗', '赌博或金钱输赢', '违法违规', '冒充他人', '骚扰或人身攻击', '其他'];
+export const REPORT_REASONS = ['广告推销', '色情低俗', '赌博、涉及钱财', '违法违规', '冒充他人', '骚扰或人身攻击', '其他'];
+const OLD_REASON: Record<string, string> = { 赌博或金钱输赢: '赌博、涉及钱财' };
 const KINDS = ['meetup', 'profile', 'card', 'photo', 'club_member'] as const;
 
 export async function report(contactId: string, b: Record<string, unknown>) {
@@ -27,7 +28,8 @@ export async function report(contactId: string, b: Record<string, unknown>) {
   if (!(KINDS as readonly string[]).includes(kind)) throw new CrmError('bad_request', '举报的内容类型不对');
   const target = String(b.targetId ?? '').trim().slice(0, 80);
   if (!target) throw new CrmError('bad_request', '缺少举报对象');
-  const reason = REPORT_REASONS.includes(String(b.reason)) ? String(b.reason) : '其他';
+  const r0 = OLD_REASON[String(b.reason)] ?? String(b.reason);
+  const reason = REPORT_REASONS.includes(r0) ? r0 : '其他';
   const detail = String(b.detail ?? '').trim().slice(0, 200) || null;
   // 同一个人同一条内容一天内只记一次
   const { rows: dup } = await getPool().query(`SELECT 1 FROM ugc_reports WHERE kind = $1 AND target_id = $2 AND reporter_id = $3 AND created_at > now() - interval '1 day'`, [kind, target, contactId]);
@@ -59,6 +61,11 @@ async function targetSummary(kind: string, id: string): Promise<{ text: string; 
     if (kind === 'profile' || kind === 'card') {
       const { rows } = await pool.query<{ name: string | null; bio: string | null; company: string | null }>(`SELECT NULLIF(c.name, '微信用户') AS name, m.bio, m.company FROM contacts c LEFT JOIN member_cards m ON m.contact_id = c.id WHERE c.id::text = $1 OR m.token = $1`, [id]);
       return rows[0] ? { text: `${rows[0].name ?? 'SAREC 用户'} 的${kind === 'card' ? '名片' : '个人主页'}${rows[0].company ? '（' + rows[0].company + '）' : ''}${rows[0].bio ? '：' + rows[0].bio.slice(0, 60) : ''}`, link: kind === 'card' ? '/zh/staff/cards' : '/zh/staff/profiles' } : { text: '（已删除）', link: null };
+    }
+    if (kind === 'club_member') {
+      const [ck, mid] = id.split(':');
+      const { rows } = await pool.query<{ name: string | null; club: string | null }>(`SELECT NULLIF(c.name, '微信用户') AS name, (SELECT name FROM clubs WHERE key = $2) AS club FROM contacts c WHERE c.id::text = $1`, [mid ?? '', ck ?? '']);
+      return rows[0] ? { text: `俱乐部「${rows[0].club ?? ck}」的成员 ${rows[0].name ?? 'SAREC 用户'}`, link: '/zh/staff/clubs' } : { text: id, link: null };
     }
     if (kind === 'photo') {
       const { rows } = await pool.query<{ thumb_url: string; title: string }>(`SELECT p.thumb_url, e.title FROM event_photos p JOIN events e ON e.id = p.event_id WHERE p.id::text = $1`, [id]);
@@ -173,8 +180,9 @@ export async function publicProfile(token: string) {
     `SELECT id, title, body, images FROM profile_projects WHERE contact_id = $1 AND status = 'ok' ORDER BY sort_order, created_at`, [r.contact_id]
   );
   const textOk = r.profile_status === 'ok';
+  const takenDown = r.profile_status === 'taken_down';
   return {
-    bio: textOk ? r.bio : null, companyIntro: textOk ? r.company_intro : null, offers: r.offers, seeks: r.seeks, projects,
+    bio: textOk ? r.bio : null, companyIntro: textOk ? r.company_intro : null, offers: takenDown ? [] : r.offers, seeks: takenDown ? [] : r.seeks, projects,
     isMember: (await memberStatus(pool, r.contact_id)).isMember
   };
 }

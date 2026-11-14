@@ -21,7 +21,7 @@ export type Club = {
 };
 
 /** 赌博 / 金钱类字样：组局标题和一句话里出现就请发起人改掉 */
-const MONEY_GAMBLE = /输赢|赢钱|输钱|赌|下注|押注|筹码|彩头|奖金|奖品|奖励|红包|抽水|赌资|\$|美元|美金|人民币|\d+\s*(元|块|刀)|钱/;
+const MONEY_GAMBLE = /输赢|赢钱|输钱|赌|下注|押注|筹码|彩头|奖金|奖品|奖励|红包|抽水|带钱|输了.{0,4}钱|赢了.{0,4}钱|\$|美元|美金|人民币|\d+\s*(元|块|刀)/;
 
 export function gambleWords(text: string): string | null {
   const m = MONEY_GAMBLE.exec(text);
@@ -99,7 +99,12 @@ export async function joinClub(contactId: string, key: string) {
 export async function leaveClub(contactId: string, key: string) {
   const c = await clubByKey(key);
   await getPool().query(`UPDATE club_members SET left_at = now() WHERE club_id = $1 AND contact_id = $2 AND left_at IS NULL`, [c.id, contactId]);
-  return { joined: false, message: `已退出「${c.name}」` };
+  // 退出俱乐部，同时退出这个俱乐部还没开始的组局（不再占名额）
+  await getPool().query(
+    `DELETE FROM club_meetup_joins j USING club_meetups u WHERE j.meetup_id = u.id AND u.club_id = $1 AND j.contact_id = $2 AND u.starts_at > now()`,
+    [c.id, contactId]
+  );
+  return { joined: false, message: `已退出「${c.name}」，没开始的组局也一起退了` };
 }
 
 /** 俱乐部页：加入后才看得到成员、群二维码；组局板加入后能发起 / 参加 */
@@ -110,7 +115,7 @@ export async function clubDetail(contactId: string | null, key: string) {
   const leader = !!contactId && c.leader_contact_id === contactId;
   const { rows: cnt } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM club_members WHERE club_id = $1 AND left_at IS NULL`, [c.id]);
   let members: unknown[] = [];
-  if (joined) {
+  if (joined || leader) {
     const { rows } = await pool.query<{ contact_id: string; name: string | null; company: string | null; title: string | null; token: string | null; avatar_url: string | null }>(
       `SELECT m.contact_id, NULLIF(ct.name, '微信用户') AS name, mc.company, mc.title, mc.token, ct.avatar_url
          FROM club_members m JOIN contacts ct ON ct.id = m.contact_id LEFT JOIN member_cards mc ON mc.contact_id = ct.id AND mc.hidden_at IS NULL
@@ -131,7 +136,9 @@ export async function clubDetail(contactId: string | null, key: string) {
     joined, leader,
     members,
     groupQr: joined && c.group_qr_url && !(c.group_qr_expires && new Date(c.group_qr_expires).getTime() < Date.now() - 86400e3) ? c.group_qr_url : null,
-    groupQrNote: !joined ? '加入后能看到群二维码' : !c.group_qr_url ? '群二维码还没上传，负责人上传后这里会显示' : qrExpiring ? '群二维码快过期了，已提醒负责人更换' : null,
+    groupQrNote: !joined ? '加入后能看到群二维码' : !c.group_qr_url ? '群二维码还没上传，负责人上传后这里会显示'
+      : c.group_qr_expires && new Date(c.group_qr_expires).getTime() < Date.now() - 86400e3 ? '群二维码已过期，等负责人更换'
+      : qrExpiring ? '群二维码快过期了，已提醒负责人更换' : null,
     meetups: await listMeetups(c, contactId, joined || leader)
   };
 }
@@ -154,8 +161,10 @@ async function listMeetups(c: Club, contactId: string | null, canSee: boolean) {
       ORDER BY u.starts_at`,
     [c.id, contactId]
   );
-  return rows.map((u) => ({
-    id: u.id, title: u.title, startsAt: u.starts_at, location: u.location, address: u.address, capacity: u.capacity, note: u.note,
+  const { geocode } = await import('./geo');
+  const geos = await Promise.all(rows.map((u) => (u.address ? geocode(u.address) : Promise.resolve(null))));
+  return rows.map((u, i) => ({
+    id: u.id, title: u.title, startsAt: u.starts_at, location: u.location, address: u.address, geo: geos[i], capacity: u.capacity, note: u.note,
     joined: u.joined, full: u.joined >= u.capacity, iJoined: u.mine, mineCreated: u.creator_id === contactId,
     creator: u.creator_name ?? 'SAREC 用户', cancelled: u.status === 'cancelled',
     pending: u.sec_status === 'pending' ? '内容检测中，稍后显示（只有您自己看得到）' : u.sec_status === 'rejected' ? '内容没通过检测，别人看不到，请修改后重新发起' : null
@@ -208,6 +217,7 @@ export async function joinMeetup(contactId: string, id: string, on: boolean) {
       [id]
     );
     const u = rows[0];
+    if (u && u.status === 'open' && u.sec_status === 'pending') throw new CrmError('pending', '这个组局还在内容检测中，过了才能参加');
     if (!u || u.status !== 'open' || u.sec_status !== 'ok') throw new CrmError('not_found', '这个组局已经取消或下架了');
     if (!on) {
       await db.query(`DELETE FROM club_meetup_joins WHERE meetup_id = $1 AND contact_id = $2`, [id, contactId]);
