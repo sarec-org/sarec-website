@@ -3,6 +3,7 @@
  * - 小程序先在手机上生成“分享成片”直接给用户转发（不等服务器）；同时后台上传压缩版（长边 1600），原图稍后再传。
  * - 去重：完全相同的照片（内容哈希）不重复存，直接返回已有那张；相似照片记 phash，后台分组、精选时用，不挡分享。
  * - 1.4.0（东哥定）：上传 = 进本场活动相册，所有人立刻能看到，不用工作人员批准、不用再点“放进相册”。
+ *   只对 1.4.0 及以上的小程序生效；1.3.x 仍按旧规则（默认私人），见 uploadMyPhoto 的 opts.toAlbum。
  *   管理改成事后：工作人员可下架某张、禁止某人上传；上传的人可以删自己的。（1.3.x 以前传的“只有自己看得见”的照片不动。）
  * - 美颜版：只作为本人的分享版存一份（variant_of 指向原照片），不覆盖相册原图，去重时不当成两张。
  * - 服务器单次请求上限约 4.5MB：所谓“原图”是手机端压到长边 2560、质量 0.9 的高清版。
@@ -36,7 +37,11 @@ const toMine = (r: { id: string; url: string; thumb_url: string; visibility: str
   id: r.id, url: r.url, thumb: r.thumb_url, visibility: r.visibility, review: r.review_status, hasOriginal: !!r.original_url, ...(duplicate ? { duplicate: true } : {})
 });
 
-export async function uploadMyPhoto(contactId: string, slug: string, data: Buffer): Promise<MyPhoto> {
+/**
+ * opts.toAlbum：1.4.0 及以上的小程序 = true（上传即进相册）；1.3.x 及更早 = false（保持旧规则：默认只有自己看得见，
+ * 勾了“放进活动相册”才公开）。1.3.4 的页面上写着“照片默认只有你自己看得到”，不能让它的用户以为私人、实际已公开。
+ */
+export async function uploadMyPhoto(contactId: string, slug: string, data: Buffer, opts: { toAlbum?: boolean } = {}): Promise<MyPhoto> {
   if (!blobConfigured()) throw new CrmError('storage_unconfigured', '照片存储暂时不可用，请稍后再试');
   if (!data.length) throw new CrmError('bad_request', '没有收到照片，请再试一次');
   if (data.length > MAX_BYTES) throw new CrmError('too_large', '这张照片太大了，请换一张');
@@ -59,10 +64,10 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
   ]);
   const { rows } = await pool.query(
     `INSERT INTO event_photos (id, event_id, url, thumb_url, width, height, sort_order, uploaded_by, uploader_contact_id, visibility, review_status, content_hash, phash)
-     VALUES ($1, $2, $3, $4, $5, $6, 100000, 'customer', $7, 'album', 'ok', $8, $9)
+     VALUES ($1, $2, $3, $4, $5, $6, 100000, 'customer', $7, $10, 'ok', $8, $9)
      ON CONFLICT (event_id, content_hash) WHERE content_hash IS NOT NULL AND variant_of IS NULL DO NOTHING
      RETURNING id, url, thumb_url, visibility, review_status, original_url`,
-    [id, ev.id, full.url, thumb.url, w.width, w.height, contactId, hash, ph]
+    [id, ev.id, full.url, thumb.url, w.width, w.height, contactId, hash, ph, opts.toAlbum ? 'album' : 'private']
   );
   if (rows[0]) return toMine(rows[0]);
   // 并发上传同一张：另一条请求先存进去了
