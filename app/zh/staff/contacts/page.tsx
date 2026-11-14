@@ -16,15 +16,19 @@ export default function StaffContacts() {
   const [rows, setRows] = useState<C[] | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [err, setErr] = useState('');
-  const qs = () => new URLSearchParams(Object.entries(f).filter(([, v]) => v)).toString();
-  async function load() {
-    const r = await api<{ contacts: C[] }>(`/api/v1/staff/contacts?${qs()}`);
+  const qs = (x = f) => new URLSearchParams(Object.entries(x).filter(([, v]) => v)).toString();
+  async function load(x = f) {
+    const r = await api<{ contacts: C[] }>(`/api/v1/staff/contacts?${qs(x)}`);
     if (r.ok) setRows(r.data.contacts);
     else setErr(r.message);
   }
   useEffect(() => {
     api<Meta>('/api/v1/meta').then((r) => r.ok && setMeta(r.data));
-    load();
+    // 网址带 ?q= 时（别的页面点“查看客户”过来）直接按它查
+    const q = new URLSearchParams(location.search).get('q') ?? '';
+    const first = { ...f, q };
+    if (q) setF(first);
+    load(first);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const sel = (k: keyof typeof f, label: string, opts: [string, string][]) => (
     <div className={styles.field} style={{ margin: 0 }}>
@@ -36,13 +40,13 @@ export default function StaffContacts() {
     </div>
   );
   return (
-    <StaffGate title="客户查询" role="ops" wide>
+    <StaffGate title="客户" role="ops" wide>
       {() => (
         <>
           {err && <div className={styles.error}>{err}</div>}
           <div className={styles.inputRow} style={{ marginBottom: '0.75rem' }}>
             <input className={styles.input} placeholder="姓名 / 邮箱 / 手机 / 会员编号" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && load()} />
-            <button className={styles.btn} onClick={load}>查询</button>
+            <button className={styles.btn} onClick={() => load()}>查询</button>
           </div>
           <div className={styles.grid2} style={{ marginBottom: '0.75rem' }}>
             {sel('member', '身份', [['member', '正式会员'], ['registered', '注册用户']])}
@@ -56,7 +60,7 @@ export default function StaffContacts() {
             </div>
           </div>
           <div className={styles.btnRow} style={{ marginBottom: '1rem' }}>
-            <button className={styles.btn} onClick={load}>按条件筛选</button>
+            <button className={styles.btn} onClick={() => load()}>按条件筛选</button>
             <a className={`${styles.btn} ${styles.btnGhost}`} href={`/api/v1/staff/contacts?${qs()}&format=csv`}>导出 Excel（CSV）</a>
           </div>
           <p className={styles.small}>{rows ? `共 ${rows.length} 人（最多显示 200）` : '加载中…'}</p>

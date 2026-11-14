@@ -700,7 +700,8 @@ export async function reviewScreenAd(
 }
 
 // ── 配置（管理员）──────────────────────────────────────────────────────────
-export const SETTING_KEYS = ['room_discount', 'screen_fee_cents', 'member_prices_published', 'points_per_dollar', 'room_pass_cents', 'zelle_enabled'] as const;
+// 1.4.0（改动单 D2）：邮件通讯发信额度（Resend 套餐）在设置页改：resend_monthly_quota / resend_daily_quota
+export const SETTING_KEYS = ['room_discount', 'screen_fee_cents', 'member_prices_published', 'points_per_dollar', 'room_pass_cents', 'zelle_enabled', 'resend_monthly_quota', 'resend_daily_quota'] as const;
 
 export async function getSettings() {
   const pool = getPool();
@@ -717,6 +718,9 @@ export async function updateSetting(s: Staff, key: string, value: unknown) {
   if (!(SETTING_KEYS as readonly string[]).includes(key)) throw new CrmError('bad_request', '不能修改这个配置');
   if ((key === 'member_prices_published' || key === 'zelle_enabled') && typeof value !== 'boolean') throw new CrmError('bad_request', '请选择是或否');
   if ((key === 'points_per_dollar' || key === 'room_pass_cents') && !(Number(value) > 0)) throw new CrmError('bad_request', '请填写正数');
+  if ((key === 'resend_monthly_quota' || key === 'resend_daily_quota') && !(Number.isInteger(Number(value)) && Number(value) > 0 && Number(value) <= 10_000_000)) {
+    throw new CrmError('bad_request', '发信额度请填正整数（封数），例如每月 3000、每天 100');
+  }
   if ((key === 'room_discount' || key === 'screen_fee_cents') && (typeof value !== 'object' || value === null || Array.isArray(value))) {
     throw new CrmError('bad_request', '格式不对');
   }
@@ -727,7 +731,8 @@ export async function updateSetting(s: Staff, key: string, value: unknown) {
   }
   return withTransaction(async (db) => {
     const before = await getSetting(db, key, null);
-    await setSetting(db, key, typeof value === 'number' || typeof value === 'boolean' ? value : value, s.name);
+    const v = key === 'resend_monthly_quota' || key === 'resend_daily_quota' ? Number(value) : value;
+    await setSetting(db, key, v, s.name);
     await audit(db, s, 'update_setting', 'setting', key, { before, after: value });
     return { key };
   });

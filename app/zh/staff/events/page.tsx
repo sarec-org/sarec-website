@@ -19,7 +19,7 @@ export default function StaffEvents() {
     api<{ events: Row[] }>('/api/v1/staff/events').then((r) => (r.ok ? setRows(r.data.events) : setErr(r.message)));
   }, []);
   return (
-    <StaffGate title="活动管理" role={['ops', 'checkin']}>
+    <StaffGate title="活动" role={['ops', 'checkin']}>
       {(s) => (
         <>
           {err && <div className={styles.error}>{err}</div>}

@@ -44,7 +44,7 @@ export default function CheckinQuestions() {
             </div>
           ))}
           <div className={styles.btnRow}>
-            <button className={styles.btnQuiet} onClick={() => setQs((l) => [...l, { key: '', prompt: '', options: [], sort: 100, isActive: true, allowText: true }])}>加一道题</button>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setQs((l) => [...l, { key: '', prompt: '', options: [], sort: 100, isActive: true, allowText: true }])}>加一道题</button>
             <button className={styles.btn} onClick={save}>保存题库</button>
           </div>
         </>

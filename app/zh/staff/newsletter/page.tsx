@@ -35,7 +35,7 @@ export default function NewsletterList() {
               <p className={styles.cardTitle}>发信额度（Resend 现有套餐）</p>
               <p className={styles.small} style={{ margin: 0 }}>
                 本月已发 {q.usedMonth} / {q.monthly || '不限'} 封 · 今天 {q.usedToday} / {q.daily || '不限'} 封。群发前会预留 10% 给活动通知等日常邮件；不够时会拦下并发邮件提醒东哥。
-                额度在“设置”里按套餐改（resend_monthly_quota / resend_daily_quota）。
+                额度在<a href="/zh/staff/settings#email-quota" style={{ color: 'var(--gold)' }}>「设置」→「邮件通讯发信额度」</a>里按套餐改（管理员）。
               </p>
             </div>
           )}

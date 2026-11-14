@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
+import { saveImage, savedText } from '@/components/crm/staff/SaveImage';
 import { DEFAULT_STYLE } from '@/lib/poster/styles';
 
 type Gen = { id: string; batch_id: string; kind: string; style: string | null; event_type: string | null; provider: string; model: string | null; prompt: string; image_url: string | null; cost_usd: number; status: string; error: string | null; created_at: string; ai?: boolean };
@@ -300,7 +301,22 @@ export function AiPoster({ eventId, isAdmin }: { eventId: string; isAdmin: boole
           <p className={styles.small} style={{ marginTop: 6 }}>手机上：长按上面的图 →「存储到照片 / 保存图片」，再发微信。</p>
           <div className={styles.btnRow}>
             {([['tall', '下载竖版'], ['square', '下载方版'], ['oa', '下载公众号头图']] as const).map(([k, label]) => (
-              <a key={k} className={`${styles.btn} ${k === 'tall' ? '' : styles.btnQuiet}`} href={`/api/v1/staff/events/${eventId}/ai-poster/render?size=${k}&v=${v}`} download>{label}</a>
+              // 1.4.0（1.3.5 第 11 条）：手机上弹出大图 +「分享 / 存相册」，电脑照常下载
+              <button
+                key={k}
+                type="button"
+                className={`${styles.btn} ${k === 'tall' ? '' : styles.btnQuiet}`}
+                onClick={async () => {
+                  try {
+                    const how = await saveImage(`/api/v1/staff/events/${eventId}/ai-poster/render?size=${k}&inline=1&v=${v}`, `AI海报-${label.replace('下载', '')}.png`);
+                    setMsg({ ok: true, text: savedText(how, label.replace('下载', '')) });
+                  } catch (e) {
+                    setMsg({ ok: false, text: e instanceof Error ? e.message : '海报这会儿生成不了，请稍后再试' });
+                  }
+                }}
+              >
+                {label}
+              </button>
             ))}
           </div>
 
