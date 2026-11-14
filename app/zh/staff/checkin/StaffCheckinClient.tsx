@@ -25,7 +25,10 @@ export default function StaffCheckin() {
   // 1.2 个人签到码：工作人员用手机扫会员的签到码 → 打开本页并定位到这条报名，核对后一键签到
   const [regCard, setRegCard] = useState<(Person & { event_id: string; title: string; starts_at: string; status: string }) | null>(null);
 
+  // 1.4.0：登录成功（StaffGate 放行）以后再取数据——没登录的工作人员从个人码说明页点“登录后台”，登录完自动定位到这条报名
+  const [ready, setReady] = useState(false);
   useEffect(() => {
+    if (!ready) return;
     api<{ events: Ev[] }>('/api/v1/staff/events').then((r) => {
       if (!r.ok) return;
       const now = Date.now();
@@ -45,7 +48,7 @@ export default function StaffCheckin() {
         setRegCard({ id: x.contact_id, member_no: x.member_no, name: x.name, email: x.email, phone_e164: x.phone_e164, role_label: x.role_label, reg_status: x.status, arrival_status: x.arrival_status, event_id: x.event_id, title: x.title, starts_at: x.starts_at, status: x.status });
       });
     }
-  }, []);
+  }, [ready]);
 
   async function search() {
     if (!q.trim()) return;
@@ -78,6 +81,7 @@ export default function StaffCheckin() {
     <StaffGate title="现场签到台" role="checkin">
       {() => (
         <>
+          <Ready onReady={() => setReady(true)} />
           <div className={styles.field}>
             <label className={styles.label} htmlFor="ev">当前活动</label>
             <select id="ev" className={styles.select} value={eventId} onChange={(e) => { setEventId(e.target.value); setPeople(null); setResult(null); }}>
@@ -178,4 +182,12 @@ export default function StaffCheckin() {
       )}
     </StaffGate>
   );
+}
+
+/** StaffGate 放行（已登录、有权限）后才挂载：通知外层开始取数据 */
+function Ready({ onReady }: { onReady: () => void }) {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+  return null;
 }
