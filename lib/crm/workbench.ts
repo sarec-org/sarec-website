@@ -130,15 +130,141 @@ export async function workbenchEvent(eventId: string, q: string) {
             count(*) FILTER (WHERE status = 'waitlisted')::int AS waitlisted FROM registrations WHERE event_id = $1`,
     [eventId]
   );
-  return {
-    event: ev[0],
-    counts: { ...cnt[0], not_arrived: Math.max(0, cnt[0].registered - cnt[0].checked_in) },
-    people: rows.map((r) => ({
+  // 1.4.1 到场名单（东哥已点头）：每人一行——行业、公司、是不是第一次来、谁邀请的、会员还是注册用户；顶上 已到 / 已报名 / 新人
+  const ids = Array.from(new Set(rows.map((r) => r.contact_id)));
+  const extra = new Map<string, { company: string | null; industry: string | null; first: boolean; inviter: string | null; isMember: boolean; followup: boolean }>();
+  if (ids.length) {
+    const { rows: ex } = await pool.query<{ id: string; company: string | null; industry: string | null; prior: number; inviter: string | null; followup: boolean }>(
+      `SELECT c.id,
+              COALESCE(m.company, (SELECT co.name FROM contact_companies cc JOIN companies co ON co.id = cc.company_id WHERE cc.contact_id = c.id ORDER BY cc.is_primary DESC LIMIT 1)) AS company,
+              COALESCE(NULLIF(m.industry, ''), (SELECT a.value->>'choice' FROM profile_answers a WHERE a.contact_id = c.id AND a.item_code = 'CK:profession' AND a.status = 'current' LIMIT 1)) AS industry,
+              (SELECT count(*)::int FROM registrations o WHERE o.contact_id = c.id AND o.event_id <> $2 AND o.arrival_status = 'checked_in') AS prior,
+              (SELECT NULLIF(ic.name, '微信用户') FROM registrations rr JOIN contacts ic ON ic.id = rr.ref_contact_id WHERE rr.event_id = $2 AND rr.contact_id = c.id
+                UNION ALL SELECT NULLIF(ic2.name, '微信用户') FROM contacts ic2 WHERE ic2.id = c.referred_by LIMIT 1) AS inviter,
+              EXISTS (SELECT 1 FROM followups f WHERE f.contact_id = c.id AND f.status = 'todo') AS followup
+         FROM contacts c LEFT JOIN member_cards m ON m.contact_id = c.id
+        WHERE c.id = ANY($1::uuid[])`,
+      [ids, eventId]
+    );
+    const { memberStatus } = await import('./membership');
+    for (const e of ex) {
+      extra.set(e.id, { company: e.company, industry: e.industry, first: e.prior === 0, inviter: e.inviter, isMember: (await memberStatus(pool, e.id)).isMember, followup: e.followup });
+    }
+  }
+  const people = rows.map((r) => {
+    const x = extra.get(r.contact_id);
+    const companion = !!r.companion_name;
+    return {
       regId: r.reg_id, contactId: r.contact_id, name: r.name || 'SAREC 用户', phone: r.phone, memberNo: r.member_no,
       status: r.status, arrived: r.arrival_status === 'checked_in', checkedInAt: r.checked_in_at,
-      note: r.companion_of_name ? `由 ${r.companion_of_name} 代报名` : r.source === 'onsite' ? '现场登记' : r.source === 'staff' ? '工作人员代报' : ''
-    }))
+      note: r.companion_of_name ? `由 ${r.companion_of_name} 代报名` : r.source === 'onsite' ? '现场登记' : r.source === 'staff' ? '工作人员代报' : '',
+      // 代报的朋友（companion）资料是朋友本人的，档案里的公司 / 行业属于报名人，不显示
+      company: companion ? null : x?.company ?? null,
+      industry: companion ? null : x?.industry ?? null,
+      firstTime: companion ? true : x?.first ?? true,
+      inviter: companion ? r.companion_of_name : x?.inviter ?? null,
+      isMember: companion ? false : x?.isMember ?? false,
+      followup: x?.followup ?? false
+    };
+  });
+  const arrivedNew = people.filter((p) => p.arrived && p.firstTime).length;
+  const ended = new Date(ev[0].ends_at ?? new Date(new Date(ev[0].starts_at).getTime() + 3 * 3600e3)).getTime() < Date.now();
+  return {
+    event: ev[0],
+    counts: { ...cnt[0], not_arrived: Math.max(0, cnt[0].registered - cnt[0].checked_in), new_arrived: arrivedNew },
+    // 活动结束后自动出一页总结
+    summary: ended
+      ? {
+          arrived: cnt[0].checked_in,
+          registered: cnt[0].registered,
+          newcomers: people.filter((p) => p.arrived && p.firstTime).map((p) => p.name),
+          members: people.filter((p) => p.arrived && p.isMember).length,
+          noShow: people.filter((p) => !p.arrived && p.status === 'registered').length,
+          followups: people.filter((p) => p.followup).map((p) => p.name)
+        }
+      : null,
+    people
   };
+}
+
+/**
+ * 1.4.1 到场名单 → 点开一个人：完整档案（来过几次、填过的资料、备注、标签、待跟进）。不含金额。
+ */
+export async function workbenchPerson(contactId: string) {
+  if (!/^[0-9a-f-]{36}$/.test(contactId)) throw new CrmError('not_found', '找不到这个人');
+  const pool = getPool();
+  const { rows: c } = await pool.query<{ id: string; name: string; phone: string | null; email: string | null; member_no: number; region: string | null; created_at: Date; first_channel: string | null; referred: string | null }>(
+    `SELECT c.id, NULLIF(c.name, '微信用户') AS name, c.phone_e164 AS phone, c.email, c.member_no::int AS member_no, c.region_self AS region, c.created_at, c.first_channel,
+            (SELECT NULLIF(r.name, '微信用户') FROM contacts r WHERE r.id = c.referred_by) AS referred
+       FROM contacts c WHERE c.id = $1`,
+    [contactId]
+  );
+  if (!c[0]) throw new CrmError('not_found', '找不到这个人');
+  const { memberStatus } = await import('./membership');
+  const ms = await memberStatus(pool, contactId);
+  const { rows: card } = await pool.query<{ company: string | null; title: string | null; industry: string | null; intro: string | null }>(
+    `SELECT company, title, industry, intro FROM member_cards WHERE contact_id = $1`, [contactId]
+  );
+  const { rows: events } = await pool.query<{ title: string; starts_at: Date; arrived: boolean; status: string }>(
+    `SELECT e.title, e.starts_at, r.arrival_status = 'checked_in' AS arrived, r.status FROM registrations r JOIN events e ON e.id = r.event_id
+      WHERE r.contact_id = $1 AND r.status <> 'cancelled' ORDER BY e.starts_at DESC LIMIT 20`,
+    [contactId]
+  );
+  const { rows: answers } = await pool.query<{ code: string; value: Record<string, unknown> }>(
+    `SELECT item_code AS code, value FROM profile_answers WHERE contact_id = $1 AND status = 'current' ORDER BY created_at DESC LIMIT 30`,
+    [contactId]
+  ).catch(() => ({ rows: [] as { code: string; value: Record<string, unknown> }[] }));
+  const { rows: tags } = await pool.query<{ tag: string }>(`SELECT tag FROM contact_tags WHERE contact_id = $1 ORDER BY created_at`, [contactId]);
+  const { rows: notes } = await pool.query<{ body: string; created_by: string; created_at: Date }>(
+    `SELECT body, created_by, created_at FROM contact_staff_notes WHERE contact_id = $1 ORDER BY created_at DESC LIMIT 30`, [contactId]
+  ).catch(() => ({ rows: [] as { body: string; created_by: string; created_at: Date }[] }));
+  const { rows: fu } = await pool.query<{ id: string; need: string | null; status: string }>(
+    `SELECT id, need, status FROM followups WHERE contact_id = $1 AND status = 'todo' ORDER BY created_at DESC LIMIT 5`, [contactId]
+  );
+  const answerText = (v: Record<string, unknown>) => String(v.text ?? v.choice ?? v.label ?? (Array.isArray(v.choices) ? (v.choices as string[]).join('、') : '') ?? '').slice(0, 120);
+  return {
+    person: {
+      id: c[0].id, name: c[0].name ?? 'SAREC 用户', phone: c[0].phone, email: c[0].email, memberNo: c[0].member_no, region: c[0].region,
+      isMember: ms.isMember, since: c[0].created_at, referredBy: c[0].referred, channel: c[0].first_channel,
+      company: card[0]?.company ?? null, title: card[0]?.title ?? null, industry: card[0]?.industry ?? null, intro: card[0]?.intro ?? null
+    },
+    visits: events.filter((e) => e.arrived).length,
+    events: events.map((e) => ({ title: e.title, startsAt: e.starts_at, arrived: e.arrived })),
+    answers: answers.map((a) => ({ code: a.code, text: answerText(a.value || {}) })).filter((a) => a.text),
+    tags: tags.map((t) => t.tag),
+    notes,
+    followups: fu
+  };
+}
+
+/** 1.4.1 工作台当场操作：写备注、打标签、标“要跟进” */
+export async function workbenchPersonAction(s: Staff, contactId: string, b: { action?: string; text?: string; eventId?: string | null }) {
+  if (!/^[0-9a-f-]{36}$/.test(contactId)) throw new CrmError('not_found', '找不到这个人');
+  const pool = getPool();
+  const text = String(b.text ?? '').trim().slice(0, 500);
+  const eventId = b.eventId && /^[0-9a-f-]{36}$/.test(b.eventId) ? b.eventId : null;
+  const who = s.name || s.email;
+  if (b.action === 'note') {
+    if (!text) throw new CrmError('bad_request', '备注没写内容');
+    await pool.query(`INSERT INTO contact_staff_notes (contact_id, event_id, body, created_by) VALUES ($1, $2, $3, $4)`, [contactId, eventId, text, who]);
+    return { done: '备注已保存' };
+  }
+  if (b.action === 'tag') {
+    const tag = text.slice(0, 30);
+    if (!tag) throw new CrmError('bad_request', '标签没写内容');
+    await pool.query(`INSERT INTO contact_tags (contact_id, tag, source) VALUES ($1, $2, 'staff') ON CONFLICT DO NOTHING`, [contactId, tag]);
+    return { done: `已打标签「${tag}」` };
+  }
+  if (b.action === 'followup') {
+    const { rows } = await pool.query<{ name: string | null; phone: string | null }>(`SELECT NULLIF(name, '微信用户') AS name, phone_e164 AS phone FROM contacts WHERE id = $1`, [contactId]);
+    const { upsertFollowup } = await import('./followups');
+    const r = await upsertFollowup(pool, {
+      source: 'manual', dedupeKey: `wb_followup:${contactId}:${eventId ?? 'none'}`, contactId, name: rows[0]?.name ?? null, contactText: rows[0]?.phone ?? null,
+      need: text || `${who} 在工作台标记要跟进`, eventId
+    });
+    return { done: r.created ? '已标“要跟进”，在后台「待跟进」里能看到' : '这个人这一场已经标过“要跟进”了' };
+  }
+  throw new CrmError('bad_request', '不支持的操作');
 }
 
 /** 给小程序工作台的返回值再过一遍：去掉金额 / 订单 / 付款相关字段，文字里带金额的句子去掉 */

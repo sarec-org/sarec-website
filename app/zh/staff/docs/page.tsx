@@ -11,7 +11,7 @@ import { StaffGate } from '@/components/crm/staff/StaffGate';
 import { api } from '@/components/crm/client';
 
 type Doc = {
-  id: string; slug: string; title: string; summary: string | null; cover_url: string | null; sort_order: number; is_public: boolean;
+  id: string; slug: string; title: string; summary: string | null; cover_url: string | null; sort_order: number; is_public: boolean; audience?: 'all' | 'members'; event_id?: string | null; preview_pages?: number;
   pdf_url: string | null; pdf_site_url: string | null; pdf_bytes: number | null; pages: { url: string; w: number; h: number }[];
   red_flags: { page: number; words: string[] }[]; text_readable: boolean | null; open_count: number; share_count: number; pdf_count: number;
 };
@@ -21,7 +21,8 @@ export default function StaffDocs() {
   const [docs, setDocs] = useState<Doc[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [edit, setEdit] = useState<Record<string, { title: string; summary: string; sortOrder: string; isPublic: boolean }>>({});
+  const [edit, setEdit] = useState<Record<string, { title: string; summary: string; sortOrder: string; isPublic: boolean; audience: 'all' | 'members'; eventId: string; previewPages: string }>>({});
+  const [evs, setEvs] = useState<{ id: string; title: string; starts_at: string }[]>([]);
   const [nw, setNw] = useState({ slug: '', title: '', summary: '' });
   const [prefix, setPrefix] = useState('test');
 
@@ -30,7 +31,8 @@ export default function StaffDocs() {
     if (!r.ok) return setMsg({ ok: false, text: r.message });
     setDocs(r.data.docs);
     setPrefix(r.data.uploadPrefix);
-    setEdit(Object.fromEntries(r.data.docs.map((d) => [d.id, { title: d.title, summary: d.summary ?? '', sortOrder: String(d.sort_order), isPublic: d.is_public }])));
+    setEdit(Object.fromEntries(r.data.docs.map((d) => [d.id, { title: d.title, summary: d.summary ?? '', sortOrder: String(d.sort_order), isPublic: d.is_public, audience: d.audience === 'members' ? 'members' : 'all', eventId: d.event_id ?? '', previewPages: String(d.preview_pages ?? 3) }])));
+    api<{ events: { id: string; title: string; starts_at: string }[] }>('/api/v1/staff/events').then((x) => x.ok && setEvs([...x.data.events].sort((a, b) => b.starts_at.localeCompare(a.starts_at))));
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -46,7 +48,7 @@ export default function StaffDocs() {
   async function save(d: Doc) {
     const e = edit[d.id];
     setBusy(d.id);
-    const r = await api(`/api/v1/staff/docs/${d.id}`, { method: 'PATCH', body: { title: e.title, summary: e.summary, sortOrder: Number(e.sortOrder || 0), isPublic: e.isPublic } });
+    const r = await api(`/api/v1/staff/docs/${d.id}`, { method: 'PATCH', body: { title: e.title, summary: e.summary, sortOrder: Number(e.sortOrder || 0), isPublic: e.isPublic, audience: e.audience, eventId: e.eventId || null, previewPages: Number(e.previewPages || 3) } });
     setBusy(null);
     setMsg(r.ok ? { ok: true, text: '已保存' } : { ok: false, text: r.message });
     if (r.ok) load();
@@ -141,6 +143,20 @@ export default function StaffDocs() {
                   <label className={styles.field}><span className={styles.label}>一句话说明</span><input className={styles.input} value={e.summary} maxLength={80} onChange={(x) => setEdit({ ...edit, [d.id]: { ...e, summary: x.target.value } })} /></label>
                   <label className={styles.field}><span className={styles.label}>排序（小的在前）</span><input className={styles.input} inputMode="numeric" value={e.sortOrder} onChange={(x) => setEdit({ ...edit, [d.id]: { ...e, sortOrder: x.target.value.replace(/[^\d-]/g, '') } })} /></label>
                   <label className={styles.field} style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" checked={e.isPublic} onChange={(x) => setEdit({ ...edit, [d.id]: { ...e, isPublic: x.target.checked } })} /> 公开（小程序里能看到）</label>
+                  {/* 1.4.1 会员特权：讲座资料分级（东哥已点头） */}
+                  <label className={styles.field}><span className={styles.label}>谁能看全部</span>
+                    <select className={styles.select} value={e.audience} onChange={(x) => setEdit({ ...edit, [d.id]: { ...e, audience: x.target.value === 'members' ? 'members' : 'all' } })}>
+                      <option value="all">所有人</option>
+                      <option value="members">仅会员（注册用户只看前几页预览，后面写“会员可看完整版”）</option>
+                    </select>
+                  </label>
+                  {e.audience === 'members' && <label className={styles.field}><span className={styles.label}>注册用户能看前几页</span><input className={styles.input} inputMode="numeric" value={e.previewPages} onChange={(x) => setEdit({ ...edit, [d.id]: { ...e, previewPages: x.target.value.replace(/\D/g, '') } })} /></label>}
+                  <label className={styles.field}><span className={styles.label}>是哪场活动的讲座资料（可不选）</span>
+                    <select className={styles.select} value={e.eventId} onChange={(x) => setEdit({ ...edit, [d.id]: { ...e, eventId: x.target.value } })}>
+                      <option value="">不挂活动（商会介绍等通用资料）</option>
+                      {evs.map((v) => <option key={v.id} value={v.id}>{v.starts_at.slice(0, 10)} · {v.title}</option>)}
+                    </select>
+                  </label>
                 </div>
                 <div className={styles.btnRow}>
                   <button className={styles.btn} disabled={!!busy} onClick={() => save(d)}>{busy === d.id ? '处理中…' : '保存'}</button>
