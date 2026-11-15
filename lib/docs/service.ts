@@ -211,3 +211,35 @@ export async function docStats(docId: string) {
   );
   return rows;
 }
+
+/**
+ * 东哥 11/15 真机验收 R2：「商会介绍」固定指向后台标为"商会介绍"的那一份（设置 intro_doc_slug，只能有一份）；
+ * 没标时用 sarec-intro。讲座资料永远不会被当成商会介绍——小程序不再取资料列表的第一份。
+ */
+const INTRO_KEY = 'intro_doc_slug';
+const INTRO_DEFAULT = 'sarec-intro';
+export async function introSlug(): Promise<string> {
+  const { getSetting } = await import('@/lib/crm/orders');
+  const v = await getSetting<string>(getPool(), INTRO_KEY, INTRO_DEFAULT);
+  return typeof v === 'string' && v ? v : INTRO_DEFAULT;
+}
+/** 商会介绍那一份（列表项的样子）；没公开 / 没有页时返回 null */
+export async function introDoc(base: string) {
+  const slug = await introSlug();
+  // 1.4.1 起资料分"所有人 / 仅会员"：仅会员的永远不当商会介绍
+  const { rows } = await getPool().query<DocRow>(`SELECT * FROM chamber_docs WHERE slug = $1 AND is_public AND jsonb_array_length(pages) > 0 AND audience <> 'members'`, [slug]);
+  const d = rows[0];
+  if (!d) return null;
+  const v = publicView(d, base);
+  return { slug: v.slug, title: v.title, summary: v.summary, cover: v.cover, pageCount: v.pageCount };
+}
+/** 后台：把某一份设为商会介绍（只能有一份，设了别的就换掉） */
+export async function setIntroDoc(s: Staff, slug: string) {
+  const { rows } = await getPool().query<{ slug: string; is_public: boolean; audience: string }>(`SELECT slug, is_public, audience FROM chamber_docs WHERE slug = $1`, [slug]);
+  if (!rows[0]) throw new CrmError('not_found', '找不到这份资料');
+  if (rows[0].audience === 'members') throw new CrmError('bad_request', '这是"仅会员"的资料，不能当商会介绍');
+  if (!rows[0].is_public) throw new CrmError('bad_request', '这份资料还没公开，先公开再设为商会介绍');
+  const { setSetting } = await import('@/lib/crm/orders');
+  await setSetting(getPool(), INTRO_KEY, slug, s.name);
+  return { slug, message: '已设为商会介绍：小程序首页「商会介绍」、了解商会页都会打开这一份' };
+}
