@@ -26,6 +26,17 @@ export function releasedTemplates(batches: number): CardTemplate[] {
   return ALL_TEMPLATES.filter((t) => t.batch <= batches);
 }
 
+/**
+ * 1.4.0 名片模板精选（东哥已点头：按风格分组，默认只显示十来套精选，其余收进「更多样式」）。
+ * 开发窗口按“商会、地产、中美生意”挑了 12 套，覆盖深色 / 浅色 / 中式 / 带头像几种；给指挥窗口看过后可直接改这个列表。
+ */
+export const FEATURED_IDS = [90, 91, 93, 94, 95, 97, 102, 73, 88, 81, 85, 5];
+
+export function featured(batches: number) {
+  const list = releasedTemplates(batches);
+  return FEATURED_IDS.map((id) => list.find((t) => t.id === id)).filter((t): t is CardTemplate => !!t).map((t) => ({ id: t.id, name: t.name, desc: t.desc }));
+}
+
 export function catalog(batches: number) {
   const list = releasedTemplates(batches);
   return CATEGORY_ORDER.map((cat) => ({

@@ -8,13 +8,13 @@
  * - 首页状态卡按人变：未报名 / 已报名未开始 / 活动当天 / 活动结束。
  */
 import { seatStatus } from '@/lib/crm/seats';
-import QRCode from 'qrcode';
 import { getPool } from '@/lib/db/client';
 import { getSetting } from './orders';
 import { memberStatus } from './membership';
 import type { Db } from './profile';
 import { unseenAlbums } from './photos';
 import { CHANNEL_RE } from './channels';
+import { personalCheckinQr } from './checkinCode';
 
 // ── 点击统计 ───────────────────────────────────────────────────────────
 
@@ -156,10 +156,6 @@ function evCard(e: EvRow) {
   };
 }
 
-/** 个人签到码：工作人员用手机扫，直接打开后台签到台并定位到这条报名 */
-export async function personalCheckinQr(base: string, registrationId: string): Promise<string> {
-  return QRCode.toDataURL(`${base.replace(/\/$/, '')}/zh/staff/checkin?reg=${registrationId}`, { margin: 1, width: 360, color: { dark: '#06111E', light: '#F2EAD6' } });
-}
 
 export async function homeData(contactId: string | null, opts: { base: string; withQr?: boolean }) {
   const pool = getPool();

@@ -413,6 +413,9 @@ export function contentBenefits() {
   return { ...benefitsContent, hero: IMAGES.benefitsHero };
 }
 
+/** 商会办公室街道地址（联系商会页、会议室页共用） */
+export const SAREC_OFFICE_ADDRESS = '500 S Hacienda Blvd, City of Industry, CA 91745';
+
 /** 联系：与网站 /zh/contact 同一份文案；不含表单、入会付款入口 */
 export function contentContact() {
   const nodes: Node[] = [{ t: 'h', text: '你想了解什么' }];
@@ -434,7 +437,9 @@ export function contentContact() {
     phone: site.phone,
     phoneDial: site.phone.replace(/[^\d+]/g, ''),
     email: contactCopy.email,
-    address: `${aboutPage.contact.address}（${site.location}）`,
+    // 1.4.0（东哥已点头）：写商会办公室的街道地址，复制出来能直接在地图里搜到；小程序旁边放「复制地址」「导航」
+    address: SAREC_OFFICE_ADDRESS,
+    addressName: '中美房地产商会 Office',
     org: contactCopy.org,
     nodes,
     note: '工作人员会在 1 个工作日内回复（美国西部时间）。'

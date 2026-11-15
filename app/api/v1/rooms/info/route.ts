@@ -7,11 +7,13 @@ import { roomsInfo } from '@/lib/crm/staff12';
 import { noMoney } from '@/lib/noMoney';
 import { site } from '@/lib/content';
 import { ROOM_ADDRESS } from '@/lib/crm/staff12';
+import { geocode } from '@/lib/crm/geo';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // 工作人员写的介绍 / 设备里带金额的句子不对外显示（这个接口给小程序和网站展示用，“不含任何价格”）
 export const GET = handler(async (req: Request) => {
   const raw = await roomsInfo();
   const info = { ...raw, rooms: raw.rooms.map((r) => ({ ...r, intro: noMoney(r.intro), equipment: noMoney(r.equipment) })) };
-  return ok({ ...info, address: (await getSetting<string>(getPool(), 'room_address', '')) || ROOM_ADDRESS, phone: site.phone, phoneDial: site.phone.replace(/[^\d+]/g, ''), wechatQr: (await wechatQrFor('rooms', await optionalContact(req)))?.url ?? null });
+  const address = (await getSetting<string>(getPool(), 'room_address', '')) || ROOM_ADDRESS;
+  return ok({ ...info, address, geo: await geocode(address), phone: site.phone, phoneDial: site.phone.replace(/[^\d+]/g, ''), wechatQr: (await wechatQrFor('rooms', await optionalContact(req)))?.url ?? null });
 });

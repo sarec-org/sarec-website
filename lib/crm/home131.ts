@@ -124,7 +124,7 @@ function eventSlide(e: Ev, mine: boolean): Slide {
 }
 
 /** 首页数据（1.3.1） */
-export async function home131(contactId: string | null, opts: { region?: string | null; persona?: Persona; now?: Date; simulateRegistered?: boolean } = {}) {
+export async function home131(contactId: string | null, opts: { region?: string | null; persona?: Persona; now?: Date; simulateRegistered?: boolean; client14?: boolean } = {}) {
   const db = getPool();
   const now = opts.now ?? new Date();
   const ms = contactId ? await memberStatus(db, contactId) : { isMember: false };
@@ -188,7 +188,13 @@ export async function home131(contactId: string | null, opts: { region?: string 
       title: `今天 ${clock(todayReg.starts_at, tz)} · ${todayReg.title}`,
       sub: todayReg.arrival_status === 'checked_in' ? '已签到，祝您愉快' : `${todayReg.location_name ?? '地点见活动页'} · 到场扫门口的码签到`,
       slug: todayReg.slug,
-      actions: [{ text: todayReg.arrival_status === 'checked_in' ? '看安排' : '签到码', action: todayReg.arrival_status === 'checked_in' ? 'event' : 'checkin_qr' }]
+      // 1.4.0（1.3.5 第 5 条）：没签到时，第一个按钮「扫门口签到码」，第二个「出示给工作人员」（个人码，码里是公开中转网址 /zh/c/…）
+      // 1.3.x 只显示第一个按钮、也不认识 scan_checkin：给它「签到码」（码已改成公开中转网址，扫到不再是后台页）
+      actions: todayReg.arrival_status === 'checked_in'
+        ? [{ text: '看安排', action: 'event' }]
+        : opts.client14
+          ? [{ text: '扫门口签到码', action: 'scan_checkin' }, { text: '出示给工作人员', action: 'checkin_qr' }]
+          : [{ text: '签到码', action: 'checkin_qr' }]
     };
     todoEventId = todayReg.id;
   } else if (nextReg) {

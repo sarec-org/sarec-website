@@ -331,10 +331,18 @@ export async function register(slug: string, contactId: string, input: RegisterI
     }
     let pointsAwarded = 0;
     if (firstTime) {
-      const name = (input.name ?? '').trim();
+      // 1.3.5 第 2 条：请求里没带名字 / 行业，但档案里已经有了 → 用已有的继续报名，不拦（只有真的没有才提示）
+      const { rows: known } = await db.query<{ name: string | null; industry: string | null }>(
+        `SELECT NULLIF(NULLIF(trim(c.name), ''), '微信用户') AS name,
+                COALESCE((SELECT a.value->>'choice' FROM profile_answers a WHERE a.contact_id = c.id AND a.item_code = 'CK:profession' AND a.status = 'current' LIMIT 1),
+                         (SELECT NULLIF(trim(mc.industry), '') FROM member_cards mc WHERE mc.contact_id = c.id)) AS industry
+           FROM contacts c WHERE c.id = $1`,
+        [contactId]
+      );
+      const name = (input.name ?? '').trim() || known[0]?.name || '';
       const role = findRoleSub(input.roleSub);
       if (!name) throw new CrmError('answers_required', '请填写怎么称呼您');
-      if (!role && !input.allowNoRole) throw new CrmError('answers_required', '请选择您的主要行业');
+      if (!role && !input.allowNoRole && !known[0]?.industry) throw new CrmError('answers_required', '请选择您的主要行业');
       const { rows: c } = await db.query<{ email: string | null; phone_e164: string | null }>(`SELECT email, phone_e164 FROM contacts WHERE id = $1`, [contactId]);
       const ph = c[0]?.phone_e164 ?? given?.phone ?? null;
       const contact = ph ? { phone: ph } : { email: c[0]?.email ?? given?.email ?? '' };

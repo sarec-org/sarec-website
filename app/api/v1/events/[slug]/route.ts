@@ -4,6 +4,7 @@ import { handler, isMp12, isMp131, mp131Safe, ok, optionalContact } from '@/lib/
 import { getPool } from '@/lib/db/client';
 import { seatStatus, takenSeats } from '@/lib/crm/seats';
 import { noMoney } from '@/lib/noMoney';
+import { geocode } from '@/lib/crm/geo';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,9 @@ export const GET = handler(async (req: Request, { params }: { params: { slug: st
   if (d2.event) {
     const { rows } = await getPool().query<{ id: string }>(`SELECT id FROM events WHERE slug = $1`, [params.slug]);
     if (rows[0]) d2.event.seat = seatStatus(d2.event.capacity ?? null, await takenSeats(getPool(), rows[0].id));
+    // 1.4.0：「导航」用的经纬度（按街道地址查一次存起来；查不到为 null，小程序退回复制地址）
+    const d3 = data as { event?: { address?: string | null; geo?: unknown } };
+    if (d3.event) d3.event.geo = await geocode(d3.event.address);
   }
   return ok(isMp131(req) ? mp131Safe(data) : data);
 });
