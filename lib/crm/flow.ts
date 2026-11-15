@@ -507,7 +507,8 @@ export async function myOverviewMp(contactId: string) {
     points: { balance: full.points.balance, ledger: full.points.ledger.slice(0, 30) },
     profile: full.profile,
     registrations: full.registrations.map((r: Record<string, unknown>) => ({
-      slug: r.slug, title: r.title, starts_at: r.starts_at, location_name: r.location_name, status: r.status,
+      // 测试窗口 Q26：小程序按"活动还没结束"判断能不能出示个人签到码，要结束时间
+      slug: r.slug, title: r.title, starts_at: r.starts_at, ends_at: r.ends_at ?? null, location_name: r.location_name, status: r.status,
       arrival_status: r.arrival_status, checked_in_at: r.checked_in_at, paid_event: Number(r.fee_cents) > 0,
       companions: compBy.get(String(r.slug)) ?? [],
       fee_confirmed: !!extraBy.get(String(r.slug))?.paid,
@@ -531,7 +532,7 @@ export async function myOverview(contactId: string) {
   const balance = await pointsBalance(pool, contactId);
   const { view, answered } = await loadProfile(pool, contactId);
   const { rows: regs } = await pool.query(
-    `SELECT e.slug, e.title, e.starts_at, e.timezone, e.location_name, e.fee_cents, r.status, r.arrival_status, r.checked_in_at,
+    `SELECT e.slug, e.title, e.starts_at, e.ends_at, e.timezone, e.location_name, e.fee_cents, r.status, r.arrival_status, r.checked_in_at,
             (SELECT o.order_no FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = e.id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_no,
             (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = e.id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status
        FROM registrations r JOIN events e ON e.id = r.event_id WHERE r.contact_id = $1 ORDER BY e.starts_at DESC LIMIT 50`,
