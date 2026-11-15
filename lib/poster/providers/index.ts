@@ -68,7 +68,7 @@ function cfNeurons(model: string): number {
 }
 export const cloudflare: ImageProvider = {
   key: 'cloudflare',
-  label: 'Cloudflare Workers AI',
+  label: '出图方式一（便宜）',
   get model() { return cfModel(); },
   get costPerImage() { return Math.round(cfNeurons(cfModel()) * CF_NEURON_USD * 10000) / 10000; },
   configured: () => !!(cfAccount() && cfToken()) && !cfProblem(),
@@ -130,7 +130,7 @@ export async function gatewayBalance(): Promise<number | null> {
 
 export const gateway: ImageProvider = {
   key: 'gateway',
-  label: 'Vercel AI Gateway',
+  label: '出图方式二（质量好）',
   get model() { return gwModel(); },
   get costPerImage() { return GW_PRICES[gwModel()] ?? 0.04; },
   configured: () => !!gwKey(),

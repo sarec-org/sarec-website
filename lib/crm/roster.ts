@@ -89,6 +89,14 @@ export async function rosterForParticipant(slug: string, contactId: string) {
       WHERE e.slug = $1 AND EXISTS (SELECT 1 FROM registrations x WHERE x.event_id = e.id AND x.contact_id = $2 AND x.arrival_status = 'checked_in')`,
     [slug, contactId]
   );
-  if (!rows[0]) throw new CrmError('not_found', '名册只给本场到场的人看');
+  if (!rows[0]) {
+    // 测试窗口 Q18：分清“没到场”和“名册还没生成”
+    const { rows: me } = await pool.query(
+      `SELECT 1 FROM registrations x JOIN events e ON e.id = x.event_id WHERE e.slug = $1 AND x.contact_id = $2 AND x.arrival_status = 'checked_in'`,
+      [slug, contactId]
+    );
+    if (me[0]) throw new CrmError('not_found', '名册还在整理，活动结束后可以看');
+    throw new CrmError('not_found', '名册只给本场到场的人看');
+  }
   return rows[0];
 }

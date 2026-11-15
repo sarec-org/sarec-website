@@ -47,7 +47,7 @@ export default function StaffPayments() {
   }
 
   return (
-    <StaffGate title="核款工作台" role="finance">
+    <StaffGate title="核款" role="finance">
       {() => (
         <>
           <p className={styles.muted}>请先在 Chase 网银核对 Zelle 实际到账（备注里有订单号），再点“确认到账”。截图或会员说“已付款”不算到账。</p>

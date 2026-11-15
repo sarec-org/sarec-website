@@ -124,7 +124,9 @@ function TemplateEditor({ t, onMsg, reload }: { t: Tpl; onMsg: (m: { ok: boolean
     const j = i + d;
     if (j < 0 || j >= ids.length) return;
     [ids[i], ids[j]] = [ids[j], ids[i]];
-    await api(`/api/v1/staff/prep/templates/${t.id}`, { body: { order: ids } });
+    // 1.4.0（改动单 D7）：排完给结果提示
+    const r = await api(`/api/v1/staff/prep/templates/${t.id}`, { body: { order: ids } });
+    onMsg(r.ok ? { ok: true, text: `已把「${t.items[i].title}」${d < 0 ? '上移' : '下移'}一位` } : { ok: false, text: r.message });
     reload();
   };
   return (
@@ -229,8 +231,8 @@ function ItemRow({ tplId, it, roles, onMove, onMsg, reload }: { tplId: number; i
         <button className={styles.btn} disabled={!title.trim() || !role.trim()} onClick={save}>{it ? '保存' : '加一项'}</button>
         {it && (
           <>
-            <button className={`${styles.btn} ${styles.btnQuiet}`} aria-label="上移" onClick={() => onMove?.(-1)}>↑</button>
-            <button className={`${styles.btn} ${styles.btnQuiet}`} aria-label="下移" onClick={() => onMove?.(1)}>↓</button>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} aria-label="上移" onClick={() => onMove?.(-1)}>↑ 上移</button>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} aria-label="下移" onClick={() => onMove?.(1)}>↓ 下移</button>
             <button
               className={`${styles.btn} ${styles.btnQuiet}`}
               onClick={async () => {

@@ -39,10 +39,10 @@ export default function JoinRequests() {
               {(r.status === 'new' || r.status === 'link_sent') && (
                 <div className={styles.btnRow}>
                   {r.phone && <button className={styles.btn} onClick={() => act({ id: r.id, action: 'send_link', channel: 'sms' }, `已用短信把入会链接发给 ${r.name}`)}>短信发缴费链接</button>}
-                  {r.email && <button className={styles.btnQuiet} onClick={() => act({ id: r.id, action: 'send_link', channel: 'email' }, `已用邮件把入会链接发给 ${r.name}`)}>邮件发</button>}
-                  <button className={styles.btnQuiet} onClick={() => act({ id: r.id, action: 'send_link', channel: 'copy' }, '链接和话术已复制，粘到微信发给他')}>复制发微信</button>
-                  <button className={styles.btnQuiet} onClick={() => act({ id: r.id, action: 'status', status: 'paid' }, '已标记入会')}>已入会</button>
-                  <button className={styles.btnQuiet} onClick={() => act({ id: r.id, action: 'status', status: 'closed' }, '已关闭')}>关闭</button>
+                  {r.email && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ id: r.id, action: 'send_link', channel: 'email' }, `已用邮件把入会链接发给 ${r.name}`)}>邮件发</button>}
+                  <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ id: r.id, action: 'send_link', channel: 'copy' }, '链接和话术已复制，粘到微信发给他')}>复制发微信</button>
+                  <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ id: r.id, action: 'status', status: 'paid' }, '已标记入会')}>已入会</button>
+                  <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ id: r.id, action: 'status', status: 'closed' }, '已关闭')}>关闭</button>
                 </div>
               )}
             </div>

@@ -24,7 +24,11 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'pub-750866849946432cb842827f7414652c.r2.dev', pathname: '/**' },
       // 1.2：活动相册、封面、头像、商会微信二维码（Vercel Blob）
-      { protocol: 'https', hostname: '*.public.blob.vercel-storage.com', pathname: '/**' }
+      { protocol: 'https', hostname: '*.public.blob.vercel-storage.com', pathname: '/**' },
+      // 测试窗口记录：封面写成本站绝对地址（https://本站/images/…）时，小程序走 /_next/image 会 400、显示空块。允许本站自己的图片路径
+      { protocol: 'https', hostname: 'sinoamericanrec.org', pathname: '/images/**' },
+      { protocol: 'https', hostname: 'www.sinoamericanrec.org', pathname: '/images/**' },
+      { protocol: 'https', hostname: 'sarec-crm-preview.vercel.app', pathname: '/images/**' }
     ]
   },
   async rewrites() {

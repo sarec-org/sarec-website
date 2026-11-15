@@ -15,7 +15,11 @@ const t: CardTemplate = {
 .d13 .bi{flex-direction:row;padding:6cqw 6.5cqw 0;gap:13cqw;bottom:auto;height:40cqw}
 .d13 .hf{flex:1 1 0!important;display:flex;flex-direction:column;justify-content:center;text-align:right;min-width:0}
 .d13 .hf.r{text-align:left}
-.d13 .o1{font-size:1.75cqw;letter-spacing:.08em;color:#B08A3C;white-space:nowrap}
+.d13 .o1{font-size:2.3cqw;letter-spacing:.06em;color:#B08A3C;white-space:nowrap}
+/* 名片发给别人默认发图片（东哥 11/14）：聊天缩略图里公司名要认得出；每半边的字最宽到这半边为止，超了由出图自检缩字，不再压到中间徽标 */
+.d13 .hf>p{max-width:100%}
+/* 测试窗口 Q22：英文名可以在空格、连字符处换行（不再被右边裁掉）；两半边可以缩得更小，长混合名也不越过中间徽标 */
+.d13 .n1.e{white-space:normal;overflow-wrap:anywhere}
 .d13 .n1{font-family:var(--serif);font-weight:900;font-size:8cqw;letter-spacing:.14em;line-height:1.2;margin-top:1.6cqw;white-space:nowrap}
 .d13 .n1.e{font-family:var(--en);font-weight:700;font-size:5.6cqw;letter-spacing:.02em;line-height:1.5}
 .d13 .t1{font-size:2.4cqw;margin-top:.8cqw;white-space:nowrap}
@@ -25,6 +29,6 @@ const t: CardTemplate = {
 .d13 .rowx i{background:#D9B46A}
 .d13 .ft .qr{width:11.6cqw;height:11.6cqw}
 `,
-  html: `<div class="deco md"></div><div class="deco sl">{{mark}}</div><div class="in bi"><div class="hf">{{#company}}<p class="o1">{{company}}</p>{{/company}}<p class="n1">{{name}}</p>{{#tierTitle}}<p class="t1">{{tierTitle}}</p>{{/tierTitle}}{{#address}}<p class="a1">{{address}}</p>{{/address}}</div><div class="hf r">{{#companyEn}}<p class="o1">{{companyEn}}</p>{{/companyEn}}{{#nameEn}}<p class="n1 e">{{nameEn}}</p>{{/nameEn}}{{#titleEn}}<p class="t1">{{titleEn}}</p>{{/titleEn}}</div></div><div class="deco ft" data-fit>{{#hasIc3}}<div class="ic2 rowx">{{#ic3}}<div><i>{{k}}</i>{{v}}</div>{{/ic3}}</div>{{/hasIc3}}{{^hasIc3}}<span></span>{{/hasIc3}}<div class="qr">{{{qrImg}}}</div></div>`
+  html: `<div class="deco md"></div><div class="deco sl">{{mark}}</div><div class="in bi"><div class="hf" data-minzoom="0.4">{{#company}}<p class="o1">{{company}}</p>{{/company}}<p class="n1">{{name}}</p>{{#tierTitle}}<p class="t1">{{tierTitle}}</p>{{/tierTitle}}{{#address}}<p class="a1">{{address}}</p>{{/address}}</div><div class="hf r" data-minzoom="0.4">{{#companyEn}}<p class="o1">{{companyEn}}</p>{{/companyEn}}{{#nameEn}}<p class="n1 e">{{nameEn}}</p>{{/nameEn}}{{#titleEn}}<p class="t1">{{titleEn}}</p>{{/titleEn}}</div></div><div class="deco ft" data-fit>{{#hasIc3}}<div class="ic2 rowx">{{#ic3}}<div><i>{{k}}</i>{{v}}</div>{{/ic3}}</div>{{/hasIc3}}{{^hasIc3}}<span></span>{{/hasIc3}}<div class="qr">{{{qrImg}}}</div></div>`
 };
 export default t;
