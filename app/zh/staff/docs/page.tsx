@@ -24,12 +24,16 @@ export default function StaffDocs() {
   const [edit, setEdit] = useState<Record<string, { title: string; summary: string; sortOrder: string; isPublic: boolean }>>({});
   const [nw, setNw] = useState({ slug: '', title: '', summary: '' });
   const [prefix, setPrefix] = useState('test');
+  // 东哥 11/15 R2：哪一份是「商会介绍」（只能有一份；小程序首页「商会介绍」只打开这一份）
+  const [introSlug, setIntroSlug] = useState('');
 
   const load = useCallback(async () => {
     const r = await api<{ docs: Doc[]; uploadPrefix: string }>('/api/v1/staff/docs');
     if (!r.ok) return setMsg({ ok: false, text: r.message });
     setDocs(r.data.docs);
     setPrefix(r.data.uploadPrefix);
+    const i = await api<{ slug: string }>('/api/v1/staff/docs/intro');
+    if (i.ok) setIntroSlug(i.data.slug);
     setEdit(Object.fromEntries(r.data.docs.map((d) => [d.id, { title: d.title, summary: d.summary ?? '', sortOrder: String(d.sort_order), isPublic: d.is_public }])));
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -50,6 +54,13 @@ export default function StaffDocs() {
     setBusy(null);
     setMsg(r.ok ? { ok: true, text: '已保存' } : { ok: false, text: r.message });
     if (r.ok) load();
+  }
+  async function makeIntro(d: Doc) {
+    setBusy(d.id);
+    const r = await api<{ slug: string; message: string }>('/api/v1/staff/docs/intro', { body: { slug: d.slug } });
+    setBusy(null);
+    setMsg(r.ok ? { ok: true, text: r.data.message } : { ok: false, text: r.message });
+    if (r.ok) setIntroSlug(r.data.slug);
   }
   async function remove(d: Doc) {
     if (!window.confirm(`删除「${d.title}」？小程序里马上看不到了。`)) return;
@@ -132,7 +143,16 @@ export default function StaffDocs() {
             if (!e) return null;
             return (
               <div key={d.id} className={styles.card} style={{ marginTop: 12 }}>
-                <p className={styles.cardTitle}>{d.title} <span className={styles.small}>（{d.slug}）{d.is_public ? ' · 已公开' : ' · 未公开'}</span></p>
+                <p className={styles.cardTitle}>
+                  {d.title} <span className={styles.small}>（{d.slug}）{d.is_public ? ' · 已公开' : ' · 未公开'}</span>
+                  {introSlug === d.slug && <span className={styles.badge} style={{ marginLeft: 8 }}>商会介绍</span>}
+                </p>
+                {introSlug !== d.slug && d.is_public && (
+                  <button className={`${styles.btn} ${styles.btnGhost}`} style={{ marginBottom: 8 }} disabled={busy === d.id} onClick={() => makeIntro(d)}>
+                    设为商会介绍
+                  </button>
+                )}
+                {introSlug === d.slug && <p className={styles.small} style={{ margin: '0 0 8px' }}>小程序首页「商会介绍」打开的就是这一份；讲座资料不会被当成商会介绍。</p>}
                 <p className={styles.small}>打开 {d.open_count} 次 · 转发 {d.share_count} 次 · 看 PDF {d.pdf_count} 次 · {d.pages.length} 页{d.pdf_bytes ? ` · PDF ${mb(d.pdf_bytes)}` : ''}</p>
                 {d.red_flags.length > 0 && <p className={styles.notice}>可能影响审核的字样：{d.red_flags.map((x) => `第 ${x.page} 页（${x.words.join('、')}）`).join('；')}</p>}
                 {d.text_readable === false && d.pages.length > 0 && <p className={styles.small}>这份是图片做的，系统读不到字；请人工确认没有金额、会费、收款方式、收益承诺。</p>}
