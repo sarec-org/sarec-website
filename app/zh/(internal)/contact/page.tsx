@@ -181,7 +181,7 @@ export default function ContactPage() {
           <span className={styles.eyebrow}>OTHER NEEDS · 其他需求</span>
           <h2 className={styles.h2}>不是房地产需求？</h2>
           <p className={styles.lead}>
-            SAREC 主叙事聚焦美国房地产项目判断、风险控制和资本合作。如果你的核心需求是其他领域 ——
+            SAREC 主要做美国房地产项目判断、风险控制和资本合作。如果你的核心需求是其他领域 ——
             我们也可以推荐我们的专业服务伙伴网络。
           </p>
 
