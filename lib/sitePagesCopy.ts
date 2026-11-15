@@ -139,7 +139,7 @@ export const servicesCopy = {
   }
 };
 
-export const partnerCopy = { title: '主叙事之外', lead: 'SAREC 主叙事聚焦地产。其他业务由专业服务伙伴分工提供。' };
+export const partnerCopy = { title: '其他服务', lead: '商会主要做房地产；法律、税务、保险等由合作的专业机构提供。' }; // 东哥 11/15 R4：去掉内部用语"主叙事"
 
 /** 专业服务伙伴网络（服务页 S06、联系页共用） */
 export const partnerNetwork = [
@@ -279,7 +279,7 @@ export const homeCopy = {
       number: '04',
       title: '业务边界模糊，专业服务伙伴未分工',
       body:
-        '许多服务方同时做地产、保险、移民、税务、贷款。更稳健的做法 —— 主叙事聚焦地产，其他服务由专业服务伙伴网络分工提供。'
+        '许多服务方同时做地产、保险、移民、税务、贷款。更稳健的做法 —— 商会主要做房地产，其他服务由合作的专业机构分工提供。'
     }
   ] as { number: string; title: string; body: string }[]
   },
