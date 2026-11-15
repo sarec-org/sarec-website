@@ -19,7 +19,7 @@ const t: CardTemplate = {
 /* 名片发给别人默认发图片（东哥 11/14）：聊天缩略图里公司名要认得出；每半边的字最宽到这半边为止，超了由出图自检缩字，不再压到中间徽标 */
 .d13 .hf>p{max-width:100%}
 /* 测试窗口 Q22：英文名可以在空格、连字符处换行（不再被右边裁掉）；两半边可以缩得更小，长混合名也不越过中间徽标 */
-.d13 .n1.e{white-space:normal;overflow-wrap:anywhere}
+.d13 .n1.e{white-space:normal;overflow-wrap:normal;word-break:normal;hyphens:manual} /* 只在空格、连字符处断行；整词放不下由出图自检缩字 */
 .d13 .n1{font-family:var(--serif);font-weight:900;font-size:8cqw;letter-spacing:.14em;line-height:1.2;margin-top:1.6cqw;white-space:nowrap}
 .d13 .n1.e{font-family:var(--en);font-weight:700;font-size:5.6cqw;letter-spacing:.02em;line-height:1.5}
 .d13 .t1{font-size:2.4cqw;margin-top:.8cqw;white-space:nowrap}
