@@ -15,7 +15,9 @@ const t: CardTemplate = {
 .d13 .bi{flex-direction:row;padding:6cqw 6.5cqw 0;gap:13cqw;bottom:auto;height:40cqw}
 .d13 .hf{flex:1 1 0!important;display:flex;flex-direction:column;justify-content:center;text-align:right;min-width:0}
 .d13 .hf.r{text-align:left}
-.d13 .o1{font-size:1.75cqw;letter-spacing:.08em;color:#B08A3C;white-space:nowrap}
+.d13 .o1{font-size:2.3cqw;letter-spacing:.06em;color:#B08A3C;white-space:nowrap}
+/* 名片发给别人默认发图片（东哥 11/14）：聊天缩略图里公司名要认得出；每半边的字最宽到这半边为止，超了由出图自检缩字，不再压到中间徽标 */
+.d13 .hf>p{max-width:100%}
 .d13 .n1{font-family:var(--serif);font-weight:900;font-size:8cqw;letter-spacing:.14em;line-height:1.2;margin-top:1.6cqw;white-space:nowrap}
 .d13 .n1.e{font-family:var(--en);font-weight:700;font-size:5.6cqw;letter-spacing:.02em;line-height:1.5}
 .d13 .t1{font-size:2.4cqw;margin-top:.8cqw;white-space:nowrap}
