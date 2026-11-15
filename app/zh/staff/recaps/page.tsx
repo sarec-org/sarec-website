@@ -33,10 +33,13 @@ export default function StaffRecaps() {
   }, []);
   useEffect(() => {
     load();
-  }, [load]);
-  async function open(id: string) {
+    // 1.4.0：从活动详情页「活动回顾」过来（?event=<id>）直接打开这一场
+    const ev = new URLSearchParams(location.search).get('event');
+    if (ev) open(ev, true);
+  }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function open(id: string, fromLink = false) {
     const r = await api<{ recap: Detail }>(`/api/v1/staff/recaps/${id}`);
-    if (!r.ok || !r.data.recap) return setMsg({ ok: false, text: r.ok ? '还没有生成' : r.message });
+    if (!r.ok || !r.data.recap) return setMsg({ ok: false, text: r.ok ? (fromLink ? '这场活动的回顾还没有生成：活动结束 2 小时后系统会自动整理好，到时出现在下面的列表里。' : '还没有生成') : r.message });
     const d = r.data.recap;
     setCur(d);
     setPicks(d.picks ?? []);
@@ -61,10 +64,10 @@ export default function StaffRecaps() {
           {!cur && (
             <>
               {list?.map((x) => (
-                <div key={x.event_id} className={styles.card} style={{ cursor: 'pointer' }} onClick={() => open(x.event_id)}>
-                  <p className={styles.cardTitle}>{x.title} <span className={styles.badge}>{x.status === 'published' ? '已发布' : '待审核'}</span></p>
+                <button key={x.event_id} type="button" className={styles.card} style={{ cursor: 'pointer', display: 'block', width: '100%', textAlign: 'left', color: 'inherit', font: 'inherit' }} onClick={() => open(x.event_id)}>
+                  <p className={styles.cardTitle}>{x.title} <span className={styles.badge}>{x.status === 'published' ? '已发布' : '待审核'}</span> <span style={{ color: 'var(--gold)' }}>打开 ›</span></p>
                   <p className={styles.small} style={{ margin: 0 }}>{fmtDateTime(x.starts_at)} · 报名 {x.stats?.registered ?? 0} · 到场 {x.stats?.arrived ?? 0} · 照片 {(x.stats?.staffPhotos ?? 0) + (x.stats?.guestPhotos ?? 0)} · 初稿：{x.drafted_by?.startsWith('ai') ? 'AI' : '模板'}</p>
-                </div>
+                </button>
               ))}
               {list && !list.length && <p className={styles.muted}>还没有结束的活动。活动结束 2 小时后会自动出现在这里。</p>}
             </>

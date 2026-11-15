@@ -36,7 +36,8 @@ export default function CheckinQuestions() {
               <label className={styles.label}>选项（用顿号或逗号隔开，2–8 个）</label>
               <input className={styles.input} value={q.options.join('、')} onChange={(e) => set(i, { options: e.target.value.split(/[、,，]/) })} />
               <div className={styles.small}>
-                编号 {q.key || '（新题，保存时用下面填的编号）'} · 已有 {q.answered ?? 0} 人答过 ·{' '}
+                {/* Q3 复测：已有题目的内部编号（英文）不显示给工作人员；新题才让填 */}
+                {q.key ? '' : '新题 · '}已有 {q.answered ?? 0} 人答过 ·{' '}
                 <label><input type="checkbox" checked={q.isActive} onChange={(e) => set(i, { isActive: e.target.checked })} /> 启用</label>{' '}
                 <label><input type="checkbox" checked={q.allowText} onChange={(e) => set(i, { allowText: e.target.checked })} /> 允许多写一点</label>
               </div>
@@ -44,7 +45,7 @@ export default function CheckinQuestions() {
             </div>
           ))}
           <div className={styles.btnRow}>
-            <button className={styles.btnQuiet} onClick={() => setQs((l) => [...l, { key: '', prompt: '', options: [], sort: 100, isActive: true, allowText: true }])}>加一道题</button>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setQs((l) => [...l, { key: '', prompt: '', options: [], sort: 100, isActive: true, allowText: true }])}>加一道题</button>
             <button className={styles.btn} onClick={save}>保存题库</button>
           </div>
         </>

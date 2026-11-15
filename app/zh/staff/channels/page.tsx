@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api } from '@/components/crm/client';
+import { saveImage, savedText } from '@/components/crm/staff/SaveImage';
 
 type F = { visits: number; registered: number; arrived: number; joined: number; inquiries: number; firstTouch: number };
 type Ch = { id: number; code: string; name: string; kind: string; kindLabel: string; note: string | null; active: boolean; stats: F };
@@ -39,17 +40,20 @@ export default function StaffChannels() {
     if (r.ok) setForm({ name: '', kind: 'merchant', note: '' });
     load();
   }
+  // 1.4.0（改动单 D7）：停用 / 启用给结果提示，失败说原因
   async function toggle(c: Ch) {
-    await api('/api/v1/staff/channels', { method: 'PATCH', body: { id: c.id, active: !c.active } });
+    const r = await api('/api/v1/staff/channels', { method: 'PATCH', body: { id: c.id, active: !c.active } });
+    setMsg(r.ok ? { ok: true, text: c.active ? `已停用渠道“${c.name}”：这个码扫进来不再记到这个渠道（以前的数据保留）` : `已启用渠道“${c.name}”` } : { ok: false, text: r.message });
     load();
   }
+  // 1.4.0（1.3.5 第 11 条）：手机上直接显示图 + 存相册，电脑照常下载
   async function download(c: Ch) {
-    const res = await fetch(`/api/v1/staff/channels/${c.code}${slug ? `?slug=${encodeURIComponent(slug)}` : ''}`, { credentials: 'same-origin' }).catch(() => null);
-    if (!res || !res.ok) return setMsg({ ok: false, text: '小程序码这会儿生成不了，请过 1 分钟再点一次' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(await res.blob());
-    a.download = `渠道码-${c.name}${slug ? '-' + slug : ''}.png`;
-    a.click();
+    try {
+      const how = await saveImage(`/api/v1/staff/channels/${c.code}${slug ? `?slug=${encodeURIComponent(slug)}` : ''}`, `渠道码-${c.name}${slug ? '-' + slug : ''}.png`);
+      setMsg({ ok: true, text: savedText(how, `“${c.name}”的渠道码`) });
+    } catch {
+      setMsg({ ok: false, text: '小程序码这会儿生成不了，请过 1 分钟再点一次' });
+    }
   }
   return (
     <StaffGate title="渠道码" role="ops">
@@ -89,23 +93,20 @@ export default function StaffChannels() {
               {events.map((e) => <option key={e.slug} value={e.slug}>下载的码进：{e.title}</option>)}
             </select>
           </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table className={styles.table}>
-              <thead><tr><th>渠道</th><th>访问</th><th>报名</th><th>到场</th><th>入会</th><th>有效咨询</th><th>首次来源</th><th></th></tr></thead>
-              <tbody>
-                {rows?.map((c) => (
-                  <tr key={c.id} style={{ opacity: c.active ? 1 : 0.5 }}>
-                    <td>{c.name}<br /><span className={styles.small}>{c.kindLabel} · {c.code}</span></td>
-                    <td>{c.stats.visits}</td><td>{c.stats.registered}</td><td>{c.stats.arrived}</td><td>{c.stats.joined}</td><td>{c.stats.inquiries}</td><td>{c.stats.firstTouch}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button className={`${styles.btn} ${styles.btnSmall ?? ''}`} onClick={() => download(c)}>下载码</button>{' '}
-                      <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => toggle(c)}>{c.active ? '停用' : '启用'}</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* 1.4.0：手机上表格要横滑才看得到按钮，改成一条一张卡片 */}
+          {rows?.map((c) => (
+            <div key={c.id} className={styles.card} style={{ opacity: c.active ? 1 : 0.6 }}>
+              <p className={styles.cardTitle}>{c.name}{!c.active && <span className={`${styles.badge} ${styles.badgeMuted}`}>已停用</span>}</p>
+              <p className={styles.small} style={{ margin: '0 0 0.4rem' }}>{c.kindLabel} · {c.code}</p>
+              <p style={{ margin: '0 0 0.6rem' }}>
+                访问 <b>{c.stats.visits}</b> · 报名 <b>{c.stats.registered}</b> · 到场 <b>{c.stats.arrived}</b> · 入会 <b>{c.stats.joined}</b> · 有效咨询 <b>{c.stats.inquiries}</b> · 首次来源 <b>{c.stats.firstTouch}</b>
+              </p>
+              <div className={styles.btnRow}>
+                <button className={styles.btn} onClick={() => download(c)}>下载 / 存码</button>
+                <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => toggle(c)}>{c.active ? '停用' : '启用'}</button>
+              </div>
+            </div>
+          ))}
           {rows && !rows.length && <p className={styles.muted}>还没有渠道。先在上面建一个。</p>}
         </>
       )}

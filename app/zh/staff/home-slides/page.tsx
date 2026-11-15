@@ -103,7 +103,7 @@ export default function HomeSlides() {
           {ovs.map((o) => (
             <div key={o.id} className={styles.card}>
               <b>{ACT[o.action]}</b> {o.title ?? o.target ?? ''} · 给{o.audience === 'all' ? '所有人' : WHO[o.audience] ?? o.audience} · 到 {fmtDateTime(o.expires_at)} · {o.created_by.replace(/^staff:/, '')}
-              <div className={styles.btnRow}><button className={styles.btnQuiet} onClick={() => remove(o.id)}>撤掉</button></div>
+              <div className={styles.btnRow}><button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => remove(o.id)}>撤掉</button></div>
             </div>
           ))}
         </>

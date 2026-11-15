@@ -1,12 +1,11 @@
 'use client';
 /**
- * 增长与设置（1.2）：点击统计、推荐排行（只给工作人员看）、专委会意向；
+ * 增长（1.2；1.4.0 由“增长与设置”改名，东哥已点头）：点击统计、推荐排行（只给工作人员看）、专委会意向；
  * 商会微信二维码（报名成功页 / 首页 / 会议室“联系预约”用，换图不用发版本）、视频号 ID、专委会状态、内容显示范围。
  */
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
-import { shrink } from '@/components/crm/staff/RoomsV12';
 import { api } from '@/components/crm/client';
 
 type Stat = { name: string; target: string | null; client: string; n: number; people: number };
@@ -62,21 +61,12 @@ function Growth() {
     setMsg(r.ok ? { ok: true, text: '已保存' } : { ok: false, text: r.message });
     load();
   }
-  async function uploadQr(file: File) {
-    const fd = new FormData();
-    fd.append('file', await shrink(file, 1000));
-    const res = await fetch('/api/v1/staff/growth', { method: 'POST', body: fd, credentials: 'same-origin' });
-    const j = await res.json().catch(() => null);
-    setMsg(j?.ok ? { ok: true, text: '商会微信二维码已更换，小程序和网站立即生效' } : { ok: false, text: j?.error?.message ?? '上传失败' });
-    load();
-  }
   function setScope(slug: string, scope: 'mp' | 'site', value: string) {
     const next = { ...raw, [slug]: { ...(raw[slug] ?? {}), [scope]: value } };
     setRaw(next);
     save('content_visibility', next);
   }
 
-  const qr = String(d?.settings.wechat_qr_url ?? '');
   return (
     <>
       {msg && <p className={msg.ok ? styles.success : styles.error} role="status">{msg.text}</p>}
@@ -84,18 +74,8 @@ function Growth() {
         {[7, 30, 90].map((n) => <button key={n} className={`${styles.chip} ${days === n ? styles.chipOn : ''}`} onClick={() => setDays(n)}>最近 {n} 天</button>)}
       </div>
 
-      {/* 手机上也能一眼找到：放在页面最上面，大按钮上传（原来是页面很下面的一个小文件框，手机上找不到） */}
-      <h2 className={styles.h2} id="wechat-qr">商会微信二维码</h2>
-      <div className={styles.card}>
-        <p className={styles.small}>小程序和网站里所有“加商会微信”的地方都显示这张图（报名成功页、签到成功页、首页、相册、会议室、联系商会、商会介绍页）。换图立即生效，不用发新版本。个人号加满时上传新号的码即可。</p>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {qr ? <img src={qr} alt="商会微信二维码" style={{ width: 180, height: 180, objectFit: 'contain', background: '#fff', display: 'block', marginBottom: 12 }} /> : <p className={styles.notice}>还没有上传。没上传时，小程序只显示“联系商会”和电话。</p>}
-        <label className={styles.btn} style={{ cursor: 'pointer', width: '100%' }}>
-          {qr ? '更换二维码图片' : '上传二维码图片'}
-          <input type="file" accept="image/*" aria-label="上传商会微信二维码" style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadQr(f); e.target.value = ''; }} />
-        </label>
-        <p className={styles.small} style={{ marginBottom: 0 }}>手机上点按钮可以直接从相册选截图（微信 → 我 → 二维码名片 → 保存图片）。</p>
-      </div>
+      {/* 1.4.0：「换商会微信二维码」已挪进「设置」页（东哥已点头），这里只留一句指路 */}
+      <p className={styles.notice}>换商会微信二维码：在<a href="/zh/staff/settings#wechat-qr" style={{ color: 'var(--gold)' }}>「设置」页</a>（管理员）。</p>
 
       <h2 className={styles.h2}>点击统计</h2>
       {d && (d.track.byName.length === 0 ? <p className={styles.muted}>这段时间还没有打点数据。</p> : (
@@ -261,7 +241,7 @@ function Growth() {
 
 export default function Page() {
   return (
-    <StaffGate role="ops" title="增长与设置" wide>
+    <StaffGate role="ops" title="增长" wide>
       {() => <Growth />}
     </StaffGate>
   );

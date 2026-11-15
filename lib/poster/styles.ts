@@ -10,7 +10,7 @@ export const EVENT_TYPES = [
   { key: 'lecture', label: '讲座', motif: 'a single dramatic symbolic object or landscape that suggests ideas and insight' },
   { key: 'summit', label: '论坛峰会', motif: 'a grand modern auditorium stage with sweeping light beams and an empty podium' },
   { key: 'golf', label: '高尔夫球赛', motif: 'a golf course hilltop with a flagstick, a tiny distant silhouetted golfer mid-swing and the arc of a ball' },
-  { key: 'guandan', label: '掼蛋牌局', motif: 'four playing cards face down on a green felt table under a single overhead spotlight, poker chips' },
+  { key: 'guandan', label: '掼蛋牌局', motif: 'four playing cards face down on a wooden tea table beside teacups in warm afternoon light, a friendly social gathering; no chips, no money, no casino' }, // 测试窗口 Q14 同类：不要筹码、钱、赌场感
   { key: 'estate', label: '房地产', motif: 'a modern skyscraper rising above the clouds over a city' },
   { key: 'tax', label: '会计税务', motif: 'a giant stone percent sign monument and calculator-like geometric shapes' },
   { key: 'law', label: '法律', motif: 'the silhouette of scales of justice and a gavel' },
