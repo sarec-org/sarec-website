@@ -45,6 +45,23 @@ function MortgageBody() {
           <NumField label={L(lang, 'HOA（每月）', 'HOA (monthly)')} prefix="$" value={inp.hoa} onChange={set('hoa')} />
           <NumField label={L(lang, '预期租金（每月）', 'Expected rent (monthly)')} prefix="$" value={inp.rent} onChange={set('rent')} />
         </div>
+        {/* 东哥 11/15：委托物业管理公司（默认不委托；委托时管理费率只能 4%–10%） */}
+        <div style={{ margin: '0.75rem 0' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 40 }}>
+            <input type="checkbox" checked={clean.mgmtOn === 1} onChange={(e) => setInp((p) => ({ ...p, mgmtOn: e.target.checked ? 1 : 0 }))} />
+            {L(lang, '委托物业管理公司', 'Use a property manager')}
+          </label>
+          {clean.mgmtOn === 1 && (
+            <div>
+              <p className={s.small} style={{ margin: '0.25rem 0' }}>{L(lang, '管理费率：按每月租金的百分比收取', 'Management fee: % of monthly rent')}</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="radiogroup" aria-label={L(lang, '管理费率', 'Management fee rate')}>
+                {[4, 5, 6, 7, 8, 9, 10].map((v) => (
+                  <button key={v} type="button" role="radio" aria-checked={clean.mgmtPct === v} className={`${s.chip} ${clean.mgmtPct === v ? s.chipOn : ''}`} onClick={() => setInp((p) => ({ ...p, mgmtPct: v }))}>{v}%</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         <button type="button" className={`${s.btn} ${s.btnQuiet}`} onClick={() => { reset(); setInp(MORTGAGE_DEFAULTS); }}>{L(lang, '恢复默认值', 'Reset to defaults')}</button>
       </div>
 
@@ -62,6 +79,7 @@ function MortgageBody() {
               <tr><td>{L(lang, '房产税', 'Property tax')}</td><td>{usd(r.tax)}</td></tr>
               <tr><td>{L(lang, '保险', 'Insurance')}</td><td>{usd(r.insurance)}</td></tr>
               <tr><td>HOA</td><td>{usd(r.hoa)}</td></tr>
+              {clean.mgmtOn === 1 && <tr><td>{L(lang, `管理费（租金的 ${clean.mgmtPct}%）`, `Management (${clean.mgmtPct}% of rent)`)}</td><td>{usd(r.mgmtFee)}</td></tr>}
               <tr><td>{L(lang, '每月总支出', 'Total monthly cost')}</td><td>{usd(r.totalMonthly)}</td></tr>
             </tbody>
           </table>
@@ -75,8 +93,12 @@ function MortgageBody() {
           <p className={s.small} style={{ marginBottom: 0 }}>
             {L(
               lang,
-              '年化现金回报 = 每年现金流 ÷ 首付。粗算未计空置、维修、物业管理、过户费、PMI 和所得税，实际数字以贷款机构和会计师为准。',
-              'Cash-on-cash = annual cash flow ÷ down payment. This estimate excludes vacancy, repairs, management, closing costs, PMI and income tax; confirm with your lender and CPA.'
+              clean.mgmtOn === 1
+                ? `年化现金回报 = 每年现金流 ÷ 首付。管理费按每月租金的 ${clean.mgmtPct}% 算（这里没有空置率，按月租金）。粗算未计空置、维修、过户费、PMI 和所得税，实际数字以贷款机构和会计师为准。`
+                : '年化现金回报 = 每年现金流 ÷ 首付。粗算未计空置、维修、物业管理、过户费、PMI 和所得税，实际数字以贷款机构和会计师为准。',
+              clean.mgmtOn === 1
+                ? `Cash-on-cash = annual cash flow ÷ down payment. Management is ${clean.mgmtPct}% of monthly rent (no vacancy input here). Excludes vacancy, repairs, closing costs, PMI and income tax; confirm with your lender and CPA.`
+                : 'Cash-on-cash = annual cash flow ÷ down payment. This estimate excludes vacancy, repairs, management, closing costs, PMI and income tax; confirm with your lender and CPA.'
             )}
           </p>
         </div>
@@ -95,6 +117,7 @@ function MortgageBody() {
               [L(lang, '首付', 'Down payment'), L(lang, `${usd(r.downPayment)}（${clean.downPct}%）`, `${usd(r.downPayment)} (${clean.downPct}%)`)],
               [L(lang, '利率 / 年限', 'Rate / term'), `${clean.ratePct}% / ${clean.years}${L(lang, ' 年', ' yrs')}`],
               [L(lang, '月供（本息）', 'Monthly P&I'), usd(r.principalInterest)],
+              ...(clean.mgmtOn === 1 ? [[L(lang, `管理费（租金 ${clean.mgmtPct}%）`, `Management (${clean.mgmtPct}%)`), usd(r.mgmtFee)] as [string, string]] : []),
               [L(lang, '每月总支出', 'Total monthly cost'), usd(r.totalMonthly)],
               [L(lang, '每月租金', 'Monthly rent'), usd(clean.rent)],
               [L(lang, '年化现金回报', 'Cash-on-cash'), pct(r.cashOnCashPct)]

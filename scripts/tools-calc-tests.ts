@@ -22,6 +22,38 @@ const c = cleanMortgageInput({ price: '1,200,000', downPct: 150, ratePct: 'abc',
 assert.equal(c.price, 1_200_000); assert.equal(c.downPct, 100); assert.equal(c.ratePct, 6.5); assert.equal(c.years, 1);
 assert.equal(usd(-1234.6), '\u2212$1,235'); assert.equal(usd(-0.4), '$0');
 assert.equal(pct(-4.554), '\u22124.55%'); assert.equal(pct(-0.001), '0.00%'); assert.equal(pct(null), '—'); assert.equal(usd(1234567), '$1,234,567');
+// —— 东哥 11/15：委托管理（管理费 = 每月租金 × 费率；不委托时一切和以前一样）——
+{
+  const sets = [
+    { price: 800_000, downPct: 25, ratePct: 6.5, years: 30, taxPct: 1.1, insurancePct: 0.35, hoa: 0, rent: 4000 },
+    { price: 500_000, downPct: 20, ratePct: 7, years: 30, taxPct: 1.2, insurancePct: 0.4, hoa: 150, rent: 2500 },
+    { price: 1_200_000, downPct: 30, ratePct: 6, years: 15, taxPct: 1.0, insurancePct: 0.3, hoa: 300, rent: 6000 }
+  ];
+  // 手算的管理费（租金 × 费率）：第一组 4000 → 160 / 320 / 400；第二组 2500 → 100 / 200 / 250；第三组 6000 → 240 / 480 / 600
+  const hand: Record<number, number[]> = { 4: [160, 100, 240], 8: [320, 200, 480], 10: [400, 250, 600] };
+  sets.forEach((x, idx) => {
+    const off = calcMortgage(x);
+    const off2 = calcMortgage({ ...x, mgmtOn: 0, mgmtPct: 10 });
+    assert.deepEqual(off2, off, '不委托时费率不影响任何数字');
+    assert.equal(off.mgmtFee, 0);
+    for (const p of [4, 8, 10]) {
+      const on = calcMortgage({ ...x, mgmtOn: 1, mgmtPct: p });
+      near(on.mgmtFee, hand[p][idx], 1e-9, `fee ${p}% set${idx}`);
+      near(on.totalMonthly, off.totalMonthly + hand[p][idx], 1e-9, 'total');
+      near(on.cashFlow, off.cashFlow - hand[p][idx], 1e-9, 'cash flow');
+      near(on.annualCashFlow, (off.cashFlow - hand[p][idx]) * 12, 1e-9, 'annual');
+      near(on.cashOnCashPct!, ((off.cashFlow - hand[p][idx]) * 12 / off.downPayment) * 100, 1e-9, 'coc');
+      assert.equal(on.principalInterest, off.principalInterest);
+    }
+  });
+  // 费率只能 4–10、整数；开关只认 0 / 1
+  assert.equal(cleanMortgageInput({ mgmtPct: 3 }).mgmtPct, 4);
+  assert.equal(cleanMortgageInput({ mgmtPct: 12 }).mgmtPct, 10);
+  assert.equal(cleanMortgageInput({ mgmtPct: 7.6 }).mgmtPct, 8);
+  assert.equal(cleanMortgageInput({ mgmtOn: '1' }).mgmtOn, 1);
+  assert.equal(cleanMortgageInput({}).mgmtOn, 0);
+  assert.equal(cleanMortgageInput({}).mgmtPct, 8);
+}
 console.log('✓ mortgage tests passed');
 
 // —— 1031 ——
