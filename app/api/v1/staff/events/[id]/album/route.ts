@@ -1,4 +1,4 @@
-/** POST /api/v1/staff/events/:id/album { recap? } —— 发布相册并通知到场的人（重复点击不重复推送）；{ resend: true } 只重推失败的 */
+/** POST /api/v1/staff/events/:id/album { recap? } —— 通知到场的人：照片出来了（1.4.0 起只是通知，照片上传后本来就能看到；重复点击不重复推送）；{ resend: true } 只重推失败的 */
 import { body, handler, ok, requireStaff } from '@/lib/crm/http';
 import { publishAlbum, sendPhotoNotices } from '@/lib/crm/photos';
 export const runtime = 'nodejs';

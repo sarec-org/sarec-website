@@ -3,7 +3,7 @@
  *  GET  /api/v1/events/:slug/photos —— 我在这场活动上传的照片 */
 import { listMyPhotos, uploadMyPhoto } from '@/lib/crm/customerPhotos';
 import { CrmError } from '@/lib/crm/events';
-import { handler, ok, requireContact } from '@/lib/crm/http';
+import { handler, isMp14, ok, requireContact } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -15,5 +15,6 @@ export const POST = handler(async (req: Request, { params }: { params: { slug: s
   const form = await req.formData().catch(() => null);
   const f = form?.get('file');
   if (!f || typeof f === 'string') throw new CrmError('bad_request', '没有收到照片，请再试一次');
-  return ok({ photo: await uploadMyPhoto(me, decodeURIComponent(params.slug), Buffer.from(await f.arrayBuffer())) });
+  // 1.4.0 及以上：上传即进相册；1.3.x：默认私人（它的页面就是这么写的）
+  return ok({ photo: await uploadMyPhoto(me, decodeURIComponent(params.slug), Buffer.from(await f.arrayBuffer()), { toAlbum: isMp14(req) }) });
 });

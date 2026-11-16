@@ -72,6 +72,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
     address: String(initial?.address ?? ''),
     capacity: initial?.capacity == null ? '' : String(initial.capacity),
     hardCapacity: initial?.hard_capacity == null ? '' : String(initial.hard_capacity),
+    memberReservedSeats: initial?.member_reserved_seats == null ? '0' : String(initial.member_reserved_seats),
     region: String(initial?.region ?? '洛杉矶/橙县'),
     notifyScope: String(initial?.notify_scope ?? 'local'),
     notifyRegions: (initial?.notify_regions as string[]) ?? [],
@@ -127,6 +128,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       address: f.address,
       capacity: f.capacity === '' ? null : Number(f.capacity),
       hardCapacity: f.hardCapacity === '' ? null : Number(f.hardCapacity),
+      memberReservedSeats: f.memberReservedSeats === '' ? 0 : Number(f.memberReservedSeats),
       region: f.region,
       notifyScope: f.notifyScope,
       notifyRegions: f.notifyScope === 'regions' ? f.notifyRegions : [],
@@ -216,6 +218,7 @@ export function EventForm({ initial, onSaved }: { initial?: Ev; onSaved: (r: { i
       </div>
       {input('capacity', '当前上限（报到这个数后进候补；不填 = 不限）', 'number', { min: 0, inputMode: 'numeric' })}
       {input('hardCapacity', '硬上限（场地坐得下的极限；加名额最多加到这里）', 'number', { min: 0, inputMode: 'numeric' })}
+      {input('memberReservedSeats', '会员保留座位（0 = 不保留；比如填 10：最后 10 个座位只给会员）', 'number', { min: 0, inputMode: 'numeric' })}
       {initial && input('videoUrl', '活动视频链接（活动后填；YouTube 会嵌入回顾页，视频号给链接）')}
       {initial && initial.slug ? <p className={styles.small}>网站回顾页：<a href={`/zh/e/${String(initial.slug)}/recap`} target="_blank" rel="noreferrer">/zh/e/{String(initial.slug)}/recap</a>（照片发布、回顾审核后自动有内容）</p> : null}
       <div className={styles.field}>

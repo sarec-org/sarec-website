@@ -8,6 +8,7 @@
 import { getPool, withTransaction } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
 import { msgSecCheck } from '@/lib/crm/contentSec';
+import { memberStatus } from '@/lib/crm/membership';
 
 export const CARD_POINTS = 2;
 export const TEMPLATES = [
@@ -128,7 +129,9 @@ export async function cardBook(me: string, q?: string | null) {
     const label = r.event_title ?? '其他场合';
     let g = groups.find((x) => x.event === label);
     if (!g) groups.push((g = { event: label, cards: [] }));
-    g.cards.push({ id: r.id, name: r.name ?? 'SAREC 用户', company: r.company, title: r.title, industry: r.industry, token: r.token, avatarUrl: r.avatar_url, note: r.note });
+    // 1.4.1：缴费会员名字旁有金色「会员」标
+    const isMember = (await memberStatus(pool, r.other)).isMember;
+    g.cards.push({ id: r.id, name: r.name ?? 'SAREC 用户', company: r.company, title: r.title, industry: r.industry, token: r.token, avatarUrl: r.avatar_url, note: r.note, isMember });
   }
   const { rows: inc } = await pool.query<{ id: string; name: string; company: string | null; title: string | null; token: string | null; created_at: Date }>(
     `SELECT x.id, NULLIF(o.name, '微信用户') AS name, m.company, m.title, m.token, x.created_at
@@ -137,4 +140,29 @@ export async function cardBook(me: string, q?: string | null) {
     [me]
   );
   return { total: rows.length, groups, incoming: inc };
+}
+
+/**
+ * 1.4.1 找人（东哥已点头）：只搜打开了“让商会里的人能搜到我”的人；按姓名、公司、行业、城市（常住地区 / 名片地址）搜。
+ * 搜到的是对方的公开名片（联系方式显示与否由对方自己设）；想联系走“交换名片”。不返回手机、邮箱。
+ */
+export async function searchPeople(me: string, q: string) {
+  const kw = String(q ?? '').trim().slice(0, 40);
+  if (kw.length < 1) return { people: [] };
+  const pool = getPool();
+  const { rows } = await pool.query<{ contact_id: string; name: string | null; company: string | null; title: string | null; industry: string | null; region: string | null; token: string; avatar_url: string | null; exchanged: string | null }>(
+    `SELECT m.contact_id, NULLIF(c.name, '微信用户') AS name, m.company, m.title, m.industry, c.region_self AS region, m.token, c.avatar_url,
+            (SELECT x.status FROM card_exchanges x WHERE (x.requester_id = $1 AND x.target_id = c.id) OR (x.target_id = $1 AND x.requester_id = c.id) ORDER BY x.created_at DESC LIMIT 1) AS exchanged
+       FROM member_cards m JOIN contacts c ON c.id = m.contact_id
+      WHERE m.searchable IS TRUE AND m.hidden_at IS NULL AND c.id <> $1 AND c.merged_into IS NULL AND NULLIF(c.name, '微信用户') IS NOT NULL
+        AND (c.name ILIKE '%' || $2 || '%' OR m.company ILIKE '%' || $2 || '%' OR m.industry ILIKE '%' || $2 || '%' OR m.title ILIKE '%' || $2 || '%'
+             OR c.region_self ILIKE '%' || $2 || '%' OR (m.show_address AND m.address ILIKE '%' || $2 || '%'))
+      ORDER BY c.name LIMIT 30`,
+    [me, kw]
+  );
+  const people = [];
+  for (const r of rows) {
+    people.push({ name: r.name, company: r.company, title: r.title, industry: r.industry, region: r.region, token: r.token, avatarUrl: r.avatar_url, exchanged: r.exchanged, isMember: (await memberStatus(pool, r.contact_id)).isMember });
+  }
+  return { people };
 }

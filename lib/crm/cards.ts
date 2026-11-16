@@ -119,8 +119,26 @@ export async function myCard(contactId: string) {
     projectPhotoUrl: card.project_photo_url,
     // 名片模板库：地址、公司 logo；会员等级（非会员为空，卡面不出现任何等级字样）
     address: card.address, showAddress: card.show_address, logoUrl: card.logo_url,
-    tierName: status.isMember ? tierBadge(status) : null
+    tierName: status.isMember ? tierBadge(status) : null,
+    // 1.4.1 找人：让商会里的人能搜到我（null = 还没问过）
+    searchable: await cardSearchable(contactId)
   };
+}
+
+/** 1.4.1 “让商会里的人能搜到我”：null = 还没问过；没有这一列（迁移 0036 没跑）时也当没问过 */
+export async function cardSearchable(contactId: string): Promise<boolean | null> {
+  try {
+    const { rows } = await getPool().query<{ searchable: boolean | null }>(`SELECT searchable FROM member_cards WHERE contact_id = $1`, [contactId]);
+    return rows[0]?.searchable ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setCardSearchable(contactId: string, on: boolean) {
+  const { rowCount } = await getPool().query(`UPDATE member_cards SET searchable = $2, updated_at = now() WHERE contact_id = $1`, [contactId, on]);
+  if (!rowCount) throw new CrmError('no_card', '先做一张电子名片，别人才能搜到您');
+  return { searchable: on };
 }
 
 /** 头像换了：名片重新进入待审核 */
@@ -361,7 +379,8 @@ export async function chamberInviteData(contactId: string, base: string) {
       memberNo: c[0]?.member_no,
       avatarUrl: proxied(c[0]?.avatar_url ?? null),
       company: card.company ?? null,
-      label: `${st.isMember ? 'SAREC 会员' : 'SAREC 注册用户'}${card.company ? ' · ' + card.company : ''}${card.title ? ' · ' + card.title : ''}`
+      // 1.4.0：和活动邀请海报口径一致，非会员不印“注册用户”字样
+      label: [st.isMember ? 'SAREC 会员' : '', card.company ?? '', card.title ?? ''].filter(Boolean).join(' · ')
     },
     title: texts.title?.trim() || '邀请你认识中美房地产商会',
     intro: texts.intro?.trim() || '连接中美资本，重构房地产项目协作。商会定期举办讲座和企业家交流活动，扫码了解商会和近期活动。',
@@ -411,7 +430,8 @@ export async function posterData(contactId: string, slug: string, base: string) 
       memberNo: c[0]?.member_no,
       avatarUrl: proxied(c[0]?.avatar_url ?? null),
       // 1.3 D：海报同时展示本人在名片里公开的公司、职位（名片本身就是对外展示的资料）
-      label: `${st.isMember ? 'SAREC 会员' : 'SAREC 注册用户'}${card.company ? ' · ' + card.company : ''}${card.title ? ' · ' + card.title : ''}`
+      // 1.4.0：和活动邀请海报口径一致，非会员不印“注册用户”字样
+      label: [st.isMember ? 'SAREC 会员' : '', card.company ?? '', card.title ?? ''].filter(Boolean).join(' · ')
     },
     codeUrl: `${b}/api/v1/codes/invite/${encodeURIComponent(ev[0].slug)}/${c[0]?.member_no}.png`,
     isTestCode: !wxConfigured(),

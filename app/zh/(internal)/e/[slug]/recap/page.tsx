@@ -29,14 +29,13 @@ async function load(slug: string) {
   ));
   const e = rows[0];
   if (!e) return null;
-  const { rows: photos } = e.album_published_at
-    ? await pool.query<{ url: string; thumb_url: string; caption: string | null }>(
-        `SELECT url, thumb_url, NULL AS caption FROM event_photos
-          WHERE event_id = $1 AND NOT is_hidden AND coalesce(visibility, 'album') = 'album' AND variant_of IS NULL AND coalesce(review_status, 'ok') = 'ok'
-          ORDER BY sort_order, created_at LIMIT 60`,
-        [e.id]
-      )
-    : { rows: [] as { url: string; thumb_url: string; caption: string | null }[] };
+  // 1.4.0：上传即公开，不再等“发布”
+  const { rows: photos } = await pool.query<{ url: string; thumb_url: string; caption: string | null }>(
+    `SELECT url, thumb_url, NULL AS caption FROM event_photos
+      WHERE event_id = $1 AND NOT is_hidden AND coalesce(visibility, 'album') = 'album' AND variant_of IS NULL AND coalesce(review_status, 'ok') = 'ok'
+      ORDER BY sort_order, created_at LIMIT 60`,
+    [e.id]
+  );
   const { rows: rc } = await pool.query<{ text: string | null }>(
     `SELECT recap_draft AS text FROM event_recaps WHERE event_id = $1 AND status = 'published'`,
     [e.id]

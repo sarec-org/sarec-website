@@ -192,6 +192,18 @@ export async function requireStaffAny(req: Request, roles: StaffRole[]): Promise
 }
 
 /** 1.3.1 及以后的小程序（X-Sarec-Client: mp-1.3.1 …）：不给任何人数、金额（只给“名额状态”和“免费 / 收费”） */
+/** 小程序请求头里的版本号（mp-1.4.1 → [1,4,1]）；不是小程序（网站）返回 null */
+export function mpVersion(req: Request): number[] | null {
+  const m = /^mp-(\d+)\.(\d+)(?:\.(\d+))?/.exec((req.headers.get('x-sarec-client') ?? '').toLowerCase());
+  return m ? [Number(m[1]), Number(m[2]), Number(m[3] ?? 0)] : null;
+}
+/** 是不是“比 v 旧的小程序”（网站请求、没带版本号的不算旧） */
+export function isMpOlderThan(req: Request, v: [number, number, number]): boolean {
+  const x = mpVersion(req);
+  if (!x) return false;
+  for (let i = 0; i < 3; i++) if (x[i] !== v[i]) return x[i] < v[i];
+  return false;
+}
 /** 1.4 及以后的小程序（X-Sarec-Client: mp-1.4.0 …）：新的首页待办按钮等 */
 const MP14 = /^mp-(1\.([4-9]|\d{2,})|[2-9])(\b|\.|$)/;
 export function isMp14(req: Request): boolean {

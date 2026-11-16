@@ -57,6 +57,7 @@ export type EventInput = {
   address?: string;
   capacity?: number | null;
   hardCapacity?: number | null; // 1.3.1 B：硬上限（场地坐得下的极限）
+  memberReservedSeats?: number | null; // 1.4.1 会员保留座位（默认 0）
   videoUrl?: string | null; // 1.3.1 G5：活动视频（YouTube / 视频号链接）
   feeCents?: number;
   region?: string; // 1.3.1 E：所在地区
@@ -118,6 +119,7 @@ function eventFields(b: EventInput, partial: boolean) {
   };
   if (b.capacity !== undefined) out.capacity = num(b.capacity, '当前上限');
   if (b.hardCapacity !== undefined) out.hard_capacity = num(b.hardCapacity, '硬上限');
+  if (b.memberReservedSeats !== undefined) out.member_reserved_seats = num(b.memberReservedSeats, '会员保留座位') ?? 0;
   if (out.capacity != null && out.hard_capacity != null && Number(out.capacity) > Number(out.hard_capacity)) {
     throw new CrmError('bad_request', '当前上限不能超过硬上限（场地坐得下的极限）');
   }
