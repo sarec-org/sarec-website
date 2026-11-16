@@ -14,6 +14,8 @@ export type MortgageInput = {
   insurancePct: number;   // 保险（%/年，按房价）
   hoa: number;            // HOA（美元/月）
   rent: number;           // 预期租金（美元/月）
+  mgmtOn: number;         // 东哥 11/15：委托物业管理公司（0 不委托 / 1 委托），默认不委托
+  mgmtPct: number;        // 管理费率（%，按每月租金），只能 4–10，步长 1，默认 8
 };
 
 export type MortgageResult = {
@@ -23,7 +25,8 @@ export type MortgageResult = {
   tax: number;               // 月房产税
   insurance: number;         // 月保险
   hoa: number;
-  totalMonthly: number;      // 月总支出（PITI + HOA）
+  mgmtFee: number;           // 月管理费 = 每月租金 × 管理费率（不委托时 0）
+  totalMonthly: number;      // 月总支出（PITI + HOA + 管理费）
   cashFlow: number;          // 月现金流 = 租金 − 月总支出
   annualCashFlow: number;
   cashOnCashPct: number | null; // 年化现金回报 = 年现金流 ÷ 首付；首付为 0 时为 null
@@ -38,7 +41,9 @@ export const MORTGAGE_DEFAULTS: MortgageInput = {
   taxPct: 1.1,
   insurancePct: 0.35,
   hoa: 0,
-  rent: 4_000
+  rent: 4_000,
+  mgmtOn: 0,
+  mgmtPct: 8
 };
 
 /** 合理范围，超出就夹住（防止页面算出 NaN / Infinity） */
@@ -50,7 +55,9 @@ export const MORTGAGE_LIMITS: Record<keyof MortgageInput, [number, number]> = {
   taxPct: [0, 10],
   insurancePct: [0, 10],
   hoa: [0, 100_000],
-  rent: [0, 1_000_000]
+  rent: [0, 1_000_000],
+  mgmtOn: [0, 1],
+  mgmtPct: [4, 10]
 };
 
 const num = (v: unknown, d: number) => {
@@ -65,6 +72,12 @@ export function cleanMortgageInput(raw: Partial<Record<keyof MortgageInput, unkn
     out[k] = Math.min(hi, Math.max(lo, num(raw[k], MORTGAGE_DEFAULTS[k])));
   });
   out.years = Math.round(out.years);
+  // 委托管理两项没传（老链接、老存档）时用默认值：不委托、8%（其他字段沿用原来的处理，保证老数字不变）
+  const blank = (v: unknown) => v === undefined || v === null || v === '';
+  if (blank(raw.mgmtOn)) out.mgmtOn = MORTGAGE_DEFAULTS.mgmtOn;
+  if (blank(raw.mgmtPct)) out.mgmtPct = MORTGAGE_DEFAULTS.mgmtPct;
+  out.mgmtOn = out.mgmtOn >= 0.5 ? 1 : 0;
+  out.mgmtPct = Math.round(out.mgmtPct);
   return out;
 }
 
@@ -84,7 +97,9 @@ export function calcMortgage(raw: Partial<Record<keyof MortgageInput, unknown>>)
   const principalInterest = monthlyPayment(loan, i.ratePct, i.years);
   const tax = (i.price * i.taxPct) / 100 / 12;
   const insurance = (i.price * i.insurancePct) / 100 / 12;
-  const totalMonthly = principalInterest + tax + insurance + i.hoa;
+  // 委托管理：管理费按每月租金收（这个计算器没有空置率，所以按月租金）；不委托时 0，所有数字和以前一样
+  const mgmtFee = i.mgmtOn ? (i.rent * i.mgmtPct) / 100 : 0;
+  const totalMonthly = principalInterest + tax + insurance + i.hoa + mgmtFee;
   const cashFlow = i.rent - totalMonthly;
   const annualCashFlow = cashFlow * 12;
   return {
@@ -94,6 +109,7 @@ export function calcMortgage(raw: Partial<Record<keyof MortgageInput, unknown>>)
     tax,
     insurance,
     hoa: i.hoa,
+    mgmtFee,
     totalMonthly,
     cashFlow,
     annualCashFlow,
