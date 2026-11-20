@@ -50,7 +50,7 @@ function Form({ meta }: { meta: Meta }) {
   const sp = useSearchParams();
   const pre = sp.get('trade');
   const [d, setD, clear] = useDraft<Draft>('jobs-post', EMPTY);
-  const [phone, setPhone] = useState<string | null | undefined>(undefined);
+  const [, setPhone] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [cityOther, setCityOther] = useState(false);
@@ -69,6 +69,12 @@ function Form({ meta }: { meta: Meta }) {
   useEffect(() => { if (d.city && !allCities.includes(d.city)) setCityOther(true); }, [d.city, allCities]);
 
   const groupsOrder = [...meta.groups].sort((a, b) => a.order - b.order);
+  const commonKeys = new Set([
+    ...meta.homeEntries.filter((e) => e.target.type === 'trade').map((e) => e.target.key),
+    ...meta.homeEntries.filter((e) => e.target.type === 'group').flatMap((e) => postable.filter((t) => t.group === e.target.key && t.licType === 'A').slice(0, 2).map((t) => t.key)),
+    ...d.trades
+  ]);
+  const common = postable.filter((t) => commonKeys.has(t.key));
   const crew = d.role === 'crew';
   const showSiteVisit = d.trades.some((k) => meta.options.siteVisitTrades.includes(k));
   const hasStory = d.text.trim().length > 0 || d.photos.length > 0 || !!d.voiceUrl;
@@ -80,7 +86,6 @@ function Form({ meta }: { meta: Meta }) {
     !d.timing && '什么时候要',
     crew && !d.headcount && '要几个人',
     crew && !d.duration && '干多久',
-    !phone && '验证手机号'
   ].filter(Boolean) as string[];
 
   function toggleTurnover() {
@@ -142,16 +147,23 @@ function Form({ meta }: { meta: Meta }) {
           </div>
         )}
         {d.turnover && <p className={s.small} style={{ margin: 0 }}>已帮你选好，可以再加减。每个工种拆成一条活儿，分别找对口的人。</p>}
-        {groupsOrder.map((g) => {
-          const ts = postable.filter((t) => t.group === g.key);
-          if (!ts.length) return null;
-          return (
-            <div key={g.key}>
-              <p className={s.small} style={{ margin: '0.6rem 0 0.3rem' }}>{g.name}</p>
-              <Pick multi options={ts.map((t) => ({ value: t.key, label: t.name }))} value={d.trades} onChange={(v) => set({ trades: v })} />
-            </div>
-          );
-        })}
+        {/* 常用的（首页入口指向的工种 + 已选的）直接摆出来；其余按组收在"更多工种"里，第一屏不用滑很久 */}
+        <div style={{ marginTop: '0.5rem' }}>
+          <Pick multi options={common.map((t) => ({ value: t.key, label: t.name }))} value={d.trades} onChange={(v) => set({ trades: [...d.trades.filter((k) => !common.some((t) => t.key === k)), ...v] })} />
+        </div>
+        <details className={j.fold} style={{ marginTop: '0.5rem' }}>
+          <summary>更多工种（按类别）</summary>
+          {groupsOrder.map((g) => {
+            const ts = postable.filter((t) => t.group === g.key);
+            if (!ts.length) return null;
+            return (
+              <div key={g.key}>
+                <p className={s.small} style={{ margin: '0.6rem 0 0.3rem' }}>{g.name}</p>
+                <Pick multi options={ts.map((t) => ({ value: t.key, label: t.name }))} value={d.trades} onChange={(v) => set({ trades: v })} />
+              </div>
+            );
+          })}
+        </details>
       </div>
 
       {showSiteVisit && (
@@ -163,16 +175,25 @@ function Form({ meta }: { meta: Meta }) {
 
       <div className={s.field}>
         <span className={s.label}>在哪个城市<span className={s.required}>*</span></span>
-        {meta.options.cityGroups.map((g) => (
-          <div key={g.region}>
-            <p className={s.small} style={{ margin: '0.4rem 0 0.3rem' }}>{g.region}</p>
-            <div className={j.opts}>
-              {g.cities.map((c) => (
-                <button key={c} type="button" className={`${j.opt} ${d.city === c && !cityOther ? j.optOn : ''}`} onClick={() => { setCityOther(false); set({ city: c }); }}>{c}</button>
-              ))}
+        {meta.options.cityGroups.map((g, gi) => {
+          const block = (
+            <div key={g.region}>
+              <p className={s.small} style={{ margin: '0.4rem 0 0.3rem' }}>{g.region}</p>
+              <div className={j.opts}>
+                {g.cities.map((c) => (
+                  <button key={c} type="button" className={`${j.opt} ${d.city === c && !cityOther ? j.optOn : ''}`} onClick={() => { setCityOther(false); set({ city: c }); }}>{c}</button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+          // 第一组（会员最集中的地区）直接摆；其它地区收起来，选中的城市在里面时自动展开
+          return gi === 0 ? block : (
+            <details key={g.region} className={j.fold} style={{ marginTop: '0.4rem' }} open={g.cities.includes(d.city) || undefined}>
+              <summary>{g.region}</summary>
+              {block}
+            </details>
+          );
+        })}
         <div className={j.opts} style={{ marginTop: '0.4rem' }}>
           <button type="button" className={`${j.opt} ${cityOther ? j.optOn : ''}`} onClick={() => { setCityOther(true); set({ city: '' }); }}>别的城市（自己写）</button>
         </div>

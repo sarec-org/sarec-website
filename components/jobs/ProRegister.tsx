@@ -89,7 +89,7 @@ export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: 
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState<{ pro: ProSelf; autoCheck: { message?: string } | null } | null>(null);
   const [cityOther, setCityOther] = useState('');
-  const [phone, setPhone] = useState<string | null>(null);
+  const [, setPhone] = useState<string | null>(null);
   const set = (p: Partial<ProForm>) => setF((x) => ({ ...x, ...p }));
   const licensed = f.role === 'company' || f.role === 'licensed';
   const proService = f.role === 'pro_service';
@@ -114,7 +114,6 @@ export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: 
     !f.years && '干了几年',
     needLic && !f.licenseNo.trim() && '牌照号',
     needBizReg && !f.businessRegUrl && '营业登记',
-    !phone && '验证手机号',
     !f.agree && '勾选同意规则'
   ].filter(Boolean) as string[];
 

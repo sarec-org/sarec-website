@@ -95,7 +95,7 @@ function Trades() {
           <section key={g.key} className={styles.card}>
             <div className={styles.row}>
               <b>{g.name}</b>
-              <span className={styles.btnRow} style={{ flex: '0 0 auto' }}>
+              <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} disabled={gi === 0} onClick={() => moveGroup(g, -1)}>上移</button>
                 <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} disabled={gi === groups.length - 1} onClick={() => moveGroup(g, 1)}>下移</button>
                 <GroupRename g={g} save={(name) => call(GROUP, 'POST', { key: g.key, name, order: g.order }, '分组已改名')} />
@@ -108,7 +108,7 @@ function Trades() {
                   {ts.map((t, i) => (
                     <tr key={t.key}>
                       <td style={{ whiteSpace: 'normal', minWidth: 220 }}><b>{t.name}</b><div className={styles.small}>{LIC[t.licType]}{t.issuer ? ` · ${t.issuer}` : ''}{t.licenseClass ? ` · ${t.licenseClass}` : ''}</div>{t.verifyPoints && <div className={styles.small}>核验要点：{t.verifyPoints.split('\n').join('；')}</div>}{t.note && <div className={styles.small}>备注：{t.note}</div>}</td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         <span className={`${styles.badge} ${t.open ? styles.badgeGreen : styles.badgeMuted}`}>{t.open ? '已开放' : '没开放'}</span>
                         {t.noPost && <span className={`${styles.badge} ${styles.badgeMuted}`}>不接受发活儿</span>}
                         {t.noNotify && <span className={`${styles.badge} ${styles.badgeMuted}`}>不发通知</span>}
