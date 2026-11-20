@@ -5,7 +5,7 @@ import type { Db } from '@/lib/crm/profile';
 
 export type Switches = { find: boolean; work: boolean; requirePaid: boolean };
 const KEYS = { find: 'jobs_find_on', work: 'jobs_work_on', requirePaid: 'jobs_require_paid_member' } as const;
-const DEFAULTS: Switches = { find: false, work: false, requirePaid: true };
+const DEFAULTS: Switches = { find: true, work: true, requirePaid: true }; // D11：和 0038 种子一致（找工人、接活默认开）
 
 export async function getSwitches(db: Db = getPool()): Promise<Switches> {
   const out = { ...DEFAULTS };

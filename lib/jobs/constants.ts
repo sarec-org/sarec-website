@@ -74,3 +74,8 @@ export function webBase(): string {
   if (process.env.VERCEL_ENV === 'preview') return 'https://sarec-crm-preview.vercel.app';
   return (process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '');
 }
+
+// D11 冷启动（内容状态，不靠开关藏）
+export const RECRUITING_TEXT = '正在招募各工种的接活人，可先发布活儿等人联系';
+export const TRADE_RECRUITING_TEXT = '这个工种正在招募接活人';
+export const RECRUITING_LABEL = '招募中';

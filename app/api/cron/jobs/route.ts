@@ -1,6 +1,6 @@
 /**
- * 找工人 · 接活 定时任务（Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>）
- * ?task=dispatch —— 漏发的第一批 + 24 小时没人联系发第二批并提醒工作人员 + 处理排队的 CSLB 比对（GitHub Actions 每 15 分钟、Vercel 每天一次）
+ * 找工人 · 接活 定时任务（Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>；测试站（VERCEL_ENV=preview）另认 JOBS_CRON_TEST_SECRET，正式环境不认）
+ * ?task=dispatch —— 漏发的第一批 + 24 小时没人联系发第二批并提醒工作人员 + 处理排队的 CSLB 比对（.github/workflows/jobs-dispatch.yml：每 15 分钟；daily 每天、weekly 每周二）
  * ?task=daily    —— 14 天到期下架、第 12 天提醒续期、第 7 天回访、90 天复核、执照到期下架
  * ?task=weekly   —— 全部已通过的 A 类接活人重新对一次 CSLB 官方总表
  * 发消息全部经过 lib/jobs/notify.ts 的保险：正式环境开关都开才发；其它环境只发测试身份。
@@ -31,7 +31,9 @@ async function step(out: Record<string, unknown>, name: string, fn: () => Promis
 
 async function run(req: Request) {
   const m = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i);
-  if (!m || !(matches(m[1], process.env.CRON_SECRET) || matches(m[1], process.env.REMINDER_CRON_SECRET))) {
+  // D14：测试站专用密钥，只在 Preview 认（正式环境即使误配了也不认）
+  const testSecret = process.env.VERCEL_ENV === 'preview' ? process.env.JOBS_CRON_TEST_SECRET : undefined;
+  if (!m || !(matches(m[1], process.env.CRON_SECRET) || matches(m[1], process.env.REMINDER_CRON_SECRET) || matches(m[1], testSecret))) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
   const task = new URL(req.url).searchParams.get('task') ?? 'dispatch';

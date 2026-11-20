@@ -23,6 +23,8 @@ export function entryVisible(meta: Meta, e: HomeEntry) {
 
 export function FindPanel({ meta }: { meta: Meta }) {
   const entries = meta.homeEntries.slice(0, 7).filter((e) => entryVisible(meta, e));
+  // D11 冷启动：一个核验通过的人都没有时，方块区换成一行招募说明 +「全部工种和服务」
+  const coldStart = meta.anyPros === false;
   return (
     <section className={`${j.panel} ${j.panelFind} ${j.find}`} aria-label="找工人／施工队">
       <h2 className={j.panelTitle}>找工人／施工队</h2>
@@ -30,8 +32,9 @@ export function FindPanel({ meta }: { meta: Meta }) {
         发布活儿
         <small>说清要干什么，等人联系</small>
       </Link>
+      {coldStart && <p className={j.recruitLine}>{meta.recruitingText ?? '正在招募各工种的接活人，可先发布活儿等人联系'}</p>}
       <div className={j.tiles}>
-        {entries.map((e) => (
+        {!coldStart && entries.map((e) => (
           <Link key={`${e.target.type}:${e.target.key}`} href={entryHref(e)} className={j.tile} onClick={() => trackJobs('jobs_home_entry', e.target.key)}>{e.label}</Link>
         ))}
         <Link href="/zh/jobs/trades" className={`${j.tile} ${j.tileAll}`}>全部工种和服务</Link>

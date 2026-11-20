@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ViewportLockScript } from '@/components/sections/research/ViewportLockScript';
 import styles from './MobileNav.module.css';
+import { JobsMenuItem } from '@/components/jobs/JobsMenuItem';
 
 type SubLink = { label: string; href: string };
 type NavItem = { label: string; href: string; children?: SubLink[] };
@@ -152,6 +153,8 @@ export function MobileNav({ variant = 'overlay' }: { variant?: 'overlay' | 'head
                 </Link>
               </li>
             ))}
+            {/* D12（11/20 东哥同意）：只追加一项，跟开关走 */}
+            <JobsMenuItem linkClassName={styles.scrollLink} activeClassName={styles.scrollLinkActive} />
           </ul>
           <span className={styles.scrollFade} aria-hidden="true" />
         </div>
@@ -235,6 +238,7 @@ export function MobileNav({ variant = 'overlay' }: { variant?: 'overlay' | 'head
                 </li>
               );
             })}
+            <JobsMenuItem liClassName={styles.drawerItem} rowClassName={styles.drawerRow} linkClassName={styles.drawerLink} activeClassName={styles.drawerLinkActive} onClick={close} />
           </ul>
 
           {/* 辅助:联系(不参与一级结构 / 不高亮) */}

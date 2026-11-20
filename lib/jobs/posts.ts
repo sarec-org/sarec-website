@@ -12,6 +12,7 @@ import { needPayFor, proByContact, refreshPro } from './pros';
 import { getSwitches } from './settings';
 import { tradeMap, type Trade } from './trades';
 import { cityNames, loadCities, resolveCity } from './cities';
+import { checkDescription, openidOf, saveSec } from './secCheck';
 
 export type PostRow = {
   id: string; batch_id: string; contact_id: string; poster_role: PosterRole; trade_key: string; city: string; title: string; description: string;
@@ -233,6 +234,9 @@ export async function createPosts(v: Viewer, contactId: string, b: Record<string
     }
     return out;
   });
+  // D10：情况说明过微信内容安全（结果只决定进不进小程序「通知给我的活儿」，不拦网站发布）
+  const sec = await checkDescription(description, await openidOf(pool, contactId)).catch(() => ({ status: 'unchecked' as const, note: 'error' }));
+  await saveSec(pool, ids, sec);
   // 发布即通知第一批（失败不影响发布；定时任务会补）
   const { dispatchPost } = await import('./notify');
   for (const id of ids) await dispatchPost(id, 1).catch(() => undefined);
@@ -299,6 +303,11 @@ export async function patchPost(id: string, v: Viewer, b: Record<string, unknown
   }
   if (!sets.length) throw new CrmError('bad_request', '没有要改的内容');
   await pool.query(`UPDATE jobs_posts SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, vals);
+  if (mine && typeof b.description === 'string' && b.description.trim() !== post.description) {
+    // 改了情况说明：重新过内容安全
+    const sec = await checkDescription(str(b.description, 2000), await openidOf(pool, post.contact_id)).catch(() => ({ status: 'unchecked' as const, note: 'error' }));
+    await saveSec(pool, [id], sec);
+  }
   const fresh = (await postById(pool, id))!;
   return { post: postCard(fresh, await tradeMap(pool), await cityNames(pool)) };
 }
@@ -373,4 +382,70 @@ export async function notifiedPosts(contactId: string, mp: boolean) {
   const trades = await tradeMap(pool);
   const names = await cityNames(pool);
   return { count: rows.length, webUrl, items: rows.map((p) => ({ ...postCard(p, trades, names), notifiedAt: p.notified_at_n })) };
+}
+
+// ── D10：小程序「我的接活 · 通知给我的活儿」──────────────────────────────
+// 只给核验通过（且满足缴费开关）的接活人；只给和他已核验工种、服务城市对口的业主类活儿（房主/房东/物业/开发商），
+// 招工那一类不给；情况说明过了内容安全（sec_status='pass'）的才给。字段只有：id、城市、工种、情况说明、什么时候要、发布时间、已联系过没有。
+// 不给预算、任何金额、照片、语音、标题。
+export const OWNER_ROLES: PosterRole[] = ['owner', 'landlord', 'property', 'developer'];
+const MATCH_WHERE = `p.status = 'open' AND p.expires_at > now() AND p.poster_role = ANY($1::text[])
+   AND p.trade_key = ANY($2::text[]) AND p.city_key = ANY($3::text[]) AND p.sec_status = 'pass' AND p.contact_id <> $4`;
+
+type MatchGate = { ok: true; trades: string[]; cities: string[] } | { ok: false; reason: string; needPay: boolean };
+
+async function matchGate(db: Db, contactId: string): Promise<MatchGate> {
+  const p0 = await proByContact(db, contactId);
+  if (!p0) return { ok: false, needPay: false, reason: '先登记接活，核验通过后，和你工种、城市对口的活儿会出现在这里' };
+  const p = (await refreshPro(db, p0.id)) ?? p0;
+  if (p.role === 'worker') return { ok: false, needPay: false, reason: '房主发的活儿要由核验过执照的施工队、师傅或专业服务来接' };
+  if (p.status === 'removed') return { ok: false, needPay: false, reason: '你的接活资料已被下架，请联系商会工作人员' };
+  if (p.status === 'returned') return { ok: false, needPay: false, reason: '你的资料被退回了，按退回原因改好再提交，核验通过后这里会有对口的活儿' };
+  if (p.status !== 'verified') return { ok: false, needPay: false, reason: '你的资料还在核验，核验通过后，和你工种、城市对口的活儿会出现在这里' };
+  const { requirePaid } = await getSwitches(db);
+  if (needPayFor(p, requirePaid)) return { ok: false, needPay: true, reason: '核验已通过，成为缴费会员后，对口的活儿会出现在这里' };
+  return { ok: true, trades: p.verified_trades, cities: p.cities };
+}
+
+export async function matchedPosts(contactId: string, cursor: string | null) {
+  const pool = getPool();
+  const g = await matchGate(pool, contactId);
+  if (!g.ok) return { eligible: false, reason: g.reason, needPay: g.needPay, items: [], nextCursor: null };
+  const offset = Math.max(0, Number(cursor) || 0);
+  const limit = 20;
+  const { rows } = await pool.query<PostRow & { contacted: boolean }>(
+    `SELECT p.*, EXISTS (SELECT 1 FROM jobs_contacts jc WHERE jc.direction = 'post' AND jc.post_id = p.id AND jc.viewer_contact_id = $4) AS contacted
+       FROM jobs_posts p WHERE ${MATCH_WHERE}
+      ORDER BY p.created_at DESC, p.id LIMIT ${limit + 1} OFFSET $5`,
+    [OWNER_ROLES, g.trades, g.cities, contactId, offset]
+  );
+  const trades = await tradeMap(pool);
+  const names = await cityNames(pool);
+  return {
+    eligible: true,
+    reason: null,
+    needPay: false,
+    items: rows.slice(0, limit).map((p) => ({
+      id: p.id,
+      city: (p.city_key && names.get(p.city_key)) || p.city,
+      trade: p.trade_key,
+      tradeName: trades.get(p.trade_key)?.name ?? p.trade_key,
+      description: p.description,
+      timing: p.timing,
+      timingLabel: timingLabel(p.timing),
+      createdAt: p.created_at,
+      contacted: p.contacted
+    })),
+    nextCursor: rows.length > limit ? String(offset + limit) : null
+  };
+}
+
+/** 小程序联系发布人：只限 matched 里的活儿（其余照旧 404） */
+export async function isMatchedFor(contactId: string, postId: string): Promise<boolean> {
+  if (!/^[0-9a-f-]{36}$/i.test(postId)) return false;
+  const pool = getPool();
+  const g = await matchGate(pool, contactId);
+  if (!g.ok) return false;
+  const { rows } = await pool.query(`SELECT 1 FROM jobs_posts p WHERE ${MATCH_WHERE} AND p.id = $5`, [OWNER_ROLES, g.trades, g.cities, contactId, postId]);
+  return rows.length > 0;
 }

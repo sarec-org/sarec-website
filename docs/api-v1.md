@@ -199,7 +199,8 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 ## 12. 找工人 · 接活 `/api/v1/jobs/*`（迁移 0038）
 
-小程序判断：请求头 `X-Sarec-Client: mp-…`、`servicewechat.com` 来源或小程序会话都算小程序。**小程序调用活儿相关接口（`/jobs/posts*`、`/jobs/me/posts`、`/jobs/upload`）一律 404**（D1：活儿只在网站）。
+小程序判断：请求头 `X-Sarec-Client: mp-…`、`servicewechat.com` 来源或小程序会话都算小程序。**小程序调用活儿相关接口（`/jobs/posts*`、`/jobs/me/posts`、`/jobs/upload`）一律 404**（D1：活儿只在网站）；**例外（D10）**：`GET /jobs/me/matched` 小程序可调；`POST /jobs/posts/:id/contact` 小程序只对 matched 里的活儿开放，其余照旧 404。
+开关默认（D11）：迁移 0038 新建时 `jobs_find_on`、`jobs_work_on` 默认**开**（开关只留给日后整栏下线），`jobs_require_paid_member` 默认开；已有的值不改。
 开关（D3）：`find` 关时找工人那边的接口（`/jobs/pros*`、`POST /jobs/posts`）返回 `403 not_open`「这个功能还没开放」；`work` 关时接活那边（`GET /jobs/posts*`、`/jobs/me/pro*`）同样。**工作人员不受开关限制**（meta 里 `staffPreview=true`，页面显示 `staffPreviewText`）。
 新错误码：`not_open`（403，功能没开放）、`not_eligible`（403，不能联系发布人，`message` 是一句人话原因）、`need_phone`（400，先验证手机号）。
 
@@ -207,7 +208,7 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 | 接口 | 权限 | 参数 | 返回 |
 |---|---|---|---|
-| `GET /jobs/meta` | 🌐 | — | `switches{find,work,requirePaid}`、`staffPreview`、`staffPreviewText`、`groups[{key,name,order}]`、`trades[{key,name,group,licType:'A'\|'B'\|'C',open,hasPros,noPost,noNotify,icon}]`、`homeEntries[{label,icon,target:{type:'trade'\|'group',key}}]`（7 个，按顺序）、`cities[{region,items:[{key,name}]}]`（城市表，按地区和顺序，只含启用的；发活儿、登记、筛选都用它，提交 key）、`me.pro`（null 或 `{id,role,status,listed,needPay}`）、`latest`（≤3 张活儿卡片；小程序、接活开关关时为 `[]`）、`options{proRoles,posterRoles（小程序不含 crew）,timings,propertyTypes,languages,cityGroups[{region,cities:[名字]}]（旧字段，从城市表生成，新代码用 `cities`）,turnoverTrades,siteVisitTrades}`、`rules[]`、`disclaimer`、`subscribeTemplate`（派活订阅消息模板 ID 或 null）、`webUrl`、`postUrl` |
+| `GET /jobs/meta` | 🌐 | — | `switches{find,work,requirePaid}`、`staffPreview`、`staffPreviewText`、`groups[{key,name,order}]`、`trades[{key,name,group,licType:'A'\|'B'\|'C',open,hasPros,noPost,noNotify,icon}]`、`homeEntries[{label,icon,target:{type:'trade'\|'group',key}}]`（7 个，按顺序）、`cities[{region,items:[{key,name}]}]`（城市表，按地区和顺序，只含启用的；发活儿、登记、筛选都用它，提交 key）、`me.pro`（null 或 `{id,role,status,listed,needPay}`）、`latest`（≤3 张活儿卡片；小程序、接活开关关时为 `[]`）、`options{proRoles,posterRoles（小程序不含 crew）,timings,propertyTypes,languages,cityGroups[{region,cities:[名字]}]（旧字段，从城市表生成，新代码用 `cities`）,turnoverTrades,siteVisitTrades}`、`rules[]`、`disclaimer`、`subscribeTemplate`（派活订阅消息模板 ID 或 null）、`webUrl`、`postUrl`；**D11 冷启动**：`anyPros`（有没有任何开放工种已有核验通过的人；`false` 时首页「找工人」方块区换成 `recruitingText`「正在招募各工种的接活人，可先发布活儿等人联系」＋「全部工种和服务」）、`recruitingText`、`tradeRecruitingText`「这个工种正在招募接活人」、`recruitingLabel`「招募中」。`trades` 含全部工种（包括没人的，`hasPros=false`）：全部工种页出所有 `open` 的，没人的标“招募中”，点进去是 `tradeRecruitingText` ＋ 发布活儿 / 登记接活。不区分审核员 |
 | `GET /jobs/pros?trade=&group=&city=&role=worker&cursor=` | 🌐（find 开关） | `trade` 或 `group` 二选一；`city` = 城市 key（名字也认，停用的城市也能筛）；`role=worker` 只列工人（网站施工队招工用，默认不含工人） | `items[接活人卡片]`、`cities[{key,name}]`（这批人服务的城市，按城市表顺序）、`nextCursor` |
 | `GET /jobs/pros/:id` | 🌐（find） | — | `pro`（卡片） |
 | `POST /jobs/pros/:id/contact` | 👤（find） | — | `{phone, wechat, name}`；记录谁看过（jobs_contacts direction=pro） |
@@ -217,12 +218,14 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 | `POST /jobs/me/pro/photo?kind=avatar\|work\|license\|insurance\|bizreg` | 👤（work） | multipart `file`（≤6MB） | `{url, kind}` |
 | `POST /jobs/me/subscribe` | 👤 | `{accepted:[模板ID]}` | `{saved, quota}`：允许一次记一次，派活时用掉一次 |
 | `GET /jobs/me/notified` | 👤 | — | `{count, webUrl}`；网站另有 `items[活儿卡片 + notifiedAt]` |
+| `GET /jobs/me/matched?cursor=` | 👤（work）· **小程序可调**（D10） | — | `{eligible, reason, needPay, items[{id, city（名字）, trade（key）, tradeName, description（情况说明）, timing, timingLabel, createdAt, contacted（我联系过没有）}], nextCursor}`。只给 `status=verified` 的施工队/持牌师傅/设计与专业服务，且 `requirePaid` 开着时要是缴费会员（否则 `eligible=false` + 一句人话 `reason`，未缴费时 `needPay=true`）；工人、没登记的 `eligible=false`。活儿条件：房主/房东/物业/开发商发的（招工不给）、找人中没到期、工种在他的 `verifiedTrades` 里、城市在他的服务城市里、情况说明内容安全 `sec_status='pass'`、不是自己发的。**不给预算、任何金额、照片、语音、标题** |
+| `GET /jobs/entry` | 🌐 | — | `{show, find, work}`（D12：网站顶部菜单「找工人·接活」和首页入口跟开关走，两个都关 `show=false`；可缓存 60 秒） |
 | `GET /jobs/posts?trade=&city=&cursor=` | 🌐（work）· 小程序 404 | `city` = 城市 key | `items[活儿卡片]`、`cities[{key,name}]`（有活儿的城市）、`nextCursor`。只列找人中、没到期的 |
 | `GET /jobs/posts/:id` | 🌐 · 小程序 404 | — | `post`（卡片 + `description,photos,voiceUrl,propertyType,propertyTypeLabel,callName,wantSiteVisit,turnover,mine`）、`canContact`、`reason`（不能联系的人话原因）、`reasonCode`、`needPay`。**不含电话、不含地址** |
 | `POST /jobs/posts` | 👤（find）· 小程序 404 | `{posterRole:'owner'\|'landlord'\|'property'\|'developer'\|'crew', trades[]（或 trade）, cityKey（城市表里启用的 key；旧写法 `city` 传名字也认，表里没有的一律 400）, description?, photos[≤9]?, voiceUrl?, timing:'asap'\|'week'\|'month'\|'flexible', budget?, propertyType?:'house'\|'condo'\|'commercial', callName?, wechat?, wantSiteVisit?, turnover?, crewHeadcount?, crewDuration?, crewPay?}` | `{ids[], batchId, next}`。**按工种拆单**：选几个工种就拆成几条（同一 `batchId`），退租整修 `turnover=true` 时页面预选 `options.turnoverTrades`。描述 / 语音 / 照片至少一样；`crew` 必填 `crewHeadcount`、`crewDuration`。手机号用已验证的（没有 → `need_phone`）。标题自动生成：`城市 · 工种 · 一句话`（从描述第一句截 16 字；招工为 `城市 · 工种 · 招工人 N 人`）。发布即通知第一批（`next` 是给发布人看的“接下来会发生什么”） |
 | `PATCH /jobs/posts/:id` | 👤 发布人 · 小程序 404 | `{status?:'open'\|'found'\|'closed', renew?:true, description?, cityKey?, photos?, voiceUrl?, timing?, budget?, propertyType?, callName?, wechat?, wantSiteVisit?, crewHeadcount?, crewDuration?, crewPay?}`；续期链接不登录：`{renew:true, token}` | `{post}`。续期 = 从现在起再 14 天（已到期关闭的重新变成找人中） |
 | `GET /jobs/me/posts` | 👤 · 小程序 404 | — | `items[卡片 + description,photos,batchId,closeReason,expired,notifiedCount,contacts[{proId,name,roleLabel,at,times}]]` |
-| `POST /jobs/posts/:id/contact` | 👤 · 小程序 404 | — | 有资格：`{phone, wechat, callName}`，记录谁看过；没资格：`403 {code:'not_eligible', message}`（见下） |
+| `POST /jobs/posts/:id/contact` | 👤 · 小程序只限 `/jobs/me/matched` 里的活儿（其余 404） | — | 有资格：`{phone, wechat, callName}`，记录谁看过；没资格：`403 {code:'not_eligible', message}`（见下） |
 | `POST /jobs/upload?kind=photo\|voice` | 👤 · 小程序 404 | multipart `file`（图片 ≤6MB，语音 ≤8MB） | `{url, kind}` |
 | `POST /jobs/report` | 🌐 / 👤 | `{targetType:'pro'\|'post', targetId, reason}` | `{id, message}`；进后台「待跟进」（ops_exceptions kind=jobs_report）和投诉列表 |
 | `GET /jobs/followup/:token` | 🌐 | — | `followup{title, side:'poster'\|'pro', answered, questions[{key,text}], answers}` |
@@ -266,9 +269,11 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 ### 通知与定时任务（D4）
 
-- `/api/cron/jobs?task=dispatch`（GitHub Actions 每 15 分钟 + Vercel 每天）：漏发的第一批；发布 24 小时没人联系 → 第二批 + 后台待跟进；处理排队的 CSLB 比对。
-- `?task=daily`（每天）：14 天到期关闭、第 12 天发续期链接 `/zh/jobs/renew/<id>?t=<token>`、第 7 天回访 `/zh/jobs/followup/<token>`（发布人和联系过的人各一次）、90 天复核、执照到期下架。
-- `?task=weekly`（每周二）：全部已通过的 A 类接活人重新对 CSLB 官方总表；不合格自动下架、通知本人、提醒工作人员。
+- 定时任务都由 `.github/workflows/jobs-dispatch.yml`（新文件）触发，不改 vercel.json 和已有工作流；鉴权 `Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>`，**测试站（`VERCEL_ENV=preview`）另认 `JOBS_CRON_TEST_SECRET`**（D14，只加在 Preview，正式环境不认）。
+- `/api/cron/jobs?task=dispatch`（每 15 分钟）：漏发的第一批；发布 24 小时没人联系 → 第二批 + 后台待跟进；处理排队的 CSLB 比对。
+- `?task=daily`（每天 14:00 UTC）：14 天到期关闭、第 12 天发续期链接 `/zh/jobs/renew/<id>?t=<token>`、第 7 天回访 `/zh/jobs/followup/<token>`（发布人和联系过的人各一次）、90 天复核、执照到期下架。
+- `?task=weekly`（每周二 16:00 UTC）：全部已通过的 A 类接活人重新对 CSLB 官方总表；不合格自动下架、通知本人、提醒工作人员。
+- **内容安全（D10）**：发布和改情况说明时过微信 `msgSecCheck`（用发布人的小程序 openid，沿用 lib/crm/contentSec.ts 的降级）；结果记 `jobs_posts.sec_status`：`pass` / `review` / `risky` / `unchecked`（未检测，`sec_note` = `no_wx_config` 没配微信密钥 / `no_openid` 发布人没有小程序 openid / `error`）。只有 `pass` 进 matched；网站发布、显示不受影响。
 - **发消息的保险**：正式环境（`VERCEL_ENV=production`）只有 `find`、`work` 两个开关都开才真发；其它环境只发测试身份（姓名以「验收」开头，或 `JOBS_TEST_CONTACT_IDS`、`PREVIEW_SMS_ALLOW` 里的）。没发的都记 `blocked`。渠道：微信订阅消息（`WX_SUBSCRIBE_TEMPLATES.jobs`，用户允许过才有）优先，短信兜底。给工作人员的提醒只进后台待跟进，不发消息。
 - CSLB：用官方免费总表（Data Portal「License Master」CSV）一次下载比对状态、到期日、类别、工伤保险、保证金；避开周日晚 8 点到周一早 6 点。单个牌照详情页要先过带验证码的查询页，程序不去开，只给工作人员一键打开（`cslbDetailUrl`）。其它机构一律一键打开官方查询页 + 核验清单。
 

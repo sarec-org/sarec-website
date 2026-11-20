@@ -19,6 +19,11 @@ export type Meta = {
   groups: Group[];
   trades: Trade[];
   homeEntries: HomeEntry[];
+  /** D11 冷启动：有没有任何开放工种已经有核验通过的人；没有时首页换成招募说明 */
+  anyPros?: boolean;
+  recruitingText?: string;
+  tradeRecruitingText?: string;
+  recruitingLabel?: string;
   me: { pro: MePro };
   latest: PostCard[];
   /** 城市表（后台管理；发活儿、登记接活、筛选都用它，提交 key） */

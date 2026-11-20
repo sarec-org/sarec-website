@@ -7,9 +7,9 @@ import j from './jobs.module.css';
 import { BottomBar, JobsShell, trackJobs } from './shared';
 import type { Meta, Trade } from './types';
 
-/** 找工人这边只显示开放、并且已经有核验通过的人的工种；工作人员预览时全显示（没人的变淡） */
+/** 全部工种页：所有开放的工种都出；还没有核验通过的人的标“招募中”（D11） */
 export function visibleTrades(meta: Meta): Trade[] {
-  return meta.trades.filter((t) => t.open && (t.hasPros || meta.staffPreview));
+  return meta.trades.filter((t) => t.open);
 }
 
 export function TradesPage() {
@@ -37,7 +37,7 @@ export function TradesPage() {
           return (
             <>
               <h1 className={s.h1}>{groups[0].name}</h1>
-              {blocks.length === 0 ? <Empty /> : <Tiles ts={blocks[0].ts} />}
+              {blocks.length === 0 ? <Empty /> : <Tiles ts={blocks[0].ts} label={meta.recruitingLabel} />}
             </>
           );
         }
@@ -48,7 +48,7 @@ export function TradesPage() {
             {blocks.map(({ g, ts }) => (
               <section key={g.key}>
                 <h2 className={j.groupTitle}>{g.name}</h2>
-                <Tiles ts={ts} />
+                <Tiles ts={ts} label={meta.recruitingLabel} />
               </section>
             ))}
           </>
@@ -58,12 +58,17 @@ export function TradesPage() {
   );
 }
 
-function Tiles({ ts }: { ts: Trade[] }) {
+function Tiles({ ts, label }: { ts: Trade[]; label?: string }) {
   return (
     <div className={j.tiles}>
       {ts.map((t) => (
-        <Link key={t.key} href={`/zh/jobs/find/${encodeURIComponent(t.key)}`} className={`${j.tile} ${t.hasPros ? '' : j.tileOff}`} onClick={() => trackJobs('jobs_trade', t.key)}>
-          {t.name}
+        <Link key={t.key} href={`/zh/jobs/find/${encodeURIComponent(t.key)}`} className={`${j.tile} ${t.hasPros ? '' : j.tileRecruit}`} onClick={() => trackJobs('jobs_trade', t.key)}>
+          {t.hasPros ? t.name : (
+            <>
+              <span>{t.name}</span>
+              <small className={j.tileTag}>{label ?? '招募中'}</small>
+            </>
+          )}
         </Link>
       ))}
     </div>

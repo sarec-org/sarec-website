@@ -96,7 +96,14 @@ async function main() {
   assert.ok(r.j.trades.length >= 40);
   assert.equal(r.j.staffPreview, false);
   assert.ok(r.j.disclaimer.includes('不参与合同与付款'));
-  ok('meta：开关关、7 个首页入口、资质表、统一声明');
+  assert.equal(typeof r.j.anyPros, 'boolean');
+  assert.equal(r.j.recruitingText, '正在招募各工种的接活人，可先发布活儿等人联系');
+  assert.equal(r.j.tradeRecruitingText, '这个工种正在招募接活人');
+  assert.ok(r.j.trades.some((t: { open: boolean; hasPros: boolean }) => t.open && !t.hasPros), 'D11：没人的开放工种也给（hasPros=false）');
+  ok('meta：开关关、7 个首页入口、资质表、统一声明；D11 冷启动字段（anyPros、招募中文字、没人的工种也给）');
+  r = await call('GET', `/jobs/entry?t=${Date.now()}`);
+  assert.equal(r.j.show, false);
+  ok('D12：两个开关都关，网站菜单 / 首页入口不出（/jobs/entry show=false）');
   r = await call('GET', '/jobs/pros?trade=plumbing');
   assert.equal(r.status, 403);
   assert.equal(r.j.error.code, 'not_open');
@@ -263,6 +270,66 @@ async function main() {
   r = await call('POST', `/jobs/posts/${pCrew}/contact`, proA);
   assert.equal(r.status, 403);
   ok('施工队招工：工人能联系，公司不能');
+
+  // ── D10：小程序「通知给我的活儿」 ──
+  r = await call('GET', `/jobs/entry?t=${Date.now()}`);
+  assert.equal(r.j.show, true);
+  const { rows: sec } = await pool.query<{ id: string; sec_status: string; sec_note: string | null; sec_checked_at: Date | null }>(`SELECT id, sec_status, sec_note, sec_checked_at FROM jobs_posts WHERE id = ANY($1::uuid[])`, [[pHandy, pPaint, pCrew]]);
+  assert.ok(sec.every((x) => x.sec_status && x.sec_checked_at !== null), JSON.stringify(sec));
+  const handySec = sec.find((x) => x.id === pHandy)!;
+  r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+  assert.equal(r.status, 200, JSON.stringify(r.j));
+  assert.equal(r.j.eligible, true);
+  if (handySec.sec_status !== 'pass') {
+    assert.equal(handySec.sec_status, 'unchecked');
+    assert.ok(['no_wx_config', 'no_openid', 'error'].includes(String(handySec.sec_note)));
+    assert.ok(!r.j.items.some((x: { id: string }) => x.id === pHandy), '未检测的不进 matched');
+    ok(`D10：情况说明发布时过内容安全；这里记“未检测”（${handySec.sec_note}），不进 matched`);
+  }
+  // 模拟内容安全已通过（测试站没有微信密钥）
+  await pool.query(`UPDATE jobs_posts SET sec_status = 'pass', sec_note = 'test' WHERE id = ANY($1::uuid[])`, [[pHandy, pPaint, pCrew]]);
+  r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+  const mh = r.j.items.find((x: { id: string }) => x.id === pHandy);
+  assert.ok(mh, 'D10：已核验工种 + 服务城市对口的业主活儿要出现');
+  assert.deepEqual(Object.keys(mh).sort(), ['city', 'contacted', 'createdAt', 'description', 'id', 'timing', 'timingLabel', 'trade', 'tradeName']);
+  assert.equal(mh.contacted, true);
+  assert.equal(mh.city, '阿凯迪亚');
+  assert.ok(!JSON.stringify(r.j).includes('$2000'), '不给预算');
+  assert.ok(!r.j.items.some((x: { id: string }) => x.id === pPaint), '没核验的工种不给');
+  assert.ok(!r.j.items.some((x: { id: string }) => x.id === pCrew), '招工那一类不给');
+  ok('D10：matched 只给对口的业主活儿；字段只有 id/城市/工种/情况说明/什么时候要/发布时间/已联系过；不给预算、照片、招工');
+  r = await call('POST', `/jobs/posts/${pHandy}/contact`, proA, undefined, MP);
+  assert.equal(r.status, 200, JSON.stringify(r.j));
+  assert.ok(String(r.j.phone).startsWith('+1626'));
+  r = await call('POST', `/jobs/posts/${pPaint}/contact`, proA, undefined, MP);
+  assert.equal(r.status, 404);
+  r = await call('POST', `/jobs/posts/${pCrew}/contact`, worker, undefined, MP);
+  assert.equal(r.status, 404);
+  r = await call('GET', `/jobs/posts/${pHandy}`, proA, undefined, MP);
+  assert.equal(r.status, 404);
+  ok('D10：小程序联系发布人只限 matched 里的活儿（其余 404）；活儿详情等其它 posts 接口小程序照旧 404');
+  r = await call('GET', '/jobs/me/matched', worker, undefined, MP);
+  assert.equal(r.j.eligible, false);
+  assert.deepEqual(r.j.items, []);
+  r = await call('GET', '/jobs/me/matched', owner, undefined, MP);
+  assert.equal(r.j.eligible, false);
+  r = await call('GET', '/jobs/me/matched', designer, undefined, MP);
+  assert.equal(r.j.eligible, false);
+  assert.ok(r.j.reason.includes('核验'));
+  r = await call('GET', '/jobs/me/matched', null, undefined, MP);
+  assert.equal(r.status, 401);
+  await call('PATCH', '/workbench/jobs/switches', staff, { requirePaid: true });
+  r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+  assert.equal(r.j.eligible, false);
+  assert.equal(r.j.needPay, true);
+  r = await call('POST', `/jobs/posts/${pHandy}/contact`, proA, undefined, MP);
+  assert.equal(r.status, 404);
+  await call('PATCH', '/workbench/jobs/switches', staff, { requirePaid: false });
+  await pool.query(`UPDATE jobs_posts SET sec_status = 'review' WHERE id = $1`, [pHandy]);
+  r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+  assert.ok(!r.j.items.some((x: { id: string }) => x.id === pHandy), '没过（review/risky）的不进 matched');
+  await pool.query(`UPDATE jobs_posts SET sec_status = 'pass' WHERE id = $1`, [pHandy]);
+  ok('D10：工人、没登记、核验中、未缴费（开关开）一律不给；内容安全没过的不给');
 
   // ── 7. 通知与保险 ──
   await pool.query(`UPDATE jobs_pros SET status = 'verified', verified_trades = '{handyman}', verified_at = now() WHERE id = $1`, [realProId]);

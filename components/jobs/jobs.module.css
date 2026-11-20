@@ -39,6 +39,10 @@
 .tile:hover { border-color: var(--ivory); }
 .tileAll { color: var(--navy-deep); background: var(--ivory); border-color: var(--ivory); }
 .tileOff { opacity: 0.5; }
+/* D11：没人的工种标“招募中”（不变淡，照样能点） */
+.tileRecruit { flex-direction: column; gap: 2px; border-style: dashed; }
+.tileTag { font-size: 0.75rem; font-weight: 400; color: var(--ivory-mute); }
+.recruitLine { margin: 0.9rem 0 0; color: var(--ivory); font-size: 1rem; line-height: 1.6; }
 .groupTitle { font-family: var(--serif-zh); font-size: 1.1rem; margin: 1.4rem 0 0.2rem; color: var(--ivory); }
 @media (max-width: 380px) { .tile { font-size: 0.95rem; } }
 

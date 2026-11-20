@@ -23,8 +23,26 @@ export function ProsPage({ trade }: { trade: string }) {
         </BottomBar>
       )}
     >
-      {(meta) => <ProsList trade={trade} name={tradeName(meta, trade)} />}
+      {(meta) => {
+        const t = meta.trades.find((x) => x.key === trade);
+        // D11：这个工种还没有核验通过的人 → "这个工种正在招募接活人" + 发布活儿 / 登记接活
+        if (t && t.open && !t.hasPros) return <Recruiting name={t.name} trade={trade} text={meta.tradeRecruitingText} />;
+        return <ProsList trade={trade} name={tradeName(meta, trade)} />;
+      }}
     </JobsShell>
+  );
+}
+
+function Recruiting({ name, trade, text }: { name: string; trade: string; text?: string }) {
+  return (
+    <>
+      <h1 className={s.h1}>{name}</h1>
+      <div className={s.notice}>{text ?? '这个工种正在招募接活人'}。可以先发布活儿，有人登记通过后第一时间联系你；你是做这一行的，可以登记接活。</div>
+      <div className={j.cardActions} style={{ marginTop: '1rem' }}>
+        <Link href={`/zh/jobs/post?trade=${encodeURIComponent(trade)}`} className={`${s.btn} ${j.btnFind}`}>发布活儿</Link>
+        <Link href="/zh/jobs/register" className={`${s.btn} ${j.btnWork}`}>登记接活</Link>
+      </div>
+    </>
   );
 }
 

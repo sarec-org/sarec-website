@@ -1,6 +1,6 @@
 -- 找工人 · 接活（11/20）。幂等：可以重复跑。不依赖 0037。
 -- 表：工种分组、工种（资质表）、首页入口、接活人、核验记录、活儿、联系记录（谁看过电话）、通知记录、回访、投诉。
--- 开关：沿用 crm_settings（jobs_find_on 默认关、jobs_work_on 默认关、jobs_require_paid_member 默认开），改动记 updated_by + crm_audit_log。
+-- 开关：沿用 crm_settings（D11：jobs_find_on、jobs_work_on 默认开——审核的和上线的是同一个东西，开关只留给日后整栏下线；jobs_require_paid_member 默认开），改动记 updated_by + crm_audit_log。
 -- 统计点击：沿用 track_events（name = 'jobs_trade' / 'jobs_home_entry'）。
 
 -- ── 1. 工种分组 ─────────────────────────────────────────────────────────
@@ -232,10 +232,10 @@ CREATE TABLE IF NOT EXISTS jobs_reports (
 );
 CREATE INDEX IF NOT EXISTS jobs_reports_status_idx ON jobs_reports (status, created_at DESC);
 
--- ── 11. 三个开关（发布时找工人、接活都关；要求缴费会员默认开）──────────
+-- ── 11. 三个开关（D11：找工人、接活默认开；要求缴费会员默认开。只影响新建，已有的值不改）──
 INSERT INTO crm_settings (key, value, updated_by) VALUES
-  ('jobs_find_on', 'false', 'migration-0038'),
-  ('jobs_work_on', 'false', 'migration-0038'),
+  ('jobs_find_on', 'true', 'migration-0038'),
+  ('jobs_work_on', 'true', 'migration-0038'),
   ('jobs_require_paid_member', 'true', 'migration-0038')
 ON CONFLICT (key) DO NOTHING;
 
@@ -365,3 +365,11 @@ UPDATE jobs_posts p SET city_key = c.key FROM jobs_cities c WHERE p.city_key IS 
 CREATE INDEX IF NOT EXISTS jobs_posts_city_key_idx ON jobs_posts (city_key, status);
 UPDATE jobs_pros p SET cities = ARRAY(SELECT coalesce(c.key, x) FROM unnest(p.cities) WITH ORDINALITY AS u(x, i) LEFT JOIN jobs_cities c ON c.name = u.x ORDER BY u.i)
  WHERE EXISTS (SELECT 1 FROM unnest(p.cities) x JOIN jobs_cities c ON c.name = x);
+
+-- D10：活儿的「情况说明」发布时过微信内容安全（msgSecCheck）。
+-- sec_status：pass 通过 / review 需人工复核 / risky 不通过 / unchecked 未检测（没配微信密钥、发布人没有小程序 openid、接口出错）。
+-- 只有 pass 的才进小程序「通知给我的活儿」（GET /jobs/me/matched）。sec_note 记未检测的原因（no_wx_config / no_openid / error）。
+ALTER TABLE jobs_posts ADD COLUMN IF NOT EXISTS sec_note text;
+ALTER TABLE jobs_posts ADD COLUMN IF NOT EXISTS sec_checked_at timestamptz;
+UPDATE jobs_posts SET sec_status = 'unchecked', sec_note = coalesce(sec_note, 'before_check') WHERE sec_status IS NULL;
+CREATE INDEX IF NOT EXISTS jobs_posts_matched_idx ON jobs_posts (trade_key, city_key) WHERE status = 'open' AND sec_status = 'pass';

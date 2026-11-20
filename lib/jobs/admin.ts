@@ -6,7 +6,7 @@ import { recordException, resolveException } from '@/lib/crm/followups';
 import type { Viewer } from './access';
 import {
   DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
-  TURNOVER_TRADES, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
+  TURNOVER_TRADES, RECRUITING_TEXT, TRADE_RECRUITING_TEXT, RECRUITING_LABEL, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
 } from './constants';
 import { deliver, isProduction, jobsTemplate } from './notify';
 import { getSwitches } from './settings';
@@ -31,6 +31,11 @@ export async function buildMeta(v: Viewer) {
       key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon
     })),
     homeEntries: entries.map((e) => ({ label: e.label, icon: e.icon, target: e.target })),
+    // D11 冷启动：一个核验通过的人都没有时，首页方块区换成一行招募说明 +「全部工种和服务」；没人的工种标“招募中”
+    anyPros: trades.some((t) => t.open && withPros.has(t.key)),
+    recruitingText: RECRUITING_TEXT,
+    tradeRecruitingText: TRADE_RECRUITING_TEXT,
+    recruitingLabel: RECRUITING_LABEL,
     cities,
     me: { pro: await proBrief(pool, v.contactId) },
     latest: showLatest ? await latestPosts(3) : [],
