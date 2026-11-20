@@ -126,8 +126,9 @@ export async function scanMaster(numbers: string[], fetcher: typeof fetch = fetc
     const { done, value } = await reader.read();
     if (done) break;
     buf += dec.decode(value, { stream: true });
-    let i: number;
-    while ((i = buf.indexOf('\n')) >= 0) { take(buf.slice(0, i)); buf = buf.slice(i + 1); }
+    const lines = buf.split('\n');
+    buf = lines.pop() ?? '';
+    for (const l of lines) take(l);
     if (found.size === want.size) { await reader.cancel().catch(() => undefined); break; }
   }
   if (buf) take(buf);
@@ -228,7 +229,9 @@ export async function runVerification(now = new Date(), opts: { weekly?: boolean
       out.cslb = 'maintenance_window';
     } else {
       try {
-        const recs = await scanMaster(withA.map((p) => p.license_no!), opts.fetcher);
+        const nums = withA.map((p) => p.license_no!);
+        // 下载几十 MB，偶尔中途断开：再试一次
+        const recs = await scanMaster(nums, opts.fetcher).catch(() => scanMaster(nums, opts.fetcher));
         let bad = 0;
         for (const p of withA) {
           const st = await applyCslb(p, recs.get(p.license_no!.replace(/\D/g, '')) ?? null, review90.has(p.id) ? 'review90' : 'auto_cslb', trades);
