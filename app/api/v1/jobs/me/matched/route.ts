@@ -12,5 +12,5 @@ export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   const v = await viewer(req);
   requireSide(v, 'work');
-  return ok(await matchedPosts(requireLogin(v), new URL(req.url).searchParams.get('cursor')));
+  return ok(await matchedPosts(requireLogin(v), new URL(req.url).searchParams.get('cursor'), { mp: v.mp }));
 });

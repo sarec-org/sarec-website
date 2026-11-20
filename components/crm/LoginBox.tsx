@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from './client';
 import s from './crm.module.css';
+import { TEST_FIXED_CODE_TEXT } from '@/lib/crm/testFixedCode';
 
 export type Identity = { channel: 'email' | 'sms'; target: string };
 
@@ -30,12 +31,15 @@ export function ContactCodeFields({
   c,
   code,
   setCode,
-  smsAvailable
+  smsAvailable,
+  testFixedCode
 }: {
   c: ReturnType<typeof useContactInput>;
   code: string;
   setCode: (v: string) => void;
   smsAvailable: boolean;
+  /** D16：测试站才是 true（服务器 /api/v1/meta 给）：显示"测试站：验证码固定为 246810" */
+  testFixedCode?: boolean;
 }) {
   const [sending, setSending] = useState(false);
   const [left, setLeft] = useState(0);
@@ -48,14 +52,14 @@ export function ContactCodeFields({
     if (sending || left > 0) return;
     setSending(true);
     setMsg(null);
-    const r = await api<{ target: string; devCode?: string }>('/api/v1/auth/code/send', { body: { channel: c.channel, target: c.target } });
+    const r = await api<{ target: string; devCode?: string; testFixedCode?: boolean }>('/api/v1/auth/code/send', { body: { channel: c.channel, target: c.target } });
     setSending(false);
     if (!r.ok) {
       setMsg({ ok: false, text: r.message });
       return;
     }
     if (r.data.devCode) setCode(r.data.devCode); // 仅测试环境
-    setMsg({ ok: true, text: c.channel === 'email' ? '验证码已发到邮箱，10 分钟内有效（没收到请看垃圾邮件）' : '验证码已发到手机，10 分钟内有效' });
+    setMsg({ ok: true, text: r.data.testFixedCode ? TEST_FIXED_CODE_TEXT : c.channel === 'email' ? '验证码已发到邮箱，10 分钟内有效（没收到请看垃圾邮件）' : '验证码已发到手机，10 分钟内有效' });
     setLeft(60);
     clearInterval(timer.current);
     timer.current = setInterval(() => setLeft((x) => (x <= 1 ? (clearInterval(timer.current), 0) : x - 1)), 1000);
@@ -88,6 +92,7 @@ export function ContactCodeFields({
         ) : (
           <>
             {!smsAvailable && <p className={s.small}>短信暂时发不出，请改用邮箱验证。</p>}
+            {testFixedCode && <p className={s.small}>{TEST_FIXED_CODE_TEXT}</p>}
             <div className={s.inputRow}>
               <select className={s.select} style={{ flex: '0 0 9.5rem' }} value={c.cc} onChange={(e) => c.setCc(e.target.value)} aria-label="国家码">
                 {COUNTRIES.map((x) => (
@@ -139,6 +144,7 @@ export function useMeta() {
     roleCategories: { key: string; label: string; subs: { key: string; label: string }[] }[];
     quickRoles: { key: string; label: string }[];
     smsAvailable: boolean;
+    testFixedCode?: boolean;
   } | null>(null);
   useEffect(() => {
     api<NonNullable<typeof meta>>('/api/v1/meta').then((r) => r.ok && setMeta(r.data));
@@ -167,7 +173,7 @@ export function LoginBox({ onDone, initialEmail = '' }: { onDone: () => void; in
 
   return (
     <form onSubmit={submit}>
-      <ContactCodeFields c={c} code={code} setCode={setCode} smsAvailable={!!meta?.smsAvailable} />
+      <ContactCodeFields c={c} code={code} setCode={setCode} smsAvailable={!!meta?.smsAvailable} testFixedCode={!!meta?.testFixedCode} />
       {err && <p className={s.error} role="alert">{err}</p>}
       <button className={`${s.btn} ${s.btnBlock}`} disabled={busy || code.length !== 6}>
         {busy ? '处理中…' : '登录'}

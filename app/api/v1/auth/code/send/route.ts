@@ -7,5 +7,5 @@ export const POST = handler(async (req: Request) => {
   const b = await body<{ channel?: Channel; target?: string }>(req);
   const channel: Channel = b.channel === 'sms' ? 'sms' : 'email';
   const r = await sendLoginCode(channel, String(b.target ?? ''));
-  return ok({ target: r.target, ...(r.devCode ? { devCode: r.devCode } : {}) });
+  return ok({ target: r.target, ...(r.devCode ? { devCode: r.devCode } : {}), ...(r.testFixedCode ? { testFixedCode: true } : {}) });
 });

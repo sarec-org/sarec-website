@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
 import { staffCan, type Staff } from '@/lib/crm/auth';
 import { recordException, resolveException } from '@/lib/crm/followups';
+import { TEST_FIXED_CODE_TEXT, testFixedCodeOn } from '@/lib/crm/testFixedCode';
 import type { Viewer } from './access';
 import {
   DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
@@ -26,6 +27,8 @@ export async function buildMeta(v: Viewer) {
     switches: { find: s.find, work: s.work, requirePaid: s.requirePaid },
     staffPreview,
     staffPreviewText: staffPreview ? STAFF_PREVIEW_TEXT : null,
+    /** 指令 7 · D16：只在测试站给——手机验证码固定 246810，小程序在验证手机的地方显示 testFixedCodeText 这行小字 */
+    ...(testFixedCodeOn() ? { testFixedCode: true, testFixedCodeText: TEST_FIXED_CODE_TEXT } : {}),
     groups,
     trades: trades.map((t) => ({
       key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon

@@ -14,6 +14,7 @@ import { getPool, withTransaction } from '@/lib/db/client';
 import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
 import { CrmError, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
+import { TEST_FIXED_CODE, TEST_FIXED_CODE_TEXT, testFixedCodeOn } from './testFixedCode';
 
 export type Kind = 'email' | 'phone';
 export type MethodStatus = 'unconfirmed' | 'confirmed' | 'invalid';
@@ -54,6 +55,9 @@ export type ContactInfo = {
   needsReconfirm: boolean;
   confirmedAt: string | null;
   phoneVerifyAvailable: boolean;
+  /** D16：只在测试站出现（正式站没有这两个字段） */
+  testFixedCode?: true;
+  testFixedCodeText?: string;
 };
 
 async function currentMethods(db: Db, contactId: string): Promise<Partial<Record<Kind, MethodRow>>> {
@@ -87,7 +91,8 @@ export async function getContactInfo(db: Db, contactId: string): Promise<Contact
     needsUpdate: cur.email?.status === 'invalid' || cur.phone?.status === 'invalid',
     needsReconfirm: base != null && base < cutoff.getTime(),
     confirmedAt: rows[0]?.contact_info_confirmed_at?.toISOString() ?? null,
-    phoneVerifyAvailable: twilioVerifyConfigured()
+    phoneVerifyAvailable: twilioVerifyConfigured() || testFixedCodeOn(),
+    ...(testFixedCodeOn() ? { testFixedCode: true, testFixedCodeText: TEST_FIXED_CODE_TEXT } : {})
   };
 }
 
@@ -399,7 +404,7 @@ export async function phoneSendLimits(db: Db, phone: string, contactId: string |
   if (lim[0].today >= PHONE_DAILY_MAX || lim[0].mine >= PHONE_DAILY_MAX) throw new CrmError('too_many_attempts', '今天发送次数已达上限（10 次），请明天再试，或改用邮箱验证');
 }
 
-export async function sendPhoneCode(contactId: string): Promise<{ alreadyVerified: boolean; masked: string; message: string }> {
+export async function sendPhoneCode(contactId: string): Promise<{ alreadyVerified: boolean; masked: string; message: string; testFixedCode?: true }> {
   const pool = getPool();
   const { rows } = await pool.query<{ id: string; value: string; status: MethodStatus }>(
     `SELECT id, value, status FROM contact_methods WHERE contact_id = $1 AND kind = 'phone' AND is_current`,
@@ -414,6 +419,8 @@ export async function sendPhoneCode(contactId: string): Promise<{ alreadyVerifie
     });
     return { alreadyVerified: true, masked: maskPhone(m.value), message: '这个号码已验证过，无需再验证' };
   }
+  // D16：测试站不真发短信，验证码固定（见 testFixedCode.ts）；正式站不走这里
+  if (testFixedCodeOn()) return { alreadyVerified: false, masked: maskPhone(m.value), message: TEST_FIXED_CODE_TEXT, testFixedCode: true };
   if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
   await phoneSendLimits(pool, m.value, contactId);
   const r = await twilioVerify('Verifications', { To: m.value, Channel: 'sms', Locale: 'zh' });
@@ -438,11 +445,16 @@ export async function checkPhoneCode(contactId: string, code: string): Promise<{
   const m = rows[0];
   if (!m) throw new CrmError('no_phone', '请先填写手机号');
   if (m.status === 'confirmed') return { message: '手机号已验证' };
-  if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
-  const r = await twilioVerify('VerificationCheck', { To: m.value, Code: clean });
-  if (!r.ok && r.code === 20404) throw new CrmError('code_expired', '验证码已过期，请重新获取');
-  if (!r.ok) throw new CrmError('sms_failed', SMS_FALLBACK);
-  if (r.status !== 'approved') throw new CrmError('code_wrong', '验证码不对，请再试一次');
+  if (testFixedCodeOn()) {
+    // D16：测试站只认固定验证码
+    if (clean !== TEST_FIXED_CODE) throw new CrmError('code_wrong', `验证码不对（${TEST_FIXED_CODE_TEXT}）`);
+  } else {
+    if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
+    const r = await twilioVerify('VerificationCheck', { To: m.value, Code: clean });
+    if (!r.ok && r.code === 20404) throw new CrmError('code_expired', '验证码已过期，请重新获取');
+    if (!r.ok) throw new CrmError('sms_failed', SMS_FALLBACK);
+    if (r.status !== 'approved') throw new CrmError('code_wrong', '验证码不对，请再试一次');
+  }
   await withTransaction(async (db) => {
     await noteVerified(db, contactId, 'phone', m.value);
     await promoteIdentity(db, contactId, 'phone', m.value);

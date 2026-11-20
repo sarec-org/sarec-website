@@ -1,4 +1,5 @@
 /** 接活人：登记、我的接活、找工人列表、联系（看电话并记录） */
+import { createHash } from 'node:crypto';
 import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
 import { memberStatus } from '@/lib/crm/membership';
@@ -347,19 +348,61 @@ export async function getProPublic(id: string, v: Viewer) {
   return proCard(p, await tradeMap(pool), await cityNames(pool));
 }
 
-/** 找工人的人点“联系”：给电话（和微信），记录谁看过 */
-export async function contactPro(id: string, v: Viewer, viewerId: string) {
+/**
+ * 指令 7 · D17：联系接活人不用登录、不用验证手机（小程序、网站游客都能点）。
+ * 频率限制（防刷号）：登录的（小程序都是登录的）按同一身份算，没登录的游客按同一 IP 算——
+ * （登录的人不按 IP 算：手机网络常常很多人共用一个出口 IP，按 IP 会误挡小程序用户）
+ * 1 小时内最多看 20 个不同的接活人、24 小时内最多 60 个；24 小时内看过的同一个人再点不算新的。工作人员、看自己不限。
+ */
+export const PRO_CONTACT_LIMITS = { hour: 20, day: 60 } as const;
+export const PRO_CONTACT_TOO_MANY = '查看太频繁了，请稍后再试，或加商会微信';
+
+/** IP 只存加盐哈希（不存原始 IP） */
+export function clickIpHash(req: Request): string | null {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || null;
+  if (!ip) return null;
+  const salt = process.env.AGENT_IP_SALT || process.env.CRON_SECRET || 'sarec-jobs-click-v1';
+  return createHash('sha256').update(`${salt}|jobs-click|${ip}`, 'utf8').digest('hex').slice(0, 32);
+}
+
+async function overLimit(db: Db, col: 'viewer_contact_id' | 'ip_hash', key: string, proId: string, lim: { hour: number; day: number }): Promise<boolean> {
+  const { rows } = await db.query<{ hour: number; day: number; seen: boolean }>(
+    `SELECT count(DISTINCT pro_id) FILTER (WHERE created_at > now() - interval '1 hour')::int AS hour,
+            count(DISTINCT pro_id)::int AS day,
+            coalesce(bool_or(pro_id = $2), false) AS seen
+       FROM jobs_pro_clicks WHERE ${col} = $1 AND NOT limited AND created_at > now() - interval '1 day'`,
+    [key, proId]
+  );
+  const r = rows[0];
+  if (!r || r.seen) return false;
+  return r.hour >= lim.hour || r.day >= lim.day;
+}
+
+/** 找工人的人点“联系”：给电话（和微信），每次点击都记一行（谁 / IP 哈希、什么时候） */
+export async function contactPro(id: string, v: Viewer, ipHash: string | null, lim: { hour: number; day: number } = PRO_CONTACT_LIMITS) {
   const pool = getPool();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new CrmError('not_found', '找不到这个人，可能已经下架');
   const p = await proById(pool, id);
+  const viewerId = v.contactId;
   if (!p || (!p.listed && !v.staff && p.contact_id !== viewerId)) throw new CrmError('not_found', '找不到这个人，可能已经下架');
-  const phone = await anyPhone(pool, p.contact_id);
-  if (p.contact_id !== viewerId) {
-    await pool.query(
-      `INSERT INTO jobs_contacts (direction, pro_id, viewer_contact_id) VALUES ('pro', $1, $2)
-       ON CONFLICT (pro_id, viewer_contact_id) WHERE direction = 'pro' DO UPDATE SET times = jobs_contacts.times + 1, last_at = now()`,
-      [id, viewerId]
-    );
+  const self = !!viewerId && p.contact_id === viewerId;
+  if (!self) {
+    const limited =
+      !v.staff &&
+      (viewerId ? await overLimit(pool, 'viewer_contact_id', viewerId, id, lim) : !!ipHash && (await overLimit(pool, 'ip_hash', ipHash, id, lim)));
+    await pool.query(`INSERT INTO jobs_pro_clicks (pro_id, viewer_contact_id, ip_hash, client, limited) VALUES ($1, $2, $3, $4, $5)`, [
+      id, viewerId, ipHash, v.mp ? 'mp' : 'web', limited
+    ]);
+    if (limited) throw new CrmError('too_many_attempts', PRO_CONTACT_TOO_MANY);
+    if (viewerId) {
+      await pool.query(
+        `INSERT INTO jobs_contacts (direction, pro_id, viewer_contact_id) VALUES ('pro', $1, $2)
+         ON CONFLICT (pro_id, viewer_contact_id) WHERE direction = 'pro' DO UPDATE SET times = jobs_contacts.times + 1, last_at = now()`,
+        [id, viewerId]
+      );
+    }
   }
+  const phone = await anyPhone(pool, p.contact_id);
   return { phone, wechat: p.wechat, name: p.name };
 }
 

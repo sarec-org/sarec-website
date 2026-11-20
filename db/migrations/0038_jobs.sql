@@ -373,3 +373,19 @@ ALTER TABLE jobs_posts ADD COLUMN IF NOT EXISTS sec_note text;
 ALTER TABLE jobs_posts ADD COLUMN IF NOT EXISTS sec_checked_at timestamptz;
 UPDATE jobs_posts SET sec_status = 'unchecked', sec_note = coalesce(sec_note, 'before_check') WHERE sec_status IS NULL;
 CREATE INDEX IF NOT EXISTS jobs_posts_matched_idx ON jobs_posts (trade_key, city_key) WHERE status = 'open' AND sec_status = 'pass';
+
+-- 指令 7 · D17：联系接活人不用登录、不用验证手机（小程序、网站游客都能点）。
+-- 每次点「联系」记一行：登录的记档案，没登录的记 IP 哈希（加盐，不存原始 IP）；用于统计和防刷（频率限制）。
+-- limited = 这次被频率限制挡住了（不给电话）；算频率时不计这些行。
+CREATE TABLE IF NOT EXISTS jobs_pro_clicks (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  pro_id             uuid NOT NULL REFERENCES jobs_pros(id) ON DELETE CASCADE,
+  viewer_contact_id  uuid REFERENCES contacts(id) ON DELETE SET NULL,
+  ip_hash            text,
+  client             text,                                -- mp / web
+  limited            boolean NOT NULL DEFAULT false,
+  created_at         timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS jobs_pro_clicks_viewer_idx ON jobs_pro_clicks (viewer_contact_id, created_at DESC) WHERE viewer_contact_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS jobs_pro_clicks_ip_idx ON jobs_pro_clicks (ip_hash, created_at DESC) WHERE ip_hash IS NOT NULL;
+CREATE INDEX IF NOT EXISTS jobs_pro_clicks_pro_idx ON jobs_pro_clicks (pro_id, created_at DESC);

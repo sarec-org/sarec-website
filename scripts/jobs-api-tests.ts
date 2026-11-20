@@ -17,6 +17,7 @@ const CRON = process.env.CRON_SECRET || '';
 const pool = getPool();
 const contacts: string[] = [];
 const staffEmails: string[] = [];
+const testPhones: string[] = [];
 let passed = 0;
 const ok = (n: string) => { passed++; console.log(`  ✓ ${n}`); };
 const uniq = randomBytes(3).toString('hex');
@@ -115,6 +116,66 @@ async function main() {
   assert.equal(r.j.staffPreview, true);
   assert.ok(r.j.staffPreviewText.includes('仅工作人员可见'));
   ok('工作人员开关关着也能用，带“仅工作人员可见”');
+
+  // ── 指令 7 · D16：测试站手机验证走得通（只在 VERCEL_ENV=preview；正式站、本地不出现） ──
+  {
+    const { testFixedCodeOn, TEST_FIXED_CODE } = await import('@/lib/crm/testFixedCode');
+    const saved = process.env.VERCEL_ENV;
+    for (const env of ['production', undefined, 'development']) {
+      if (env === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = env;
+      assert.equal(testFixedCodeOn(), false, `VERCEL_ENV=${env} 不能有固定验证码`);
+    }
+    process.env.VERCEL_ENV = 'preview';
+    assert.equal(testFixedCodeOn(), true);
+    if (saved === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = saved;
+    assert.equal(TEST_FIXED_CODE, '246810');
+    const preview = /vercel\.app/.test(BASE);
+    r = await call('GET', '/meta');
+    const vp = await call('GET', '/jobs/meta');
+    if (!preview) {
+      assert.equal(r.j.testFixedCode, undefined);
+      assert.equal(vp.j.testFixedCode, undefined);
+      ok('D16：不是测试站时没有固定验证码（testFixedCodeOn 只认 VERCEL_ENV=preview；接口不给 testFixedCode）');
+    } else {
+      assert.equal(r.j.testFixedCode, true);
+      assert.equal(r.j.testFixedCodeText, '测试站：验证码固定为 246810');
+      assert.equal(r.j.smsAvailable, true);
+      assert.equal(vp.j.testFixedCode, true);
+      const ph = `+1626${String(Math.floor(1e6 + Math.random() * 8.9e6))}`;
+      r = await call('POST', '/me/contact', noPhone, { phone: ph });
+      assert.equal(r.status, 200, JSON.stringify(r.j));
+      r = await call('GET', '/me/contact', noPhone, undefined, MP);
+      assert.equal(r.j.contactInfo.phone.status, 'unconfirmed');
+      assert.equal(r.j.contactInfo.phoneVerifyAvailable, true);
+      assert.equal(r.j.contactInfo.testFixedCode, true);
+      r = await call('POST', '/me/phone/send', noPhone, {}, MP);
+      assert.equal(r.status, 200, JSON.stringify(r.j));
+      assert.equal(r.j.testFixedCode, true);
+      assert.equal(r.j.message, '测试站：验证码固定为 246810');
+      r = await call('POST', '/me/phone/verify', noPhone, { code: '123456' }, MP);
+      assert.equal(r.status, 400);
+      assert.ok(r.j.error.message.includes('246810'));
+      r = await call('POST', '/me/phone/verify', noPhone, { code: '246810' }, MP);
+      assert.equal(r.status, 200, JSON.stringify(r.j));
+      r = await call('GET', '/me/contact', noPhone);
+      assert.equal(r.j.contactInfo.phone.status, 'confirmed');
+      const { rows: sends } = await pool.query(`SELECT 1 FROM phone_verify_sends WHERE contact_id = $1`, [noPhone.id]);
+      assert.equal(sends.length, 0, '测试站不发短信、不记发送');
+      // 网站手机号登录：同样固定 246810
+      const ph2 = `+1626${String(Math.floor(1e6 + Math.random() * 8.9e6))}`;
+      testPhones.push(ph, ph2);
+      r = await call('POST', '/auth/code/send', null, { channel: 'sms', target: ph2 });
+      assert.equal(r.status, 200, JSON.stringify(r.j));
+      assert.equal(r.j.testFixedCode, true);
+      r = await call('POST', '/auth/code/verify', null, { channel: 'sms', target: ph2, code: '246810', client: 'miniprogram' });
+      assert.equal(r.status, 200, JSON.stringify(r.j));
+      contacts.push(r.j.contactId);
+      // 测完把这个人的手机号还原成“没有”（后面的测试要用没手机的人）
+      await pool.query(`UPDATE contacts SET phone_e164 = NULL, phone_verified_at = NULL WHERE id = $1`, [noPhone.id]);
+      await pool.query(`DELETE FROM contact_methods WHERE contact_id = $1 AND kind = 'phone'`, [noPhone.id]);
+      ok('D16：测试站手机验证不发短信、验证码固定 246810（错的不行）；接口给 testFixedCode 让小程序显示那行字；网站手机号登录同样');
+    }
+  }
 
   // ── 2. 小程序：活儿一律 404 ──
   for (const [m, p] of [['GET', '/jobs/posts'], ['POST', '/jobs/posts'], ['GET', '/jobs/me/posts'], ['POST', '/jobs/upload']] as const) {
@@ -270,13 +331,53 @@ async function main() {
   assert.ok(!r.j.items.some((x: { name: string }) => x.name === '验收工-工人'));
   r = await call('GET', '/jobs/pros?role=worker&trade=painting');
   assert.ok(r.j.items.some((x: { name: string }) => x.name === '验收工-工人'));
+  // 指令 7 · D17：联系接活人不用登录、不用验证手机；每次点击都记（登录记档案，游客记 IP 哈希）
   r = await call('POST', `/jobs/pros/${proAId}/contact`);
-  assert.equal(r.status, 401);
+  assert.equal(r.status, 200, JSON.stringify(r.j));
+  assert.ok(String(r.j.phone).startsWith('+1626'));
+  const { rows: gc } = await pool.query<{ viewer_contact_id: string | null; ip_hash: string | null; client: string }>(
+    `SELECT viewer_contact_id, ip_hash, client FROM jobs_pro_clicks WHERE pro_id = $1 ORDER BY created_at DESC LIMIT 1`, [proAId]
+  );
+  assert.equal(gc[0].viewer_contact_id, null);
+  assert.equal(gc[0].client, 'web');
+  if (BASE.startsWith('https://')) assert.ok(gc[0].ip_hash && /^[0-9a-f]{32}$/.test(gc[0].ip_hash), '游客记 IP 哈希（不存原始 IP）');
+  r = await call('POST', `/jobs/pros/${proAId}/contact`, noPhone, undefined, MP);
+  assert.equal(r.status, 200, '小程序头、没验证手机也能看');
   r = await call('POST', `/jobs/pros/${proAId}/contact`, owner);
   assert.ok(r.j.phone);
   const { rows: pv } = await pool.query(`SELECT 1 FROM jobs_contacts WHERE direction = 'pro' AND pro_id = $1 AND viewer_contact_id = $2`, [proAId, owner.id]);
   assert.ok(pv[0]);
-  ok('找工人列表：牌照号 + 执照已核验日期；工人不进业主列表；联系要登录并记录');
+  const { rows: cc } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM jobs_pro_clicks WHERE pro_id = $1 AND viewer_contact_id = ANY($2::uuid[])`, [proAId, [owner.id, noPhone.id]]);
+  assert.equal(cc[0].n, 2);
+  ok('D17：联系接活人游客、小程序（没验证手机）都能看电话；每次点击都记录（登录记档案、游客记 IP 哈希）');
+  {
+    const pr = await import('@/lib/jobs/pros');
+    assert.deepEqual(pr.PRO_CONTACT_LIMITS, { hour: 20, day: 60 });
+    const guest = { contactId: null, staff: false, staffName: null, mp: false, switches: { find: true, work: true, requirePaid: true } } as const;
+    const ip = `test-${uniq}`;
+    const lim = { hour: 2, day: 3 }; // 用小额度测同一套逻辑（正式额度 20 / 60）
+    const { rows: ps } = await pool.query<{ id: string }>(`SELECT id FROM jobs_pros WHERE listed ORDER BY created_at LIMIT 4`);
+    const ids = ps.map((x) => x.id);
+    assert.ok(ids.length >= 3);
+    await pr.contactPro(ids[0], guest as never, ip, lim);
+    await pr.contactPro(ids[1], guest as never, ip, lim);
+    const tooMany = (e: Error & { code?: string }) => e.code === 'too_many_attempts' && e.message === '查看太频繁了，请稍后再试，或加商会微信';
+    await assert.rejects(pr.contactPro(ids[2], guest as never, ip, lim), tooMany);
+    const { rows: lr } = await pool.query(`SELECT 1 FROM jobs_pro_clicks WHERE pro_id = $1 AND ip_hash = $2 AND limited`, [ids[2], ip]);
+    assert.ok(lr[0], '被挡的那次也记一行（limited）');
+    assert.ok('phone' in (await pr.contactPro(ids[0], guest as never, ip, lim)), '看过的人再点不算新的');
+    await pool.query(`UPDATE jobs_pro_clicks SET created_at = now() - interval '2 hours' WHERE ip_hash = $1`, [ip]);
+    assert.ok('phone' in (await pr.contactPro(ids[2], guest as never, ip, lim)), '过了 1 小时，小时额度恢复');
+    await assert.rejects(pr.contactPro(ids[3] ?? ids[2], guest as never, `${ip}-x`, { hour: 0, day: 0 }), tooMany);
+    if (ids[3]) {
+      await assert.rejects(pr.contactPro(ids[3], guest as never, ip, lim), tooMany); // 24 小时 3 个用完
+    }
+    // 登录的人按身份算，不按 IP 算
+    const who = { ...guest, contactId: owner.id };
+    assert.ok('phone' in (await pr.contactPro(ids[1], who as never, ip, lim)));
+    ok('D17：频率限制——同一身份（游客按同一 IP）1 小时 / 24 小时不同接活人个数有上限，超了一句人话；看过的再点不算；登录的按身份不按 IP');
+    await pool.query(`DELETE FROM jobs_pro_clicks WHERE ip_hash LIKE $1`, [`${ip}%`]);
+  }
 
   // 施工队招工
   r = await call('POST', '/jobs/posts', crewBoss, { posterRole: 'crew', trades: ['painting'], city: '阿凯迪亚', description: '外墙油漆', timing: 'week', crewHeadcount: 3, crewDuration: '两周', crewPay: '$25/小时' });
@@ -346,6 +447,42 @@ async function main() {
   assert.ok(!r.j.items.some((x: { id: string }) => x.id === pHandy), '没过（review/risky）的不进 matched');
   await pool.query(`UPDATE jobs_posts SET sec_status = 'pass' WHERE id = $1`, [pHandy]);
   ok('D10：工人、没登记、核验中、未缴费（开关开）一律不给；内容安全没过的不给');
+
+  // ── 指令 7 · D19：网站发的活儿（发布人没有小程序 openid）用查看的接活人身份补检 ──
+  {
+    const openid = `dev-openid-jobs-${uniq}`;
+    await pool.query(`UPDATE contacts SET wechat_openid = $2 WHERE id = $1`, [proA.id, openid]);
+    await pool.query(`UPDATE jobs_posts SET sec_status = 'unchecked', sec_note = 'no_openid', sec_checked_at = now() WHERE id = $1`, [pHandy]);
+    r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+    assert.equal(r.status, 200, JSON.stringify(r.j));
+    assert.ok(!r.j.items.some((x: { id: string }) => x.id === pHandy), '补检没结果（没配微信密钥）的不显示');
+    const { rows: s1 } = await pool.query<{ sec_status: string; sec_note: string }>(`SELECT sec_status, sec_note FROM jobs_posts WHERE id = $1`, [pHandy]);
+    assert.deepEqual(s1[0], { sec_status: 'unchecked', sec_note: 'no_openid' }, '没配微信密钥（no_wx_config）时照旧，不记、下次再试');
+    const { recheckForViewer } = await import('@/lib/jobs/posts');
+    const { rows: pg } = await pool.query<{ trades: string[]; cities: string[] }>(`SELECT verified_trades AS trades, cities FROM jobs_pros WHERE id = $1`, [proAId]);
+    const seen: string[] = [];
+    const stub = async (text: string, oid: string | null) => { seen.push(`${oid}|${text.slice(0, 4)}`); return { status: 'pass' as const, note: null }; };
+    const n1 = await recheckForViewer(pool, proA.id, { proId: proAId, ...pg[0] }, stub);
+    assert.ok(n1 >= 1);
+    assert.ok(seen.every((x) => x.startsWith(`${openid}|`)), '用查看的接活人的 openid');
+    const { rows: s2 } = await pool.query<{ sec_status: string; sec_note: string; sec_checked_at: Date | null }>(`SELECT sec_status, sec_note, sec_checked_at FROM jobs_posts WHERE id = $1`, [pHandy]);
+    assert.equal(s2[0].sec_status, 'pass');
+    assert.equal(s2[0].sec_note, `viewer:${proAId}`);
+    assert.ok(s2[0].sec_checked_at);
+    seen.length = 0;
+    assert.equal(await recheckForViewer(pool, proA.id, { proId: proAId, ...pg[0] }, stub), 0);
+    assert.equal(seen.length, 0, '检一次就记住，不重复检');
+    r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+    assert.ok(r.j.items.some((x: { id: string }) => x.id === pHandy), '补检通过后出现');
+    // 没过的（risky）不显示
+    await pool.query(`UPDATE jobs_posts SET sec_status = 'unchecked', sec_note = 'no_openid' WHERE id = $1`, [pHandy]);
+    await recheckForViewer(pool, proA.id, { proId: proAId, ...pg[0] }, async () => ({ status: 'risky' as const, note: null }));
+    r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+    assert.ok(!r.j.items.some((x: { id: string }) => x.id === pHandy));
+    await pool.query(`UPDATE jobs_posts SET sec_status = 'pass', sec_note = 'test' WHERE id = $1`, [pHandy]);
+    await pool.query(`UPDATE contacts SET wechat_openid = NULL WHERE id = $1`, [proA.id]);
+    ok('D19：发布人没有 openid 的活儿，接活人在小程序打开时用他的 openid 补检，记 viewer:<pro id>，检一次就记住；没过的不显示；没配微信密钥时不记');
+  }
 
   // ── 7. 通知与保险 ──
   await pool.query(`UPDATE jobs_pros SET status = 'verified', verified_trades = '{handyman}', verified_at = now() WHERE id = $1`, [realProId]);
@@ -487,26 +624,47 @@ async function main() {
   ok('邀请：不传 dryRun:false 只演练（记 dry_run、不发）；真发只限管理员；测试站不是测试身份的人一律拦住');
 
   // ── 8. 执照过期 / 被停：自动下架 ──
-  const { runVerification } = await import('@/lib/jobs/verify');
+  const { runVerification, ingestCslb, cslbNumbers } = await import('@/lib/jobs/verify');
   const csv = [
     'LicenseNo,LastUpdate,BusinessName,BUS-NAME-2,FullBusinessName,MailingAddress,City,State,County,ZIPCode,country,BusinessPhone,BusinessType,IssueDate,ReissueDate,ExpirationDate,InactivationDate,ReactivationDate,PendingSuspension,PendingClassRemoval,PendingClassReplace,PrimaryStatus,SecondaryStatus,Classifications(s),AsbestosReg,WorkersCompCoverageType,WCInsuranceCompany,WCPolicyNumber,WCEffectiveDate,WCExpirationDate,WCCancellationDate,WCSuspendDate,CBSuretyCompany,CBNumber,CBEffectiveDate,CBCancellationDate,CBAmount',
     '1050000,11/01/2026,TEST CO,,,1 MAIN,ARCADIA,CA,LA,91006,,(626) 000 0000,Corporation,01/01/2020,,01/31/2026,,,,,,CLEAR,,B| C33,,Workers\' Compensation Insurance,SCIF,1,01/01/2026,01/01/2027,,,ACME SURETY,1,01/01/2026,,25000'
   ].join('\n');
-  const fake = (async () => new Response(csv, { status: 200 })) as unknown as typeof fetch;
   await pool.query(`UPDATE jobs_pros SET license_state = jsonb_build_object('state','queued') WHERE id = $1`, [proAId]);
-  const out = await runVerification(new Date('2026-11-24T20:00:00Z'), { onlyQueued: true, fetcher: fake });
-  assert.deepEqual(out.cslb, { checked: 1, notActive: 1 });
+  // D20：服务器自己不再下载总表——定时任务只数排队的
+  const vq = await runVerification(new Date('2026-11-24T20:00:00Z'), { onlyQueued: true });
+  assert.ok(Number(vq.cslbQueued) >= 1);
+  assert.equal(vq.cslb, undefined);
+  assert.ok((await cslbNumbers('queued')).includes('1050000'));
+  const [hdr, ...rowsCsv] = csv.split('\n');
+  // 总表没下完整（行数太少）：整批不认，谁都不动
+  await assert.rejects(ingestCslb({ mode: 'queued', header: hdr, lines: rowsCsv, scanned: 10 }), /没下载完整/);
+  const { rows: still } = await pool.query<{ status: string }>(`SELECT status FROM jobs_pros WHERE id = $1`, [proAId]);
+  assert.equal(still[0].status, 'verified');
+  if (process.env.CRON_DIRECT !== '1' && CRON) {
+    const ep = `${BASE}/api/cron/jobs/cslb-ingest`;
+    let h = await fetch(`${ep}?mode=queued`);
+    assert.equal(h.status, 401);
+    h = await fetch(`${ep}?mode=queued`, { headers: { Authorization: `Bearer ${CRON}` } });
+    const hj = (await h.json()) as { numbers: string[] };
+    assert.ok(hj.numbers.includes('1050000'), 'runner 先问要查哪些牌照号（只有号码）');
+    h = await fetch(ep, { method: 'POST', headers: { Authorization: `Bearer ${CRON}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'queued', header: hdr, lines: rowsCsv, scanned: 10 }) });
+    assert.equal(h.status, 400);
+    ok('D20：cslb-ingest 要密钥；GET 给要查的牌照号；总表行数太少整批不认（400）');
+  }
+  const out = await ingestCslb({ mode: 'queued', header: hdr, lines: rowsCsv, scanned: 10 }, new Date('2026-11-24T20:00:00Z'), { minScanned: 1 });
+  assert.equal(out.checked, 1);
+  assert.equal(out.notActive, 1);
   const { rows: pa } = await pool.query<{ status: string; listed: boolean; removed_reason: string }>(`SELECT status, listed, removed_reason FROM jobs_pros WHERE id = $1`, [proAId]);
   assert.equal(pa[0].status, 'removed');
   assert.equal(pa[0].listed, false);
   assert.ok(pa[0].removed_reason.includes('过期'));
   const { rows: ln } = await pool.query(`SELECT 1 FROM jobs_notifications WHERE kind = 'license' AND pro_id = $1`, [proAId]);
   assert.ok(ln[0]);
-  ok('CSLB 官方总表显示过期 → 自动下架、通知本人、提醒工作人员');
+  ok('D20：runner 送来的总表行显示过期 → 自动下架、通知本人、提醒工作人员');
   // 90 天复核（B、C 类转工作人员）
   await call('POST', `/workbench/jobs/pros/${designerId}/verify`, staff, { action: 'approve' });
   await pool.query(`UPDATE jobs_pros SET next_review_at = now() - interval '1 minute' WHERE id = $1`, [designerId]);
-  await runVerification(new Date(), { fetcher: fake });
+  await runVerification(new Date());
   const { rows: dr } = await pool.query<{ needs_review: boolean }>(`SELECT needs_review FROM jobs_pros WHERE id = $1`, [designerId]);
   assert.equal(dr[0].needs_review, true);
   r = await call('GET', '/jobs/pros?trade=interior');
@@ -530,6 +688,8 @@ main()
     await pool.query(`DELETE FROM crm_audit_log WHERE actor LIKE 'staff:验收工-%'`).catch(() => undefined);
     await pool.query(`DELETE FROM sessions WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM staff_roles WHERE email = ANY($1)`, [staffEmails]).catch(() => undefined);
+    await pool.query(`DELETE FROM login_codes WHERE target = ANY($1)`, [testPhones]).catch(() => undefined);
+    await pool.query(`DELETE FROM jobs_pro_clicks WHERE viewer_contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM contacts WHERE id = ANY($1::uuid[])`, [ids]).catch((e) => console.error('contacts', e.message));
     if (savedSwitches) {
       for (const [k, v] of Object.entries(savedSwitches)) await pool.query(`UPDATE crm_settings SET value = $2 WHERE key = $1`, [k, JSON.stringify(v)]).catch(() => undefined);

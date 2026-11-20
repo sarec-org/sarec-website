@@ -12,7 +12,7 @@ import { needPayFor, proByContact, refreshPro } from './pros';
 import { getSwitches } from './settings';
 import { tradeMap, type Trade } from './trades';
 import { cityNames, loadCities, resolveCity } from './cities';
-import { checkDescription, openidOf, saveSec } from './secCheck';
+import { checkDescription, openidOf, saveSec, type SecOutcome } from './secCheck';
 
 export type PostRow = {
   id: string; batch_id: string; contact_id: string; poster_role: PosterRole; trade_key: string; city: string; title: string; description: string;
@@ -392,7 +392,7 @@ export const OWNER_ROLES: PosterRole[] = ['owner', 'landlord', 'property', 'deve
 const MATCH_WHERE = `p.status = 'open' AND p.expires_at > now() AND p.poster_role = ANY($1::text[])
    AND p.trade_key = ANY($2::text[]) AND p.city_key = ANY($3::text[]) AND p.sec_status = 'pass' AND p.contact_id <> $4`;
 
-type MatchGate = { ok: true; trades: string[]; cities: string[] } | { ok: false; reason: string; needPay: boolean };
+type MatchGate = { ok: true; proId: string; trades: string[]; cities: string[] } | { ok: false; reason: string; needPay: boolean };
 
 async function matchGate(db: Db, contactId: string): Promise<MatchGate> {
   const p0 = await proByContact(db, contactId);
@@ -404,13 +404,46 @@ async function matchGate(db: Db, contactId: string): Promise<MatchGate> {
   if (p.status !== 'verified') return { ok: false, needPay: false, reason: '你的资料还在核验，核验通过后，和你工种、城市对口的活儿会出现在这里' };
   const { requirePaid } = await getSwitches(db);
   if (needPayFor(p, requirePaid)) return { ok: false, needPay: true, reason: '核验已通过，成为缴费会员后，对口的活儿会出现在这里' };
-  return { ok: true, trades: p.verified_trades, cities: p.cities };
+  return { ok: true, proId: p.id, trades: p.verified_trades, cities: p.cities };
 }
 
-export async function matchedPosts(contactId: string, cursor: string | null) {
+/**
+ * D19：内容安全用查看者身份补检。网站发的活儿发布人没有小程序 openid（sec_note='no_openid'），
+ * 对口的接活人在小程序里打开「通知给我的活儿」时，用这个接活人的 openid（他正在用小程序，openid 有效）补检，
+ * 结果记回 jobs_posts（sec_note='viewer:<pro id>'），检一次就记住；补检还是没结果（没配微信密钥 / 接口出错）就不记，下次再试。
+ */
+export async function recheckForViewer(
+  db: Db,
+  contactId: string,
+  g: { proId: string; trades: string[]; cities: string[] },
+  check: (text: string, openid: string | null) => Promise<SecOutcome> = checkDescription
+): Promise<number> {
+  const openid = await openidOf(db, contactId);
+  if (!openid) return 0;
+  const { rows } = await db.query<{ id: string; description: string }>(
+    `SELECT p.id, p.description FROM jobs_posts p
+      WHERE ${MATCH_WHERE.replace("p.sec_status = 'pass'", "p.sec_status = 'unchecked' AND p.sec_note = 'no_openid'")}
+      ORDER BY p.created_at DESC LIMIT 10`,
+    [OWNER_ROLES, g.trades, g.cities, contactId]
+  );
+  let n = 0;
+  for (const r of rows) {
+    const o = await check(r.description ?? '', openid).catch(() => ({ status: 'unchecked' as const, note: 'error' }));
+    if (o.status === 'unchecked') continue;
+    const { rowCount } = await db.query(
+      `UPDATE jobs_posts SET sec_status = $2, sec_note = $3, sec_checked_at = now() WHERE id = $1 AND sec_status = 'unchecked' AND sec_note = 'no_openid'`,
+      [r.id, o.status, `viewer:${g.proId}`]
+    );
+    n += rowCount ?? 0;
+  }
+  return n;
+}
+
+export async function matchedPosts(contactId: string, cursor: string | null, opts: { mp?: boolean } = {}) {
   const pool = getPool();
   const g = await matchGate(pool, contactId);
   if (!g.ok) return { eligible: false, reason: g.reason, needPay: g.needPay, items: [], nextCursor: null };
+  if (opts.mp && !cursor) await recheckForViewer(pool, contactId, g).catch((e) => console.error('[jobs] viewer sec recheck', e instanceof Error ? e.message : e));
   const offset = Math.max(0, Number(cursor) || 0);
   const limit = 20;
   const { rows } = await pool.query<PostRow & { contacted: boolean }>(

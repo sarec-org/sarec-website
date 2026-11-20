@@ -7,6 +7,10 @@
  *   不程序化打开单个牌照详情页：11/20 实测详情页要先经过带 reCAPTCHA 的查询页拿会话，程序去绕不合适——
  *   详情页只给工作人员“一键打开”。总表里查不到 = 已注销 / 吊销 / 过期太久（官方说明），按“不合格”处理。
  *   避开 CSLB 每周维护时间（周日晚 8 点到周一早 6 点，洛杉矶时间）；同一次运行只下载一次。
+ *   指令 7 · D20：服务器不再自己下载总表（11/20 测试站实测从 Vercel 下载 78MB 会被断开 / 超时）。改成 GitHub 定时任务
+ *   （.github/workflows/jobs-cslb-weekly.yml + scripts/jobs-cslb-runner.mjs）在 runner 上下载，先问服务器要查哪些牌照号
+ *   （GET /api/cron/jobs/cslb-ingest），只把对得上的那几行 POST 回来（ingestCslb），服务器比对、过期或被停自动下架并通知。
+ *   scanMaster 留着只给本地手动备用（scripts 里调），定时任务不走。
  * 其它机构（DCA 名下各委员会、DRE、BREA、律师协会、CDI、营业登记）：工作人员一键打开官方查询页 + 核验清单，手点通过 / 退回 / 下架。
  *   不抓 search.dca.ca.gov（robots.txt 禁止 /details/）。
  * 90 天复核：A 类重新对总表；B、C 类转给工作人员复核。执照过期或被停：自动下架，通知本人，提醒工作人员。
@@ -160,7 +164,7 @@ export async function checkAndRecord(proId: string, kind: string, actor: string)
     [proId]
   );
   await pool.query(`INSERT INTO jobs_verifications (pro_id, kind, action, result, actor) VALUES ($1, $2, 'check', '{"state":"queued"}', $3)`, [proId, kind, actor]);
-  return { state: 'queued', message: '牌照会自动对照 CSLB 官方名单，几分钟内出结果。' };
+  return { state: 'queued', message: '牌照会自动对照 CSLB 官方名单，一般一天内出结果。' };
 }
 
 /** 把一条总表结果写回这个人；已上列表的人如果不合格 → 自动下架、通知本人、提醒工作人员 */
@@ -198,7 +202,7 @@ async function takeDown(p: ProRow, reason: string, actor: string, kind: string) 
 }
 
 /** 定时任务：处理排队的 CSLB 比对 + 每周全部重新比对一次 + 90 天复核 + 执照到期 */
-export async function runVerification(now = new Date(), opts: { weekly?: boolean; onlyQueued?: boolean; fetcher?: typeof fetch } = {}) {
+export async function runVerification(now = new Date(), opts: { onlyQueued?: boolean } = {}) {
   const pool = getPool();
   const trades = await tradeMap(pool);
   const out: Record<string, unknown> = {};
@@ -227,46 +231,16 @@ export async function runVerification(now = new Date(), opts: { weekly?: boolean
     }
   }
   }
-  // 3) 要对 CSLB 总表的：排队的 + 90 天到期的 A 类 +（每周）全部已通过的 A 类
-  const { rows: list } = await pool.query<{ id: string; license_no: string }>(
-    `SELECT id, license_no FROM jobs_pros WHERE license_no IS NOT NULL AND role <> 'worker'
-        AND (license_state->>'state' = 'queued' OR id = ANY($1::uuid[]) OR ($2 AND status = 'verified'))`,
-    [Array.from(review90), !!opts.weekly]
-  );
-  const withA = [];
-  for (const r of list) {
-    const p = await proById(pool, r.id);
-    if (p && p.trades.some((k) => trades.get(k)?.licType === 'A')) withA.push(p);
+  // 3) 90 天复核到期的 A 类：排队等 GitHub runner 送来总表的行（D20：服务器不再自己下载总表）
+  if (review90.size) {
+    await pool.query(
+      `UPDATE jobs_pros SET license_state = coalesce(license_state, '{}'::jsonb) || jsonb_build_object('state', 'queued', 'reason', 'review90', 'queuedAt', now())
+        WHERE id = ANY($1::uuid[]) AND license_no IS NOT NULL`,
+      [Array.from(review90)]
+    );
   }
-  out.cslbCandidates = withA.length;
-  if (withA.length) {
-    if (inCslbMaintenance(now)) {
-      out.cslb = 'maintenance_window';
-    } else {
-      try {
-        const nums = withA.map((p) => p.license_no!);
-        // 下载几十 MB，偶尔中途断开：再试一次
-        // 超时的不再重试（再试一次也会超过函数时限）；其它错误还剩时间就再试一次
-        const started = Date.now();
-        const recs = await scanMaster(nums, opts.fetcher).catch((e: Error) => {
-          if (/timeout/.test(e.message) || Date.now() - started > 60_000) throw e;
-          return scanMaster(nums, opts.fetcher, CSLB_TIMEOUT_MS - (Date.now() - started));
-        });
-        let bad = 0;
-        for (const p of withA) {
-          const st = await applyCslb(p, recs.get(p.license_no!.replace(/\D/g, '')) ?? null, review90.has(p.id) ? 'review90' : 'auto_cslb', trades);
-          if (!st.active) bad++;
-        }
-        out.cslb = { checked: withA.length, notActive: bad };
-      } catch (e) {
-        // 下载或解析失败：退回成工作人员一键打开详情页
-        const msg = e instanceof Error ? e.message : 'error';
-        await recordException('jobs_cslb', `jobs_cslb:${laToday(now)}`, null, `CSLB 官方名单下载失败（${msg.slice(0, 120)}），请在「接活人核验」里一键打开详情页人工核对`, {});
-        out.cslb = 'fetch_failed';
-        out.cslbError = msg.slice(0, 160);
-      }
-    }
-  }
+  const { rows: waiting } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM jobs_pros WHERE license_state->>'state' = 'queued'`);
+  out.cslbQueued = waiting[0]?.n ?? 0;
   if (!opts.onlyQueued) {
     // 缴费会员到期 / 新交了会费：刷新“上不上列表”
     for (const p of await pool.query<{ id: string }>(`SELECT id FROM jobs_pros WHERE status = 'verified'`).then((r) => r.rows)) await refreshPro(pool, p.id);
@@ -370,4 +344,75 @@ export async function staffVerify(s: Staff, id: string, b: Record<string, unknow
   if (b.action !== 'check') await resolveException(`jobs_verify:${id}`, actor).catch(() => undefined);
   const after = await staffProList(null, { mp: false, onlyId: id });
   return { pro: after.items[0] ?? null };
+}
+
+// ── D20：GitHub runner 下载总表，服务器只收对得上的那几行 ─────────────────
+export type CslbMode = 'queued' | 'weekly';
+/** 总表少于这么多行 = 下载不完整（真表 20 多万行），整批不认，免得把所有人当“查不到”下架 */
+export const CSLB_MIN_SCANNED = 50_000;
+
+/** 这次要对总表的人：queued = 排队的（新登记、改了牌照号、90 天复核）；weekly = 再加全部已通过的 A 类 */
+export async function cslbCandidates(mode: CslbMode): Promise<ProRow[]> {
+  const pool = getPool();
+  const trades = await tradeMap(pool);
+  const { rows } = await pool.query<{ id: string }>(
+    `SELECT id FROM jobs_pros WHERE license_no IS NOT NULL AND role <> 'worker'
+        AND (license_state->>'state' = 'queued' OR ($1 AND status = 'verified'))`,
+    [mode === 'weekly']
+  );
+  const out: ProRow[] = [];
+  for (const r of rows) {
+    const p = await proById(pool, r.id);
+    if (p && p.license_no && p.trades.some((k) => trades.get(k)?.licType === 'A')) out.push(p);
+  }
+  return out;
+}
+
+const digits = (n: string) => n.replace(/\D/g, '');
+
+/** 给 runner：要在总表里找的牌照号（只有号码，没有名字、电话） */
+export async function cslbNumbers(mode: CslbMode): Promise<string[]> {
+  return Array.from(new Set((await cslbCandidates(mode)).map((p) => digits(p.license_no!)).filter(Boolean))).sort();
+}
+
+/**
+ * runner 送来的总表行：header 是总表第一行原文，lines 是挑出来的行原文，scanned 是 runner 一共读了多少行。
+ * 比对状态 / 到期 / 类别 / 工伤保险 / 保证金（evaluate + applyCslb），已上列表的人不合格 → 自动下架、通知本人、提醒工作人员。
+ */
+export async function ingestCslb(
+  input: { mode?: unknown; header?: unknown; lines?: unknown; scanned?: unknown },
+  now = new Date(),
+  opts: { minScanned?: number } = {}
+) {
+  const mode: CslbMode = input.mode === 'weekly' ? 'weekly' : 'queued';
+  const headerLine = typeof input.header === 'string' ? input.header.replace(/^\uFEFF/, '').replace(/\r$/, '') : '';
+  const header = parseCsvLine(headerLine);
+  const lines = Array.isArray(input.lines) ? input.lines.filter((x): x is string => typeof x === 'string').slice(0, 5000) : null;
+  const scanned = Number(input.scanned) || 0;
+  if (!header.includes('LicenseNo') || !header.includes('PrimaryStatus') || !lines) {
+    throw new CrmError('bad_request', '总表格式不对：要有 header（含 LicenseNo、PrimaryStatus）和 lines');
+  }
+  if (scanned < (opts.minScanned ?? CSLB_MIN_SCANNED)) {
+    throw new CrmError('bad_request', `总表只读到 ${scanned} 行，像是没下载完整，这次不比对`);
+  }
+  const noIdx = header.indexOf('LicenseNo');
+  const recs = new Map<string, CslbRecord>();
+  for (const l of lines) {
+    const f = parseCsvLine(l.replace(/\r$/, ''));
+    const no = digits(f[noIdx] ?? '');
+    if (no) recs.set(no, recordFrom(header, f));
+  }
+  const pool = getPool();
+  const trades = await tradeMap(pool);
+  const list = await cslbCandidates(mode);
+  let bad = 0;
+  let found = 0;
+  for (const p of list) {
+    const rec = recs.get(digits(p.license_no!)) ?? null;
+    if (rec) found++;
+    const kind = p.license_state && (p.license_state as { reason?: string }).reason === 'review90' ? 'review90' : 'auto_cslb';
+    const st = await applyCslb(p, rec, kind, trades);
+    if (!st.active) bad++;
+  }
+  return { mode, checked: list.length, found, notActive: bad, scanned, at: now.toISOString() };
 }

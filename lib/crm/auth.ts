@@ -8,6 +8,7 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
+import { TEST_FIXED_CODE, testFixedCodeOn } from './testFixedCode';
 import { CrmError, findOrCreateContact, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
 import { SMS_FALLBACK, noteVerified, phoneSendLimits, twilioVerify, twilioVerifyConfigured } from './contactInfo';
@@ -52,13 +53,15 @@ export function normalizeTarget(channel: Channel, raw: string): string | null {
 }
 
 /** 发送验证码。返回 devCode 仅在测试环境。 */
-export async function sendLoginCode(channel: Channel, rawTarget: string): Promise<{ target: string; devCode?: string }> {
+export async function sendLoginCode(channel: Channel, rawTarget: string): Promise<{ target: string; devCode?: string; testFixedCode?: true }> {
   const target = normalizeTarget(channel, rawTarget);
   if (!target) {
     throw new CrmError('bad_target', channel === 'email' ? '邮箱格式不对，请检查后再试' : '手机号格式不对，请加国家码，例如 +1 626 555 1234');
   }
   const viaVerify = channel === 'sms' && smsConfigured();
-  if (channel === 'sms' && !viaVerify && !devEcho()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
+  // D16：测试站短信验证码不真发、固定 246810（正式站 fixed 永远是 false）
+  const fixed = channel === 'sms' && !viaVerify && testFixedCodeOn();
+  if (channel === 'sms' && !viaVerify && !devEcho() && !fixed) throw new CrmError('sms_unavailable', SMS_FALLBACK);
   const pool = getPool();
   const { rows: recent } = await pool.query(
     `SELECT 1 FROM login_codes WHERE target = $1 AND created_at > now() - make_interval(secs => $2) LIMIT 1`,
@@ -68,7 +71,7 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
 
   // 小程序审核账号：固定验证码（环境变量配置），不发邮件；该账号不能成为工作人员
   const review = reviewLogin(channel, target);
-  const code = review ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const code = review ?? (fixed ? TEST_FIXED_CODE : String(randomInt(0, 1_000_000)).padStart(6, '0'));
 
   if (viaVerify) {
     // 短信：Twilio Verify 发码；同一号码 60 秒一次、一天 10 次；发不出 → 提示改用邮箱
@@ -108,6 +111,7 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
     }
   }
   // 短信（仅本地测试、未配置 Twilio 时）：验证码随响应返回，不真正发送
+  if (fixed) return devEcho() ? { target, devCode: code, testFixedCode: true } : { target, testFixedCode: true };
   return devEcho() ? { target, devCode: code } : { target };
 }
 

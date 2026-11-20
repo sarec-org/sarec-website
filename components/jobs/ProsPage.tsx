@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/components/crm/client';
 import s from '@/components/crm/crm.module.css';
 import j from './jobs.module.css';
-import { BottomBar, JobsShell, NeedLogin, ReportButton, initial, tradeName } from './shared';
+import { BottomBar, JobsShell, ReportButton, initial, tradeName } from './shared';
 import type { CityOpt, ProCard } from './types';
 
 type ProsRes = { items: ProCard[]; cities: CityOpt[]; nextCursor?: string | null };
@@ -94,19 +94,45 @@ function ProsList({ trade, name }: { trade: string; name: string }) {
   );
 }
 
+/** 复制到剪贴板（不支持时退回选中文字的老办法） */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const t = document.createElement('textarea');
+      t.value = text;
+      t.setAttribute('readonly', '');
+      t.style.position = 'fixed';
+      t.style.opacity = '0';
+      document.body.appendChild(t);
+      t.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(t);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** 指令 7 · D17：点「联系」不用登录、不用验证手机，直接出「拨号」「复制电话」「复制微信号」（有微信号才出） */
 export function ProCardView({ p }: { p: ProCard }) {
-  const [phone, setPhone] = useState<{ phone: string; wechat?: string | null } | null>(null);
+  const [phone, setPhone] = useState<{ phone: string | null; wechat?: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [needLogin, setNeedLogin] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   async function contact() {
     setBusy(true);
     setErr(null);
-    const r = await api<{ phone: string; wechat?: string | null }>(`/api/v1/jobs/pros/${p.id}/contact`, { method: 'POST' });
+    const r = await api<{ phone: string | null; wechat?: string | null }>(`/api/v1/jobs/pros/${p.id}/contact`, { method: 'POST' });
     setBusy(false);
-    if (!r.ok) return r.status === 401 ? setNeedLogin(true) : setErr(r.message);
-    setNeedLogin(false);
+    if (!r.ok) return setErr(r.message);
     setPhone(r.data);
+  }
+  async function copy(text: string, what: string) {
+    setCopied((await copyText(text)) ? `${what}已复制` : `没能复制，请长按上面的${what}自己复制`);
   }
   return (
     <article className={j.card}>
@@ -140,17 +166,21 @@ export function ProCardView({ p }: { p: ProCard }) {
       )}
       {phone ? (
         <div className={j.phoneBox}>
-          电话：<a href={`tel:${phone.phone}`}>{phone.phone}</a>
-          {phone.wechat && <><br />微信：<span className={s.mono}>{phone.wechat}</span></>}
+          {phone.phone ? <>电话：<span className={s.mono}>{phone.phone}</span></> : '（没留电话）'}
+          {phone.wechat && <><br />微信号：<span className={s.mono}>{phone.wechat}</span></>}
+          <div className={j.cardActions}>
+            {phone.phone && <a className={`${s.btn} ${j.btnFind}`} href={`tel:${phone.phone}`}>拨号</a>}
+            {phone.phone && <button type="button" className={`${s.btn} ${s.btnGhost}`} onClick={() => copy(phone.phone!, '电话')}>复制电话</button>}
+            {phone.wechat && <button type="button" className={`${s.btn} ${s.btnGhost}`} onClick={() => copy(phone.wechat!, '微信号')}>复制微信号</button>}
+          </div>
+          {copied && <p className={s.small} role="status" style={{ margin: '0.3rem 0 0' }}>{copied}</p>}
           <p className={s.small} style={{ margin: '0.3rem 0 0' }}>请自己和对方谈清楚价钱、合同和付款。</p>
         </div>
-      ) : needLogin ? (
-        <NeedLogin why="登录后才能看到联系电话（用邮箱或手机收验证码，不用密码）。" onDone={contact} />
       ) : null}
       {err && <div className={s.error} style={{ marginTop: '0.6rem' }}>{err}</div>}
       <div className={j.cardActions}>
-        {!phone && !needLogin && (
-          <button type="button" className={`${s.btn} ${j.btnFind}`} disabled={busy} onClick={contact}>{busy ? '正在获取…' : '联系（看电话）'}</button>
+        {!phone && (
+          <button type="button" className={`${s.btn} ${j.btnFind}`} disabled={busy} onClick={contact}>{busy ? '正在获取…' : '联系'}</button>
         )}
         <ReportButton targetType="pro" targetId={p.id} />
       </div>
