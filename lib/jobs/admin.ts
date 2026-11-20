@@ -1,0 +1,191 @@
+/** 找工人 · 接活：meta（首页、方块页要的一切）和工作人员后台（活儿、统计、投诉、邀请） */
+import { getPool } from '@/lib/db/client';
+import { CrmError } from '@/lib/crm/events';
+import type { Staff } from '@/lib/crm/auth';
+import { recordException, resolveException } from '@/lib/crm/followups';
+import type { Viewer } from './access';
+import {
+  CITY_GROUPS, DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
+  TURNOVER_TRADES, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
+} from './constants';
+import { deliver, jobsTemplate } from './notify';
+import { latestPosts } from './posts';
+import { proBrief } from './pros';
+import { loadGroups, loadHomeEntries, loadTrades, tradeMap, tradesWithPros } from './trades';
+
+export async function buildMeta(v: Viewer) {
+  const pool = getPool();
+  const [groups, trades, entries, withPros] = await Promise.all([loadGroups(pool), loadTrades(pool), loadHomeEntries(pool), tradesWithPros(pool)]);
+  const s = v.switches;
+  const staffPreview = v.staff && (!s.find || !s.work);
+  const showLatest = !v.mp && (s.work || v.staff);
+  return {
+    switches: { find: s.find, work: s.work, requirePaid: s.requirePaid },
+    staffPreview,
+    staffPreviewText: staffPreview ? STAFF_PREVIEW_TEXT : null,
+    groups,
+    trades: trades.map((t) => ({
+      key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon
+    })),
+    homeEntries: entries.map((e) => ({ label: e.label, icon: e.icon, target: e.target })),
+    me: { pro: await proBrief(pool, v.contactId) },
+    latest: showLatest ? await latestPosts(3) : [],
+    options: {
+      proRoles: PRO_ROLES, posterRoles: v.mp ? POSTER_ROLES.filter((r) => r.key !== 'crew') : POSTER_ROLES, timings: TIMINGS, propertyTypes: PROPERTY_TYPES,
+      languages: LANGUAGES, cityGroups: CITY_GROUPS, turnoverTrades: TURNOVER_TRADES, siteVisitTrades: SITE_VISIT_TRADES
+    },
+    rules: RULES,
+    disclaimer: DISCLAIMER,
+    subscribeTemplate: jobsTemplate()?.id ?? null,
+    webUrl: `${webBase()}${WEB_JOBS_PATH}`,
+    postUrl: `${webBase()}${WEB_JOBS_PATH}/post`
+  };
+}
+
+// ── 工作人员：活儿 ─────────────────────────────────────────────────────
+export async function staffPosts(q: { status?: string | null; mp: boolean }) {
+  const pool = getPool();
+  const trades = await tradeMap(pool);
+  const st = q.status && ['open', 'found', 'closed', 'removed'].includes(q.status) ? q.status : null;
+  const { rows } = await pool.query<{
+    id: string; title: string; status: PostStatus; close_reason: string | null; staff_note: string | null; city: string; trade_key: string; poster_role: string;
+    created_at: Date; expires_at: Date; budget_range: string | null; contact_count: number; notified: number; reports: number; first_contact_at: Date | null; poster_name: string;
+  }>(
+    `SELECT p.id, p.title, p.status, p.close_reason, p.staff_note, p.city, p.trade_key, p.poster_role, p.created_at, p.expires_at, p.budget_range, p.first_contact_at,
+            c.name AS poster_name,
+            (SELECT count(*)::int FROM jobs_contacts jc WHERE jc.direction = 'post' AND jc.post_id = p.id) AS contact_count,
+            (SELECT count(*)::int FROM jobs_notifications n WHERE n.kind = 'dispatch' AND n.post_id = p.id) AS notified,
+            (SELECT count(*)::int FROM jobs_reports r WHERE r.target_type = 'post' AND r.target_id = p.id AND r.status = 'open') AS reports
+       FROM jobs_posts p JOIN contacts c ON c.id = p.contact_id
+      WHERE ($1::text IS NULL OR p.status = $1) ORDER BY p.created_at DESC LIMIT 300`,
+    [st]
+  );
+  return {
+    items: rows.map((r) => q.mp
+      ? { id: r.id, title: r.title, status: r.status, statusLabel: STATUS_LABEL[r.status], contactCount: r.contact_count, note: r.staff_note }
+      : {
+          id: r.id, title: r.title, status: r.status, statusLabel: STATUS_LABEL[r.status], closeReason: r.close_reason, note: r.staff_note, city: r.city,
+          tradeName: trades.get(r.trade_key)?.name ?? r.trade_key, posterLabel: posterLabel(r.poster_role), posterName: r.poster_name,
+          createdAt: r.created_at, expiresAt: r.expires_at, budget: r.budget_range, contactCount: r.contact_count, notifiedCount: r.notified,
+          openReports: r.reports, firstContactAt: r.first_contact_at
+        })
+  };
+}
+
+export async function staffPostAction(s: Staff, id: string, b: Record<string, unknown>) {
+  const pool = getPool();
+  const actor = `staff:${s.name || s.email}`;
+  const note = typeof b.note === 'string' ? b.note.trim().slice(0, 1000) : '';
+  if (b.action === 'remove') {
+    const { rowCount } = await pool.query(
+      `UPDATE jobs_posts SET status = 'removed', close_reason = 'staff', removed_by = $2, staff_note = COALESCE(NULLIF($3, ''), staff_note), updated_at = now() WHERE id = $1`,
+      [id, actor, note]
+    );
+    if (!rowCount) throw new CrmError('not_found', '找不到这个活儿');
+  } else if (b.action === 'note') {
+    const { rowCount } = await pool.query(`UPDATE jobs_posts SET staff_note = $2, updated_at = now() WHERE id = $1`, [id, note || null]);
+    if (!rowCount) throw new CrmError('not_found', '找不到这个活儿');
+  } else {
+    throw new CrmError('bad_request', 'action 只能是 remove 或 note');
+  }
+  await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, reason) VALUES ($1, $2, 'jobs_post', $3, $4)`, [actor, `jobs_post_${b.action}`, id, note || null]);
+  const { rows } = await pool.query<{ id: string; title: string; status: PostStatus; staff_note: string | null }>(`SELECT id, title, status, staff_note FROM jobs_posts WHERE id = $1`, [id]);
+  return { post: { id: rows[0].id, title: rows[0].title, status: rows[0].status, statusLabel: STATUS_LABEL[rows[0].status], note: rows[0].staff_note } };
+}
+
+// ── 统计：每个工种的点击数、活儿数、联系次数、成了的数、平均多久有人联系 ──
+export async function stats(days = 90) {
+  const pool = getPool();
+  const trades = await loadTrades(pool);
+  const { rows: clicks } = await pool.query<{ target: string; n: number }>(
+    `SELECT target, count(*)::int AS n FROM track_events WHERE name IN ('jobs_trade', 'jobs_home_entry') AND created_at > now() - make_interval(days => $1) GROUP BY target`,
+    [days]
+  );
+  const { rows: posts } = await pool.query<{ trade_key: string; posts: number; contacts: number; deals: number; avg_hours: number | null; contacted: number }>(
+    `SELECT p.trade_key, count(*)::int AS posts,
+            coalesce(sum((SELECT count(*) FROM jobs_contacts jc WHERE jc.direction = 'post' AND jc.post_id = p.id)), 0)::int AS contacts,
+            count(*) FILTER (WHERE EXISTS (SELECT 1 FROM jobs_followups f WHERE f.post_id = p.id AND f.deal) OR p.status = 'found')::int AS deals,
+            avg(extract(epoch FROM (p.first_contact_at - p.created_at)) / 3600) FILTER (WHERE p.first_contact_at IS NOT NULL) AS avg_hours,
+            count(*) FILTER (WHERE p.first_contact_at IS NOT NULL)::int AS contacted
+       FROM jobs_posts p WHERE p.created_at > now() - make_interval(days => $1) GROUP BY p.trade_key`,
+    [days]
+  );
+  const { rows: pros } = await pool.query<{ status: string; n: number }>(`SELECT status, count(*)::int AS n FROM jobs_pros GROUP BY status`);
+  const { rows: listedPros } = await pool.query<{ k: string; n: number }>(`SELECT unnest(verified_trades) AS k, count(*)::int AS n FROM jobs_pros WHERE listed GROUP BY 1`);
+  const { rows: fu } = await pool.query<{ sent: number; answered: number; reached: number; deal: number; satisfied: number }>(
+    `SELECT count(*)::int AS sent, count(answered_at)::int AS answered, count(*) FILTER (WHERE reached)::int AS reached,
+            count(*) FILTER (WHERE deal)::int AS deal, count(*) FILTER (WHERE satisfied)::int AS satisfied FROM jobs_followups WHERE created_at > now() - make_interval(days => $1)`,
+    [days]
+  );
+  const c = new Map(clicks.map((r) => [r.target, r.n]));
+  const p = new Map(posts.map((r) => [r.trade_key, r]));
+  const l = new Map(listedPros.map((r) => [r.k, r.n]));
+  return {
+    days,
+    trades: trades.map((t) => {
+      const x = p.get(t.key);
+      return {
+        key: t.key, name: t.name, group: t.group, clicks: c.get(t.key) ?? 0, pros: l.get(t.key) ?? 0, posts: x?.posts ?? 0, contacts: x?.contacts ?? 0,
+        deals: x?.deals ?? 0, avgHoursToContact: x?.avg_hours != null ? Math.round(Number(x.avg_hours) * 10) / 10 : null
+      };
+    }),
+    pros: Object.fromEntries(pros.map((r) => [r.status, r.n])),
+    followups: fu[0]
+  };
+}
+
+// ── 投诉 ────────────────────────────────────────────────────────────────
+export async function staffReports(status: string | null) {
+  const { rows } = await getPool().query(
+    `SELECT r.id, r.target_type AS "targetType", r.target_id AS "targetId", r.reason, r.status, r.handled_by AS "handledBy", r.handled_note AS "handledNote", r.created_at AS "createdAt",
+            COALESCE(pr.name, po.title) AS "targetLabel", c.name AS "reporterName"
+       FROM jobs_reports r LEFT JOIN jobs_pros pr ON r.target_type = 'pro' AND pr.id = r.target_id
+       LEFT JOIN jobs_posts po ON r.target_type = 'post' AND po.id = r.target_id LEFT JOIN contacts c ON c.id = r.reporter_contact_id
+      WHERE ($1::text IS NULL OR r.status = $1) ORDER BY r.created_at DESC LIMIT 300`,
+    [status === 'open' || status === 'handled' ? status : null]
+  );
+  return { items: rows };
+}
+export async function handleReport(s: Staff, id: string, b: Record<string, unknown>) {
+  const actor = `staff:${s.name || s.email}`;
+  const note = typeof b.note === 'string' ? b.note.trim().slice(0, 1000) : null;
+  const { rowCount } = await getPool().query(`UPDATE jobs_reports SET status = 'handled', handled_by = $2, handled_note = $3 WHERE id = $1`, [id, actor, note]);
+  if (!rowCount) throw new CrmError('not_found', '找不到这条反馈');
+  await resolveException(`jobs_report:${id}`, actor).catch(() => undefined);
+  return { id, status: 'handled' };
+}
+
+// ── 邀请现有会员来登记接活（按行业标签筛） ────────────────────────────
+export async function inviteCandidates(roleCategory: string | null, roleSub: string | null) {
+  const { rows } = await getPool().query(
+    `SELECT c.id, c.name, c.role_category AS "roleCategory", c.role_sub AS "roleSub",
+            EXISTS (SELECT 1 FROM jobs_pros p WHERE p.contact_id = c.id) AS "registered",
+            (SELECT max(n.created_at) FROM jobs_notifications n WHERE n.kind = 'invite' AND n.contact_id = c.id) AS "invitedAt"
+       FROM contacts c
+      WHERE c.merged_into IS NULL AND ($1::text IS NULL OR c.role_category = $1) AND ($2::text IS NULL OR c.role_sub = $2)
+        AND (c.role_category IS NOT NULL OR $1::text IS NULL)
+        AND EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id)
+      ORDER BY c.name LIMIT 500`,
+    [roleCategory || null, roleSub || null]
+  );
+  return { items: rows };
+}
+export async function sendInvites(s: Staff, b: Record<string, unknown>) {
+  const ids = (Array.isArray(b.contactIds) ? b.contactIds : []).filter((x): x is string => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 200);
+  if (!ids.length) throw new CrmError('bad_request', '请先勾选要邀请的会员');
+  const pool = getPool();
+  const out = { sent: 0, blocked: 0, failed: 0, skipped: 0 };
+  for (const id of ids) {
+    const { rows } = await pool.query(`SELECT 1 FROM jobs_notifications WHERE kind = 'invite' AND contact_id = $1 AND created_at > now() - interval '30 days'`, [id]);
+    if (rows[0]) { out.skipped++; continue; }
+    const st = await deliver(pool, {
+      kind: 'invite', contactId: id,
+      sms: `SAREC：商会新开了「找工人·接活」。登记一次，有对口的活儿会第一时间通知你：${webBase()}${WEB_JOBS_PATH}/register`
+    });
+    if (st === 'sent') out.sent++; else if (st === 'blocked') out.blocked++; else out.failed++;
+  }
+  await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value) VALUES ($1, 'jobs_invite', 'contacts', 'batch', $2)`, [`staff:${s.name || s.email}`, JSON.stringify({ ids: ids.length, ...out })]);
+  return out;
+}
+
+export { recordException };

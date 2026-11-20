@@ -23,6 +23,18 @@
     {
       "path": "/api/cron/qa-patrol?trigger=daily",
       "schedule": "30 15 * * *"
+    },
+    {
+      "path": "/api/cron/jobs?task=daily",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/jobs?task=dispatch",
+      "schedule": "30 18 * * *"
+    },
+    {
+      "path": "/api/cron/jobs?task=weekly",
+      "schedule": "0 16 * * 2"
     }
   ],
   "git": {

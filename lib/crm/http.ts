@@ -29,7 +29,9 @@ const STATUS_BY_CODE: Record<string, number> = {
   wx_error: 502,
   merge_needed: 409,
   already_checked_in: 409,
-  conflict: 409
+  conflict: 409,
+  not_open: 403,
+  not_eligible: 403
 };
 
 /** 包一层：CrmError → 对应状态码的大白话错误；其他异常 → 500（不泄露内部信息）。 */
