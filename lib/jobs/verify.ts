@@ -105,11 +105,19 @@ export function inCslbMaintenance(d = new Date()): boolean {
 }
 
 /** 下载总表一次，挑出要查的牌照号。查不到的返回 null。 */
-export async function scanMaster(numbers: string[], fetcher: typeof fetch = fetch): Promise<Map<string, CslbRecord | null>> {
+/** 下载总表最多等多久（Vercel 函数 300 秒上限；11/20 测试站实测：从 Vercel 下载 78MB 总表 300 秒没下完，函数被强杀） */
+export const CSLB_TIMEOUT_MS = 200_000;
+
+export async function scanMaster(numbers: string[], fetcher: typeof fetch = fetch, timeoutMs = CSLB_TIMEOUT_MS): Promise<Map<string, CslbRecord | null>> {
   const want = new Set(numbers.map((n) => n.replace(/\D/g, '')).filter(Boolean));
   const found = new Map<string, CslbRecord | null>();
   if (!want.size) return found;
-  const res = await fetcher(CSLB_MASTER_URL, { cache: 'no-store', headers: { 'User-Agent': 'SAREC-license-check/1.0' } });
+  const t0 = Date.now();
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+  let bytes = 0;
+  try {
+  const res = await fetcher(CSLB_MASTER_URL, { cache: 'no-store', headers: { 'User-Agent': 'SAREC-license-check/1.0' }, signal: ac.signal });
   if (!res.ok || !res.body) throw new Error(`cslb master http ${res.status}`);
   const reader = res.body.getReader();
   const dec = new TextDecoder();
@@ -125,6 +133,7 @@ export async function scanMaster(numbers: string[], fetcher: typeof fetch = fetc
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
+    bytes += value.byteLength;
     buf += dec.decode(value, { stream: true });
     const lines = buf.split('\n');
     buf = lines.pop() ?? '';
@@ -135,6 +144,12 @@ export async function scanMaster(numbers: string[], fetcher: typeof fetch = fetc
   if (!header) throw new Error('cslb master: empty file');
   for (const n of Array.from(want)) if (!found.has(n)) found.set(n, null);
   return found;
+  } catch (e) {
+    if (ac.signal.aborted) throw new Error(`cslb master timeout: ${Math.round((Date.now() - t0) / 1000)}s, ${(bytes / 1e6).toFixed(1)}MB read`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // ── 登记时：排队等下一次总表比对（几分钟内由定时任务处理） ─────────────
@@ -231,7 +246,12 @@ export async function runVerification(now = new Date(), opts: { weekly?: boolean
       try {
         const nums = withA.map((p) => p.license_no!);
         // 下载几十 MB，偶尔中途断开：再试一次
-        const recs = await scanMaster(nums, opts.fetcher).catch(() => scanMaster(nums, opts.fetcher));
+        // 超时的不再重试（再试一次也会超过函数时限）；其它错误还剩时间就再试一次
+        const started = Date.now();
+        const recs = await scanMaster(nums, opts.fetcher).catch((e: Error) => {
+          if (/timeout/.test(e.message) || Date.now() - started > 60_000) throw e;
+          return scanMaster(nums, opts.fetcher, CSLB_TIMEOUT_MS - (Date.now() - started));
+        });
         let bad = 0;
         for (const p of withA) {
           const st = await applyCslb(p, recs.get(p.license_no!.replace(/\D/g, '')) ?? null, review90.has(p.id) ? 'review90' : 'auto_cslb', trades);
@@ -243,6 +263,7 @@ export async function runVerification(now = new Date(), opts: { weekly?: boolean
         const msg = e instanceof Error ? e.message : 'error';
         await recordException('jobs_cslb', `jobs_cslb:${laToday(now)}`, null, `CSLB 官方名单下载失败（${msg.slice(0, 120)}），请在「接活人核验」里一键打开详情页人工核对`, {});
         out.cslb = 'fetch_failed';
+        out.cslbError = msg.slice(0, 160);
       }
     }
   }

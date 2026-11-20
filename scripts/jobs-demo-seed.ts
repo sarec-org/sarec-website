@@ -98,7 +98,8 @@ async function main() {
     const by = p.role === 'crew' ? crewBoss : owner;
     const cityName = cities.get(p.city)!;
     const tName = trades.get(p.trade)!.name;
-    const title = makeTitle(cityName, tName, p.desc, p.role, p.crew?.[0] ?? null);
+    const t0 = makeTitle(cityName, tName, p.desc, p.role, p.crew?.[0] ?? null);
+    const title = t0.includes('演示') ? t0 : `${t0}（演示）`; // 标题里一定写“演示”（招工的标题不取描述）
     const { rows } = await pool.query<{ id: string }>(
       `INSERT INTO jobs_posts (batch_id, contact_id, poster_role, trade_key, city_key, city, title, description, timing, budget_range, call_name, phone,
           crew_headcount, crew_duration, expires_at, notify_round, notified_at)
