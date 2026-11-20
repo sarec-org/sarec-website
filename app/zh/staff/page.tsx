@@ -40,7 +40,14 @@ const DESC: Record<string, string> = {
   '/zh/staff/display': '会员资料能否在官网展示（不影响会员身份）',
   '/zh/staff/agent': '网站上的商会 AI 助手：月预算、每日用量、常见问题库、最近对话和线索',
   '/zh/staff/team': '工作人员和权限：加人、每人一行「出码」（同事用微信扫一下就绑定好手机工作台）、停用、改角色，立即生效；网站登录邮箱也在这里管；关键操作记录',
-  '/zh/staff/settings': '会员价、屏幕费、积分比例、商家优惠、邮件额度、商会微信二维码'
+  '/zh/staff/settings': '会员价、屏幕费、积分比例、商家优惠、邮件额度、商会微信二维码',
+  '/zh/staff/jobs': '发布的活儿：状态（自动到期）、联系次数、到期日；下架、写备注',
+  '/zh/staff/jobs/pros': '登记接活的人：待核验 / 已通过 / 退回 / 下架；加州承包商牌照自动查，其余一键打开官方查询页 + 核验清单',
+  '/zh/staff/jobs/trades': '工种与资质表：增删改、排序、分组、开放；首页 7 个入口换和排序',
+  '/zh/staff/jobs/switches': '「找工人／施工队」「我要接活」两个栏目开关、接活是否要求缴费会员（改前确认，记谁改的）',
+  '/zh/staff/jobs/stats': '每个工种的点击数、活儿数、联系次数、成了的数、平均多久有人联系',
+  '/zh/staff/jobs/reports': '卡片和活儿上的"反馈 / 投诉"：看内容、标已处理',
+  '/zh/staff/jobs/invite': '按行业标签筛现有会员，先预览再确认，发"来登记接活"的邀请（默认演练）'
 };
 /** 不是单独页面、但常用的卡片（挪进「设置」后仍留一张直达卡） */
 const EXTRA: { href: string; title: string; desc: string; role: string; group: NavGroup; after: string }[] = [
