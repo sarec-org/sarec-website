@@ -5,7 +5,7 @@
  *   - 首页 7 个入口每个至少 1 个核验通过的演示接活人（名字以「演示-」开头，电话是明显假的 555 号码，介绍里写明“演示数据”）；
  *     他们没有牌照号（不出现“执照已核验”），是缴费会员（演示用会籍，备注写明），所以在“要求缴费会员”开着时也上列表；
  *   - 几条演示活儿（标题、描述里写“演示”，城市含尔湾），发布人「演示-房主」；
- *   - 不发任何通知（直接写库，不走派活）。情况说明照样过内容安全（本机没有微信密钥 → 记“未检测”）。
+ *   - 不发任何通知（直接写库，不走派活）。情况说明照样过内容安全；业主类演示活儿随后在测试库直接标成 pass（sec_note='demo_seed'，测试站没有微信密钥），招工那条不标。
  * 清理：scripts/jobs-demo-clean.ts（按「演示-」前缀和 ID 删）。
  *
  * 用法：DATABASE_URL=<测试库> pnpm dlx tsx scripts/jobs-demo-seed.ts --i-know-this-is-not-production [--reset]
@@ -107,8 +107,14 @@ async function main() {
       [by.id, p.role, p.trade, p.city, cityName, title, p.desc, p.timing, p.budget ?? null, by.phone, p.crew?.[0] ?? null, p.crew?.[1] ?? null, POST_DAYS]
     );
     // 情况说明照样过内容安全：本机 / 测试站没有微信密钥时记“未检测”（不进小程序 matched）
-    const sec = await checkDescription(p.desc, null);
+    let sec = await checkDescription(p.desc, null);
     await saveSec(pool, [rows[0].id], sec);
+    if (p.role !== 'crew') {
+      // 只在演示脚本里：业主类演示活儿直接标成内容安全已通过（测试站没有微信密钥），让体验版「通知给我的活儿」能看到。
+      // 运行时的检查逻辑不变；真实活儿照样按 msgSecCheck 结果记。招工那条不标（本来也不进小程序）。
+      sec = { status: 'pass', note: 'demo_seed' };
+      await pool.query(`UPDATE jobs_posts SET sec_status = 'pass', sec_note = 'demo_seed', sec_checked_at = now() WHERE id = $1`, [rows[0].id]);
+    }
     out.push({ kind: '活儿', id: rows[0].id, name: title, extra: `${p.role}｜内容安全 ${sec.status}${sec.note ? `（${sec.note}）` : ''}` });
   }
   out.push({ kind: '发布人', id: owner.id, name: `${DEMO_PREFIX}房主`, extra: `电话 ${owner.phone}` });
@@ -118,6 +124,8 @@ async function main() {
     `# 找工人·接活 演示数据（测试库，${new Date().toISOString().slice(0, 16)}Z 生成）`,
     '',
     '由 scripts/jobs-demo-seed.ts 生成；清理：scripts/jobs-demo-clean.ts（按「演示-」前缀和下面的 ID 删）。',
+    '',
+    '演示活儿在测试库直接标成内容安全已通过（测试站没有微信密钥）',
     '',
     '| 类别 | ID | 名字 / 标题 | 说明 |',
     '|---|---|---|---|',

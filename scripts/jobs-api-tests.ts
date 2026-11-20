@@ -155,6 +155,19 @@ async function main() {
   assert.equal(r.j.autoCheck.state, 'queued');
   const proAId = r.j.pro.id as string;
   ok('施工队登记 → 核验中，CSLB 自动比对已排队');
+  // 改资料要能回填：GET /jobs/me/pro 带回登记过的每一项（网站、小程序一样）
+  for (const h of [{}, MP]) {
+    r = await call('GET', '/jobs/me/pro', proA, undefined, h);
+    const mp = r.j.pro;
+    assert.equal(mp.name, '验收工-持牌公司');
+    assert.deepEqual(mp.trades, ['handyman', 'painting']);
+    assert.deepEqual(mp.cities, ['arcadia', 'san_gabriel']);
+    assert.equal(mp.years, 12);
+    assert.equal(mp.teamSize, 8, '团队人数要回填');
+    assert.equal(mp.licenseNo, '1050000');
+    for (const k of ['avatar', 'languages', 'availableNow', 'intro', 'photos', 'insuranceUrl', 'businessRegUrl', 'wechat']) assert.ok(k in mp, `GET /jobs/me/pro 缺 ${k}`);
+  }
+  ok('GET /jobs/me/pro 带回登记的每一项（名称、头像、工种、城市、年数、语言、现在有空、牌照号、介绍、照片、团队人数、保险、营业登记），小程序头也一样');
   r = await call('POST', '/jobs/me/pro', worker, { agree: true, role: 'worker', name: '验收工-工人', trades: ['painting', 'cleaning'], cities: ['阿凯迪亚'] });
   assert.equal(r.j.pro.status, 'verified');
   assert.equal(r.j.pro.needPay, false);
@@ -168,6 +181,9 @@ async function main() {
   });
   assert.equal(r.j.pro.status, 'pending');
   const designerId = r.j.pro.id as string;
+  r = await call('GET', '/jobs/me/pro', designer, undefined, MP);
+  assert.equal(r.j.pro.businessRegUrl, 'https://example.com/biz.jpg');
+  assert.equal(r.j.pro.insuranceUrl, 'https://example.com/ins.jpg');
   ok('设计与专业服务：C 类工种要营业登记');
   r = await call('POST', '/jobs/me/pro', real, { agree: true, role: 'company', name: 'DEVJOBS-不是测试身份', trades: ['handyman'], cities: ['阿凯迪亚'], licenseNo: '999999' });
   const realProId = r.j.pro.id as string;
