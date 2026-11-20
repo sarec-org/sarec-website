@@ -7,9 +7,9 @@ import s from '@/components/crm/crm.module.css';
 import j from './jobs.module.css';
 import { BottomBar, JobsShell } from './shared';
 import { PostCardView } from './PostCardView';
-import type { Meta, PostCard } from './types';
+import type { CityOpt, Meta, PostCard } from './types';
 
-type Res = { items: PostCard[]; cities?: string[]; nextCursor?: string | null };
+type Res = { items: PostCard[]; cities?: CityOpt[]; nextCursor?: string | null };
 
 export function PostsList() {
   return (
@@ -36,7 +36,7 @@ export function PostsList() {
 function List({ meta }: { meta: Meta }) {
   const [trade, setTrade] = useState('');
   const [city, setCity] = useState('');
-  const [cities, setCities] = useState<string[]>([]);
+  const [cities, setCities] = useState<CityOpt[]>([]);
   const [d, setD] = useState<Res | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [more, setMore] = useState(false);
@@ -87,7 +87,7 @@ function List({ meta }: { meta: Meta }) {
         <div className={j.opts} style={{ marginBottom: '1rem' }} aria-label="按城市筛选">
           <button type="button" className={`${j.opt} ${!city ? j.optOn : ''}`} onClick={() => setCity('')}>全部城市</button>
           {cities.map((c) => (
-            <button key={c} type="button" className={`${j.opt} ${city === c ? j.optOn : ''}`} onClick={() => setCity(c)}>{c}</button>
+            <button key={c.key} type="button" className={`${j.opt} ${city === c.key ? j.optOn : ''}`} onClick={() => setCity(c.key)}>{c.name}</button>
           ))}
         </div>
       )}

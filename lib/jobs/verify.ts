@@ -275,6 +275,8 @@ export function checklistFor(p: Pick<ProRow, 'trades'>, trades: Map<string, Trad
 export async function staffProList(status: string | null, opts: { mp: boolean; onlyId?: string }) {
   const pool = getPool();
   const trades = await tradeMap(pool);
+  const { cityNames } = await import('./cities');
+  const names = await cityNames(pool);
   const st = status && ['draft', 'pending', 'verified', 'returned', 'removed'].includes(status) ? status : null;
   const { rows } = await pool.query<{ id: string }>(
     `SELECT id FROM jobs_pros WHERE ($1::text IS NULL OR status = $1 OR ($1 = 'pending' AND needs_review)) AND ($2::uuid IS NULL OR id = $2)
@@ -290,7 +292,7 @@ export async function staffProList(status: string | null, opts: { mp: boolean; o
       id: p.id, contactId: p.contact_id, contactName: c[0]?.name ?? null, phone: c[0]?.phone ?? null,
       name: p.name, role: p.role, roleLabel: roleLabel(p.role), status: p.status, statusLabel: PRO_STATUS_LABEL[p.status], needsReview: p.needs_review,
       trades: p.trades.map((k) => ({ key: k, name: trades.get(k)?.name ?? k, licType: trades.get(k)?.licType ?? null, verified: p.verified_trades.includes(k) })),
-      cities: p.cities, licenseNo: p.license_no, licenseState: p.license_state, licenseExpiresOn: p.license_expires_on,
+      cities: p.cities.map((k) => names.get(k) ?? k), cityKeys: p.cities, licenseNo: p.license_no, licenseState: p.license_state, licenseExpiresOn: p.license_expires_on,
       businessRegUrl: p.business_reg_url, insuranceUrl: p.insurance_url, licenseDocUrl: p.license_doc_url, intro: p.intro, photos: p.photos,
       returnReason: p.return_reason, removedReason: p.removed_reason, listed: p.listed, isPaidMember: opts.mp ? undefined : p.is_paid_member,
       verifiedAt: p.verified_at, nextReviewAt: p.next_review_at, createdAt: p.created_at,

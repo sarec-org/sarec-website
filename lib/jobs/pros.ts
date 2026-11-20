@@ -5,9 +5,10 @@ import { memberStatus } from '@/lib/crm/membership';
 import type { Db } from '@/lib/crm/profile';
 import { msgSecCheck } from '@/lib/crm/contentSec';
 import { anyPhone, verifiedPhone, type Viewer } from './access';
-import { ALL_CITIES, LANGUAGES, PRO_ROLES, PRO_STATUS_LABEL, REVIEW_DAYS, RULES, roleLabel, type ProRole, type ProStatus } from './constants';
+import { LANGUAGES, PRO_ROLES, PRO_STATUS_LABEL, REVIEW_DAYS, RULES, roleLabel, type ProRole, type ProStatus } from './constants';
 import { getSwitches } from './settings';
 import { tradeMap, type Trade } from './trades';
+import { cityNames, loadCities, resolveCities, resolveCity } from './cities';
 
 export type ProRow = {
   id: string; contact_id: string; role: ProRole; name: string; avatar_url: string | null; trades: string[]; verified_trades: string[]; cities: string[];
@@ -77,7 +78,7 @@ export function badgesFor(p: ProRow, trades: Map<string, Trade>): Badge[] {
 }
 
 /** 列表卡片（公开） */
-export function proCard(p: ProRow, trades: Map<string, Trade>) {
+export function proCard(p: ProRow, trades: Map<string, Trade>, cities: Map<string, string> = new Map()) {
   const showLicense = p.role === 'company' || p.role === 'licensed' || (p.role === 'pro_service' && !!p.license_no);
   return {
     id: p.id,
@@ -87,7 +88,8 @@ export function proCard(p: ProRow, trades: Map<string, Trade>) {
     roleLabel: roleLabel(p.role),
     trades: p.verified_trades.map((k) => trades.get(k)?.name ?? k),
     tradeKeys: p.verified_trades,
-    cities: p.cities,
+    cities: p.cities.map((k) => cities.get(k) ?? k),
+    cityKeys: p.cities,
     years: p.years,
     languages: p.languages,
     availableNow: p.available_now,
@@ -103,8 +105,12 @@ export function proCard(p: ProRow, trades: Map<string, Trade>) {
 export async function proSelf(db: Db, p: ProRow) {
   const trades = await tradeMap(db);
   const { requirePaid } = await getSwitches(db);
+  const names = await cityNames(db);
   return {
-    ...proCard(p, trades),
+    ...proCard(p, trades, names),
+    // 本人编辑用：cities 是 key，cityNames 是名字
+    cities: p.cities,
+    cityNames: p.cities.map((k) => names.get(k) ?? k),
     trades: p.trades,
     tradeNames: p.trades.map((k) => trades.get(k)?.name ?? k),
     verifiedTrades: p.verified_trades,
@@ -203,7 +209,7 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
     if (!t) throw new CrmError('bad_request', '选的工种里有一项已经不存在了，请重新选');
     if (!t.open && !v.staff) throw new CrmError('bad_request', `「${t.name}」暂时还没开放登记`);
   }
-  const cities = strArr(b.cities, 40, 30);
+  const cities = (await resolveCities(pool, b.cities)).map((c) => c.key);
   if (!cities.length) throw new CrmError('bad_request', '请至少选一个服务城市');
   const languages = strArr(b.languages, 20, 8).filter((x) => LANGUAGES.includes(x) || x.length <= 20);
   const licenseNo = str(b.licenseNo, 40).replace(/\s+/g, '') || null;
@@ -315,16 +321,20 @@ export async function listPros(q: { trade?: string | null; group?: string | null
   const offset = Math.max(0, Number(q.cursor) || 0);
   const limit = 20;
   const where = `p.listed AND ${worker ? `p.role = 'worker'` : `p.role <> 'worker'`} AND ($1::text[] IS NULL OR p.verified_trades && $1::text[])`;
+  const cityKey = q.city ? (await resolveCity(pool, q.city, { allowDisabled: true }))?.key ?? '__none__' : null;
   const { rows } = await pool.query<ProRow>(
     `SELECT ${PRO_COLS} FROM jobs_pros p WHERE ${where} AND ($2::text IS NULL OR $2 = ANY(p.cities))
       ORDER BY p.available_now DESC, p.verified_at DESC NULLS LAST, p.id LIMIT ${limit + 1} OFFSET $3`,
-    [keys, q.city || null, offset]
+    [keys, cityKey, offset]
   );
   const { rows: cs } = await pool.query<{ c: string }>(`SELECT DISTINCT unnest(p.cities) AS c FROM jobs_pros p WHERE ${where}`, [keys]);
-  const order = new Map(ALL_CITIES.map((c, i) => [c, i]));
-  const cities = cs.map((r) => r.c).sort((a, b) => (order.get(a) ?? 999) - (order.get(b) ?? 999) || a.localeCompare(b));
+  // 筛选用的城市：按后台城市表的顺序，只列这批人服务的
+  const have = new Set(cs.map((r) => r.c));
+  const all = await loadCities(pool, { all: true });
+  const names = new Map(all.map((c) => [c.key, c.name]));
+  const cities = all.filter((c) => have.has(c.key)).map((c) => ({ key: c.key, name: c.name }));
   return {
-    items: rows.slice(0, limit).map((p) => proCard(p, trades)),
+    items: rows.slice(0, limit).map((p) => proCard(p, trades, names)),
     cities,
     nextCursor: rows.length > limit ? String(offset + limit) : null
   };
@@ -334,7 +344,7 @@ export async function getProPublic(id: string, v: Viewer) {
   const pool = getPool();
   const p = await proById(pool, id);
   if (!p || (!p.listed && !v.staff && p.contact_id !== v.contactId)) throw new CrmError('not_found', '找不到这个人，可能已经下架');
-  return proCard(p, await tradeMap(pool));
+  return proCard(p, await tradeMap(pool), await cityNames(pool));
 }
 
 /** 找工人的人点“联系”：给电话（和微信），记录谁看过 */

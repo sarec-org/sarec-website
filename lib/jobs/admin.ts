@@ -1,21 +1,24 @@
 /** 找工人 · 接活：meta（首页、方块页要的一切）和工作人员后台（活儿、统计、投诉、邀请） */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
-import type { Staff } from '@/lib/crm/auth';
+import { staffCan, type Staff } from '@/lib/crm/auth';
 import { recordException, resolveException } from '@/lib/crm/followups';
 import type { Viewer } from './access';
 import {
-  CITY_GROUPS, DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
+  DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
   TURNOVER_TRADES, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
 } from './constants';
-import { deliver, jobsTemplate } from './notify';
+import { deliver, isProduction, jobsTemplate } from './notify';
+import { getSwitches } from './settings';
 import { latestPosts } from './posts';
 import { proBrief } from './pros';
+import { groupCities, loadCities } from './cities';
 import { loadGroups, loadHomeEntries, loadTrades, tradeMap, tradesWithPros } from './trades';
 
 export async function buildMeta(v: Viewer) {
   const pool = getPool();
-  const [groups, trades, entries, withPros] = await Promise.all([loadGroups(pool), loadTrades(pool), loadHomeEntries(pool), tradesWithPros(pool)]);
+  const [groups, trades, entries, withPros, cityList] = await Promise.all([loadGroups(pool), loadTrades(pool), loadHomeEntries(pool), tradesWithPros(pool), loadCities(pool)]);
+  const cities = groupCities(cityList);
   const s = v.switches;
   const staffPreview = v.staff && (!s.find || !s.work);
   const showLatest = !v.mp && (s.work || v.staff);
@@ -28,11 +31,14 @@ export async function buildMeta(v: Viewer) {
       key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon
     })),
     homeEntries: entries.map((e) => ({ label: e.label, icon: e.icon, target: e.target })),
+    cities,
     me: { pro: await proBrief(pool, v.contactId) },
     latest: showLatest ? await latestPosts(3) : [],
     options: {
       proRoles: PRO_ROLES, posterRoles: v.mp ? POSTER_ROLES.filter((r) => r.key !== 'crew') : POSTER_ROLES, timings: TIMINGS, propertyTypes: PROPERTY_TYPES,
-      languages: LANGUAGES, cityGroups: CITY_GROUPS, turnoverTrades: TURNOVER_TRADES, siteVisitTrades: SITE_VISIT_TRADES
+      languages: LANGUAGES,
+      // 旧字段（只有名字）：给还没改的调用方；新代码用上面的 cities（带 key）
+      cityGroups: cities.map((g) => ({ region: g.region, cities: g.items.map((c) => c.name) })), turnoverTrades: TURNOVER_TRADES, siteVisitTrades: SITE_VISIT_TRADES
     },
     rules: RULES,
     disclaimer: DISCLAIMER,
@@ -51,12 +57,12 @@ export async function staffPosts(q: { status?: string | null; mp: boolean }) {
     id: string; title: string; status: PostStatus; close_reason: string | null; staff_note: string | null; city: string; trade_key: string; poster_role: string;
     created_at: Date; expires_at: Date; budget_range: string | null; contact_count: number; notified: number; reports: number; first_contact_at: Date | null; poster_name: string;
   }>(
-    `SELECT p.id, p.title, p.status, p.close_reason, p.staff_note, p.city, p.trade_key, p.poster_role, p.created_at, p.expires_at, p.budget_range, p.first_contact_at,
+    `SELECT p.id, p.title, p.status, p.close_reason, p.staff_note, COALESCE(jc.name, p.city) AS city, p.trade_key, p.poster_role, p.created_at, p.expires_at, p.budget_range, p.first_contact_at,
             c.name AS poster_name,
             (SELECT count(*)::int FROM jobs_contacts jc WHERE jc.direction = 'post' AND jc.post_id = p.id) AS contact_count,
             (SELECT count(*)::int FROM jobs_notifications n WHERE n.kind = 'dispatch' AND n.post_id = p.id) AS notified,
             (SELECT count(*)::int FROM jobs_reports r WHERE r.target_type = 'post' AND r.target_id = p.id AND r.status = 'open') AS reports
-       FROM jobs_posts p JOIN contacts c ON c.id = p.contact_id
+       FROM jobs_posts p JOIN contacts c ON c.id = p.contact_id LEFT JOIN jobs_cities jc ON jc.key = p.city_key
       WHERE ($1::text IS NULL OR p.status = $1) ORDER BY p.created_at DESC LIMIT 300`,
     [st]
   );
@@ -160,7 +166,7 @@ export async function inviteCandidates(roleCategory: string | null, roleSub: str
   const { rows } = await getPool().query(
     `SELECT c.id, c.name, c.role_category AS "roleCategory", c.role_sub AS "roleSub",
             EXISTS (SELECT 1 FROM jobs_pros p WHERE p.contact_id = c.id) AS "registered",
-            (SELECT max(n.created_at) FROM jobs_notifications n WHERE n.kind = 'invite' AND n.contact_id = c.id) AS "invitedAt"
+            (SELECT max(n.created_at) FROM jobs_notifications n WHERE n.kind = 'invite' AND n.status <> 'dry_run' AND n.contact_id = c.id) AS "invitedAt"
        FROM contacts c
       WHERE c.merged_into IS NULL AND ($1::text IS NULL OR c.role_category = $1) AND ($2::text IS NULL OR c.role_sub = $2)
         AND (c.role_category IS NOT NULL OR $1::text IS NULL)
@@ -170,21 +176,41 @@ export async function inviteCandidates(roleCategory: string | null, roleSub: str
   );
   return { items: rows };
 }
+/**
+ * 发邀请。默认演练（dryRun 不是 false 就是演练）：只记一行 status='dry_run'，一条都不发。
+ * 真发（dryRun:false）要：管理员；正式环境两个开关都开着；测试站只会发给测试身份（其他人记 blocked，见 notify.ts 的保险）。
+ */
 export async function sendInvites(s: Staff, b: Record<string, unknown>) {
   const ids = (Array.isArray(b.contactIds) ? b.contactIds : []).filter((x): x is string => typeof x === 'string' && /^[0-9a-f-]{36}$/i.test(x)).slice(0, 200);
   if (!ids.length) throw new CrmError('bad_request', '请先勾选要邀请的会员');
+  const dryRun = b.dryRun !== false;
   const pool = getPool();
-  const out = { sent: 0, blocked: 0, failed: 0, skipped: 0 };
+  if (!dryRun) {
+    if (!staffCan(s, 'admin')) throw new CrmError('forbidden', '真正发送邀请只限管理员；可以先演练看看会发给谁');
+    if (isProduction()) {
+      const sw = await getSwitches(pool);
+      if (!sw.find || !sw.work) throw new CrmError('conflict', '「找工人」「接活」两个开关都打开后才能真正发送邀请');
+    }
+  }
+  const out = { dryRun, sent: 0, blocked: 0, failed: 0, skipped: 0, wouldSend: 0 };
+  const text = `SAREC：商会新开了「找工人·接活」。登记一次，有对口的活儿会第一时间通知你：${webBase()}${WEB_JOBS_PATH}/register`;
   for (const id of ids) {
-    const { rows } = await pool.query(`SELECT 1 FROM jobs_notifications WHERE kind = 'invite' AND contact_id = $1 AND created_at > now() - interval '30 days'`, [id]);
+    const { rows } = await pool.query(
+      `SELECT 1 FROM jobs_notifications WHERE kind = 'invite' AND contact_id = $1 AND status <> 'dry_run' AND created_at > now() - interval '30 days'`,
+      [id]
+    );
     if (rows[0]) { out.skipped++; continue; }
-    const st = await deliver(pool, {
-      kind: 'invite', contactId: id,
-      sms: `SAREC：商会新开了「找工人·接活」。登记一次，有对口的活儿会第一时间通知你：${webBase()}${WEB_JOBS_PATH}/register`
-    });
+    if (dryRun) {
+      await pool.query(`INSERT INTO jobs_notifications (kind, contact_id, channel, status, detail) VALUES ('invite', $1, 'none', 'dry_run', $2)`, [id, text.slice(0, 300)]);
+      out.wouldSend++;
+      continue;
+    }
+    const st = await deliver(pool, { kind: 'invite', contactId: id, sms: text });
     if (st === 'sent') out.sent++; else if (st === 'blocked') out.blocked++; else out.failed++;
   }
-  await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value) VALUES ($1, 'jobs_invite', 'contacts', 'batch', $2)`, [`staff:${s.name || s.email}`, JSON.stringify({ ids: ids.length, ...out })]);
+  await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value) VALUES ($1, $2, 'contacts', 'batch', $3)`, [
+    `staff:${s.name || s.email}`, dryRun ? 'jobs_invite_dry_run' : 'jobs_invite', JSON.stringify({ ids: ids.length, ...out })
+  ]);
   return out;
 }
 

@@ -11,10 +11,11 @@ import {
 import { needPayFor, proByContact, refreshPro } from './pros';
 import { getSwitches } from './settings';
 import { tradeMap, type Trade } from './trades';
+import { cityNames, loadCities, resolveCity } from './cities';
 
 export type PostRow = {
   id: string; batch_id: string; contact_id: string; poster_role: PosterRole; trade_key: string; city: string; title: string; description: string;
-  photos: string[]; voice_url: string | null; timing: Timing; budget_range: string | null; property_type: string | null; call_name: string | null;
+  city_key: string | null; photos: string[]; voice_url: string | null; timing: Timing; budget_range: string | null; property_type: string | null; call_name: string | null;
   phone: string | null; wechat: string | null; crew_headcount: number | null; crew_duration: string | null; crew_pay: string | null;
   want_site_visit: boolean; turnover: boolean; status: PostStatus; close_reason: string | null; expires_at: Date; renew_token: string;
   renew_reminded_at: Date | null; notify_round: number; notified_at: Date | null; first_contact_at: Date | null; staff_alerted_at: Date | null;
@@ -39,12 +40,13 @@ const summary = (d: string) => {
 };
 const isOpen = (p: PostRow) => p.status === 'open' && p.expires_at.getTime() > Date.now();
 
-export function postCard(p: PostRow, trades: Map<string, Trade>) {
+export function postCard(p: PostRow, trades: Map<string, Trade>, cities: Map<string, string> = new Map()) {
   return {
     id: p.id,
     title: p.title,
     summary: summary(p.description),
-    city: p.city,
+    city: (p.city_key && cities.get(p.city_key)) || p.city,
+    cityKey: p.city_key,
     trade: p.trade_key,
     tradeName: trades.get(p.trade_key)?.name ?? p.trade_key,
     posterRole: p.poster_role,
@@ -71,16 +73,20 @@ export async function listPosts(q: { trade?: string | null; city?: string | null
   const trades = await tradeMap(pool);
   const offset = Math.max(0, Number(q.cursor) || 0);
   const limit = q.limit ?? 20;
+  const cityKey = q.city ? (await resolveCity(pool, q.city, { allowDisabled: true }))?.key ?? '__none__' : null;
   const { rows } = await pool.query<PostRow>(
     `SELECT * FROM jobs_posts WHERE status = 'open' AND expires_at > now()
-        AND ($1::text IS NULL OR trade_key = $1) AND ($2::text IS NULL OR city = $2)
+        AND ($1::text IS NULL OR trade_key = $1) AND ($2::text IS NULL OR city_key = $2)
       ORDER BY created_at DESC, id LIMIT ${limit + 1} OFFSET $3`,
-    [q.trade || null, q.city || null, offset]
+    [q.trade || null, cityKey, offset]
   );
-  const { rows: cs } = await pool.query<{ city: string }>(`SELECT DISTINCT city FROM jobs_posts WHERE status = 'open' AND expires_at > now() ORDER BY city`);
+  const { rows: cs } = await pool.query<{ k: string }>(`SELECT DISTINCT city_key AS k FROM jobs_posts WHERE status = 'open' AND expires_at > now() AND city_key IS NOT NULL`);
+  const have = new Set(cs.map((r) => r.k));
+  const all = await loadCities(pool, { all: true });
+  const names = new Map(all.map((c) => [c.key, c.name]));
   return {
-    items: rows.slice(0, limit).map((p) => postCard(p, trades)),
-    cities: cs.map((r) => r.city),
+    items: rows.slice(0, limit).map((p) => postCard(p, trades, names)),
+    cities: all.filter((c) => have.has(c.key)).map((c) => ({ key: c.key, name: c.name })),
     nextCursor: rows.length > limit ? String(offset + limit) : null
   };
 }
@@ -151,7 +157,7 @@ export async function getPost(id: string, v: Viewer) {
   const e = await eligibility(pool, post, v.contactId, v.staff);
   return {
     post: {
-      ...postCard(post, trades),
+      ...postCard(post, trades, await cityNames(pool)),
       description: post.description,
       photos: post.photos,
       voiceUrl: post.voice_url,
@@ -190,8 +196,9 @@ export async function createPosts(v: Viewer, contactId: string, b: Record<string
     if (t.noPost) throw new CrmError('bad_request', `「${t.name}」只展示、可联系，不接受发布活儿`);
     if (!t.open && !v.staff) throw new CrmError('bad_request', `「${t.name}」暂时还没开放`);
   }
-  const city = str(b.city, 40);
-  if (!city) throw new CrmError('bad_request', '请选在哪个城市');
+  const cityRow = await resolveCity(pool, b.cityKey ?? b.city);
+  if (!cityRow) throw new CrmError('bad_request', b.city || b.cityKey ? '这个城市不在城市列表里，请从列表里选' : '请选在哪个城市');
+  const city = cityRow.name;
   const description = str(b.description, 2000);
   const photos = urls(b.photos, 9);
   const voiceUrl = urls([b.voiceUrl], 1)[0] ?? null;
@@ -213,13 +220,13 @@ export async function createPosts(v: Viewer, contactId: string, b: Record<string
     for (const k of keys) {
       const t = trades.get(k)!;
       const { rows } = await db.query<{ id: string }>(
-        `INSERT INTO jobs_posts (batch_id, contact_id, poster_role, trade_key, city, title, description, photos, voice_url, timing, budget_range, property_type,
+        `INSERT INTO jobs_posts (batch_id, contact_id, poster_role, trade_key, city_key, city, title, description, photos, voice_url, timing, budget_range, property_type,
             call_name, phone, wechat, crew_headcount, crew_duration, crew_pay, want_site_visit, turnover, expires_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, now() + make_interval(days => $21)) RETURNING id`,
+         VALUES ($1,$2,$3,$4,$22,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20, now() + make_interval(days => $21)) RETURNING id`,
         [
           batch, contactId, role, k, city, makeTitle(city, t.name, description, role, headcount), description, photos, voiceUrl, timing,
           str(b.budget, 60) || null, propertyType, str(b.callName, 30) || null, phone, str(b.wechat, 60) || null, headcount, duration,
-          role === 'crew' ? str(b.crewPay, 60) || null : null, want && SITE_VISIT_TRADES.includes(k), turnover, POST_DAYS
+          role === 'crew' ? str(b.crewPay, 60) || null : null, want && SITE_VISIT_TRADES.includes(k), turnover, POST_DAYS, cityRow.key
         ]
       );
       out.push(rows[0].id);
@@ -264,8 +271,14 @@ export async function patchPost(id: string, v: Viewer, b: Record<string, unknown
     let desc = post.description;
     let city = post.city;
     if (typeof b.description === 'string') { desc = str(b.description, 2000); add('description', desc); }
-    if (typeof b.city === 'string' && str(b.city, 40)) { city = str(b.city, 40); add('city', city); }
-    if (typeof b.description === 'string' || typeof b.city === 'string' || b.crewHeadcount !== undefined) {
+    if ((typeof b.city === 'string' && b.city.trim()) || typeof b.cityKey === 'string') {
+      const c = await resolveCity(pool, b.cityKey ?? b.city);
+      if (!c) throw new CrmError('bad_request', '这个城市不在城市列表里，请从列表里选');
+      city = c.name;
+      add('city', c.name);
+      add('city_key', c.key);
+    }
+    if (typeof b.description === 'string' || typeof b.city === 'string' || typeof b.cityKey === 'string' || b.crewHeadcount !== undefined) {
       const hc = b.crewHeadcount !== undefined ? intOr(b.crewHeadcount, 1, 500) : post.crew_headcount;
       if (b.crewHeadcount !== undefined && post.poster_role === 'crew') add('crew_headcount', hc);
       add('title', makeTitle(city, trades.get(post.trade_key)?.name ?? post.trade_key, desc, post.poster_role, hc));
@@ -287,7 +300,7 @@ export async function patchPost(id: string, v: Viewer, b: Record<string, unknown
   if (!sets.length) throw new CrmError('bad_request', '没有要改的内容');
   await pool.query(`UPDATE jobs_posts SET ${sets.join(', ')}, updated_at = now() WHERE id = $1`, vals);
   const fresh = (await postById(pool, id))!;
-  return { post: postCard(fresh, await tradeMap(pool)) };
+  return { post: postCard(fresh, await tradeMap(pool), await cityNames(pool)) };
 }
 
 // ── 我的活儿（含谁联系过） ──────────────────────────────────────────────
@@ -307,9 +320,10 @@ export async function myPosts(contactId: string) {
     [ids]
   );
   const notified = new Map(ns.map((r) => [r.post_id, r.n]));
+  const names = await cityNames(pool);
   return {
     items: rows.map((p) => ({
-      ...postCard(p, trades),
+      ...postCard(p, trades, names),
       description: p.description,
       photos: p.photos,
       batchId: p.batch_id,
@@ -357,5 +371,6 @@ export async function notifiedPosts(contactId: string, mp: boolean) {
   const webUrl = `${webBase()}${WEB_JOBS_PATH}/mine`;
   if (mp) return { count: rows.length, webUrl };
   const trades = await tradeMap(pool);
-  return { count: rows.length, webUrl, items: rows.map((p) => ({ ...postCard(p, trades), notifiedAt: p.notified_at_n })) };
+  const names = await cityNames(pool);
+  return { count: rows.length, webUrl, items: rows.map((p) => ({ ...postCard(p, trades, names), notifiedAt: p.notified_at_n })) };
 }

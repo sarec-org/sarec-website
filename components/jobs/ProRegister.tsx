@@ -88,7 +88,6 @@ export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState<{ pro: ProSelf; autoCheck: { message?: string } | null } | null>(null);
-  const [cityOther, setCityOther] = useState('');
   const [, setPhone] = useState<string | null>(null);
   const set = (p: Partial<ProForm>) => setF((x) => ({ ...x, ...p }));
   const licensed = f.role === 'company' || f.role === 'licensed';
@@ -104,7 +103,6 @@ export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: 
   const needLic = licensed || (proService && picked.some((t) => t.licType !== 'C'));
   const needBizReg = proService && picked.some((t) => t.licType === 'C') && !f.licenseNo.trim();
   const showStampNote = proService && picked.some((t) => t.group === 'design');
-  const allCities = Array.from(new Set([...meta.options.cityGroups.flatMap((g) => g.cities), ...f.cities]));
 
   const missing = [
     !f.role && '身份',
@@ -186,11 +184,13 @@ export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: 
           </div>
           <div className={s.field}>
             <span className={s.label}>服务城市<span className={s.required}>*</span><span className={s.small}>（可以多选）</span></span>
-            <Pick multi options={allCities.map((c) => ({ value: c, label: c }))} value={f.cities} onChange={(v) => set({ cities: v })} />
-            <div className={s.inputRow}>
-              <input className={s.input} placeholder="别的城市，例如 Fullerton" value={cityOther} onChange={(e) => setCityOther(e.target.value)} />
-              <button type="button" className={`${s.btn} ${s.btnQuiet}`} disabled={!cityOther.trim()} onClick={() => { set({ cities: Array.from(new Set([...f.cities, cityOther.trim()])) }); setCityOther(''); }}>加上</button>
-            </div>
+            {meta.cities.map((g) => (
+              <div key={g.region}>
+                <p className={s.small} style={{ margin: '0.5rem 0 0.3rem' }}>{g.region}</p>
+                <Pick multi options={g.items.map((c) => ({ value: c.key, label: c.name }))} value={f.cities} onChange={(v) => set({ cities: v })} />
+              </div>
+            ))}
+            <p className={s.small}>列表里没有你的城市？请联系商会工作人员添加。</p>
           </div>
           <div className={s.field}>
             <span className={s.label}>干了几年<span className={s.required}>*</span></span>

@@ -21,6 +21,8 @@ export type Meta = {
   homeEntries: HomeEntry[];
   me: { pro: MePro };
   latest: PostCard[];
+  /** 城市表（后台管理；发活儿、登记接活、筛选都用它，提交 key） */
+  cities: { region: string; items: { key: string; name: string }[] }[];
   options: {
     proRoles: Opt<ProRole>[];
     posterRoles: Opt<PosterRole>[];
@@ -37,12 +39,12 @@ export type Meta = {
 
 export type Badge = { kind: string; text: string };
 export type ProCard = {
-  id: string; name: string; avatar: string | null; role: ProRole; roleLabel: string; trades: string[]; tradeKeys: string[]; cities: string[];
+  id: string; name: string; avatar: string | null; role: ProRole; roleLabel: string; trades: string[]; tradeKeys: string[]; cities: string[]; cityKeys: string[];
   years: number | null; languages: string[]; availableNow: boolean; intro: string | null; photos: string[]; teamSize: number | null; badges: Badge[]; licenseNo?: string;
 };
 
 export type PostCard = {
-  id: string; title: string; summary: string; city: string; trade: string; tradeName: string; posterRole: PosterRole; posterLabel: string;
+  id: string; title: string; summary: string; city: string; cityKey: string | null; trade: string; tradeName: string; posterRole: PosterRole; posterLabel: string;
   timing: Timing; timingLabel: string; budget?: string; crew?: { headcount: number | null; duration: string | null; pay?: string };
   status: PostStatus; statusLabel: string; createdAt: string; expiresAt: string;
 };
@@ -59,9 +61,13 @@ export type MyPost = PostCard & {
 };
 
 export type ProSelf = ProCard & {
+  /** 本人编辑用：cities 是 key，cityNames 是名字 */
+  cityNames: string[];
   trades: string[]; tradeNames: string[]; verifiedTrades: string[]; licenseNo: string | null; insuranceUrl: string | null; businessRegUrl: string | null;
   licenseDocUrl: string | null; wechat: string | null; status: ProStatus; statusLabel: string; returnReason: string | null; removedReason: string | null;
   needsReview: boolean; verifiedAt: string | null; nextReviewAt: string | null; listed: boolean; needPay: boolean; designNoCaStamp: boolean;
 };
 export type Prefill = { name: string; personName: string; avatar: string | null; phone: string | null; wechat: string | null; intro: string | null; role: ProRole | null; trades: string[]; cities: string[]; isMember: boolean };
 export type MeProRes = { pro: ProSelf | null; prefill: Prefill; rules: string[] };
+
+export type CityOpt = { key: string; name: string };

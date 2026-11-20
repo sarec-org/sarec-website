@@ -207,20 +207,20 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 | 接口 | 权限 | 参数 | 返回 |
 |---|---|---|---|
-| `GET /jobs/meta` | 🌐 | — | `switches{find,work,requirePaid}`、`staffPreview`、`staffPreviewText`、`groups[{key,name,order}]`、`trades[{key,name,group,licType:'A'\|'B'\|'C',open,hasPros,noPost,noNotify,icon}]`、`homeEntries[{label,icon,target:{type:'trade'\|'group',key}}]`（7 个，按顺序）、`me.pro`（null 或 `{id,role,status,listed,needPay}`）、`latest`（≤3 张活儿卡片；小程序、接活开关关时为 `[]`）、`options{proRoles,posterRoles（小程序不含 crew）,timings,propertyTypes,languages,cityGroups[{region,cities}],turnoverTrades,siteVisitTrades}`、`rules[]`、`disclaimer`、`subscribeTemplate`（派活订阅消息模板 ID 或 null）、`webUrl`、`postUrl` |
-| `GET /jobs/pros?trade=&group=&city=&role=worker&cursor=` | 🌐（find 开关） | `trade` 或 `group` 二选一；`role=worker` 只列工人（网站施工队招工用，默认不含工人） | `items[接活人卡片]`、`cities[]`（这批人能筛的城市）、`nextCursor` |
+| `GET /jobs/meta` | 🌐 | — | `switches{find,work,requirePaid}`、`staffPreview`、`staffPreviewText`、`groups[{key,name,order}]`、`trades[{key,name,group,licType:'A'\|'B'\|'C',open,hasPros,noPost,noNotify,icon}]`、`homeEntries[{label,icon,target:{type:'trade'\|'group',key}}]`（7 个，按顺序）、`cities[{region,items:[{key,name}]}]`（城市表，按地区和顺序，只含启用的；发活儿、登记、筛选都用它，提交 key）、`me.pro`（null 或 `{id,role,status,listed,needPay}`）、`latest`（≤3 张活儿卡片；小程序、接活开关关时为 `[]`）、`options{proRoles,posterRoles（小程序不含 crew）,timings,propertyTypes,languages,cityGroups[{region,cities:[名字]}]（旧字段，从城市表生成，新代码用 `cities`）,turnoverTrades,siteVisitTrades}`、`rules[]`、`disclaimer`、`subscribeTemplate`（派活订阅消息模板 ID 或 null）、`webUrl`、`postUrl` |
+| `GET /jobs/pros?trade=&group=&city=&role=worker&cursor=` | 🌐（find 开关） | `trade` 或 `group` 二选一；`city` = 城市 key（名字也认，停用的城市也能筛）；`role=worker` 只列工人（网站施工队招工用，默认不含工人） | `items[接活人卡片]`、`cities[{key,name}]`（这批人服务的城市，按城市表顺序）、`nextCursor` |
 | `GET /jobs/pros/:id` | 🌐（find） | — | `pro`（卡片） |
 | `POST /jobs/pros/:id/contact` | 👤（find） | — | `{phone, wechat, name}`；记录谁看过（jobs_contacts direction=pro） |
 | `GET /jobs/me/pro` | 👤（work） | — | `pro`（本人完整资料或 null）、`prefill{name,personName,avatar,phone,wechat,intro,role,trades,cities,isMember}`（现有会员资料自动带入）、`rules[]`、`subscribeTemplate` |
-| `POST /jobs/me/pro` | 👤（work） | `{agree:true, role:'company'\|'licensed'\|'pro_service'\|'worker', name, avatar?, trades[], cities[], years?, languages[]?, availableNow?, licenseNo?, intro?, photos[≤9]?, teamSize?, insuranceUrl?, businessRegUrl?, licenseDocUrl?, wechat?, designNoCaStamp?}` | `{pro, autoCheck}`。规则：施工队/持牌师傅必须填牌照号；设计与专业服务选了 A/B 工种要执照号；选了 C 工种要营业登记（或执照）；必须有已验证手机号（否则 `need_phone`）。状态由服务器定：工人登记即生效（不进业主找人列表，只给施工队招工用）；其他人 `pending` 等工作人员核验，A 类牌照自动排队对 CSLB 官方总表（`autoCheck.state='queued'`，几分钟内出结果）。已通过的人改资料：新加的工种、换牌照号 → `needsReview`，原来通过的工种照常上列表 |
+| `POST /jobs/me/pro` | 👤（work） | `{agree:true, role:'company'\|'licensed'\|'pro_service'\|'worker', name, avatar?, trades[], cities[城市 key]（必须是城市表里启用的，名字也认）, years?, languages[]?, availableNow?, licenseNo?, intro?, photos[≤9]?, teamSize?, insuranceUrl?, businessRegUrl?, licenseDocUrl?, wechat?, designNoCaStamp?}` | `{pro, autoCheck}`。规则：施工队/持牌师傅必须填牌照号；设计与专业服务选了 A/B 工种要执照号；选了 C 工种要营业登记（或执照）；必须有已验证手机号（否则 `need_phone`）。状态由服务器定：工人登记即生效（不进业主找人列表，只给施工队招工用）；其他人 `pending` 等工作人员核验，A 类牌照自动排队对 CSLB 官方总表（`autoCheck.state='queued'`，几分钟内出结果）。已通过的人改资料：新加的工种、换牌照号 → `needsReview`，原来通过的工种照常上列表 |
 | `PATCH /jobs/me/pro` | 👤（work） | `{availableNow:boolean}` | `{pro}` |
 | `POST /jobs/me/pro/photo?kind=avatar\|work\|license\|insurance\|bizreg` | 👤（work） | multipart `file`（≤6MB） | `{url, kind}` |
 | `POST /jobs/me/subscribe` | 👤 | `{accepted:[模板ID]}` | `{saved, quota}`：允许一次记一次，派活时用掉一次 |
 | `GET /jobs/me/notified` | 👤 | — | `{count, webUrl}`；网站另有 `items[活儿卡片 + notifiedAt]` |
-| `GET /jobs/posts?trade=&city=&cursor=` | 🌐（work）· 小程序 404 | — | `items[活儿卡片]`、`cities[]`、`nextCursor`。只列找人中、没到期的 |
+| `GET /jobs/posts?trade=&city=&cursor=` | 🌐（work）· 小程序 404 | `city` = 城市 key | `items[活儿卡片]`、`cities[{key,name}]`（有活儿的城市）、`nextCursor`。只列找人中、没到期的 |
 | `GET /jobs/posts/:id` | 🌐 · 小程序 404 | — | `post`（卡片 + `description,photos,voiceUrl,propertyType,propertyTypeLabel,callName,wantSiteVisit,turnover,mine`）、`canContact`、`reason`（不能联系的人话原因）、`reasonCode`、`needPay`。**不含电话、不含地址** |
-| `POST /jobs/posts` | 👤（find）· 小程序 404 | `{posterRole:'owner'\|'landlord'\|'property'\|'developer'\|'crew', trades[]（或 trade）, city, description?, photos[≤9]?, voiceUrl?, timing:'asap'\|'week'\|'month'\|'flexible', budget?, propertyType?:'house'\|'condo'\|'commercial', callName?, wechat?, wantSiteVisit?, turnover?, crewHeadcount?, crewDuration?, crewPay?}` | `{ids[], batchId, next}`。**按工种拆单**：选几个工种就拆成几条（同一 `batchId`），退租整修 `turnover=true` 时页面预选 `options.turnoverTrades`。描述 / 语音 / 照片至少一样；`crew` 必填 `crewHeadcount`、`crewDuration`。手机号用已验证的（没有 → `need_phone`）。标题自动生成：`城市 · 工种 · 一句话`（从描述第一句截 16 字；招工为 `城市 · 工种 · 招工人 N 人`）。发布即通知第一批（`next` 是给发布人看的“接下来会发生什么”） |
-| `PATCH /jobs/posts/:id` | 👤 发布人 · 小程序 404 | `{status?:'open'\|'found'\|'closed', renew?:true, description?, city?, photos?, voiceUrl?, timing?, budget?, propertyType?, callName?, wechat?, wantSiteVisit?, crewHeadcount?, crewDuration?, crewPay?}`；续期链接不登录：`{renew:true, token}` | `{post}`。续期 = 从现在起再 14 天（已到期关闭的重新变成找人中） |
+| `POST /jobs/posts` | 👤（find）· 小程序 404 | `{posterRole:'owner'\|'landlord'\|'property'\|'developer'\|'crew', trades[]（或 trade）, cityKey（城市表里启用的 key；旧写法 `city` 传名字也认，表里没有的一律 400）, description?, photos[≤9]?, voiceUrl?, timing:'asap'\|'week'\|'month'\|'flexible', budget?, propertyType?:'house'\|'condo'\|'commercial', callName?, wechat?, wantSiteVisit?, turnover?, crewHeadcount?, crewDuration?, crewPay?}` | `{ids[], batchId, next}`。**按工种拆单**：选几个工种就拆成几条（同一 `batchId`），退租整修 `turnover=true` 时页面预选 `options.turnoverTrades`。描述 / 语音 / 照片至少一样；`crew` 必填 `crewHeadcount`、`crewDuration`。手机号用已验证的（没有 → `need_phone`）。标题自动生成：`城市 · 工种 · 一句话`（从描述第一句截 16 字；招工为 `城市 · 工种 · 招工人 N 人`）。发布即通知第一批（`next` 是给发布人看的“接下来会发生什么”） |
+| `PATCH /jobs/posts/:id` | 👤 发布人 · 小程序 404 | `{status?:'open'\|'found'\|'closed', renew?:true, description?, cityKey?, photos?, voiceUrl?, timing?, budget?, propertyType?, callName?, wechat?, wantSiteVisit?, crewHeadcount?, crewDuration?, crewPay?}`；续期链接不登录：`{renew:true, token}` | `{post}`。续期 = 从现在起再 14 天（已到期关闭的重新变成找人中） |
 | `GET /jobs/me/posts` | 👤 · 小程序 404 | — | `items[卡片 + description,photos,batchId,closeReason,expired,notifiedCount,contacts[{proId,name,roleLabel,at,times}]]` |
 | `POST /jobs/posts/:id/contact` | 👤 · 小程序 404 | — | 有资格：`{phone, wechat, callName}`，记录谁看过；没资格：`403 {code:'not_eligible', message}`（见下） |
 | `POST /jobs/upload?kind=photo\|voice` | 👤 · 小程序 404 | multipart `file`（图片 ≤6MB，语音 ≤8MB） | `{url, kind}` |
@@ -228,9 +228,11 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 | `GET /jobs/followup/:token` | 🌐 | — | `followup{title, side:'poster'\|'pro', answered, questions[{key,text}], answers}` |
 | `POST /jobs/followup/:token` | 🌐 | `{reached?, deal?, satisfied?, note?}`（布尔） | `{message}`；结果只进后台 |
 
-**接活人卡片**：`{id,name,avatar,role,roleLabel,trades[名称],tradeKeys[],cities[],years,languages[],availableNow,intro,photos[],teamSize,badges[{kind,text}],licenseNo?}`。`badges.kind`：`license`「执照已核验 2026-11-20」（A、B 类）/ `no_state_license`「此类服务无需州执照」/ `business_reg`「已提供营业登记」/ `insurance`「已提供责任保险」/ `member`「缴费会员」/ `note`「方案与咨询，不提供加州报批签章」。分开显示，`text` 直接用。施工队、持牌师傅一定带 `licenseNo`。
+`GET /jobs/me/pro` 的 `pro` 是本人编辑用：`cities` 是 key、`cityNames` 是名字。
 
-**活儿卡片**：`{id,title,summary（描述前两行）,city,trade,tradeName,posterRole,posterLabel,timing,timingLabel,budget?（有才给）,crew?{headcount,duration,pay?},status,statusLabel,createdAt,expiresAt}`。状态：`open` 找人中 / `found` 已找到 / `closed` 已关闭（到期自动关闭时 `closeReason='expired'`）/ `removed` 已下架（工作人员）。
+**接活人卡片**：`{id,name,avatar,role,roleLabel,trades[名称],tradeKeys[],cities[名字],cityKeys[],years,languages[],availableNow,intro,photos[],teamSize,badges[{kind,text}],licenseNo?}`。`badges.kind`：`license`「执照已核验 2026-11-20」（A、B 类）/ `no_state_license`「此类服务无需州执照」/ `business_reg`「已提供营业登记」/ `insurance`「已提供责任保险」/ `member`「缴费会员」/ `note`「方案与咨询，不提供加州报批签章」。分开显示，`text` 直接用。施工队、持牌师傅一定带 `licenseNo`。
+
+**活儿卡片**：`{id,title,summary（描述前两行）,city（当前名字）,cityKey,trade,tradeName,posterRole,posterLabel,timing,timingLabel,budget?（有才给）,crew?{headcount,duration,pay?},status,statusLabel,createdAt,expiresAt}`。状态：`open` 找人中 / `found` 已找到 / `closed` 已关闭（到期自动关闭时 `closeReason='expired'`）/ `removed` 已下架（工作人员）。
 
 **谁能看发布人电话**（原始指令第四部分；`POST /jobs/posts/:id/contact`、`GET /jobs/posts/:id` 的 `canContact/reason`）：
 - 房主 / 房东 / 物业 / 开发商发的：只有核验通过、这个工种在 `verifiedTrades` 里的施工队或公司、持牌师傅、设计与专业服务（C 类工种 = 交了营业登记并通过）。`requirePaid` 开着时还要是缴费会员（否则 `needPay=true`，“核验已通过，成为缴费会员后就能联系发布人”）。
@@ -254,9 +256,13 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 | `DELETE /workbench/jobs/trades/:key` | — | 有活儿的不能删（改不开放） |
 | `POST /workbench/jobs/groups` | `{key,name,order}` | `{group}` |
 | `PUT /workbench/jobs/home-entries` | `{entries:[7 个 {label,icon?,target:{type,key}}]}` | `{homeEntries}` |
+| `GET /workbench/jobs/cities` | — | `regions[{region,regionSort,items[{key,name,region,regionSort,sort,enabled,pros,posts}]}]`（含停用的；pros/posts = 用过的数量） |
+| `POST /workbench/jobs/cities` | `{key?（不给 = 新增）, name, region, enabled?}`；名字不能重复；换地区就排到那个地区最后 | `{city}` |
+| `DELETE /workbench/jobs/cities/:key` | — | `{key,deleted,disabled,message}`：有人登记过 / 有活儿用过的只停用（不再出现在选项里，老记录照样显示名字），没用过的真删 |
+| `PUT /workbench/jobs/cities/order` | `{regions:[{region,keys[]}]}`：地区顺序和地区内顺序都按数组；可以把城市挪到别的地区 | 同 GET |
 | `GET /workbench/jobs/reports?status=open\|handled` · `POST /workbench/jobs/reports/:id {note?}` | — | 投诉列表 · 标记已处理 |
-| `GET /workbench/jobs/invite?roleCategory=&roleSub=` · `POST /workbench/jobs/invite {contactIds[]}` | 按行业标签筛现有会员 · 一键发“来登记接活”（30 天内同一人只发一次） | `items[{id,name,roleCategory,roleSub,registered,invitedAt}]` · `{sent,blocked,failed,skipped}` |
-| `GET /workbench/jobs/notifications?postId=` | — | 通知记录：`items[{kind,postId,proId,contactName,round,channel:'wx'\|'sms'\|'none',status:'sent'\|'failed'\|'blocked'\|'no_channel',detail}]`（`blocked` 的 detail：`switch_off` / `not_test_identity`） |
+| `GET /workbench/jobs/invite?roleCategory=&roleSub=` · `POST /workbench/jobs/invite {contactIds[], dryRun?}` | 按行业标签筛现有会员 · 发“来登记接活”。**默认演练**：不传 `dryRun:false` 一律不发，每人记一行 `status='dry_run'`。真发（`dryRun:false`）要管理员（否则 403）；正式环境两个开关都开着（否则 409 conflict）；测试站只发测试身份（其他人记 blocked）。同一人 30 天内只真发一次（演练不算） | `items[{id,name,roleCategory,roleSub,registered,invitedAt（只算真发）}]` · `{dryRun,wouldSend,sent,blocked,failed,skipped}` |
+| `GET /workbench/jobs/notifications?postId=` | — | 通知记录：`items[{kind,postId,proId,contactName,round,channel:'wx'\|'sms'\|'none',status:'sent'\|'failed'\|'blocked'\|'no_channel'\|'dry_run',detail}]`（`blocked` 的 detail：`switch_off` / `not_test_identity`） |
 
 ### 通知与定时任务（D4）
 
@@ -265,6 +271,8 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 - `?task=weekly`（每周二）：全部已通过的 A 类接活人重新对 CSLB 官方总表；不合格自动下架、通知本人、提醒工作人员。
 - **发消息的保险**：正式环境（`VERCEL_ENV=production`）只有 `find`、`work` 两个开关都开才真发；其它环境只发测试身份（姓名以「验收」开头，或 `JOBS_TEST_CONTACT_IDS`、`PREVIEW_SMS_ALLOW` 里的）。没发的都记 `blocked`。渠道：微信订阅消息（`WX_SUBSCRIBE_TEMPLATES.jobs`，用户允许过才有）优先，短信兜底。给工作人员的提醒只进后台待跟进，不发消息。
 - CSLB：用官方免费总表（Data Portal「License Master」CSV）一次下载比对状态、到期日、类别、工伤保险、保证金；避开周日晚 8 点到周一早 6 点。单个牌照详情页要先过带验证码的查询页，程序不去开，只给工作人员一键打开（`cslbDetailUrl`）。其它机构一律一键打开官方查询页 + 核验清单。
+
+**城市**：表 `jobs_cities`（key、名字、地区、地区顺序、地区内顺序、启用），后台「找工人接活城市」页 `/zh/staff/jobs/cities` 增删改排序，不用发版。接活人 `jobs_pros.cities` 存 key，活儿存 `jobs_posts.city_key`（`city` 留发布时的名字给标题用），改名不影响历史。派活按 key 匹配。种子：洛杉矶 15 个、橙县（尔湾、橙县其他）、旧金山湾区 6 个、加州其他 4 个。
 
 ### 网站页面会用到的路径（通知里的链接）
 `/zh/jobs`（看全部活儿）、`/zh/jobs/post`（发布）、`/zh/jobs/posts/<id>`、`/zh/jobs/mine`（我的活儿 / 我的接活）、`/zh/jobs/register`（登记接活）、`/zh/jobs/renew/<id>?t=<token>`（一键续期：页面调 `PATCH /jobs/posts/:id {renew:true, token}`）、`/zh/jobs/followup/<token>`。

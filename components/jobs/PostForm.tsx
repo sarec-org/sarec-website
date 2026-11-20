@@ -53,12 +53,10 @@ function Form({ meta }: { meta: Meta }) {
   const [, setPhone] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [cityOther, setCityOther] = useState(false);
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }));
 
   // 能发活儿的工种：开放、不是"只展示"（地产律师等）；工作人员预览时没开放的也能选
   const postable = useMemo(() => meta.trades.filter((t) => (t.open || meta.staffPreview) && !t.noPost), [meta]);
-  const allCities = meta.options.cityGroups.flatMap((g) => g.cities);
   const turnoverKeys = meta.options.turnoverTrades.filter((k) => postable.some((t) => t.key === k));
 
   // 从工种进来：预选这个工种
@@ -66,7 +64,6 @@ function Form({ meta }: { meta: Meta }) {
     if (pre && postable.some((t) => t.key === pre)) setD((x) => (x.trades.includes(pre) ? x : { ...x, trades: [...x.trades, pre] }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pre, postable.length]);
-  useEffect(() => { if (d.city && !allCities.includes(d.city)) setCityOther(true); }, [d.city, allCities]);
 
   const groupsOrder = [...meta.groups].sort((a, b) => a.order - b.order);
   const commonKeys = new Set([
@@ -104,7 +101,7 @@ function Form({ meta }: { meta: Meta }) {
       body: {
         posterRole: d.role,
         trades: d.trades,
-        city: d.city.trim(),
+        cityKey: d.city,
         description: d.text.trim(),
         photos: d.photos,
         voiceUrl: d.voiceUrl,
@@ -175,29 +172,26 @@ function Form({ meta }: { meta: Meta }) {
 
       <div className={s.field}>
         <span className={s.label}>在哪个城市<span className={s.required}>*</span></span>
-        {meta.options.cityGroups.map((g, gi) => {
+        {meta.cities.map((g, gi) => {
           const block = (
             <div key={g.region}>
               <p className={s.small} style={{ margin: '0.4rem 0 0.3rem' }}>{g.region}</p>
               <div className={j.opts}>
-                {g.cities.map((c) => (
-                  <button key={c} type="button" className={`${j.opt} ${d.city === c && !cityOther ? j.optOn : ''}`} onClick={() => { setCityOther(false); set({ city: c }); }}>{c}</button>
+                {g.items.map((c) => (
+                  <button key={c.key} type="button" className={`${j.opt} ${d.city === c.key ? j.optOn : ''}`} onClick={() => set({ city: c.key })}>{c.name}</button>
                 ))}
               </div>
             </div>
           );
-          // 第一组（会员最集中的地区）直接摆；其它地区收起来，选中的城市在里面时自动展开
-          return gi === 0 ? block : (
-            <details key={g.region} className={j.fold} style={{ marginTop: '0.4rem' }} open={g.cities.includes(d.city) || undefined}>
+          // 前两组（洛杉矶、橙县：会员最集中）直接摆；其它地区收起来，选中的城市在里面时自动展开
+          return gi < 2 ? block : (
+            <details key={g.region} className={j.fold} style={{ marginTop: '0.4rem' }} open={g.items.some((c) => c.key === d.city) || undefined}>
               <summary>{g.region}</summary>
               {block}
             </details>
           );
         })}
-        <div className={j.opts} style={{ marginTop: '0.4rem' }}>
-          <button type="button" className={`${j.opt} ${cityOther ? j.optOn : ''}`} onClick={() => { setCityOther(true); set({ city: '' }); }}>别的城市（自己写）</button>
-        </div>
-        {cityOther && <input className={s.input} placeholder="城市名，例如 Fullerton" value={d.city} onChange={(e) => set({ city: e.target.value })} />}
+        <p className={s.small} style={{ margin: '0.3rem 0 0' }}>列表里没有你的城市？选同一地区的“其他”，或联系商会工作人员添加。</p>
         <p className={s.small} style={{ margin: 0 }}>只写城市，完整地址不公开，等对方联系你时再说。</p>
       </div>
 

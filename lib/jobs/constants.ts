@@ -43,16 +43,7 @@ export const TURNOVER_TRADES = ['cleaning', 'handyman', 'painting', 'gardening']
 /** 装修、加建类：多一个勾选“想先找人看现场” */
 export const SITE_VISIT_TRADES = ['kitchen_bath', 'remodel', 'adu', 'general', 'roofing', 'flooring', 'specialty_sub', 'solar', 'landscape', 'hardscape'];
 
-/** 服务城市（点选；先覆盖商会会员集中的地区） */
-export const CITY_GROUPS: { region: string; cities: string[] }[] = [
-  {
-    region: '洛杉矶/橙县',
-    cities: ['洛杉矶', '阿凯迪亚', '圣盖博', '阿罕布拉', '天普市', '蒙特利公园', '圣马力诺', '帕萨迪纳', '核桃市', '钻石吧', '罗兰岗', '哈岗', '奇诺岗', '尔湾', '橙县其他', '托伦斯', '洛杉矶其他']
-  },
-  { region: '旧金山湾区', cities: ['旧金山', '圣荷西', '库比蒂诺', '弗里蒙特', '奥克兰', '湾区其他'] },
-  { region: '加州其他', cities: ['圣地亚哥', '河滨县', '圣贝纳迪诺县', '加州其他'] }
-];
-export const ALL_CITIES = CITY_GROUPS.flatMap((g) => g.cities);
+/** 服务城市：在数据库 jobs_cities（后台「城市」页增删改、排序），见 lib/jobs/cities.ts */
 
 export const LANGUAGES = ['普通话', '粤语', '英语', '西班牙语', '其他'];
 

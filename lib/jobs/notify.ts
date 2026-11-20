@@ -129,12 +129,12 @@ async function pushWx(t: Tmpl, openid: string, v: NonNullable<Msg['wx']>): Promi
 }
 
 // ── 派活 ────────────────────────────────────────────────────────────────
-type PostLite = { id: string; contact_id: string; poster_role: string; trade_key: string; city: string; title: string; timing: string; status: string; expires_at: Date };
+type PostLite = { id: string; contact_id: string; poster_role: string; trade_key: string; city: string; city_key: string | null; title: string; timing: string; status: string; expires_at: Date };
 
 export async function dispatchPost(postId: string, round: number): Promise<{ picked: number; sent: number; blocked: number }> {
   const pool = getPool();
   const { rows } = await pool.query<PostLite>(
-    `SELECT id, contact_id, poster_role, trade_key, city, title, timing, status, expires_at FROM jobs_posts WHERE id = $1`,
+    `SELECT id, contact_id, poster_role, trade_key, city, city_key, title, timing, status, expires_at FROM jobs_posts WHERE id = $1`,
     [postId]
   );
   const post = rows[0];
@@ -149,7 +149,7 @@ export async function dispatchPost(postId: string, round: number): Promise<{ pic
         AND $1 = ANY(p.verified_trades) AND $2 = ANY(p.cities) AND p.contact_id <> $3
         AND NOT EXISTS (SELECT 1 FROM jobs_notifications n WHERE n.kind = 'dispatch' AND n.post_id = $4 AND n.pro_id = p.id)
       ORDER BY p.available_now DESC, random() LIMIT ${BATCH_SIZE}`,
-    [post.trade_key, post.city, post.contact_id, postId]
+    [post.trade_key, post.city_key ?? '', post.contact_id, postId]
   );
   if (!cands.length && round === 1) {
     await recordException('jobs_no_pros', `jobs_no_pros:${postId}`, postId, `活儿「${post.title}」发布了，但没有对口工种、在${post.city}服务的接活人可以通知`, { postId });

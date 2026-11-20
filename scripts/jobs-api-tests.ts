@@ -3,6 +3,7 @@
  * 用法：
  *   1) 用测试库起本地服务：DATABASE_URL=<测试库> CRON_SECRET=<随便一串> pnpm dev -p 3417
  *   2) BASE=http://localhost:3417 CRON_SECRET=<同上> DATABASE_URL=<测试库> pnpm dlx tsx scripts/jobs-api-tests.ts --i-know-this-is-not-production
+ *   测试站：BASE=https://sarec-crm-preview.vercel.app CRON_DIRECT=1 DATABASE_URL=<测试库> …（定时任务在本进程直接跑，见 cron()）
  * 测完开关恢复成测之前的值。不发任何真实消息（本地没有短信 / 微信配置；保险也会拦住不是测试身份的人）。
  */
 import assert from 'node:assert/strict';
@@ -20,7 +21,7 @@ let passed = 0;
 const ok = (n: string) => { passed++; console.log(`  ✓ ${n}`); };
 const uniq = randomBytes(3).toString('hex');
 
-async function person(name: string, opts: { phone?: boolean; staff?: boolean } = {}) {
+async function person(name: string, opts: { phone?: boolean; staff?: boolean; roles?: string[] } = {}) {
   const email = `jobs-${uniq}-${contacts.length}@example.com`;
   const phone = opts.phone === false ? null : `+1626${String(Math.floor(1e6 + Math.random() * 8.9e6))}`;
   const { rows } = await pool.query<{ id: string }>(
@@ -31,7 +32,7 @@ async function person(name: string, opts: { phone?: boolean; staff?: boolean } =
   const id = rows[0].id;
   contacts.push(id);
   if (opts.staff) {
-    await pool.query(`INSERT INTO staff_roles (email, name, roles) VALUES ($1, $2, '{admin}') ON CONFLICT (email) DO NOTHING`, [email, name]);
+    await pool.query(`INSERT INTO staff_roles (email, name, roles) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING`, [email, name, opts.roles ?? ['admin']]);
     staffEmails.push(email);
   }
   const token = randomBytes(32).toString('base64url');
@@ -55,6 +56,16 @@ async function call(method: string, path: string, who?: { token: string } | null
 }
 const MP = { 'X-Sarec-Client': 'mp-1.4.3' };
 async function cron(task: string) {
+  // CRON_DIRECT=1：定时任务在本进程里直接跑（和 /api/cron/jobs 同一套函数、同一个测试库）。
+  // 用于测试站：Vercel 的 Preview CRON_SECRET 是「敏感」变量，vercel env pull 拿到的只是占位符，没法从外面调测试站的定时任务。
+  if (process.env.CRON_DIRECT === '1') {
+    const n = await import('@/lib/jobs/notify');
+    const v = await import('@/lib/jobs/verify');
+    const j: Record<string, any> = { task };
+    if (task === 'dispatch') { j.dispatch = await n.runDispatch(); j.verify = await v.runVerification(new Date(), { onlyQueued: true }); }
+    if (task === 'daily') { j.dispatch = await n.runDispatch(); j.expiry = await n.runExpiry(); j.followups = await n.runFollowups(); j.verify = await v.runVerification(); }
+    return { status: 200, j };
+  }
   const res = await fetch(`${BASE}/api/cron/jobs?task=${task}`, { method: 'POST', headers: { Authorization: `Bearer ${CRON}` } });
   return { status: res.status, j: (await res.json()) as Record<string, any> };
 }
@@ -75,6 +86,7 @@ async function main() {
   const worker = await person('验收工-工人');
   const real = await person('DEVJOBS-不是测试身份');
   const designer = await person('验收工-室内设计');
+  const opsStaff = await person('验收工-运营', { staff: true, roles: ['ops'] });
 
   // ── 1. 开关关着 ──
   let r = await call('GET', '/jobs/meta');
@@ -331,6 +343,64 @@ async function main() {
   const sh = r.j.trades.find((x: { key: string }) => x.key === 'handyman');
   assert.ok(sh.clicks >= 1 && sh.posts >= 2 && sh.contacts >= 1);
   ok('工作人员：活儿列表（小程序不给金额）、下架、统计');
+
+  // 城市表：meta 按地区给 key；记录存 key；尔湾单独在橙县；后台增删改排序；用过的删除 = 停用
+  r = await call('GET', '/jobs/meta');
+  const oc = r.j.cities.find((g: { region: string }) => g.region === '橙县');
+  assert.ok(oc.items.some((c: { key: string; name: string }) => c.key === 'irvine' && c.name === '尔湾'));
+  const { rows: pk } = await pool.query<{ cities: string[] }>(`SELECT cities FROM jobs_pros WHERE id = $1`, [proAId]);
+  assert.deepEqual(pk[0].cities, ['arcadia', 'san_gabriel']);
+  r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], city: 'Fullerton 随便写', description: '验收工-城市', timing: 'asap' });
+  assert.equal(r.status, 400);
+  r = await call('POST', '/workbench/jobs/cities', staff, { name: '验收工-新城', region: '橙县' });
+  const newCity = r.j.city.key as string;
+  r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], cityKey: newCity, description: '验收工-新城的活儿', timing: 'asap' });
+  const pNew = r.j.ids[0] as string;
+  r = await call('POST', '/workbench/jobs/cities', staff, { key: newCity, name: '验收工-改名城', region: '橙县' });
+  r = await call('GET', `/jobs/posts?city=${newCity}`);
+  assert.equal(r.j.items.find((x: { id: string }) => x.id === pNew)?.city, '验收工-改名城');
+  r = await call('DELETE', `/workbench/jobs/cities/${newCity}`, staff);
+  assert.equal(r.j.disabled, true);
+  r = await call('GET', '/jobs/meta');
+  assert.ok(!JSON.stringify(r.j.cities).includes(newCity));
+  r = await call('GET', `/jobs/posts?city=${newCity}`);
+  assert.ok(r.j.items.some((x: { id: string }) => x.id === pNew));
+  r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], cityKey: newCity, description: '验收工-停用城', timing: 'asap' });
+  assert.equal(r.status, 400);
+  r = await call('POST', '/workbench/jobs/cities', staff, { name: '验收工-空城', region: '橙县' });
+  const emptyCity = r.j.city.key as string;
+  r = await call('GET', '/workbench/jobs/cities', staff);
+  const ocAdmin = r.j.regions.find((g: { region: string }) => g.region === '橙县');
+  const keys = ocAdmin.items.map((c: { key: string }) => c.key);
+  r = await call('PUT', '/workbench/jobs/cities/order', staff, { regions: r.j.regions.map((g: { region: string; items: { key: string }[] }) => ({ region: g.region, keys: g.region === '橙县' ? [emptyCity, ...keys.filter((k: string) => k !== emptyCity)] : g.items.map((c) => c.key) })) });
+  assert.equal(r.j.regions.find((g: { region: string }) => g.region === '橙县').items[0].key, emptyCity);
+  r = await call('DELETE', `/workbench/jobs/cities/${emptyCity}`, staff);
+  assert.equal(r.j.deleted, true);
+  r = await call('GET', '/workbench/jobs/cities', staff);
+  await call('PUT', '/workbench/jobs/cities/order', staff, { regions: r.j.regions.map((g: { region: string; items: { key: string }[] }) => ({ region: g.region, keys: g.region === '橙县' ? keys.filter((k: string) => k !== emptyCity) : g.items.map((c) => c.key) })) });
+  await pool.query(`DELETE FROM jobs_posts WHERE id = $1`, [pNew]);
+  await pool.query(`DELETE FROM jobs_cities WHERE key = ANY($1)`, [[newCity, emptyCity]]);
+  ok('城市表：meta 按地区给 key（尔湾在橙县）；记录存 key、改名历史跟着变；不在表里的城市不让发；用过的删除 = 停用、没用过的真删；排序');
+
+  // 邀请：默认演练，不发
+  r = await call('POST', '/workbench/jobs/invite', opsStaff, { contactIds: [real.id, worker.id] });
+  assert.equal(r.status, 200, JSON.stringify(r.j));
+  assert.equal(r.j.dryRun, true);
+  assert.equal(r.j.wouldSend, 2);
+  assert.equal(r.j.sent + r.j.blocked + r.j.failed, 0);
+  const { rows: inv } = await pool.query<{ status: string }>(`SELECT status FROM jobs_notifications WHERE kind = 'invite' AND contact_id = ANY($1::uuid[])`, [[real.id, worker.id]]);
+  assert.deepEqual(inv.map((x) => x.status), ['dry_run', 'dry_run']);
+  r = await call('POST', '/workbench/jobs/invite', opsStaff, { contactIds: [real.id], dryRun: false });
+  assert.equal(r.status, 403);
+  r = await call('POST', '/workbench/jobs/invite', staff, { contactIds: [real.id, worker.id], dryRun: false });
+  assert.equal(r.j.dryRun, false);
+  const { rows: inv2 } = await pool.query<{ contact_id: string; status: string; detail: string | null }>(
+    `SELECT contact_id, status, detail FROM jobs_notifications WHERE kind = 'invite' AND status <> 'dry_run' AND contact_id = ANY($1::uuid[])`, [[real.id, worker.id]]
+  );
+  assert.equal(inv2.find((x) => x.contact_id === real.id)?.status, 'blocked');
+  assert.notEqual(inv2.find((x) => x.contact_id === worker.id)?.status, 'blocked');
+  r = await call('GET', '/workbench/jobs/invite', staff);
+  ok('邀请：不传 dryRun:false 只演练（记 dry_run、不发）；真发只限管理员；测试站不是测试身份的人一律拦住');
 
   // ── 8. 执照过期 / 被停：自动下架 ──
   const { runVerification } = await import('@/lib/jobs/verify');

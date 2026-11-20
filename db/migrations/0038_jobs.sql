@@ -313,3 +313,55 @@ INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort)
   (6, '屋顶',     'roof',      'trade', 'roofing',    6),
   (7, '设计',     'compass',   'group', 'design',     7)
 ON CONFLICT (slot) DO NOTHING;
+
+-- ── 15. 城市（后台可增删改、排序，不用发版；发活儿、登记接活、所有城市筛选都用这一张表）──────────
+-- 记录里存稳定的 key（jobs_pros.cities、jobs_posts.city_key），改名不影响历史。用过的城市“删除”= 停用（enabled=false）。
+CREATE TABLE IF NOT EXISTS jobs_cities (
+  key          text PRIMARY KEY,
+  name         text NOT NULL,
+  region       text NOT NULL,                        -- 地区分组（洛杉矶 / 橙县 / 旧金山湾区 / 加州其他 …）
+  region_sort  integer NOT NULL DEFAULT 0,           -- 地区的顺序
+  sort         integer NOT NULL DEFAULT 0,           -- 地区内的顺序
+  enabled      boolean NOT NULL DEFAULT true,
+  updated_by   text,                                 -- 后台改过就记人；种子刷新不覆盖后台改过的行
+  updated_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS jobs_cities_name_uq ON jobs_cities (name);
+CREATE INDEX IF NOT EXISTS jobs_cities_order_idx ON jobs_cities (region_sort, sort);
+INSERT INTO jobs_cities (key, name, region, region_sort, sort) VALUES
+  ('los_angeles',      '洛杉矶',       '洛杉矶',     10, 10),
+  ('arcadia',          '阿凯迪亚',     '洛杉矶',     10, 20),
+  ('san_gabriel',      '圣盖博',       '洛杉矶',     10, 30),
+  ('alhambra',         '阿罕布拉',     '洛杉矶',     10, 40),
+  ('temple_city',      '天普市',       '洛杉矶',     10, 50),
+  ('monterey_park',    '蒙特利公园',   '洛杉矶',     10, 60),
+  ('san_marino',       '圣马力诺',     '洛杉矶',     10, 70),
+  ('pasadena',         '帕萨迪纳',     '洛杉矶',     10, 80),
+  ('walnut',           '核桃市',       '洛杉矶',     10, 90),
+  ('diamond_bar',      '钻石吧',       '洛杉矶',     10, 100),
+  ('rowland_heights',  '罗兰岗',       '洛杉矶',     10, 110),
+  ('hacienda_heights', '哈岗',         '洛杉矶',     10, 120),
+  ('chino_hills',      '奇诺岗',       '洛杉矶',     10, 130),
+  ('torrance',         '托伦斯',       '洛杉矶',     10, 140),
+  ('la_other',         '洛杉矶其他',   '洛杉矶',     10, 150),
+  ('irvine',           '尔湾',         '橙县',       20, 10),
+  ('oc_other',         '橙县其他',     '橙县',       20, 20),
+  ('san_francisco',    '旧金山',       '旧金山湾区', 30, 10),
+  ('san_jose',         '圣荷西',       '旧金山湾区', 30, 20),
+  ('cupertino',        '库比蒂诺',     '旧金山湾区', 30, 30),
+  ('fremont',          '弗里蒙特',     '旧金山湾区', 30, 40),
+  ('oakland',          '奥克兰',       '旧金山湾区', 30, 50),
+  ('bay_other',        '湾区其他',     '旧金山湾区', 30, 60),
+  ('san_diego',        '圣地亚哥',     '加州其他',   40, 10),
+  ('riverside',        '河滨县',       '加州其他',   40, 20),
+  ('san_bernardino',   '圣贝纳迪诺县', '加州其他',   40, 30),
+  ('ca_other',         '加州其他',     '加州其他',   40, 40)
+ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name, region = EXCLUDED.region, region_sort = EXCLUDED.region_sort, sort = EXCLUDED.sort
+WHERE jobs_cities.updated_by IS NULL;
+
+-- 活儿存城市 key（city 列留发布时的城市名，标题用）；以前按名字存的数据换成 key（重复跑无害）
+ALTER TABLE jobs_posts ADD COLUMN IF NOT EXISTS city_key text;
+UPDATE jobs_posts p SET city_key = c.key FROM jobs_cities c WHERE p.city_key IS NULL AND c.name = p.city;
+CREATE INDEX IF NOT EXISTS jobs_posts_city_key_idx ON jobs_posts (city_key, status);
+UPDATE jobs_pros p SET cities = ARRAY(SELECT coalesce(c.key, x) FROM unnest(p.cities) WITH ORDINALITY AS u(x, i) LEFT JOIN jobs_cities c ON c.name = u.x ORDER BY u.i)
+ WHERE EXISTS (SELECT 1 FROM unnest(p.cities) x JOIN jobs_cities c ON c.name = x);

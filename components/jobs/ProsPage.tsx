@@ -6,9 +6,9 @@ import { api } from '@/components/crm/client';
 import s from '@/components/crm/crm.module.css';
 import j from './jobs.module.css';
 import { BottomBar, JobsShell, NeedLogin, ReportButton, initial, tradeName } from './shared';
-import type { ProCard } from './types';
+import type { CityOpt, ProCard } from './types';
 
-type ProsRes = { items: ProCard[]; cities: string[]; nextCursor?: string | null };
+type ProsRes = { items: ProCard[]; cities: CityOpt[]; nextCursor?: string | null };
 
 export function ProsPage({ trade }: { trade: string }) {
   return (
@@ -31,7 +31,7 @@ export function ProsPage({ trade }: { trade: string }) {
 function ProsList({ trade, name }: { trade: string; name: string }) {
   const [city, setCity] = useState('');
   const [d, setD] = useState<ProsRes | null>(null);
-  const [cities, setCities] = useState<string[]>([]);
+  const [cities, setCities] = useState<CityOpt[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [more, setMore] = useState(false);
 
@@ -55,7 +55,7 @@ function ProsList({ trade, name }: { trade: string; name: string }) {
         <div className={j.opts} style={{ margin: '0 0 1rem' }} aria-label="按城市筛选">
           <button type="button" className={`${j.opt} ${!city ? j.optOn : ''}`} onClick={() => setCity('')}>全部城市</button>
           {cities.map((c) => (
-            <button key={c} type="button" className={`${j.opt} ${city === c ? j.optOn : ''}`} onClick={() => setCity(c)}>{c}</button>
+            <button key={c.key} type="button" className={`${j.opt} ${city === c.key ? j.optOn : ''}`} onClick={() => setCity(c.key)}>{c.name}</button>
           ))}
         </div>
       )}
@@ -63,7 +63,7 @@ function ProsList({ trade, name }: { trade: string; name: string }) {
       {!d && !err && <p className={s.muted}>正在加载…</p>}
       {d && d.items.length === 0 && (
         <div className={s.notice}>
-          {city ? `${city} 暂时还没有做「${name}」的人。` : `「${name}」暂时还没有核验通过的人。`}先发布活儿，有人登记通过后第一时间联系你。
+          {city ? `${cities.find((c) => c.key === city)?.name ?? city} 暂时还没有做「${name}」的人。` : `「${name}」暂时还没有核验通过的人。`}先发布活儿，有人登记通过后第一时间联系你。
         </div>
       )}
       {d?.items.map((p) => <ProCardView key={p.id} p={p} />)}
