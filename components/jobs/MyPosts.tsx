@@ -22,7 +22,12 @@ export function MyPosts() {
         </BottomBar>
       )}
     >
-      {(meta) => <Mine meta={meta} />}
+      {(meta) => (
+        <>
+          <p className={s.small} style={{ marginTop: 0 }}>登记了接活的，看<Link href="/zh/jobs/mine" style={{ color: 'var(--ivory)' }}>「我的接活」›</Link></p>
+          <Mine meta={meta} />
+        </>
+      )}
     </JobsShell>
   );
 }

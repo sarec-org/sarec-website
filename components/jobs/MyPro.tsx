@@ -15,7 +15,12 @@ type Notified = { count: number; webUrl?: string; items?: PostCard[] };
 export function MyPro() {
   return (
     <JobsShell side="work" need="work" eyebrow="我要接活" title="我的接活">
-      {(meta) => <Body meta={meta} />}
+      {(meta) => (
+        <>
+          <p className={s.small} style={{ marginTop: 0 }}>找人干活、自己发过活儿的，看<Link href="/zh/jobs/my-posts" style={{ color: 'var(--gold)' }}>「我发的活儿」›</Link></p>
+          <Body meta={meta} />
+        </>
+      )}
     </JobsShell>
   );
 }
