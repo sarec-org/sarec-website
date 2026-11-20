@@ -151,7 +151,8 @@ async function main() {
   r = await call('POST', '/jobs/me/pro', worker, { agree: true, role: 'worker', name: '验收工-工人', trades: ['painting', 'cleaning'], cities: ['阿凯迪亚'] });
   assert.equal(r.j.pro.status, 'verified');
   assert.equal(r.j.pro.needPay, false);
-  ok('工人免费登记、不填牌照，登记即生效');
+  assert.ok(!(r.j.pro.badges ?? []).some((b: { kind: string }) => b.kind === 'license'), 'Q33：工人没有牌照，不能出现「执照已核验」');
+  ok('工人免费登记、不填牌照，登记即生效（Q33：没有「执照已核验」标记）');
   r = await call('POST', '/jobs/me/pro', designer, { agree: true, role: 'pro_service', name: '验收工-室内设计', trades: ['interior'], cities: ['阿凯迪亚'] });
   assert.equal(r.status, 400);
   assert.ok(r.j.error.message.includes('营业登记'));

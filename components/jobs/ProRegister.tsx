@@ -306,7 +306,7 @@ export function AfterSubmit({ pro, meta, autoMsg }: { pro: ProSelf; meta: Meta; 
       {verified && <div className={s.success}>{pro.role === 'worker' ? '登记好了。' : pro.needsReview ? '保存好了。新加的工种或换了的牌照，工作人员会再看一遍。' : '保存好了，核验通过。'}</div>}
       {pro.status === 'returned' && <div className={s.error}>没通过：{pro.returnReason ?? '资料对不上'}。改好再提交一次就行，不收任何钱。</div>}
       <ol className={j.steps}>
-        {pro.status === 'pending' && <li>{autoMsg ?? '牌照或执照核验通常 1–2 个工作日。'}结果会通知你。</li>}
+        {pro.status === 'pending' && <li>{autoMsg ? autoMsg.replace(/[。，,.\s]*$/, '。') : '牌照或执照核验通常 1–2 个工作日。'}结果会通知你。</li>}
         {needPay && <li><b>还差一步：成为缴费会员</b>，就能上列表、看发布人电话。</li>}
         {verified && !needPay && pro.role !== 'worker' && <li>你已经在找工人列表上了，有对口的活儿会第一时间通知你。</li>}
         {pro.role === 'worker' && <li>工人免费登记，能联系施工队发的招工；有对口的招工会通知你。</li>}

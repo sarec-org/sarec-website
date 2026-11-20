@@ -145,7 +145,7 @@ export async function checkAndRecord(proId: string, kind: string, actor: string)
     [proId]
   );
   await pool.query(`INSERT INTO jobs_verifications (pro_id, kind, action, result, actor) VALUES ($1, $2, 'check', '{"state":"queued"}', $3)`, [proId, kind, actor]);
-  return { state: 'queued', message: '牌照会自动对照 CSLB 官方名单，几分钟内出结果' };
+  return { state: 'queued', message: '牌照会自动对照 CSLB 官方名单，几分钟内出结果。' };
 }
 
 /** 把一条总表结果写回这个人；已上列表的人如果不合格 → 自动下架、通知本人、提醒工作人员 */

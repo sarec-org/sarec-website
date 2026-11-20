@@ -66,7 +66,7 @@ export type Badge = { kind: 'license' | 'no_state_license' | 'business_reg' | 'i
 export function badgesFor(p: ProRow, trades: Map<string, Trade>): Badge[] {
   const out: Badge[] = [];
   const types = new Set(p.verified_trades.map((k) => trades.get(k)?.licType).filter(Boolean));
-  if (p.status === 'verified' && (types.has('A') || types.has('B')) && p.verified_at) out.push({ kind: 'license', text: `执照已核验 ${ymd(p.verified_at)}` });
+  if (p.status === 'verified' && p.role !== 'worker' && !!p.license_no && (types.has('A') || types.has('B')) && p.verified_at) out.push({ kind: 'license', text: `执照已核验 ${ymd(p.verified_at)}` });
   if (types.has('C')) {
     out.push({ kind: 'no_state_license', text: '此类服务无需州执照' });
     if (p.business_reg_url) out.push({ kind: 'business_reg', text: '已提供营业登记' });
