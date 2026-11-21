@@ -1,13 +1,21 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate, can } from '@/components/crm/staff/StaffGate';
 import { api } from '@/components/crm/client';
 import { NAV_GROUPS, NAV_ITEMS, ROLE_NAME, canSee, type NavGroup } from '@/components/crm/staff/nav';
 import { notifyStaffChanged } from '@/components/crm/staff/useStaffMe';
+import { ActionButtons, ContactResult } from '@/components/crm/staff/TodayActions';
+import type { TodayItem, TodayPayload } from '@/lib/crm/today/types';
 
 /**
+ * 后台综合优化 B（第二部分 三）：后台首页 = 「今天」。打开就是一列要办的事，每条一句话"这是什么、建议怎么办"，按钮直接在卡片上。
+ * 排序在服务器（lib/crm/today/registry.ts）：置顶的活动回顾 → 钱 → 已过期跟进 → 新咨询 → 待审核待确认。
+ * 今天有活动时最上面"今天现场"三个大按钮；"昨天的四个结果"在待办下面；没有待办显示"今天没有要办的事"。
+ * 线上巡检、绑定码挪到「设置与团队」（组件在 components/crm/staff/PatrolBar.tsx、MpBind.tsx，由子任务 A 挂）。
+ * 下面"全部功能"卡片保留（原有入口一个不少）。
+ *
  * 1.4.0：卡片名统一用导航上的短名（东哥已点头），按 今天现场 / 活动 / 会员与客户 / 内容 / 设置与团队 分组。
  * 名字、分组、谁能看见都从 components/crm/staff/nav.ts 来；这里只放每张卡片的说明文字。
  */
@@ -55,121 +63,88 @@ const EXTRA: { href: string; title: string; desc: string; role: string; group: N
   { href: '/zh/staff/settings#wechat-qr', title: '换商会微信二维码', desc: '小程序和网站里所有“加商会微信”的码，手机上也能直接换图（在「设置」页）', role: 'admin', group: '设置与团队', after: '/zh/staff/settings' }
 ];
 
-type Results = { yesterday: { visits: number; newArrived: number; joined: number; inquiries: number }; pending: { todo: number; exceptions: number; cards: number; photos: number; recaps: number } };
 
-type Patrol = { run: { at: string; trigger: string; total: number; failed: number; bad: { name: string; detail: string }[] } | null; email: { on: boolean; to: string } };
-/** 东哥 11/12 定的发版关卡：线上只读巡检（部署后 + 每天）。有失败就在后台首页最上面显示红条；管理员可手动巡检、开关巡检邮件（默认关，只发给东哥本人） */
-function PatrolBar({ admin }: { admin: boolean }) {
-  const [p, setP] = useState<Patrol | null>(null);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { api<Patrol>('/api/v1/staff/qa-patrol').then((x) => x.ok && setP(x.data)); }, []);
-  const post = async (body: Record<string, unknown>) => { setBusy(true); const r = await api<Patrol>('/api/v1/staff/qa-patrol', { body }); setBusy(false); if (r.ok) setP(r.data); };
-  if (!p) return null;
-  const r = p.run;
-  const when = r ? new Date(r.at).toLocaleString('zh-CN') : '';
+type Msg = { ok: boolean; text: string };
+
+function Card({ it, onChanged }: { it: TodayItem; onChanged: () => void }) {
+  const [msg, setMsg] = useState<Msg | null>(null);
+  const [asked, setAsked] = useState(false);
+  const done = (m: Msg) => {
+    setMsg(m);
+    // 直接生效的按钮成功后整列刷新（复制只提示，不刷新）
+    if (m.ok && !m.text.startsWith('已复制')) setTimeout(onChanged, 900);
+  };
+  const red = it.tags?.some((t) => t.startsWith('过期') || t === '钱');
   return (
-    <>
-      {r && r.failed > 0 && (
-        <div style={{ background: '#C0392B', color: '#fff', padding: '0.8rem 1rem', borderRadius: 8, marginBottom: '1rem' }}>
-          <strong>线上巡检发现 {r.failed} 项不正常</strong>（{when}，共查 {r.total} 项）
-          <ul style={{ margin: '0.4rem 0 0 1.2rem', padding: 0 }}>
-            {r.bad.slice(0, 8).map((x) => <li key={x.name}>{x.name}：{x.detail}</li>)}
-          </ul>
-          {r.bad.length > 8 && <div>还有 {r.bad.length - 8} 项…</div>}
-        </div>
-      )}
-      {admin && (
-        <p className={styles.small} style={{ marginTop: 0 }}>
-          线上巡检：{r ? `${when}，${r.total} 项，${r.failed ? `${r.failed} 项不正常` : '全部正常'}` : '还没跑过'}。
-          巡检邮件 {p.email.on ? '已开' : '已关'}（收件人 {p.email.to}）。
-          <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={busy} onClick={() => post({ action: 'run' })} style={{ marginLeft: 8 }}>{busy ? '巡检中…' : '现在巡检一次'}</button>
-          <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={busy} onClick={() => post({ action: 'email', on: !p.email.on })} style={{ marginLeft: 8 }}>{p.email.on ? '关掉巡检邮件' : '打开巡检邮件'}</button>
+    <div className={`${styles.card} ${styles.cardGold}`} style={{ borderLeftColor: red ? '#e7a1a1' : undefined }} data-kind={it.kind}>
+      {it.tags && it.tags.length > 0 && (
+        <p style={{ margin: '0 0 0.3rem', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {it.tags.map((t) => (
+            <span key={t} className={`${styles.badge} ${t === '会员' ? styles.badgeGreen : t.startsWith('过期') || t === '钱' ? styles.badgeRed : ''}`}>{t}</span>
+          ))}
         </p>
       )}
-    </>
-  );
-}
-
-/** 1.3 J：每天看四个结果（昨天）+ 未完成的事集中列出 */
-function Today() {
-  const [r, setR] = useState<Results | null>(null);
-  useEffect(() => {
-    api<Results>('/api/v1/staff/results').then((x) => x.ok && setR(x.data));
-  }, []);
-  if (!r) return null;
-  const y = r.yesterday;
-  const p = r.pending;
-  const todo = [
-    p.recaps ? { href: '/zh/staff/recaps', t: `${p.recaps} 场活动回顾待审核` } : null,
-    p.todo ? { href: '/zh/staff/followups', t: `${p.todo} 条待联系` } : null,
-    p.cards || p.photos ? { href: '/zh/staff/cards', t: `${p.cards} 张名片、${p.photos} 张照片待审核` } : null,
-    p.exceptions ? { href: '/zh/staff/followups?tab=exceptions', t: `${p.exceptions} 条失败 / 异常` } : null
-  ].filter(Boolean) as { href: string; t: string }[];
-  return (
-    <div className={styles.card}>
-      <p className={styles.cardTitle}>昨天的四个结果</p>
-      <div className={styles.grid2}>
-        <p style={{ margin: 0 }}>分享带来的访问 <strong>{y.visits}</strong></p>
-        <p style={{ margin: 0 }}>新人报名并到场 <strong>{y.newArrived}</strong></p>
-        <p style={{ margin: 0 }}>缴费入会 <strong>{y.joined}</strong></p>
-        <p style={{ margin: 0 }}>有效咨询 <strong>{y.inquiries}</strong></p>
-      </div>
-      {todo.length ? (
-        <p className={styles.small} style={{ marginBottom: 0 }}>待办：{todo.map((x, i) => <span key={x.href + i}>{i ? '；' : ''}<Link href={x.href}>{x.t}</Link></span>)}</p>
-      ) : (
-        <p className={styles.small} style={{ marginBottom: 0 }}>没有待办。</p>
+      <p className={styles.cardTitle} style={{ fontSize: '1.08rem' }}>
+        <Link href={it.href} style={{ color: 'inherit', textDecoration: 'none' }}>{it.title} <span style={{ color: 'var(--gold)' }}>›</span></Link>
+      </p>
+      <p style={{ margin: 0, color: 'var(--ivory-soft, #ddd)' }}>{it.suggestion}</p>
+      {it.detail && (
+        <details style={{ marginTop: '0.4rem' }}>
+          <summary className={styles.small} style={{ cursor: 'pointer' }}>{it.contactResult ? '看草稿' : '看详情'}</summary>
+          <p className={styles.small} style={{ whiteSpace: 'pre-wrap', margin: '0.3rem 0 0' }}>{it.detail}</p>
+        </details>
       )}
+      <ActionButtons actions={it.actions} onDone={done} onContact={() => setAsked(true)} />
+      {asked && it.contactResult && <ContactResult endpoint={it.contactResult.endpoint} onDone={(m) => { setAsked(!m.ok); done(m); }} />}
+      {msg && <p className={msg.ok ? styles.success : styles.error} style={{ marginBottom: 0 }}>{msg.text}</p>}
     </div>
   );
 }
 
-/**
- * 1.3 N / 1.4.0（改动单 A5、B2）：在小程序里用手机工作台——给“自己”的手机生成一次性绑定码，用自己的微信扫一下。
- * 放在问候语下面；给同事开通去「团队」页每人一行「出码」。
- */
-function MpBind({ admin }: { admin: boolean }) {
-  const [b, setB] = useState<{ code: string; qr: string | null; expiresAt: string } | null>(null);
+function Today({ ops }: { ops: boolean }) {
+  const [d, setD] = useState<TodayPayload | null>(null);
   const [err, setErr] = useState('');
-  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    const r = await api<TodayPayload>('/api/v1/staff/today');
+    if (r.ok) { setD(r.data); setErr(''); } else setErr(r.message);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  if (err) return <p className={styles.error}>{err}</p>;
+  if (!d) return <p className={styles.muted}>正在看今天有什么事…</p>;
+  const y = d.yesterday;
   return (
-    <div className={styles.card}>
-      <p className={styles.cardTitle}>在手机上管：小程序工作台</p>
-      <p className={styles.small} style={{ marginTop: 0 }}>
-        用您自己的微信扫一下下面的码，就能在商会小程序「我的」里打开工作台：拍照传相册、看实时报名签到、现场代签到、待办和筹备清单。收款和会费只在这个网站后台看。
-      </p>
-      <p className={styles.small}>
-        <strong>这个码是给您自己的手机用的；</strong>给同事开通请去{admin ? <Link href="/zh/staff/team" style={{ color: 'var(--gold)' }}>「团队」</Link> : '「团队」（请管理员操作）'}。
-      </p>
-      {!b && (
-        <button
-          className={styles.btn}
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            setErr('');
-            const r = await api<{ code: string; qr: string | null; expiresAt: string }>('/api/v1/staff/mp-bind', { body: {} });
-            setBusy(false);
-            if (r.ok) setB(r.data);
-            else setErr(r.message);
-          }}
-        >
-          {busy ? '生成中…' : '生成我的绑定码'}
-        </button>
+    <>
+      {d.live.map((l) => (
+        <section key={l.eventId} className={styles.card} style={{ borderColor: 'var(--gold)' }} aria-label="今天现场">
+          <p className={styles.cardTitle}>今天现场：{l.title}</p>
+          <div className={styles.btnRow}>
+            {l.buttons.map((b) => (
+              <Link key={b.href} href={b.href} className={styles.btn} style={{ minHeight: 64, fontSize: '1.15rem' }}>{b.label}</Link>
+            ))}
+          </div>
+        </section>
+      ))}
+      <h2 className={styles.h2} style={{ marginTop: '0.6rem' }}>要办的事{d.items.length ? `（${d.items.length}）` : ''}</h2>
+      {d.failed.length > 0 && <p className={styles.error}>这几类暂时读不出来：{d.failed.join('、')}。请稍后刷新，或直接去对应页面看。</p>}
+      {d.items.length === 0 ? (
+        <div className={styles.card} style={{ textAlign: 'center' }}>
+          <p className={styles.cardTitle} style={{ margin: 0 }}>今天没有要办的事</p>
+        </div>
+      ) : (
+        d.items.map((it) => <Card key={it.id} it={it} onChanged={load} />)
       )}
-      {err && <p className={styles.error}>{err}</p>}
-      {b && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {b.qr ? <img src={b.qr} alt="我的工作台绑定码" className={styles.qrImg} style={{ width: 200 }} /> : null}
-          <p className={b.qr ? styles.small : styles.notice}>
-            {b.qr ? '扫不了的：' : '小程序码这会儿生成不了。请'}打开小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里），输入 8 位码：
-            <b className={styles.mono} style={{ fontSize: '1.3rem', letterSpacing: 3, marginLeft: 6 }}>{b.code}</b>
-          </p>
-          <p className={styles.small}>10 分钟内有效，只能用一次。过期了再点一次生成。</p>
-          <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setB(null)}>重新生成</button>
-        </>
+      {ops && y && (
+        <div className={styles.card} style={{ marginTop: '1.2rem' }}>
+          <p className={styles.cardTitle}>昨天的四个结果</p>
+          <div className={styles.grid2}>
+            <p style={{ margin: 0 }}>分享带来的访问 <strong>{y.visits}</strong></p>
+            <p style={{ margin: 0 }}>新人报名并到场 <strong>{y.newArrived}</strong></p>
+            <p style={{ margin: 0 }}>缴费入会 <strong>{y.joined}</strong></p>
+            <p style={{ margin: 0 }}>有效咨询 <strong>{y.inquiries}</strong></p>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -205,15 +180,14 @@ function Desk({ roles }: { roles: string[] }) {
 
 export default function StaffHome() {
   return (
-    <StaffGate title="工作人员后台">
+    <StaffGate title="今天">
       {(s) => (
         <>
-          <PatrolBar admin={can(s, 'admin')} />
           <p className={styles.lead}>
-            {s.name}，您好。您的权限：{s.roles.map((r) => ROLE_NAME[r] ?? r).join('、')}
+            {s.name}，您好。{new Intl.DateTimeFormat('zh-CN', { timeZone: 'America/Los_Angeles', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date())}（洛杉矶）。您的权限：{s.roles.map((r) => ROLE_NAME[r] ?? r).join('、')}
           </p>
-          <MpBind admin={can(s, 'admin')} />
-          {can(s, 'ops') && <Today />}
+          <Today ops={can(s, 'ops')} />
+          <h2 className={styles.h2} style={{ marginTop: '2rem' }}>全部功能</h2>
           <Desk roles={s.roles} />
           <button
             className={`${styles.btn} ${styles.btnQuiet}`}

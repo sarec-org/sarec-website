@@ -49,7 +49,7 @@ export function StaffGate({
 
   return (
     <div className={`${styles.page} ${wide ? styles.pageWide : ''}`}>
-      {title !== '工作人员后台' && <Link href="/zh/staff" className={styles.back}>
+      {title !== '工作人员后台' && title !== '今天' && <Link href="/zh/staff" className={styles.back}>
         ‹ 返回后台首页
       </Link>}
       <h1 className={styles.h1}>{title}</h1>

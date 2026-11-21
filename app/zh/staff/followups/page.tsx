@@ -9,11 +9,15 @@ import { StaffGate } from '@/components/crm/staff/StaffGate';
 import Link from 'next/link';
 import { api, copyText, fmtDateTime } from '@/components/crm/client';
 import { laToday } from '@/lib/laDate';
+import { DateQuick } from '@/components/crm/staff/TodayActions';
 
 type F = {
   id: string; source: string; name: string | null; contact_text: string | null; need: string | null; draft: string | null; draft_by: string;
   status: string; owner: string | null; next_date: string | null; created_at: string; notified_at: string | null; event_title: string | null; member_no: number | null; contact_id?: string | null;
+  // 后台综合优化 B：会员身份、准确来源、分类
+  isMember?: boolean; sourceLabel?: string | null; category?: string; categoryLabel?: string; overdueDays?: number;
 };
+type Team = { name: string; president: boolean; assistant: boolean }[];
 type X = { id: string; kind: string; ref: string | null; error: string | null; attempts: number; status: string; created_at: string; updated_at: string };
 type Log = { actor: string; from_status: string | null; to_status: string | null; note: string | null; created_at: string };
 
@@ -22,7 +26,7 @@ const STATUS: Record<string, string> = { todo: '待联系', contacted: '已联�
 const KIND: Record<string, string> = { followup_email: '线索 / 咨询邮件通知', photo_notice: '“照片已上传”通知', photo_upload: '照片上传', followup_scan: '每日扫描', agent_digest: 'AI 助手日报', agent_lead_email: 'AI 线索邮件' };
 const today = () => laToday();
 
-function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
+function Item({ f, onChanged, team }: { f: F; onChanged: () => void; team: Team }) {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState(f.status);
   const [owner, setOwner] = useState(f.owner ?? '');
@@ -50,9 +54,12 @@ function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
       <div className={styles.row} style={{ alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => { setOpen(!open); if (!log) loadLog(); }}>
         <div>
           <p className={styles.cardTitle} style={{ marginBottom: 4 }}>
-            {f.name || '未留称呼'} <span className={styles.badge}>{SOURCE[f.source] ?? f.source}</span>{' '}
+            {f.name || '未留称呼'}{' '}
+            {f.isMember && <span className={`${styles.badge} ${styles.badgeGreen}`}>会员</span>}{' '}
+            <span className={styles.badge}>{f.sourceLabel ?? SOURCE[f.source] ?? f.source}</span>{' '}
+            {f.category && f.category !== 'customer' && <span className={`${styles.badge} ${styles.badgeMuted}`}>{f.categoryLabel}</span>}{' '}
             <span className={`${styles.badge} ${['won'].includes(f.status) ? styles.badgeGreen : ['dropped'].includes(f.status) ? styles.badgeMuted : ''}`}>{STATUS[f.status]}</span>
-            {overdue && <span className={`${styles.badge} ${styles.badgeRed}`}>已过下一步日期</span>}
+            {overdue && <span className={`${styles.badge} ${styles.badgeRed}`}>已过期{f.overdueDays ? ` ${f.overdueDays} 天` : ''}</span>}
           </p>
           <p className={styles.small} style={{ margin: 0 }}>{f.need || '—'}</p>
           <p className={styles.small} style={{ margin: '4px 0 0' }}>
@@ -79,12 +86,16 @@ function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
               </select>
             </div>
             <div className={styles.field}>
-              <label className={styles.label} htmlFor={`ow-${f.id}`}>负责人</label>
-              <input id={`ow-${f.id}`} className={styles.input} value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="例如：助理小李" />
+              <label className={styles.label} htmlFor={`ow-${f.id}`}>负责人（从团队成员里点选）</label>
+              <select id={`ow-${f.id}`} className={styles.select} value={owner} onChange={(e) => setOwner(e.target.value)}>
+                <option value="">还没定</option>
+                {owner && !team.some((m) => m.name === owner) && <option value={owner}>{owner}</option>}
+                {team.map((m) => <option key={m.name} value={m.name}>{m.name}{m.president ? '（会长）' : m.assistant ? '（助理）' : ''}</option>)}
+              </select>
             </div>
             <div className={styles.field}>
               <label className={styles.label} htmlFor={`nd-${f.id}`}>下一步日期</label>
-              <input id={`nd-${f.id}`} type="date" className={styles.input} value={nextDate} onChange={(e) => setNextDate(e.target.value)} />
+              <DateQuick id={`nd-${f.id}`} value={nextDate} onChange={setNextDate} />
             </div>
             <div className={styles.field}>
               <label className={styles.label} htmlFor={`no-${f.id}`}>处理备注</label>
@@ -93,6 +104,7 @@ function Item({ f, onChanged }: { f: F; onChanged: () => void }) {
           </div>
           <div className={styles.btnRow}>
             <button className={styles.btn} onClick={save}>保存</button>
+            <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/followups/${f.id}`}>联系 / 处理这一条</Link>
             {/* 改动单 D1：直接打开这个人的档案（原来打开的是全部客户） */}
             {f.contact_id ? <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/contacts/${f.contact_id}`}>查看客户档案</Link> : f.member_no ? <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/contacts?q=${f.member_no}`}>查看客户档案</Link> : null}
           </div>
@@ -120,6 +132,13 @@ function Followups() {
   }, []);
   const [status, setStatus] = useState('todo');
   const [source, setSource] = useState('');
+  const [cat, setCat] = useState('');
+  const [team, setTeam] = useState<Team>([]);
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('cat')) { setCat(sp.get('cat') ?? ''); if (sp.has('status')) setStatus(sp.get('status') ?? ''); }
+    api<{ team: Team }>('/api/v1/staff/followups/meta').then((r) => r.ok && setTeam(r.data.team));
+  }, []);
   const [q, setQ] = useState('');
   const [list, setList] = useState<F[] | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -133,12 +152,13 @@ function Followups() {
     const p = new URLSearchParams();
     if (status) p.set('status', status);
     if (source) p.set('source', source);
+    if (cat) p.set('cat', cat);
     if (q.trim()) p.set('q', q.trim());
     const r = await api<{ followups: F[]; counts: Record<string, number> }>(`/api/v1/staff/followups?${p}`);
     if (r.ok) { setList(r.data.followups); setCounts(r.data.counts); } else setErr(r.message);
     const x = await api<{ exceptions: X[] }>('/api/v1/staff/exceptions?status=open');
     if (x.ok) setEx(x.data.exceptions);
-  }, [status, source, q]);
+  }, [status, source, q, cat]);
   useEffect(() => { load(); }, [load]);
 
   async function exAction(id: string, action: 'retry' | 'ignore') {
@@ -170,31 +190,46 @@ function Followups() {
             ))}
           </div>
           <div className={styles.inputRow}>
+            <select className={styles.select} value={cat} onChange={(e) => setCat(e.target.value)} aria-label="分类">
+              <option value="">全部分类</option>
+              <option value="customer">客户咨询</option>
+              <option value="junk">合作或推销、垃圾</option>
+            </select>
             <select className={styles.select} value={source} onChange={(e) => setSource(e.target.value)} aria-label="来源">
               <option value="">全部来源</option>
               {Object.entries(SOURCE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
             <input className={styles.input} value={q} onChange={(e) => setQ(e.target.value)} placeholder="搜索称呼 / 联系方式 / 需求" aria-label="搜索" />
             <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => setAdding(!adding)}>{adding ? '取消' : '手动添加'}</button>
+            {cat === 'junk' && list && list.some((f) => f.status === 'todo') && (
+              <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={async () => { const r = await api<{ message: string }>('/api/v1/staff/followups/junk', { body: { ids: list.filter((f) => f.status === 'todo').map((f) => f.id) } }); setErr(r.ok ? r.data.message : r.message); load(); }}>全部不跟进</button>
+            )}
           </div>
           {adding && (
             <div className={styles.card}>
               <div className={styles.grid2}>
-                {([['name', '称呼'], ['contactText', '联系方式'], ['need', '需求'], ['owner', '负责人']] as const).map(([k, l]) => (
+                {([['name', '称呼'], ['contactText', '联系方式'], ['need', '需求']] as const).map(([k, l]) => (
                   <div key={k} className={styles.field}>
                     <label className={styles.label} htmlFor={`add-${k}`}>{l}</label>
                     <input id={`add-${k}`} className={styles.input} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
                   </div>
                 ))}
                 <div className={styles.field}>
+                  <label className={styles.label} htmlFor="add-ow">负责人</label>
+                  <select id="add-ow" className={styles.select} value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })}>
+                    <option value="">还没定</option>
+                    {team.map((m) => <option key={m.name} value={m.name}>{m.name}{m.president ? '（会长）' : m.assistant ? '（助理）' : ''}</option>)}
+                  </select>
+                </div>
+                <div className={styles.field}>
                   <label className={styles.label} htmlFor="add-nd">下一步日期</label>
-                  <input id="add-nd" type="date" className={styles.input} value={form.nextDate} onChange={(e) => setForm({ ...form, nextDate: e.target.value })} />
+                  <DateQuick id="add-nd" value={form.nextDate} onChange={(v) => setForm({ ...form, nextDate: v })} />
                 </div>
               </div>
               <button className={styles.btn} onClick={add}>添加</button>
             </div>
           )}
-          {list === null ? <p className={styles.muted}>加载中…</p> : list.length === 0 ? <p className={styles.muted}>没有符合条件的任务。</p> : list.map((f) => <Item key={f.id} f={f} onChanged={load} />)}
+          {list === null ? <p className={styles.muted}>加载中…</p> : list.length === 0 ? <p className={styles.muted}>没有符合条件的任务。</p> : list.map((f) => <Item key={f.id} f={f} onChanged={load} team={team} />)}
         </>
       )}
 
