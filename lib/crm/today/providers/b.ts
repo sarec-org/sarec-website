@@ -110,9 +110,9 @@ export const paymentProvider: TodayProvider = {
         suggestion: `打开银行 App 看有没有收到 ${amt}${o.payer_name ? `（付款人 ${o.payer_name}）` : ''}${o.payer_note ? `，备注"${clip(o.payer_note, 30)}"` : ''}；收到了就点"确认到账"`,
         actions: [
           { type: 'post' as const, label: '确认到账', endpoint: `/api/v1/staff/orders/${encodeURIComponent(o.order_no)}/verify`, body: {}, confirm: `确认已经在银行看到这笔 ${amt} 到账？`, done: '已确认到账', primary: true },
-          { type: 'link' as const, label: '没收到 / 去核款页', href: `/zh/staff/payments?q=${encodeURIComponent(o.order_no)}` }
+          { type: 'link' as const, label: '没收到 / 去核款页', href: `/zh/staff/payments?id=${encodeURIComponent(o.order_no)}` }
         ],
-        href: `/zh/staff/payments?q=${encodeURIComponent(o.order_no)}`,
+        href: `/zh/staff/payments?id=${encodeURIComponent(o.order_no)}`,
         tags: ['钱'],
         at: (o.submitted_at ?? o.created_at).toISOString()
       };
