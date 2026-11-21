@@ -17,6 +17,8 @@ const CRON = process.env.CRON_SECRET || '';
 const pool = getPool();
 const contacts: string[] = [];
 const staffEmails: string[] = [];
+/** 这次跑建的工作人员在操作记录里的名字（带本次随机后缀），收尾只删这些人的操作记录，不碰别的窗口的 */
+const staffActors: string[] = [];
 const testPhones: string[] = [];
 let passed = 0;
 const ok = (n: string) => { passed++; console.log(`  ✓ ${n}`); };
@@ -33,8 +35,10 @@ async function person(name: string, opts: { phone?: boolean; staff?: boolean; ro
   const id = rows[0].id;
   contacts.push(id);
   if (opts.staff) {
-    await pool.query(`INSERT INTO staff_roles (email, name, roles) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING`, [email, name, opts.roles ?? ['admin']]);
+    const staffName = `${name}-${uniq}`;
+    await pool.query(`INSERT INTO staff_roles (email, name, roles) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING`, [email, staffName, opts.roles ?? ['admin']]);
     staffEmails.push(email);
+    staffActors.push(`staff:${staffName}`, `staff:${email}`);
   }
   const token = randomBytes(32).toString('base64url');
   await pool.query(`INSERT INTO sessions (token_hash, contact_id, channel, expires_at) VALUES ($1, $2, 'web', now() + interval '1 day')`, [
@@ -831,16 +835,26 @@ async function main() {
     assert.equal(h.status, 400);
     ok('D20：cslb-ingest 要密钥；GET 给要查的牌照号；总表行数太少整批不认（400）');
   }
-  const out = await ingestCslb({ mode: 'queued', header: hdr, lines: rowsCsv, scanned: 10 }, new Date('2026-11-24T20:00:00Z'), { minScanned: 1 });
-  assert.equal(out.checked, 1);
-  assert.equal(out.notActive, 1);
-  const { rows: pa } = await pool.query<{ status: string; listed: boolean; removed_reason: string }>(`SELECT status, listed, removed_reason FROM jobs_pros WHERE id = $1`, [proAId]);
-  assert.equal(pa[0].status, 'removed');
-  assert.equal(pa[0].listed, false);
-  assert.ok(pa[0].removed_reason.includes('过期'));
-  const { rows: ln } = await pool.query(`SELECT 1 FROM jobs_notifications WHERE kind = 'license' AND pro_id = $1`, [proAId]);
-  assert.ok(ln[0]);
-  ok('D20：runner 送来的总表行显示过期 → 自动下架、通知本人、提醒工作人员');
+  // 共用的测试库里别的窗口也可能有排队等比对的人：比对会把所有排队的人都过一遍（总表里查不到的会被下架），
+  // 所以只有排队的全是这次跑建的人时才跑这一段，否则跳过（不动别人的数据）。
+  const { rows: others } = await pool.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM jobs_pros WHERE license_state->>'state' = 'queued' AND NOT (contact_id = ANY($1::uuid[]))`,
+    [contacts]
+  );
+  if (others[0].n > 0) {
+    console.log(`  - 跳过 D20 下架那一段：测试库里还有 ${others[0].n} 个别的窗口的人在排队等比对，不能动他们`);
+  } else {
+    const out = await ingestCslb({ mode: 'queued', header: hdr, lines: rowsCsv, scanned: 10 }, new Date('2026-11-24T20:00:00Z'), { minScanned: 1 });
+    assert.equal(out.checked, 1);
+    assert.equal(out.notActive, 1);
+    const { rows: pa } = await pool.query<{ status: string; listed: boolean; removed_reason: string }>(`SELECT status, listed, removed_reason FROM jobs_pros WHERE id = $1`, [proAId]);
+    assert.equal(pa[0].status, 'removed');
+    assert.equal(pa[0].listed, false);
+    assert.ok(pa[0].removed_reason.includes('过期'));
+    const { rows: ln } = await pool.query(`SELECT 1 FROM jobs_notifications WHERE kind = 'license' AND pro_id = $1`, [proAId]);
+    assert.ok(ln[0]);
+    ok('D20：runner 送来的总表行显示过期 → 自动下架、通知本人、提醒工作人员');
+  }
   // 90 天复核（B、C 类转工作人员）
   await call('POST', `/workbench/jobs/pros/${designerId}/verify`, staff, { action: 'approve' });
   await pool.query(`UPDATE jobs_pros SET next_review_at = now() - interval '1 minute' WHERE id = $1`, [designerId]);
@@ -866,7 +880,8 @@ main()
     await pool.query(`DELETE FROM applications WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM jobs_notifications WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM track_events WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
-    await pool.query(`DELETE FROM crm_audit_log WHERE actor LIKE 'staff:验收工-%'`).catch(() => undefined);
+    // 只删这次跑建的工作人员留下的操作记录（按本次的名字 / 邮箱），别的窗口的不碰
+    await pool.query(`DELETE FROM crm_audit_log WHERE actor = ANY($1::text[])`, [staffActors]).catch(() => undefined);
     await pool.query(`DELETE FROM sessions WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM staff_roles WHERE email = ANY($1)`, [staffEmails]).catch(() => undefined);
     await pool.query(`DELETE FROM login_codes WHERE target = ANY($1)`, [testPhones]).catch(() => undefined);
