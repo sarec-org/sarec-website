@@ -303,3 +303,13 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 ### 网站页面会用到的路径（通知里的链接）
 `/zh/jobs`（看全部活儿）、`/zh/jobs/post`（发布）、`/zh/jobs/posts/<id>`、`/zh/jobs/mine`（我的活儿 / 我的接活）、`/zh/jobs/register`（登记接活）、`/zh/jobs/renew/<id>?t=<token>`（一键续期：页面调 `PATCH /jobs/posts/:id {renew:true, token}`）、`/zh/jobs/followup/<token>`。
+
+## 13. 后台「今天」页 `/zh/staff`（后台综合优化 B，迁移 0039）
+
+- `GET /api/v1/staff/today`（任何工作人员；每类待办按角色过滤）→ `{ today, live, items, failed, yesterday }`，类型见 `lib/crm/today/types.ts`（`TodayPayload`）。
+- **待办来源接口**：`lib/crm/today/types.ts` 的 `TodayProvider { kind, roles, list(ctx) → TodayItem[] }`；
+  `TodayItem { id, kind, priority, title, suggestion, actions[], href, tags?, at?, detail? }`；
+  按钮 `TodayAction`：`link` / `tel` / `sms`（带草稿）/ `mailto`（带草稿，只打开邮件程序）/ `copy` / `post`（直接生效，POST 到 `/api/v1/staff/*` 或 `/api/v1/workbench/*`）。
+- 排序：`PRIORITY` 档位 —— 置顶 0（活动回顾待发布）→ 钱 100 → 已过期跟进 200 → 新咨询 300 → 待审核待确认 400 → 其他 500；同档按 `at`。
+- 注册：B 的在 `lib/crm/today/providers/b.ts`，C 的在 `lib/crm/today/providers/c.ts`（`C_PROVIDERS`、`C_LIVE_PROVIDERS` 今天现场三按钮 `TodayLive`）。汇总与排序在 `lib/crm/today/registry.ts`。
+- 对外发送总闸：`lib/crm/notifyGate.ts` 的 `gateSend(msg, send)`，设置 `notify_live`（正式站默认关 = 只记 `notify_log` 不发；测试站 / 本机只发测试身份）。
