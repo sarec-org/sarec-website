@@ -221,7 +221,15 @@ export async function membershipPaid(db: Db, o: OrderRow, provider: string): Pro
       [o.application_payment_id, payProvider, o.verified_by, o.order_no, o.amount_cents]
     );
   }
-  await activateMembership(db, o.related_id!, 'paid');
+  const fresh = await activateMembership(db, o.related_id!, 'paid');
+  if (fresh) {
+    // 后台综合优化 五：新缴费入会，立即通知（短信里不放姓名）
+    const { notifyStaffSafe } = await import('./staffNotify');
+    const { isNotReal } = await import('./accountKind');
+    if (!(await isNotReal(db, o.contact_id))) {
+      await notifyStaffSafe({ category: 'paid_join', key: `paid_join:${o.related_id}`, title: '有一位新会员缴费入会了', href: `/zh/staff/contacts/${o.contact_id}` });
+    }
+  }
 }
 
 async function sendWelcomeEmail(db: Db, applicationId: string, _source: 'paid'): Promise<void> {

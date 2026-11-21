@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
+import { EventHub } from '@/components/crm/staff/EventHub';
 import { shrink } from '@/components/crm/staff/RoomsV12';
 import { api, fmtDateTime } from '@/components/crm/client';
 
@@ -130,6 +131,7 @@ function Album() {
           {events.map((e) => <option key={e.id} value={e.id}>{fmtDateTime(e.starts_at)} · {e.title}</option>)}
         </select>
       </div>
+      {eventId && <EventHub eventId={eventId} current="album" />}
       {msg && <p className={msg.ok ? styles.success : styles.error} role="status">{msg.text}</p>}
       {busy && <p className={styles.notice} role="status">{busy}</p>}
       {d && (

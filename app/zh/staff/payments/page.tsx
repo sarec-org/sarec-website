@@ -9,7 +9,7 @@ type O = {
   provider: string; payer_name: string | null; payer_note: string | null; submitted_at: string | null; created_at: string; paid_at: string | null;
   verified_by: string | null; reject_reason: string | null; contact_id: string; name: string; email: string | null; phone_e164: string | null;
 };
-const FILTERS: [string, string][] = [['open', '待处理'], ['payment_submitted', '待核款'], ['pending_payment', '待付款'], ['paid', '已到账'], ['cancelled', '已取消']];
+const FILTERS: [string, string][] = [['open', '待处理'], ['payment_submitted', '待核款'], ['pending_payment', '待付款'], ['paid', '已到账'], ['cancelled', '已取消'], ['demo', '审核演示 / 测试订单']];
 
 export default function StaffPayments() {
   const [status, setStatus] = useState('open');
@@ -26,9 +26,16 @@ export default function StaffPayments() {
     if (r.ok) setRows(r.data.orders);
     else setMsg({ ok: false, text: r.message });
   }, [status, q]);
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    load();
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+    // 后台综合优化 五.5：通知里的链接带 ?order=<订单号>，直接打开这一笔
+    const o = new URLSearchParams(location.search).get('order');
+    if (o) setQ(o);
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (ready) load();
+  }, [status, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function verify(no: string) {
     setBusy(no);

@@ -2,6 +2,19 @@
 
 所有接口只返回 JSON，`Cache-Control: no-store`。
 
+> **后台综合优化 C（11/21）新增 / 改动的接口**（详见各节；正文末尾第 13 节是 B 的「今天」页）
+> - 发送：所有新对外发送走 B 的 `lib/crm/notifyGate.ts`（`gateSend`）；C 的真正发送函数包在 `lib/crm/notifySend.ts`（`gatedSend`）。
+> - `GET/POST /api/v1/staff/notify`：手机通知设置（每人渠道、收哪几类、负责人、总闸开关〔管理员〕、最近通知、发送记录）。
+> - `POST /api/cron/staff-notify`（GitHub Actions 每 15 分钟）：夜里攒的通知早 8 点合成一条、8:30 每日汇总、活动自动“已结束”、测试 / 审核演示账号打标记。
+> - `GET /api/v1/me/committees` 另带 `profile { hasName, hasPhone, needsFill }`；`POST` 可带 `name`、`phone`；缺姓名或手机号返回 400 `need_name_phone`（1.4.3 及以前的小程序不带这两个字段时照常记下并标“待补填”）。
+> - `GET /api/v1/staff/committees`：意向名单（真实姓名、手机、邮箱、待补填）。
+> - `GET /api/v1/staff/events/:id/hub`：活动页分栏数字和状态。
+> - `POST /api/v1/staff/checkin { eventId, contactId }` 返回另带 `missingPhone`；`{ eventId, contactId, addPhone }` 补手机号；现场登记手机号必填（`need_phone`）。
+> - `POST /api/v1/staff/join-requests { id, action: 'nudged' }`；`GET ?id=` 只看一条。`submitJoin` 返回另带 `linkSent`。
+> - `GET /api/v1/staff/contacts?view=customers|opened|all` 返回另带 `counts`；`POST /api/v1/staff/contacts/:id { action: 'account_kind', kind }`（管理员）。
+> - `GET /api/v1/staff/orders?status=demo`：审核演示 / 内部 / 测试账号的订单（其余状态不再含这些）。
+> - 小程序扫码签到 `step.kind = 'new'` 另带 `prefillName`、`needPhoneOnly`（档案里没有手机号的人先补手机号）。
+
 - **成功**：`{ "ok": true, ...数据 }`
 - **失败**：`{ "ok": false, "error": { "code": "...", "message": "大白话提示" } }`
 - **登录身份**：网站用 httpOnly cookie `sarec_session`；小程序用请求头 `Authorization: Bearer <token>`。两者等价。

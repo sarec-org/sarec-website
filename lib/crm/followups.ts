@@ -75,7 +75,14 @@ export async function upsertFollowup(db: Db, f: FollowupInput): Promise<{ id: st
 
 // ── 待处理（失败 / 异常）────────────────────────────────────────────────
 
+/** 这些是“系统故障”（每日任务整段出错）：立即通知（夜里也发），同一件事只通知一次 */
+export const FAULT_KINDS = ['join_scan', 'followup_scan', 'agent_digest', 'prep_reminder', 'pay_reminder', 'newsletter_queue', 'post_event', 'feature_report', 'staff_notify', 'flow_cron'];
+
 export async function recordException(kind: string, dedupeKey: string, ref: string | null, error: string, payload?: unknown): Promise<void> {
+  if (FAULT_KINDS.includes(kind)) {
+    const { notifyStaffSafe } = await import('./staffNotify');
+    await notifyStaffSafe({ category: 'system_fault', key: `fault:${dedupeKey}`, title: '系统故障：每天自动跑的任务出错了，请看一眼', href: '/zh/staff/followups?tab=exceptions' });
+  }
   await getPool()
     .query(
       `INSERT INTO ops_exceptions (kind, dedupe_key, ref, error, payload) VALUES ($1, $2, $3, $4, $5)
@@ -233,6 +240,7 @@ export async function scanFollowups(now = new Date()): Promise<{ postEvent: numb
        JOIN registrations r ON r.event_id = e.id AND r.contact_id = c.id AND r.status <> 'cancelled'
       WHERE coalesce(e.ends_at, e.starts_at) BETWEEN $1::timestamptz - interval '24 hours' AND $1::timestamptz
         AND e.event_status <> 'cancelled'
+        AND c.account_kind IS NULL -- 后台综合优化 八：内部 / 审核演示 / 测试账号不收跟进提醒
       ORDER BY a.contact_id, e.id, a.created_at DESC`,
     [now]
   );
@@ -259,7 +267,7 @@ export async function scanFollowups(now = new Date()): Promise<{ postEvent: numb
        FROM applications a
        JOIN contacts c ON c.id = a.contact_id
        LEFT JOIN membership_tiers t ON t.slug = a.selected_tier_slug
-      WHERE (a.application_status IN ('approved','paid','second_payment_due')
+      WHERE c.account_kind IS NULL AND (a.application_status IN ('approved','paid','second_payment_due')
              OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
         AND a.membership_end_date BETWEEN $1::date AND $1::date + 30
         -- 已经续费（有更晚的有效会籍）的不提醒

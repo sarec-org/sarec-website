@@ -110,6 +110,8 @@ function PhotoReview() {
 
 export default function StaffCards() {
   const [tab, setTab] = useState<'cards' | 'photos'>('cards');
+  // 后台综合优化：从「今天」的“照片待审”点过来（?tab=photos）直接打开照片
+  useEffect(() => { if (new URLSearchParams(location.search).get('tab') === 'photos') setTab('photos'); }, []);
   const [filter, setFilter] = useState('pending');
   const [q, setQ] = useState('');
   const [data, setData] = useState<{ cards: C[]; counts: { pending: number; hidden: number } } | null>(null);
