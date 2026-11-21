@@ -15,6 +15,7 @@ import { CrmError } from './events';
 import type { FollowupSource, FollowupStatus } from './followups';
 import type { TodayAction } from './today/types';
 import { buildContactActions } from './today/contactActions';
+import { realContact } from './accountKind';
 
 // ── 分类 ────────────────────────────────────────────────────────────────
 
@@ -230,8 +231,8 @@ export type FollowupCard = {
 
 const ACTIVE_APP = ['approved', 'paid', 'second_payment_due'];
 
-/** 读待跟进（带会员身份、联系方式、分类）。ids 指定几条；否则按 where 条件 */
-export async function loadCards(f: { ids?: string[]; open?: boolean; limit?: number } = {}): Promise<FollowupCard[]> {
+/** 读待跟进（带会员身份、联系方式、分类）。ids 指定几条；否则按 where 条件。real：去掉内部 / 审核演示 / 测试账号（八.1，「今天」待办用） */
+export async function loadCards(f: { ids?: string[]; open?: boolean; limit?: number; real?: boolean } = {}): Promise<FollowupCard[]> {
   const today = laToday();
   const { rows } = await getPool().query<{
     id: string; source: string; dedupe_key: string; name: string | null; need: string | null; message: string | null; intent: string | null;
@@ -265,8 +266,9 @@ export async function loadCards(f: { ids?: string[]; open?: boolean; limit?: num
             AND (a.application_status = ANY($5) OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
           ORDER BY a.membership_end_date DESC LIMIT 1
        ) m ON true
+      WHERE (NOT $6::boolean OR c.id IS NULL OR ${realContact('c')})
       ORDER BY f.created_at DESC`,
-    [f.ids ?? null, f.open ?? false, f.limit ?? 300, today, ACTIVE_APP]
+    [f.ids ?? null, f.open ?? false, f.limit ?? 300, today, ACTIVE_APP, f.real ?? false]
   );
   return rows.map((r) => {
     const ct = r.contact_text ?? '';

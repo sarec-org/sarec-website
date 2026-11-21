@@ -6,11 +6,13 @@
  * - 到场 = 这段时间签到的人（按人去重）；其中第一次到场的单列。
  * - 入会 = 这段时间开始会籍、已缴费的。
  * - 功能和渠道：用「功能排行」和「渠道码」原来的统计（按最后一次带来这个人的功能 / 渠道归因），按入会、再按到场排。
+ * - 内部账号、审核演示账号、测试账号（contacts.account_kind 有值）四个数都不算（八.1，lib/crm/accountKind.ts realContact）。
  * 只读，不改数据。
  */
 import { getPool } from '@/lib/db/client';
 import { featureRanking } from './features';
 import { listChannels } from './channels';
+import { realContact } from './accountKind';
 
 export type Bringer = { label: string; kind: '功能' | '渠道'; arrived: number; joined: number; registered: number };
 
@@ -21,10 +23,10 @@ export async function dataSummary(days: number) {
     `WITH named AS (
        SELECT c.id, (coalesce(nullif(trim(c.name), ''), '微信用户') <> '微信用户' OR c.phone_e164 IS NOT NULL OR c.email IS NOT NULL) AS real
          FROM contacts c
-        WHERE c.created_at > now() - make_interval(days => $1) AND c.merged_into IS NULL
+        WHERE c.created_at > now() - make_interval(days => $1) AND c.merged_into IS NULL AND ${realContact('c')}
      ), came AS (
-       SELECT DISTINCT r.contact_id FROM registrations r
-        WHERE r.arrival_status = 'checked_in' AND r.checked_in_at > now() - make_interval(days => $1)
+       SELECT DISTINCT r.contact_id FROM registrations r JOIN contacts c ON c.id = r.contact_id
+        WHERE r.arrival_status = 'checked_in' AND r.checked_in_at > now() - make_interval(days => $1) AND ${realContact('c')}
      )
      SELECT (SELECT count(*)::int FROM named WHERE real) AS new_people,
             (SELECT count(*)::int FROM named WHERE NOT real) AS shells,
@@ -32,7 +34,8 @@ export async function dataSummary(days: number) {
             (SELECT count(*)::int FROM came WHERE NOT EXISTS (
                SELECT 1 FROM registrations o WHERE o.contact_id = came.contact_id AND o.arrival_status = 'checked_in'
                   AND o.checked_in_at <= now() - make_interval(days => $1))) AS arrived_first,
-            (SELECT count(*)::int FROM applications a WHERE a.membership_start_date IS NOT NULL AND a.payment_status IN ('paid', 'partially_paid')
+            (SELECT count(*)::int FROM applications a JOIN contacts c ON c.id = a.contact_id
+              WHERE a.membership_start_date IS NOT NULL AND a.payment_status IN ('paid', 'partially_paid') AND ${realContact('c')}
                 AND a.membership_start_date >= (now() - make_interval(days => $1))::date) AS joined`,
     [d]
   );

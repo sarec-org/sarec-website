@@ -4,6 +4,7 @@
 import { getPool } from '@/lib/db/client';
 import { CATEGORY_LABEL, contactActions, draftFor, loadCards, teamMembers, voiceFor } from '@/lib/crm/followupKit';
 import { headline } from '@/lib/crm/followupMail';
+import { realContact } from '@/lib/crm/accountKind';
 import { PRIORITY, type TodayItem, type TodayProvider } from '../types';
 
 const money = (cents: number) => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 });
@@ -11,7 +12,7 @@ const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s
 
 /** 新咨询 + 会员和访客跟进：同一次查询，按"有没有联系过、过没过期"分到两类 */
 async function followupItems(ctx: Parameters<TodayProvider['list']>[0]): Promise<TodayItem[]> {
-  const cards = await loadCards({ open: true, limit: 500 });
+  const cards = await loadCards({ open: true, limit: 500, real: true }); // 八.1：内部 / 审核演示 / 测试账号不进待办
   const team = await teamMembers().catch(() => []);
   const out: TodayItem[] = [];
   const junk = cards.filter((c) => c.status === 'todo' && c.category !== 'customer');
@@ -96,7 +97,7 @@ export const paymentProvider: TodayProvider = {
     }>(
       `SELECT o.order_no, o.purpose, o.description, o.amount_cents, o.payer_name, o.payer_note, o.submitted_at, o.created_at, c.name, c.member_no::int
          FROM orders o JOIN contacts c ON c.id = o.contact_id
-        WHERE o.status = 'payment_submitted' ORDER BY coalesce(o.submitted_at, o.created_at) LIMIT 50`
+        WHERE o.status = 'payment_submitted' AND ${realContact('c')} ORDER BY coalesce(o.submitted_at, o.created_at) LIMIT 50`
     );
     return rows.map((o) => {
       const amt = money(o.amount_cents);
@@ -125,7 +126,10 @@ export const recapProvider: TodayProvider = {
   roles: ['ops'],
   async list() {
     const { rows } = await getPool().query<{ event_id: string; title: string; starts_at: Date; arrived: number | null; photos: number | null }>(
-      `SELECT r.event_id, e.title, e.starts_at, (r.stats->>'arrived')::int AS arrived,
+      // 到场人数现数，去掉内部 / 审核演示 / 测试账号（八.1）
+      `SELECT r.event_id, e.title, e.starts_at,
+              (SELECT count(*)::int FROM registrations rg JOIN contacts c ON c.id = rg.contact_id
+                WHERE rg.event_id = r.event_id AND rg.arrival_status = 'checked_in' AND ${realContact('c')}) AS arrived,
               coalesce((r.stats->>'staffPhotos')::int, 0) + coalesce((r.stats->>'guestPhotos')::int, 0) AS photos
          FROM event_recaps r JOIN events e ON e.id = r.event_id WHERE r.status = 'drafted' ORDER BY e.starts_at LIMIT 20`
     );
