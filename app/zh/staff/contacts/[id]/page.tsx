@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate, can } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
-import { ContactButtons, MemberBadge } from '@/components/crm/staff/ContactButtons';
+import { ContactButtons, MemberBadge } from '@/components/crm/staff/TodayActions';
 
 type Detail = {
   member: { isMember: boolean; tierName: string | null; endDate: string | null } | null;
@@ -16,6 +16,8 @@ type Detail = {
   points: { balance: number; ledger: { id: string; category: string; points: number; reason: string | null; created_by: string; created_at: string; reverses_id: string | null }[] };
   applications: { id: string; selected_tier_slug: string; application_status: string; payment_status: string; membership_end_date: string | null; display_status: string }[];
   timeline: { at: string; kind: string; text: string }[];
+  /** 这个人还没办完的那条待跟进（有就能在联系按钮下一键记“联系上了 / 没接 / 已约时间”） */
+  openFollowupId: string | null;
   contactMethods: { kind: 'email' | 'phone'; value: string; status: string; status_text: string; is_current: boolean; source: string; created_at: string; replaced_at: string | null; invalid_reason: string | null }[];
 };
 const SOURCE: Record<string, string> = { self_select: '本人点选', self_text: '本人原文', ai_confirmed: 'AI 整理经本人确认', staff: '工作人员记录', behavior: '系统行为', ai_guess: 'AI 推测' };
@@ -133,9 +135,10 @@ export default function StaffContactDetail({ params }: { params: { id: string } 
                 phone={(d.contactMethods.find((x) => x.kind === 'phone' && x.is_current)?.value ?? (c.phone_e164 as string | null)) || null}
                 email={(d.contactMethods.find((x) => x.kind === 'email' && x.is_current)?.value ?? (c.email as string | null)) || null}
                 wechat={(c.wechat_id as string | null) ?? null}
-                name={String(c.name ?? '')}
                 smsDraft={`${String(c.name ?? '')}您好，我是 SAREC 中美房地产商会的工作人员。`}
                 emailDraft={`${String(c.name ?? '')}您好，\n\n我是 SAREC 中美房地产商会的工作人员。\n\n`}
+                resultEndpoint={d.openFollowupId ? `/api/v1/staff/followups/${d.openFollowupId}/result` : null}
+                onResultDone={(m) => { if (m.ok) load(); }}
               />
               {can(s, 'admin') && <AccountKindEdit id={params.id} kind={(c.account_kind as string | null) ?? null} onDone={(m) => { setMsg(m); load(); }} />}
             </div>

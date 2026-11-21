@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, copyText, fmtDateTime } from '@/components/crm/client';
-import { ContactButtons, MemberBadge } from '@/components/crm/staff/ContactButtons';
+import { ContactButtons, MemberBadge } from '@/components/crm/staff/TodayActions';
 
 type Log = { at: string; by: string; channel: string; to: string; status: string; text: string };
 type R = {
@@ -80,7 +80,7 @@ export default function JoinRequests() {
               {!(r.link_log ?? []).length && r.link_sent_at && (
                 <div className={styles.small}>{fmtDateTime(r.link_sent_at)} 已发链接（{CH[r.link_channel ?? ''] ?? '—'}）</div>
               )}
-              <ContactButtons phone={r.phone} email={r.email} name={r.name} smsDraft={`${r.name}您好，我是 SAREC 中美房地产商会的工作人员。看到您申请入会，网站缴费链接已发到您手机，有任何问题随时问我。`} />
+              <ContactButtons phone={r.phone} email={r.email} smsDraft={`${r.name}您好，我是 SAREC 中美房地产商会的工作人员。看到您申请入会，网站缴费链接已发到您手机，有任何问题随时问我。`} />
               {(r.status === 'new' || r.status === 'link_sent') && (
                 <div className={styles.btnRow} style={{ flexWrap: 'wrap' }}>
                   {r.phone && <button className={styles.btn} style={big} onClick={() => act({ id: r.id, action: 'send_link', channel: 'sms' }, `已用短信把入会链接发给 ${r.name}`)}>短信再发缴费链接</button>}

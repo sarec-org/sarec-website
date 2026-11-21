@@ -14,6 +14,7 @@ import { laToday } from '@/lib/laDate';
 import { CrmError } from './events';
 import type { FollowupSource, FollowupStatus } from './followups';
 import type { TodayAction } from './today/types';
+import { buildContactActions } from './today/contactActions';
 
 // ── 分类 ────────────────────────────────────────────────────────────────
 
@@ -314,17 +315,9 @@ export function draftFor(c: FollowupCard, v: { voice: Voice; by: string }): stri
   return buildDraft({ name: c.name, lang: c.lang, isMember: c.isMember, voice: v.voice, by: v.by, overdueDays: c.overdueDays, source: c.source, dedupeKey: c.dedupeKey, need: c.need, eventTitle: c.eventTitle });
 }
 
-/** 联系按钮（四.4）：打电话、发短信（带草稿）、发邮件（带草稿，只打开邮件程序）、复制手机号去微信加好友、复制微信号 */
+/** 联系按钮（四.4）：打电话、发短信（带草稿）、发邮件（带草稿，只打开邮件程序）、复制微信号、复制手机号加微信（全站同一套，见 ./today/contactActions.ts） */
 export function contactActions(c: FollowupCard, draft: string | null): TodayAction[] {
-  const a: TodayAction[] = [];
-  if (c.phone) {
-    a.push({ type: 'tel', label: '打电话', phone: c.phone });
-    a.push({ type: 'sms', label: '发短信', phone: c.phone, body: draft ?? '' });
-  }
-  if (c.email) a.push({ type: 'mailto', label: '发邮件', email: c.email, subject: draftSubject(c.lang), body: draft ?? '' });
-  if (c.wechat) a.push({ type: 'copy', label: `复制微信号 ${c.wechat}`, text: c.wechat, toast: `已复制微信号 ${c.wechat}，打开微信「添加朋友」粘贴搜索` });
-  if (c.phone) a.push({ type: 'copy', label: '复制手机号加微信', text: c.phone, toast: `已复制手机号 ${c.phone}，打开微信「添加朋友」粘贴搜索` });
-  return a;
+  return buildContactActions({ phone: c.phone, email: c.email, wechat: c.wechat, smsDraft: draft ?? '', emailSubject: draftSubject(c.lang), emailDraft: draft ?? '' });
 }
 
 // ── 动作：联系回填、不跟进、我来联系、转给助理、改分类 ──────────────────────

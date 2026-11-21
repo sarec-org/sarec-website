@@ -5,7 +5,7 @@ import Link from 'next/link';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDate } from '@/components/crm/client';
-import { ContactButtons, MemberBadge } from '@/components/crm/staff/ContactButtons';
+import { ContactButtons, MemberBadge } from '@/components/crm/staff/TodayActions';
 
 type R = { committee: string; committee_name: string; contact_id: string; member_no: number; name: string | null; phone: string | null; email: string | null; needs_fill: boolean; created_at: string; is_member: boolean };
 
@@ -36,7 +36,7 @@ export default function Committees() {
                       {r.needs_fill && <span className={`${styles.badge} ${styles.badgeRed}`} style={{ marginLeft: 6 }}>待补填</span>}
                     </div>
                     <div className={styles.small}>{r.phone ?? '没留手机号'}{r.email ? ` · ${r.email}` : ''} · {fmtDate(r.created_at)} 表达意向</div>
-                    <ContactButtons phone={r.phone} email={r.email} name={r.name} />
+                    <ContactButtons phone={r.phone} email={r.email} />
                   </div>
                 ))}
               </section>

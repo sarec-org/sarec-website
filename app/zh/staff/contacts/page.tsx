@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDate } from '@/components/crm/client';
-import { MemberBadge } from '@/components/crm/staff/ContactButtons';
+import { MemberBadge } from '@/components/crm/staff/TodayActions';
 
 type C = { id: string; member_no: number; name: string; email: string | null; phone_e164: string | null; cur_email: string | null; cur_phone: string | null; email_status: string | null; email_status_text: string; phone_status: string | null; phone_status_text: string; role_label: string | null; tier: string | null; tier_name: string | null; member_until: string | null; points: number; attended: number; account_kind: string | null; last_active_at: string | null };
 type Counts = { customers: number; opened: number; members: number; internal: number };

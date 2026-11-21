@@ -2,12 +2,14 @@
 /**
  * 「今天」页和待跟进处理页共用：卡片上的按钮（TodayAction）+ 联系回填（联系上了 / 没接 / 已约时间）。
  * 联系按钮只打开手机自己的电话 / 短信 / 邮件程序，系统不替人发。
+ * ContactButtons：全站唯一的一套联系按钮（客户档案、入会申请、专委会意向……和「待跟进」一致，七.4）；MemberBadge：会员身份一眼可见。
  */
 import Link from 'next/link';
 import { useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api, copyText } from '@/components/crm/client';
 import type { TodayAction } from '@/lib/crm/today/types';
+import { buildContactActions, type ContactInfo } from '@/lib/crm/today/contactActions';
 import { laToday } from '@/lib/laDate';
 
 const isContact = (a: TodayAction) => a.type === 'tel' || a.type === 'sms' || a.type === 'mailto' || a.type === 'copy';
@@ -111,4 +113,44 @@ export function DateQuick({ value, onChange, id }: { value: string; onChange: (v
       <input id={id} type="date" className={styles.input} style={{ maxWidth: 180 }} value={value} onChange={(e) => onChange(e.target.value)} aria-label="自己选日期" />
     </div>
   );
+}
+
+/**
+ * 联系按钮（和「待跟进」「今天」同一套）：打电话、发短信（带草稿）、发邮件（带草稿，只打开邮件程序）、复制微信号、复制手机号加微信。
+ * 给了 resultEndpoint（某条待跟进的 /api/v1/staff/followups/<id>/result）：点过联系按钮回来，一键选“联系上了 / 没接 / 已约时间”。
+ */
+export function ContactButtons({
+  resultEndpoint,
+  onResultDone,
+  ...info
+}: ContactInfo & { resultEndpoint?: string | null; onResultDone?: (msg: { ok: boolean; text: string }) => void }) {
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [asked, setAsked] = useState(false);
+  if (!info.phone && !info.email && !info.wechat) return <p className={styles.small} style={{ margin: '0.4rem 0 0' }}>没有留联系方式</p>;
+  return (
+    <div>
+      <ActionButtons actions={buildContactActions(info)} onDone={setMsg} onContact={() => setAsked(true)} />
+      {info.wechat && <p className={styles.small} style={{ margin: '0.3rem 0 0' }}>微信号：<b>{info.wechat}</b></p>}
+      {msg && <p className={styles.small} style={{ margin: '0.3rem 0 0', color: msg.ok ? undefined : '#f3a1a1' }}>{msg.text}</p>}
+      {resultEndpoint && asked && (
+        <ContactResult
+          endpoint={resultEndpoint}
+          onDone={(m) => {
+            setMsg(m);
+            if (m.ok) setAsked(false);
+            onResultDone?.(m);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 会员身份一眼可见（所有列表共用）；内部 / 审核演示 / 测试账号另标 */
+export function MemberBadge({ isMember, tier, kind }: { isMember?: boolean | null; tier?: string | null; kind?: string | null }) {
+  if (kind === 'internal') return <span className={`${styles.badge} ${styles.badgeMuted}`}>内部账号</span>;
+  if (kind === 'review_demo') return <span className={`${styles.badge} ${styles.badgeMuted}`}>审核演示</span>;
+  if (kind === 'test') return <span className={`${styles.badge} ${styles.badgeMuted}`}>测试</span>;
+  if (!isMember && !tier) return null;
+  return <span className={`${styles.badge} ${styles.badgeGreen}`}>会员{tier ? `·${tier}` : ''}</span>;
 }

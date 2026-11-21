@@ -614,6 +614,10 @@ export async function contactDetail(id: string) {
     [id]
   );
   const balance = points.reduce((n, p) => n + Number(p.points), 0);
+  const { rows: fu } = await pool.query<{ id: string }>(
+    `SELECT id FROM followups WHERE contact_id = $1 AND status IN ('todo','contacted','meeting') ORDER BY next_date NULLS LAST, created_at DESC LIMIT 1`,
+    [id]
+  );
   const { memberStatus } = await import('./membership');
   const ms = await memberStatus(pool, id).catch(() => null);
   return {
@@ -625,7 +629,8 @@ export async function contactDetail(id: string) {
     answers: answers.map((a) => ({ ...a, prompt: QUESTION_BY_CODE[a.item_code]?.prompt ?? a.item_code })),
     points: { balance, ledger: points },
     applications: apps,
-    timeline: tl
+    timeline: tl,
+    openFollowupId: fu[0]?.id ?? null
   };
 }
 
