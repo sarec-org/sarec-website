@@ -76,7 +76,14 @@ export async function upsertFollowup(db: Db, f: FollowupInput): Promise<{ id: st
 
 // ── 待处理（失败 / 异常）────────────────────────────────────────────────
 
+/** 这些是“系统故障”（每日任务整段出错）：立即通知（夜里也发），同一件事只通知一次 */
+export const FAULT_KINDS = ['join_scan', 'followup_scan', 'agent_digest', 'prep_reminder', 'pay_reminder', 'newsletter_queue', 'post_event', 'feature_report', 'staff_notify', 'flow_cron'];
+
 export async function recordException(kind: string, dedupeKey: string, ref: string | null, error: string, payload?: unknown): Promise<void> {
+  if (FAULT_KINDS.includes(kind)) {
+    const { notifyStaffSafe } = await import('./staffNotify');
+    await notifyStaffSafe({ category: 'system_fault', key: `fault:${dedupeKey}`, title: '系统故障：每天自动跑的任务出错了，请看一眼', href: '/zh/staff/followups?tab=exceptions' });
+  }
   await getPool()
     .query(
       `INSERT INTO ops_exceptions (kind, dedupe_key, ref, error, payload) VALUES ($1, $2, $3, $4, $5)

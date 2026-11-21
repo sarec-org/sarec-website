@@ -1,0 +1,22 @@
+# 后台综合优化（11/21 新增，独立文件；不改已有的 workflow 和 vercel.json）：
+# 每 15 分钟调一次 /api/cron/staff-notify —— 夜里攒的通知早 8 点合成一条发、8:30 每日汇总、活动结束自动“已结束”。
+# 所有发送都过通知总闸 notify_live（正式默认关：只记录不发）。沿用仓库已有的 Secrets REMINDER_CRON_SECRET，不新增密钥。
+name: staff-notify
+on:
+  schedule:
+    - cron: '4,19,34,49 * * * *'
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Trigger staff notify
+        env:
+          SECRET: ${{ secrets.REMINDER_CRON_SECRET }}
+        run: |
+          if [ -z "$SECRET" ]; then echo "REMINDER_CRON_SECRET not set"; exit 0; fi
+          code=$(curl -s -m 200 -o /tmp/out.json -w '%{http_code}' -X POST -H "Authorization: Bearer $SECRET" https://sinoamericanrec.org/api/cron/staff-notify)
+          echo "http=$code"; cat /tmp/out.json; echo
+          test "$code" = "200"

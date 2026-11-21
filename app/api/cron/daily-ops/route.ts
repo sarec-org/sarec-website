@@ -38,6 +38,19 @@ async function run(req: Request) {
     await recordException('join_scan', `join_scan:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     return 'error';
   });
+  // 后台综合优化 七.2：手机号相同且两边已验证的重复档案自动合并（可撤销）。开关 dup_auto_merge 默认关：
+  // 正式库第一次批量要东哥点头后用 scripts/admin-oneoff-merge-dups.ts 跑，跑完脚本把开关打开，之后每天自动。
+  try {
+    const { getSetting } = await import('@/lib/crm/orders');
+    const { getPool } = await import('@/lib/db/client');
+    if ((await getSetting<boolean>(getPool(), 'dup_auto_merge', false)) === true) {
+      const { autoMergeVerified } = await import('@/lib/crm/autoMerge');
+      out.autoMerge = (await autoMergeVerified({ apply: true, limit: 50 })).count;
+    } else out.autoMerge = 'off';
+  } catch (e) {
+    await recordException('flow_cron', `auto_merge:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.autoMerge = 'error';
+  }
   // 1.3.1 E：没填常驻地区的人按报名过的活动地区推断（参加一次外地活动不改）
   out.regions = await inferRegions().catch(() => 'error');
   try {

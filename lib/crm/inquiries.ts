@@ -76,5 +76,20 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
     return { inquiryId, followupId: f.id, created: f.created };
   });
   if (out.created) await notifyFollowup(out.followupId, base);
+  if (out.created) await notifyNewInquiry(out.followupId, input.contactId ?? null);
   return out;
+}
+
+/**
+ * 后台综合优化 五：真实客户咨询立即通知工作人员（短信只写“有一条新客户咨询”）。
+ * B 的自动分类（客户咨询 / 合作或推销 / 垃圾）写在 followups.detail.class 时：只有“客户咨询”立即通知，其余进每日汇总。
+ */
+export async function notifyNewInquiry(followupId: string, contactId: string | null): Promise<void> {
+  const { notifyStaffSafe } = await import('./staffNotify');
+  const { isNotReal } = await import('./accountKind');
+  if (await isNotReal(getPool(), contactId)) return;
+  const { rows } = await getPool().query<{ cls: string | null }>(`SELECT detail->>'class' AS cls FROM followups WHERE id = $1`, [followupId]).catch(() => ({ rows: [] as { cls: string | null }[] }));
+  const cls = rows[0]?.cls;
+  if (cls && !['customer', '客户咨询'].includes(cls)) return;
+  await notifyStaffSafe({ category: 'inquiry', key: `inquiry:${followupId}`, title: '有一条新客户咨询', href: `/zh/staff/followups?id=${followupId}` });
 }

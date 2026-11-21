@@ -2,26 +2,25 @@
 -- 活动自动结束 / 筹备提醒、重复档案自动合并、内部账号 / 审核演示账号。
 -- 幂等（IF NOT EXISTS / ON CONFLICT），可以重复跑；不依赖 0037。不删任何列、不删任何数据。
 
--- ── 1. 通知总闸 notify_live：正式环境默认关；关着只记录（收件人打码），不真发 ───────────────
+-- ── 1. 通知总闸 notify_live（lib/crm/notifyGate.ts，B 定义）：正式环境默认关；关着只记录（收件人打码），不真发 ───────────────
 INSERT INTO crm_settings (key, value) VALUES ('notify_live', 'false') ON CONFLICT (key) DO NOTHING;
 
--- 每一条“本该发 / 已发”的对外消息（给申请人的缴费链接、给工作人员的通知、每日汇总……）
+-- 发送记录表和 B 的 0039 完全同一份（B 的 lib/crm/notifyGate.ts 写这张表）；这里再写一遍是为了 0040 不依赖 0039 的执行顺序
 CREATE TABLE IF NOT EXISTS notify_log (
   id          bigserial PRIMARY KEY,
-  purpose     text NOT NULL,                         -- join_link / staff_notice / staff_digest / ...
-  audience    text NOT NULL DEFAULT 'customer',      -- customer / staff
-  channel     text NOT NULL,                         -- sms / email / wecom
-  to_masked   text NOT NULL,                         -- 只存打码后的收件人
+  kind        text NOT NULL,                 -- 哪类通知：咨询通知 / 推销垃圾每日汇总 / ……
+  channel     text NOT NULL,                 -- email / sms / wecom
+  to_masked   text NOT NULL,                 -- 收件人（打码）
   subject     text,
   body        text,
-  status      text NOT NULL,                         -- sent / logged / failed
-  reason      text,                                  -- 没真发的原因（总闸关着 / 测试站只发测试身份 / 没配置）
-  ref         text,                                  -- 关联：申请编号、通知编号……
-  live        boolean NOT NULL DEFAULT false,
+  ref         text,
+  dedupe_key  text,
+  status      text NOT NULL,                 -- sent / held（正式站总闸关）/ blocked（测试站非测试身份）/ failed
+  error       text,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS notify_log_created_idx ON notify_log (created_at DESC);
-CREATE INDEX IF NOT EXISTS notify_log_ref_idx ON notify_log (ref);
+CREATE INDEX IF NOT EXISTS idx_notify_log_time ON notify_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notify_log_key ON notify_log (dedupe_key) WHERE dedupe_key IS NOT NULL;
 
 -- ── 2. 工作人员通知：每人的渠道、收哪几类 ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS staff_notify_prefs (
@@ -91,3 +90,6 @@ DO $$ BEGIN
   ALTER TABLE contacts ADD CONSTRAINT contacts_account_kind_chk CHECK (account_kind IS NULL OR account_kind IN ('internal', 'review_demo', 'test'));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 CREATE INDEX IF NOT EXISTS contacts_account_kind_idx ON contacts (account_kind) WHERE account_kind IS NOT NULL;
+
+-- 重复档案每天自动合并的开关：默认关（正式库第一次批量等东哥点头，用 scripts/admin-oneoff-merge-dups.ts 跑完后打开）
+INSERT INTO crm_settings (key, value) VALUES ('dup_auto_merge', 'false') ON CONFLICT (key) DO NOTHING;

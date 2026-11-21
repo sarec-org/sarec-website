@@ -54,7 +54,7 @@ export type Welcome = {
 
 export type CheckinStep =
   | Welcome
-  | { kind: 'new'; professions: string[]; phoneQuick: boolean; smsAvailable: boolean }
+  | { kind: 'new'; professions: string[]; phoneQuick: boolean; smsAvailable: boolean; prefillName?: string | null; needPhoneOnly?: boolean }
   | { kind: 'questions'; questions: CheckinQuestion[]; greetName: string | null; points: number }
   | { kind: 'pending_payment' | 'waitlisted' | 'rejected'; message: string };
 
@@ -84,10 +84,14 @@ export async function missingQuestions(db: Db, contactId: string): Promise<Check
 /** 这个微信登录对应的档案“认不认识”。 */
 export async function recognized(db: Db, contactId: string, eventId: string): Promise<boolean> {
   const { rows } = await db.query<{ ok: boolean }>(
+    // 后台综合优化 七.3：到过场的人档案里必须有手机号。以前“有姓名 + 邮箱”或“报过名 / 来过”就直接记到场，
+    // 于是有人到场却没有手机号。现在没有手机号的一律先走新人那一屏（姓名带出来，只补手机号和职业）。
     `SELECT (
-        (NULLIF(c.name, '微信用户') IS NOT NULL AND (c.phone_e164 IS NOT NULL OR c.email IS NOT NULL
-           OR EXISTS (SELECT 1 FROM contact_methods m WHERE m.contact_id = c.id AND m.is_current)))
-        OR EXISTS (SELECT 1 FROM registrations r WHERE r.contact_id = c.id AND (r.event_id = $2 AND r.status <> 'cancelled' OR r.arrival_status = 'checked_in'))
+        (c.phone_e164 IS NOT NULL OR EXISTS (SELECT 1 FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current))
+        AND (
+          (NULLIF(c.name, '微信用户') IS NOT NULL)
+          OR EXISTS (SELECT 1 FROM registrations r WHERE r.contact_id = c.id AND (r.event_id = $2 AND r.status <> 'cancelled' OR r.arrival_status = 'checked_in'))
+        )
       ) AS ok FROM contacts c WHERE c.id = $1`,
     [contactId, eventId]
   );
@@ -140,7 +144,8 @@ export async function scan(slug: string, contactId: string): Promise<CheckinStep
       [contactId, ev.slug]
     ).catch(() => undefined);
     if (!(await recognized(db, contactId, ev.id))) {
-      return { kind: 'new', professions: PROFESSIONS, phoneQuick: await phoneQuickOn(db), smsAvailable: twilioVerifyConfigured() };
+      const nm = await greetName(db, contactId);
+      return { kind: 'new', professions: PROFESSIONS, phoneQuick: await phoneQuickOn(db), smsAvailable: twilioVerifyConfigured(), prefillName: nm, needPhoneOnly: !!nm };
     }
     return afterRecognized(db, ev, contactId);
   });
