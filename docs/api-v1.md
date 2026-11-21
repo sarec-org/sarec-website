@@ -200,7 +200,21 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 ## 12. 找工人 · 接活 `/api/v1/jobs/*`（迁移 0038）
 
 小程序判断：请求头 `X-Sarec-Client: mp-…`、`servicewechat.com` 来源或小程序会话都算小程序。**小程序调用活儿相关接口（`/jobs/posts*`、`/jobs/me/posts`、`/jobs/upload`）一律 404**（D1：活儿只在网站）；**例外（D10）**：`GET /jobs/me/matched` 小程序可调；`POST /jobs/posts/:id/contact` 小程序只对 matched 里的活儿开放，其余照旧 404。
-开关默认（D11）：迁移 0038 新建时 `jobs_find_on`、`jobs_work_on` 默认**开**（开关只留给日后整栏下线），`jobs_require_paid_member` 默认开；已有的值不改。
+开关默认（D11）：迁移 0038 新建时 `jobs_find_on`、`jobs_work_on` 默认**开**（开关只留给日后整栏下线）；已有的值不改。
+
+**指令 9（11/20 21:35）改动一览（D22–D28，小程序照这里调）**
+- **D28 接活儿收费方式**（替换 `jobs_require_paid_member`）：`crm_settings.jobs_work_fee_mode` = `all_free` 全部免费 / `free_quota` 免费额度（**默认**）/ `members_only` 必须是会员；`jobs_free_contacts` 免费联系次数（默认 2）；`jobs_free_posts` 非会员免费发活儿次数（默认 `null` = 不限）。0038 幂等：库里有旧键就转换（开 → `members_only`，关 → `all_free`），全新的库种 `free_quota`；旧键留着不删。
+  - `GET /jobs/meta` 的 `switches` = `{find, work, requirePaid（兼容：= feeMode 是 members_only）, feeMode, freeContacts, freePosts}`；`me.pro` 多 `freeLeft`（还能免费联系几位；`null` = 不限 / 不适用：会员、工人、全部免费、必须是会员）、`freeLeftText`「还可以免费联系 X 位」。
+  - 规则：`free_quota`、`all_free` 时非会员核验通过即上列表（`needPay=false`）；`members_only` 和以前 `requirePaid` 开一样。看发布人电话（`POST /jobs/posts/:id/contact`，含小程序 matched 那条）：`free_quota` 时非会员**每看一条新活儿扣一次**，同一条重复看不扣；用完 → `403 {code:'quota_used_up', message:'免费次数用完了，成为商会会员后可以继续'}`（看过的那几条照样能看）。会员一律不限；工人不扣。需要执照的工种照旧要核验（核验不过一律不能联系，没有例外）。
+  - 成功联系返回多 `freeLeft`、`freeLeftText`（扣完之后的剩余；不适用时 `freeLeft=null`）。`GET /jobs/posts/:id` 多 `freeLeft`；用完时 `canContact=false, reasonCode='quota_used_up', needPay=true`。
+  - `GET /jobs/me/pro` 顶层和 `pro` 里都给 `freeLeft`、`freeLeftText`（`pro` 另有 `feeMode`）；`GET /jobs/me/matched` 多 `freeLeft`、`freeLeftText`（用完了列表照样给，联系时才返回 `quota_used_up`）。**小程序返回里没有任何金额**。
+  - 发活儿：`freePosts` 有数时，非会员按发布次数算（一次选几个工种拆成几条也只算一次），超了 `403 {code:'post_quota_used_up', message:'免费发布次数用完了，成为商会会员后可以继续发布（非会员可以免费发 N 次）'}`；会员、工作人员不限。
+  - 工作人员 `GET/PATCH /workbench/jobs/switches`：PATCH 收 `{feeMode?, freeContacts?（0–99）, freePosts?（0–999，null 或 '' = 不限）}`（旧的 `{requirePaid}` 也认：true → members_only，false → all_free），值不对 `400` 人话；只限 admin；立即生效；每项改动写 `crm_audit_log`（action=jobs_switch，谁、何时、改前改后）。返回多 `feeModes[{key,label,hint}]`、`changes.feeMode/freeContacts/freePosts`、`log[{key,name,actor,at,before,after}]`（最近 30 条）。
+  - `GET /workbench/jobs/stats` 多 `freeQuota{freeUsedPeople（用了免费额度的人数）, usedUpPeople（用完的人数）, joinedAfterUsedUp（用完后入会的人数）}`。
+- **D27 层级数据**：`GET /jobs/meta` 的 `groups[]` 每组多 `tradeKeys[]`（组里开放的工种）、`hasPros`（组里有没有核验通过的人）；`trades[].hasPros` 照旧（没人的标“招募中”= `recruitingLabel`）。`GET /jobs/pros` 多 `trades=a,b`（多工种，逗号分隔）；`group=` 照旧；都不给 = 全部。网站新列表页 `/zh/jobs/find?group=&trade=`（顶上工种标签同页切换），旧 `/zh/jobs/find/<工种>` 照样能开；登记 `/zh/jobs/register?role=company|licensed|pro_service|worker`（身份已选，顶上四个身份切换条）。
+- **D26**：`GET /jobs/meta` 多 `openTradeCount`（开放工种数）、`allTradesText`「全部 N 项 ›」。
+- **D25 改名**：接口返回给人看的文字统一「我要接活儿 / 登记接活儿 / 我的接活儿 / 接活儿资料」（“接活人”不变；通知短信「SAREC 接活儿提醒」）。
+- **D22 测试站固定验证码只认名单**（只在 `VERCEL_ENV=preview`，正式站没有这段）：名单 = 虚构号 +1 xxx 555-0100～555-0199（任何区号）+ 测试库 `crm_settings.test_fixed_code_phones`（数组，默认空）。名单外：`POST /auth/code/send {channel:'sms'}`、`POST /me/phone/send`、`POST /me/phone/verify` 一律 `400 {code:'test_phone_only', message:'测试站只认测试号码（例如 949-555-0199），这个号码在测试站发不出验证码'}`。`testFixedCodeText` 改成「测试站：只认测试号码（例如 949-555-0199），验证码固定为 246810」。体验版：验证手机填 949-555-0199，验证码 246810。
 开关（D3）：`find` 关时找工人那边的接口（`/jobs/pros*`、`POST /jobs/posts`）返回 `403 not_open`「这个功能还没开放」；`work` 关时接活那边（`GET /jobs/posts*`、`/jobs/me/pro*`）同样。**工作人员不受开关限制**（meta 里 `staffPreview=true`，页面显示 `staffPreviewText`）。
 新错误码：`not_open`（403，功能没开放）、`not_eligible`（403，不能联系发布人，`message` 是一句人话原因）、`need_phone`（400，先验证手机号）。
 
@@ -208,7 +222,7 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 | 接口 | 权限 | 参数 | 返回 |
 |---|---|---|---|
-| `GET /jobs/meta` | 🌐 | — | `switches{find,work,requirePaid}`、`staffPreview`、`staffPreviewText`、`groups[{key,name,order}]`、`trades[{key,name,group,licType:'A'\|'B'\|'C',open,hasPros,noPost,noNotify,icon}]`、`homeEntries[{label,icon,target:{type:'trade'\|'group',key}}]`（7 个，按顺序）、`cities[{region,items:[{key,name}]}]`（城市表，按地区和顺序，只含启用的；发活儿、登记、筛选都用它，提交 key）、`me.pro`（null 或 `{id,role,status,listed,needPay}`）、`latest`（≤3 张活儿卡片；小程序、接活开关关时为 `[]`）、`options{proRoles,posterRoles（小程序不含 crew）,timings,propertyTypes,languages,cityGroups[{region,cities:[名字]}]（旧字段，从城市表生成，新代码用 `cities`）,turnoverTrades,siteVisitTrades}`、`rules[]`、`disclaimer`、`subscribeTemplate`（派活订阅消息模板 ID 或 null）、`webUrl`、`postUrl`；**D11 冷启动**：`anyPros`（有没有任何开放工种已有核验通过的人；`false` 时首页「找工人」方块区换成 `recruitingText`「正在招募各工种的接活人，可先发布活儿等人联系」＋「全部工种和服务」）、`recruitingText`、`tradeRecruitingText`「这个工种正在招募接活人」、`recruitingLabel`「招募中」。`trades` 含全部工种（包括没人的，`hasPros=false`）：全部工种页出所有 `open` 的，没人的标“招募中”，点进去是 `tradeRecruitingText` ＋ 发布活儿 / 登记接活。不区分审核员 |
+| `GET /jobs/meta` | 🌐 | — | `switches{find,work,requirePaid}`、`staffPreview`、`staffPreviewText`、`groups[{key,name,order}]`、`trades[{key,name,group,licType:'A'\|'B'\|'C',open,hasPros,noPost,noNotify,icon}]`、`homeEntries[{label,icon,target:{type:'trade'\|'group',key}}]`（7 个，按顺序）、`cities[{region,items:[{key,name}]}]`（城市表，按地区和顺序，只含启用的；发活儿、登记、筛选都用它，提交 key）、`me.pro`（null 或 `{id,role,status,listed,needPay,freeLeft,freeLeftText}`）、`latest`（≤3 张活儿卡片；小程序、接活开关关时为 `[]`）、`options{proRoles,posterRoles（小程序不含 crew）,timings,propertyTypes,languages,cityGroups[{region,cities:[名字]}]（旧字段，从城市表生成，新代码用 `cities`）,turnoverTrades,siteVisitTrades}`、`rules[]`、`disclaimer`、`subscribeTemplate`（派活订阅消息模板 ID 或 null）、`webUrl`、`postUrl`；**D11 冷启动**：`anyPros`（有没有任何开放工种已有核验通过的人；`false` 时首页「找工人」方块区换成 `recruitingText`「正在招募各工种的接活人，可先发布活儿等人联系」＋「全部工种和服务」）、`recruitingText`、`tradeRecruitingText`「这个工种正在招募接活人」、`recruitingLabel`「招募中」。`trades` 含全部工种（包括没人的，`hasPros=false`）：全部工种页出所有 `open` 的，没人的标“招募中”，点进去是 `tradeRecruitingText` ＋ 发布活儿 / 登记接活。不区分审核员 |
 | `GET /jobs/pros?trade=&group=&city=&role=worker&cursor=` | 🌐（find 开关） | `trade` 或 `group` 二选一；`city` = 城市 key（名字也认，停用的城市也能筛）；`role=worker` 只列工人（网站施工队招工用，默认不含工人） | `items[接活人卡片]`、`cities[{key,name}]`（这批人服务的城市，按城市表顺序）、`nextCursor` |
 | `GET /jobs/pros/:id` | 🌐（find） | — | `pro`（卡片） |
 | `POST /jobs/pros/:id/contact` | 🌐（find）· 小程序可调 | — | `{phone, wechat, name}`。**指令 7 · D17：不用登录、不用验证手机**（小程序头、网站游客都能点）；每次点击记 `jobs_pro_clicks`（登录的记档案，游客记 IP 加盐哈希，不存原始 IP；`client` mp/web），登录的另记 jobs_contacts direction=pro。**频率限制**：登录的按身份、游客按 IP——1 小时内最多 20 个不同的接活人、24 小时内最多 60 个；24 小时内看过的同一个人再点不算新的；工作人员、看自己不限。超了 `429 {code:'too_many_attempts', message:'查看太频繁了，请稍后再试，或加商会微信'}`（被挡的也记一行 `limited=true`）。发布人电话（`/jobs/posts/:id/contact`）规则不变 |
@@ -247,8 +261,8 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 | 接口 | 参数 | 返回 |
 |---|---|---|
-| `GET /workbench/jobs/switches` | — | `switches{find,work,requirePaid}`、`changes{find,work,requirePaid: {updatedBy, updatedAt}}` |
-| `PATCH /workbench/jobs/switches`（admin） | `{find?, work?, requirePaid?}` | 同上；每次改动写 crm_audit_log（action=jobs_switch） |
+| `GET /workbench/jobs/switches` | — | `switches{find,work,requirePaid,feeMode,freeContacts,freePosts}`、`feeModes`、`changes{find,work,requirePaid,feeMode,freeContacts,freePosts: {updatedBy, updatedAt}}`、`log[]`（D28） |
+| `PATCH /workbench/jobs/switches`（admin） | `{find?, work?, feeMode?, freeContacts?, freePosts?}`（旧 `requirePaid?` 兼容） | 同上；每项改动写 crm_audit_log（action=jobs_switch，改前改后） |
 | `GET /workbench/jobs/pros?status=pending` | `status` 省略 = 全部；`pending` 含“通过后又改了资料、等再看”的 | `items[{id,contactId,contactName,phone,name,role,roleLabel,status,statusLabel,needsReview,trades[{key,name,licType,verified}],cities,licenseNo,licenseState（CSLB 比对结果：state,found,active,problems[],status,expires,classes[],workersComp,bond,coveredTrades[],uncoveredTrades[],checkedAt）,licenseExpiresOn,businessRegUrl,insuranceUrl,licenseDocUrl,intro,photos,returnReason,removedReason,listed,isPaidMember（小程序不给）,verifiedAt,nextReviewAt,createdAt,officialUrl,officialUrls[{agency,url}],checklist[文字],cslbDetailUrl}]` |
 | `POST /workbench/jobs/pros/:id/verify` | `{action:'approve'\|'return'\|'remove'\|'check', reason?, trades?[]}`：approve 可只勾部分工种（默认全部）；return、remove 必须写原因；check = 重新排队对 CSLB 总表 | `{pro}`（同上一项）。通过后 90 天复核；会通知本人（走发消息保险） |
 | `GET /workbench/jobs/posts?status=` | — | 网站：`items[{id,title,status,statusLabel,closeReason,note,city,tradeName,posterLabel,posterName,createdAt,expiresAt,budget,contactCount,notifiedCount,openReports,firstContactAt}]`；小程序只给 `{id,title,status,statusLabel,contactCount,note}` |
@@ -269,7 +283,7 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 ### 通知与定时任务（D4）
 
-- **测试站手机验证（指令 7 · D16）**：只在 `VERCEL_ENV=preview`（服务器判断，不看前端传参）：`POST /me/phone/send` 不发短信，返回 `{alreadyVerified:false, masked, message:'测试站：验证码固定为 246810', testFixedCode:true}`；`POST /me/phone/verify` 只认 `246810`（任何号码）；`POST /auth/code/send {channel:'sms'}` 同样不发、验证码固定 246810，返回多 `testFixedCode:true`。`GET /meta`、`GET /jobs/meta`、`GET /me/contact` 的 `contactInfo` 在测试站多给 `testFixedCode:true, testFixedCodeText:'测试站：验证码固定为 246810'`（小程序据此在验证手机的地方显示这行小字；`/meta` 的 `smsAvailable`、`phoneVerifyAvailable` 在测试站为 true）。正式站这些字段都没有，代码路径不变。
+- **测试站手机验证（指令 7 · D16；指令 9 · D22 收紧成只认名单里的号码，见本节开头）**：只在 `VERCEL_ENV=preview`（服务器判断，不看前端传参）：`POST /me/phone/send` 不发短信，返回 `{alreadyVerified:false, masked, message:testFixedCodeText, testFixedCode:true}`；`POST /me/phone/verify` 只认 `246810`（只限名单里的号码）；`POST /auth/code/send {channel:'sms'}` 同样不发、验证码固定 246810，返回多 `testFixedCode:true`。`GET /meta`、`GET /jobs/meta`、`GET /me/contact` 的 `contactInfo` 在测试站多给 `testFixedCode:true, testFixedCodeText:'测试站：验证码固定为 246810'`（小程序据此在验证手机的地方显示这行小字；`/meta` 的 `smsAvailable`、`phoneVerifyAvailable` 在测试站为 true）。正式站这些字段都没有，代码路径不变。
 - 定时任务都由 `.github/workflows/jobs-dispatch.yml`（新文件）触发，不改 vercel.json 和已有工作流；鉴权 `Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>`，**测试站（`VERCEL_ENV=preview`）另认 `JOBS_CRON_TEST_SECRET`**（D14，只加在 Preview，正式环境不认）。
 - `/api/cron/jobs?task=dispatch`（每 15 分钟）：漏发的第一批；发布 24 小时没人联系 → 第二批 + 后台待跟进（排队的 CSLB 比对 D20 起交给 GitHub runner）。
 - `?task=daily`（每天 14:00 UTC）：14 天到期关闭、第 12 天发续期链接 `/zh/jobs/renew/<id>?t=<token>`、第 7 天回访 `/zh/jobs/followup/<token>`（发布人和联系过的人各一次）、90 天复核、执照到期下架。

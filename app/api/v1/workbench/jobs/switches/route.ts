@@ -1,4 +1,4 @@
-/** GET/PATCH /api/v1/workbench/jobs/switches —— 三个开关 { find, work, requirePaid }；改动记谁、什么时候（PATCH 只限管理员） */
+/** GET/PATCH /api/v1/workbench/jobs/switches —— 栏目开关 { find, work } + D28 收费设置 { feeMode, freeContacts, freePosts }（旧字段 requirePaid 兼容）；立即生效，每项改动记谁、何时、改前改后（PATCH 只限管理员） */
 import { body, handler, ok, requireStaff } from '@/lib/crm/http';
 import { setSwitches, switchesDetail } from '@/lib/jobs/settings';
 export const runtime = 'nodejs';

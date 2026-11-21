@@ -9,6 +9,7 @@ import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
 import { TEST_FIXED_CODE, testFixedCodeOn } from './testFixedCode';
+import { assertTestPhone } from './testPhones';
 import { CrmError, findOrCreateContact, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
 import { SMS_FALLBACK, noteVerified, phoneSendLimits, twilioVerify, twilioVerifyConfigured } from './contactInfo';
@@ -58,6 +59,8 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
   if (!target) {
     throw new CrmError('bad_target', channel === 'email' ? '邮箱格式不对，请检查后再试' : '手机号格式不对，请加国家码，例如 +1 626 555 1234');
   }
+  // D22（指令 9）：测试站固定验证码只认名单里的号码（555-01xx 虚构号 + 测试库名单）；正式站 testFixedCodeOn() 永远 false，不进这里
+  if (channel === 'sms' && testFixedCodeOn() && !reviewLogin(channel, target)) await assertTestPhone(target);
   const viaVerify = channel === 'sms' && smsConfigured();
   // D16：测试站短信验证码不真发、固定 246810（正式站 fixed 永远是 false）
   const fixed = channel === 'sms' && !viaVerify && testFixedCodeOn();

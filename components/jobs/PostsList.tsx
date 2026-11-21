@@ -1,5 +1,5 @@
 'use client';
-/** /zh/jobs/posts：看全部活儿（金色），按工种和城市筛选；底部固定"登记接活"（已登记显示"我的接活"） */
+/** /zh/jobs/posts：看全部活儿（金色），按工种和城市筛选；底部固定"登记接活儿"（已登记显示"我的接活儿"） */
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/components/crm/client';
@@ -16,14 +16,14 @@ export function PostsList() {
     <JobsShell
       side="work"
       need="work"
-      eyebrow="我要接活"
+      eyebrow="我要接活儿"
       title="全部活儿"
       footer={(meta) => (
         <BottomBar>
           {meta.me?.pro ? (
-            <Link href="/zh/jobs/mine" className={`${s.btn} ${j.btnWork}`}>我的接活</Link>
+            <Link href="/zh/jobs/mine" className={`${s.btn} ${j.btnWork}`}>我的接活儿</Link>
           ) : (
-            <Link href="/zh/jobs/register" className={`${s.btn} ${j.btnWork}`}>登记接活</Link>
+            <Link href="/zh/jobs/register" className={`${s.btn} ${j.btnWork}`}>登记接活儿</Link>
           )}
         </BottomBar>
       )}

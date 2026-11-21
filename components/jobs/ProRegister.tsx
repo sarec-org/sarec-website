@@ -1,9 +1,12 @@
 'use client';
 /**
- * /zh/jobs/register：登记接活（金色）。先选身份，字段跟着变（原始指令三.3）；现有会员资料自动带入；勾选同意规则。
+ * /zh/jobs/register?role=company|licensed|pro_service|worker：登记接活儿（金色）。
+ * 指令 9 · D27：不再有单独的“选身份”一步——从「我要接活儿」的四个身份方块点进来身份已选好（没带 role 默认施工队或公司），
+ * 表单顶上四个身份切换条，点了下面的项当场变（原始指令三.3）；现有会员资料自动带入；勾选同意规则。
  * 提交后服务器定状态、加州承包商牌照自动查；核验通过但不是会员的，引导去交会费（核验不过不收钱）。工人免费。
  */
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, useDraft } from '@/components/crm/client';
 import s from '@/components/crm/crm.module.css';
@@ -37,6 +40,9 @@ const EMPTY_PRO: ProForm = { role: '', name: '', avatar: '', trades: [], cities:
 
 const nearest = (n: number | null, list: { key: string }[]) => (n == null ? '' : list.reduce((a, b) => (Math.abs(Number(b.key) - n) < Math.abs(Number(a.key) - n) ? b : a)).key);
 
+const ROLE_KEYS: ProRole[] = ['company', 'licensed', 'pro_service', 'worker'];
+export const isProRole = (x: unknown): x is ProRole => typeof x === 'string' && (ROLE_KEYS as string[]).includes(x);
+
 function startFrom(res: MeProRes): ProForm {
   const p = res.pro;
   const f = res.prefill;
@@ -47,18 +53,20 @@ function startFrom(res: MeProRes): ProForm {
       intro: p.intro ?? '', photos: p.photos, teamSize: nearest(p.teamSize, TEAM_SIZES), wechat: p.wechat ?? '', designNoCaStamp: p.designNoCaStamp
     };
   }
-  return { ...EMPTY_PRO, role: f.role ?? '', name: f.name, avatar: f.avatar ?? '', trades: f.trades, cities: f.cities, intro: f.intro ?? '', wechat: f.wechat ?? '' };
+  return { ...EMPTY_PRO, role: f.role ?? 'company', name: f.name, avatar: f.avatar ?? '', trades: f.trades, cities: f.cities, intro: f.intro ?? '', wechat: f.wechat ?? '' };
 }
 
 export function ProRegister() {
   return (
-    <JobsShell side="work" need="work" eyebrow="我要接活" title="登记接活">
+    <JobsShell side="work" need="work" eyebrow="我要接活儿" title="登记接活儿">
       {(meta) => <Loader meta={meta} />}
     </JobsShell>
   );
 }
 
 function Loader({ meta }: { meta: Meta }) {
+  const sp = useSearchParams();
+  const urlRole = sp.get('role');
   const [res, setRes] = useState<MeProRes | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -75,16 +83,21 @@ function Loader({ meta }: { meta: Meta }) {
   if (res.pro && res.pro.status !== 'draft') {
     return (
       <div className={s.notice}>
-        你已经登记过了（{res.pro.statusLabel}）。改资料、看核验状态请去「我的接活」。
-        <div style={{ marginTop: '0.6rem' }}><Link href="/zh/jobs/mine" className={`${s.btn} ${j.btnWork}`}>我的接活</Link></div>
+        你已经登记过了（{res.pro.statusLabel}）。改资料、看核验状态请去「我的接活儿」。
+        <div style={{ marginTop: '0.6rem' }}><Link href="/zh/jobs/mine" className={`${s.btn} ${j.btnWork}`}>我的接活儿</Link></div>
       </div>
     );
   }
-  return <ProFormView meta={meta} res={res} />;
+  return <ProFormView meta={meta} res={res} initialRole={isProRole(urlRole) ? urlRole : null} />;
 }
 
-export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: MeProRes; editing?: boolean; onSaved?: (p: ProSelf) => void }) {
+export function ProFormView({ meta, res, editing, onSaved, initialRole }: { meta: Meta; res: MeProRes; editing?: boolean; onSaved?: (p: ProSelf) => void; initialRole?: ProRole | null }) {
   const [f, setF, clear] = useDraft<ProForm>(editing ? 'jobs-pro-edit' : 'jobs-pro', startFrom(res));
+  // D27：从身份方块点进来（?role=）→ 身份已选好；草稿里是别的身份也以点的为准。没有身份时默认施工队或公司。
+  useEffect(() => {
+    if (initialRole && !editing) setF((x) => (x.role === initialRole ? x : { ...x, role: initialRole, trades: [] }));
+    else setF((x) => (x.role ? x : { ...x, role: 'company' }));
+  }, [initialRole, editing, setF]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState<{ pro: ProSelf; autoCheck: { message?: string } | null } | null>(null);
@@ -151,15 +164,26 @@ export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: 
       {!editing && <p className={s.muted}>登记一次，有对口的活儿第一时间通知你。你在商会已有的资料已经带进来了，看一眼对不对就行。</p>}
       {res.pro?.status === 'returned' && res.pro.returnReason && <div className={s.error}>上次被退回：{res.pro.returnReason}。改好再提交一次就行。</div>}
 
+      {/* D27：四个身份切换条（点了下面的项当场变，不再有单独的选身份页） */}
       <div className={s.field}>
-        <span className={s.label}>先选身份<span className={s.required}>*</span></span>
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
+        <span className={s.label}>我是<span className={s.required}>*</span></span>
+        <div className={j.roleBar} role="tablist" aria-label="身份">
           {meta.options.proRoles.map((r) => (
-            <button key={r.key} type="button" aria-pressed={f.role === r.key} className={`${j.opt} ${f.role === r.key ? j.optOn : ''}`} style={{ borderRadius: 8, textAlign: 'left', padding: '0.7rem 1rem' }} onClick={() => set({ role: r.key, trades: f.role === r.key ? f.trades : [] })}>
-              <b>{r.label}</b><br /><span className={s.small}>{PRO_ROLE_HINT[r.key]}</span>
+            <button key={r.key} type="button" role="tab" aria-selected={f.role === r.key} className={`${j.roleTab} ${f.role === r.key ? j.roleTabOn : ''}`}
+              onClick={() => {
+                if (f.role === r.key) return;
+                set({ role: r.key, trades: [] });
+                if (!editing && typeof window !== 'undefined') {
+                  const u = new URL(window.location.href);
+                  u.searchParams.set('role', r.key);
+                  window.history.replaceState(null, '', u.toString());
+                }
+              }}>
+              {r.label}
             </button>
           ))}
         </div>
+        {f.role && <p className={s.small} style={{ margin: '0.4rem 0 0' }}>{PRO_ROLE_HINT[f.role]}</p>}
       </div>
 
       {f.role && (
@@ -272,9 +296,12 @@ export function ProFormView({ meta, res, editing, onSaved }: { meta: Meta; res: 
           {f.role !== 'worker' && meta.switches.requirePaid && (
             <p className={s.small}>上列表、看发布人电话的条件：先核验通过，再是缴费会员。核验不过不收钱。</p>
           )}
+          {f.role !== 'worker' && meta.switches.feeMode === 'free_quota' && (
+            <p className={s.small}>核验通过就上找工人列表；可以免费联系 {meta.switches.freeContacts ?? 2} 位发布人，用完后成为商会会员可以继续。会员不限。</p>
+          )}
 
           <div className={s.card}>
-            <p className={s.cardTitle}>接活规则</p>
+            <p className={s.cardTitle}>接活儿规则</p>
             <ul className={j.steps}>
               {(res.rules.length ? res.rules : meta.rules).map((r) => <li key={r}>{r}</li>)}
             </ul>
@@ -310,11 +337,11 @@ export function AfterSubmit({ pro, meta, autoMsg }: { pro: ProSelf; meta: Meta; 
         {needPay && <li><b>还差一步：成为缴费会员</b>，就能上列表、看发布人电话。</li>}
         {verified && !needPay && pro.role !== 'worker' && <li>你已经在找工人列表上了，有对口的活儿会第一时间通知你。</li>}
         {pro.role === 'worker' && <li>工人免费登记，能联系施工队发的招工；有对口的招工会通知你。</li>}
-        <li>在「我的接活」里能改资料、看通知给你的活儿、看核验状态。</li>
+        <li>在「我的接活儿」里能改资料、看通知给你的活儿、看核验状态。</li>
       </ol>
       <div className={s.btnRow}>
         {needPay && <Link href="/zh/join" className={`${s.btn} ${j.btnWork}`}>去交会费</Link>}
-        <Link href="/zh/jobs/mine" className={`${s.btn} ${s.btnGhost}`}>我的接活</Link>
+        <Link href="/zh/jobs/mine" className={`${s.btn} ${s.btnGhost}`}>我的接活儿</Link>
         <Link href="/zh/jobs/posts" className={`${s.btn} ${s.btnQuiet}`}>看全部活儿</Link>
       </div>
     </>

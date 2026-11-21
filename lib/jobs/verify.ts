@@ -198,7 +198,7 @@ async function takeDown(p: ProRow, reason: string, actor: string, kind: string) 
   await pool.query(`UPDATE jobs_pros SET status = 'removed', listed = false, removed_reason = $2, updated_at = now() WHERE id = $1`, [p.id, reason]);
   await pool.query(`INSERT INTO jobs_verifications (pro_id, kind, action, reason, actor) VALUES ($1, $2, 'remove', $3, $4)`, [p.id, kind, reason, actor]);
   await recordException('jobs_license', `jobs_license:${p.id}:${laToday()}`, p.id, `接活人「${p.name}」已自动下架：${reason}`, { proId: p.id });
-  await notifyPro(p.contact_id, p.id, 'license', `你的接活资料已暂时下架：${reason}。更新执照后在「我的接活」里重新提交即可。`).catch(() => undefined);
+  await notifyPro(p.contact_id, p.id, 'license', `你的接活儿资料已暂时下架：${reason}。更新执照后在「我的接活儿」里重新提交即可。`).catch(() => undefined);
 }
 
 /** 定时任务：处理排队的 CSLB 比对 + 每周全部重新比对一次 + 90 天复核 + 执照到期 */
@@ -324,7 +324,7 @@ export async function staffVerify(s: Staff, id: string, b: Record<string, unknow
       if (!reason) throw new CrmError('bad_request', '退回要写原因，本人会看到');
       await pool.query(`UPDATE jobs_pros SET status = 'returned', return_reason = $2, listed = false, needs_review = false, updated_at = now() WHERE id = $1`, [id, reason]);
       await pool.query(`INSERT INTO jobs_verifications (pro_id, kind, action, reason, actor) VALUES ($1, 'manual', 'return', $2, $3)`, [id, reason, actor]);
-      await notifyPro(p.contact_id, id, 'verify', `你的接活资料被退回：${reason}。改好后在「我的接活」里重新提交。`).catch(() => undefined);
+      await notifyPro(p.contact_id, id, 'verify', `你的接活儿资料被退回：${reason}。改好后在「我的接活儿」里重新提交。`).catch(() => undefined);
       break;
     }
     case 'remove': {

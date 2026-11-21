@@ -31,7 +31,9 @@ const STATUS_BY_CODE: Record<string, number> = {
   already_checked_in: 409,
   conflict: 409,
   not_open: 403,
-  not_eligible: 403
+  not_eligible: 403,
+  quota_used_up: 403,
+  post_quota_used_up: 403
 };
 
 /** 包一层：CrmError → 对应状态码的大白话错误；其他异常 → 500（不泄露内部信息）。 */

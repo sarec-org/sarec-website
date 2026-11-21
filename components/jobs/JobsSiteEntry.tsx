@@ -33,7 +33,7 @@ export function JobsSiteEntry() {
         </div>
         <div className={st.btns}>
           {sw.find && <Link href="/zh/jobs" className={`${st.btn} ${st.find}`}>找工人／施工队</Link>}
-          {sw.work && <Link href="/zh/jobs" className={`${st.btn} ${st.work}`}>我要接活</Link>}
+          {sw.work && <Link href="/zh/jobs" className={`${st.btn} ${st.work}`}>我要接活儿</Link>}
         </div>
       </div>
     </section>

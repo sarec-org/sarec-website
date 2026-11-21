@@ -1,5 +1,5 @@
 'use client';
-/** /zh/jobs/mine：我的接活（金色）——核验状态、改资料、"现在有空"开关、通知给我的活儿 */
+/** /zh/jobs/mine：我的接活儿（金色）——核验状态、改资料、"现在有空"开关、通知给我的活儿 */
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/components/crm/client';
@@ -14,7 +14,7 @@ type Notified = { count: number; webUrl?: string; items?: PostCard[] };
 
 export function MyPro() {
   return (
-    <JobsShell side="work" need="work" eyebrow="我要接活" title="我的接活">
+    <JobsShell side="work" need="work" eyebrow="我要接活儿" title="我的接活儿">
       {(meta) => (
         <>
           <p className={s.small} style={{ marginTop: 0 }}>找人干活、自己发过活儿的，看<Link href="/zh/jobs/my-posts" style={{ color: 'var(--gold)' }}>「我发的活儿」›</Link></p>
@@ -52,22 +52,22 @@ function Body({ meta }: { meta: Meta }) {
     setRes({ ...res, pro: r.data.pro });
   }
 
-  if (needLogin) return <NeedLogin why="登录后看你的接活登记。" onDone={load} />;
+  if (needLogin) return <NeedLogin why="登录后看你的接活儿登记。" onDone={load} />;
   if (err && !res) return <div className={s.error}>{err} <button className={j.linkBtn} onClick={load}>再试一次</button></div>;
   if (!res) return <p className={s.muted}>正在加载…</p>;
   const pro = res.pro;
   if (!pro) {
     return (
       <>
-        <div className={s.notice}>你还没有登记接活。登记一次，有对口的活儿第一时间通知你。</div>
-        <BottomBar><Link href="/zh/jobs/register" className={`${s.btn} ${j.btnWork}`}>登记接活</Link></BottomBar>
+        <div className={s.notice}>你还没有登记接活儿。登记一次，有对口的活儿第一时间通知你。</div>
+        <BottomBar><Link href="/zh/jobs/register" className={`${s.btn} ${j.btnWork}`}>登记接活儿</Link></BottomBar>
       </>
     );
   }
   if (edit) {
     return (
       <>
-        <button className={s.back} onClick={() => { setEdit(false); load(); }}>‹ 回我的接活</button>
+        <button className={s.back} onClick={() => { setEdit(false); load(); }}>‹ 回我的接活儿</button>
         <ProFormView meta={meta} res={res} editing onSaved={() => load()} />
       </>
     );
@@ -90,6 +90,15 @@ function Body({ meta }: { meta: Meta }) {
         {st === 'returned' && pro.returnReason && <p className={s.error} style={{ marginTop: '0.6rem' }}>退回原因：{pro.returnReason}。改好资料再提交一次就行，不收任何钱。</p>}
         {st === 'removed' && <p className={s.error} style={{ marginTop: '0.6rem' }}>已下架{pro.removedReason ? `：${pro.removedReason}` : ''}。有疑问请联系商会工作人员。</p>}
         {st === 'pending' && <p className={s.small} style={{ margin: '0.6rem 0 0' }}>正在核验，通常 1–2 个工作日。结果会通知你。</p>}
+        {st === 'verified' && pro.freeLeft != null && (
+          <div className={s.row}><span className={s.rowLabel}>免费联系</span><span className={s.rowValue}><b>{pro.freeLeftText ?? `还可以免费联系 ${pro.freeLeft} 位`}</b></span></div>
+        )}
+        {st === 'verified' && pro.freeLeft === 0 && (
+          <div className={s.notice} style={{ marginTop: '0.6rem' }}>
+            免费次数用完了，成为商会会员后可以继续联系发布人（看过的活儿照样能看）。
+            <div style={{ marginTop: '0.5rem' }}><Link href="/zh/join" className={`${s.btn} ${j.btnWork}`}>成为商会会员</Link></div>
+          </div>
+        )}
         {st === 'verified' && pro.needPay && meta.switches.requirePaid && (
           <div className={s.notice} style={{ marginTop: '0.6rem' }}>
             核验通过了。还差一步：成为缴费会员，就能上列表、看发布人电话。

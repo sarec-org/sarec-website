@@ -15,6 +15,7 @@ import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend
 import { CrmError, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
 import { TEST_FIXED_CODE, TEST_FIXED_CODE_TEXT, testFixedCodeOn } from './testFixedCode';
+import { assertTestPhone } from './testPhones';
 
 export type Kind = 'email' | 'phone';
 export type MethodStatus = 'unconfirmed' | 'confirmed' | 'invalid';
@@ -420,6 +421,8 @@ export async function sendPhoneCode(contactId: string): Promise<{ alreadyVerifie
     return { alreadyVerified: true, masked: maskPhone(m.value), message: '这个号码已验证过，无需再验证' };
   }
   // D16：测试站不真发短信，验证码固定（见 testFixedCode.ts）；正式站不走这里
+  // D22（指令 9）：测试站只认名单里的号码，名单外发不出码
+  if (testFixedCodeOn()) await assertTestPhone(m.value);
   if (testFixedCodeOn()) return { alreadyVerified: false, masked: maskPhone(m.value), message: TEST_FIXED_CODE_TEXT, testFixedCode: true };
   if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
   await phoneSendLimits(pool, m.value, contactId);
@@ -446,7 +449,8 @@ export async function checkPhoneCode(contactId: string, code: string): Promise<{
   if (!m) throw new CrmError('no_phone', '请先填写手机号');
   if (m.status === 'confirmed') return { message: '手机号已验证' };
   if (testFixedCodeOn()) {
-    // D16：测试站只认固定验证码
+    // D16：测试站只认固定验证码；D22：只认名单里的号码
+    await assertTestPhone(m.value);
     if (clean !== TEST_FIXED_CODE) throw new CrmError('code_wrong', `验证码不对（${TEST_FIXED_CODE_TEXT}）`);
   } else {
     if (!twilioVerifyConfigured()) throw new CrmError('sms_unavailable', SMS_FALLBACK);

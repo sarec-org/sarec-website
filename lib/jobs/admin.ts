@@ -24,12 +24,20 @@ export async function buildMeta(v: Viewer) {
   const staffPreview = v.staff && (!s.find || !s.work);
   const showLatest = !v.mp && (s.work || v.staff);
   return {
-    switches: { find: s.find, work: s.work, requirePaid: s.requirePaid },
+    // D28：requirePaid 保留兼容（= feeMode 是 members_only）；feeMode 三选一、freeContacts 免费联系次数、freePosts 非会员免费发活儿条数（null 不限）
+    switches: { find: s.find, work: s.work, requirePaid: s.requirePaid, feeMode: s.feeMode, freeContacts: s.freeContacts, freePosts: s.freePosts },
     staffPreview,
     staffPreviewText: staffPreview ? STAFF_PREVIEW_TEXT : null,
     /** 指令 7 · D16：只在测试站给——手机验证码固定 246810，小程序在验证手机的地方显示 testFixedCodeText 这行小字 */
     ...(testFixedCodeOn() ? { testFixedCode: true, testFixedCodeText: TEST_FIXED_CODE_TEXT } : {}),
-    groups,
+    // D27：每组带上开放工种的 key 和“组里有没有人”，列表页顶上的分组工种标签直接用
+    groups: groups.map((g) => {
+      const ts = trades.filter((t) => t.open && t.group === g.key);
+      return { ...g, tradeKeys: ts.map((t) => t.key), hasPros: ts.some((t) => withPros.has(t.key)) };
+    }),
+    // D26：「全部工种和服务」方块上的数（开放工种数）和现成的字
+    openTradeCount: trades.filter((t) => t.open).length,
+    allTradesText: `全部 ${trades.filter((t) => t.open).length} 项 ›`,
     trades: trades.map((t) => ({
       key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon
     })),
@@ -131,6 +139,17 @@ export async function stats(days = 90) {
             count(*) FILTER (WHERE deal)::int AS deal, count(*) FILTER (WHERE satisfied)::int AS satisfied FROM jobs_followups WHERE created_at > now() - make_interval(days => $1)`,
     [days]
   );
+  // D28：免费额度——用过免费额度的人数、用完后入会的人数（先刷新用完过的人的会员状态）
+  const { rows: usedUp } = await pool.query<{ id: string }>(`SELECT id FROM jobs_pros WHERE free_used_up_at IS NOT NULL AND joined_after_quota_at IS NULL`).catch(() => ({ rows: [] as { id: string }[] }));
+  if (usedUp.length) {
+    const { refreshPro } = await import('./pros');
+    for (const r of usedUp.slice(0, 200)) await refreshPro(pool, r.id).catch(() => undefined);
+  }
+  const { rows: fq } = await pool.query<{ used: number; used_up: number; joined: number }>(
+    `SELECT (SELECT count(DISTINCT viewer_contact_id) FROM jobs_contacts WHERE direction = 'post' AND free_used)::int AS used,
+            (SELECT count(*) FROM jobs_pros WHERE free_used_up_at IS NOT NULL)::int AS used_up,
+            (SELECT count(*) FROM jobs_pros WHERE joined_after_quota_at IS NOT NULL)::int AS joined`
+  ).catch(() => ({ rows: [{ used: 0, used_up: 0, joined: 0 }] }));
   const c = new Map(clicks.map((r) => [r.target, r.n]));
   const p = new Map(posts.map((r) => [r.trade_key, r]));
   const l = new Map(listedPros.map((r) => [r.k, r.n]));
@@ -144,7 +163,9 @@ export async function stats(days = 90) {
       };
     }),
     pros: Object.fromEntries(pros.map((r) => [r.status, r.n])),
-    followups: fu[0]
+    followups: fu[0],
+    /** D28：freeUsedPeople 用了免费额度的人数（看过至少一条被扣了次数）；usedUpPeople 用完的人数；joinedAfterUsedUp 用完后入会的人数 */
+    freeQuota: { freeUsedPeople: fq[0]?.used ?? 0, usedUpPeople: fq[0]?.used_up ?? 0, joinedAfterUsedUp: fq[0]?.joined ?? 0 }
   };
 }
 

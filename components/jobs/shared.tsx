@@ -233,7 +233,7 @@ export function trackJobs(name: 'jobs_trade' | 'jobs_home_entry', target: string
   }
 }
 
-/** 已验证的手机号：发布活儿、登记接活都要（对方要能打电话）。没验证就在同一页验证，填的内容不丢 */
+/** 已验证的手机号：发布活儿、登记接活儿都要（对方要能打电话）。没验证就在同一页验证，填的内容不丢 */
 export function PhoneCheck({ onPhone, why }: { onPhone: (phone: string | null) => void; why: string }) {
   const [info, setInfo] = useState<ContactInfo | null>(null);
   const [state, setState] = useState<'loading' | 'login' | 'ok' | 'error'>('loading');

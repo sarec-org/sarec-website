@@ -13,6 +13,7 @@ import { getSwitches } from './settings';
 import { tradeMap, type Trade } from './trades';
 import { cityNames, loadCities, resolveCity } from './cities';
 import { checkDescription, openidOf, saveSec, type SecOutcome } from './secCheck';
+import { QUOTA_USED_UP_TEXT, alreadyContacted, checkPostQuota, freeLeftFor, freeLeftText, markUsedUp, quotaApplies } from './quota';
 
 export type PostRow = {
   id: string; batch_id: string; contact_id: string; poster_role: PosterRole; trade_key: string; city: string; title: string; description: string;
@@ -96,38 +97,47 @@ export async function latestPosts(n = 3) {
 }
 
 // ── 谁能看发布人电话（原始指令第四部分） ────────────────────────────────
-export type Eligibility = { ok: true } | { ok: false; code: string; message: string; needPay?: boolean };
+export type Eligibility = { ok: true; quota?: { proId: string; left: number } } | { ok: false; code: string; message: string; needPay?: boolean };
 
 export async function eligibility(db: Db, post: PostRow, viewerId: string | null, staff: boolean): Promise<Eligibility> {
   if (viewerId && viewerId === post.contact_id) return { ok: true };
-  if (!viewerId) return { ok: false, code: 'unauthorized', message: '请先登录，再登记接活' };
+  if (!viewerId) return { ok: false, code: 'unauthorized', message: '请先登录，再登记接活儿' };
   if (!isOpen(post)) return { ok: false, code: 'not_eligible', message: '这个活儿已经找到人或已经关闭了' };
   const trades = await tradeMap(db);
   const t = trades.get(post.trade_key);
   const p0 = await proByContact(db, viewerId);
-  if (!p0) return { ok: false, code: 'not_eligible', message: '先登记接活，核验通过后就能联系发布人' };
+  if (!p0) return { ok: false, code: 'not_eligible', message: '先登记接活儿，核验通过后就能联系发布人' };
   const p = (await refreshPro(db, p0.id)) ?? p0;
   if (post.poster_role === 'crew') {
     if (p.role !== 'worker') return { ok: false, code: 'not_eligible', message: '这是施工队招工人的活儿，只有登记为“工人”的人可以联系' };
-    if (p.status !== 'verified') return { ok: false, code: 'not_eligible', message: '你的接活资料还没生效，请先完成登记' };
+    if (p.status !== 'verified') return { ok: false, code: 'not_eligible', message: '你的接活儿资料还没生效，请先完成登记' };
     return { ok: true };
   }
   // 房主、房东、物业、开发商发的活
   if (p.role === 'worker') {
     return { ok: false, code: 'not_eligible', message: '房主发的活儿要由核验过执照的施工队、师傅或专业服务来接；工人可以看施工队招工人的活儿' };
   }
-  if (p.status === 'removed') return { ok: false, code: 'not_eligible', message: '你的接活资料已被下架，请联系商会工作人员' };
+  if (p.status === 'removed') return { ok: false, code: 'not_eligible', message: '你的接活儿资料已被下架，请联系商会工作人员' };
   if (p.status === 'returned') return { ok: false, code: 'not_eligible', message: '你的资料被退回了，按退回原因改好再提交，核验通过后就能联系' };
   if (p.status !== 'verified') return { ok: false, code: 'not_eligible', message: '你的资料还在核验，核验通过后就能联系发布人' };
   if (!p.verified_trades.includes(post.trade_key)) {
     const need = t?.licType === 'C' ? '营业登记' : '对应的执照';
     return { ok: false, code: 'not_eligible', message: `这个活儿是「${t?.name ?? post.trade_key}」，需要${need}，你核验通过的工种里没有这一项` };
   }
-  const { requirePaid } = await getSwitches(db);
-  if (needPayFor(p, requirePaid)) {
+  const sw = await getSwitches(db);
+  if (needPayFor(p, sw.requirePaid)) {
     return { ok: false, code: 'not_eligible', needPay: true, message: '核验已通过，成为缴费会员后就能联系发布人' };
   }
   void staff;
+  // D28 免费额度：非会员每看一条新活儿的电话扣一次；看过的这条再看不扣
+  if (quotaApplies(p, sw)) {
+    const left = (await freeLeftFor(db, p, sw)) ?? 0;
+    if (left <= 0 && !(await alreadyContacted(db, post.id, viewerId))) {
+      await markUsedUp(db, p.id);
+      return { ok: false, code: 'quota_used_up', needPay: true, message: QUOTA_USED_UP_TEXT };
+    }
+    return { ok: true, quota: { proId: p.id, left } };
+  }
   return { ok: true };
 }
 
@@ -137,15 +147,23 @@ export async function contactPost(id: string, v: Viewer, viewerId: string) {
   if (!post || (post.status === 'removed' && post.contact_id !== viewerId)) throw new CrmError('not_found', '找不到这个活儿，可能已经下架');
   const e = await eligibility(pool, post, viewerId, v.staff);
   if (!e.ok) throw new CrmError(e.code, e.message);
+  let freeLeft: number | null = null;
   if (viewerId !== post.contact_id) {
-    await pool.query(
-      `INSERT INTO jobs_contacts (direction, post_id, viewer_contact_id) VALUES ('post', $1, $2)
-       ON CONFLICT (post_id, viewer_contact_id) WHERE direction = 'post' DO UPDATE SET times = jobs_contacts.times + 1, last_at = now()`,
-      [id, viewerId]
+    // 新看的一条（插入成功）且在免费额度里 → free_used = true（扣一次）；重复看只加次数，不扣
+    const charge = e.ok && !!e.quota;
+    const { rows: ins } = await pool.query<{ inserted: boolean }>(
+      `INSERT INTO jobs_contacts (direction, post_id, viewer_contact_id, free_used) VALUES ('post', $1, $2, $3)
+       ON CONFLICT (post_id, viewer_contact_id) WHERE direction = 'post' DO UPDATE SET times = jobs_contacts.times + 1, last_at = now()
+       RETURNING (xmax = 0) AS inserted`,
+      [id, viewerId, charge]
     );
     await pool.query(`UPDATE jobs_posts SET first_contact_at = COALESCE(first_contact_at, now()) WHERE id = $1`, [id]);
+    if (e.ok && e.quota) {
+      freeLeft = ins[0]?.inserted ? Math.max(0, e.quota.left - 1) : e.quota.left;
+      if (freeLeft === 0) await markUsedUp(pool, e.quota.proId);
+    }
   }
-  return { phone: post.phone, wechat: post.wechat, callName: post.call_name };
+  return { phone: post.phone, wechat: post.wechat, callName: post.call_name, freeLeft, ...(freeLeft != null ? { freeLeftText: freeLeftText(freeLeft) } : {}) };
 }
 
 // ── 详情 ────────────────────────────────────────────────────────────────
@@ -172,7 +190,9 @@ export async function getPost(id: string, v: Viewer) {
     canContact: e.ok,
     reason: e.ok ? null : e.message,
     reasonCode: e.ok ? null : e.code,
-    needPay: !e.ok && !!e.needPay
+    needPay: !e.ok && !!e.needPay,
+    /** D28：免费额度时非会员还能免费联系几位（null = 不限 / 不适用） */
+    freeLeft: e.ok && e.quota ? e.quota.left : null
   };
 }
 
@@ -207,7 +227,9 @@ export async function createPosts(v: Viewer, contactId: string, b: Record<string
   const timing = TIMINGS.find((x) => x.key === b.timing)?.key;
   if (!timing) throw new CrmError('bad_request', '请选什么时候要：尽快、本周、本月或可商量');
   const phone = await verifiedPhone(pool, contactId);
-  if (!phone) throw new CrmError('need_phone', '请先验证手机号：接活的人要能打电话给你');
+  if (!phone) throw new CrmError('need_phone', '请先验证手机号：接活儿的人要能打电话给你');
+  // D28：非会员免费发活儿条数（默认不限）
+  await checkPostQuota(pool, contactId, await getSwitches(pool), v.staff);
   const propertyType = PROPERTY_TYPES.find((x) => x.key === b.propertyType)?.key ?? null;
   const headcount = role === 'crew' ? intOr(b.crewHeadcount, 1, 500) : null;
   if (role === 'crew' && !headcount) throw new CrmError('bad_request', '请填要几个人');
@@ -392,19 +414,19 @@ export const OWNER_ROLES: PosterRole[] = ['owner', 'landlord', 'property', 'deve
 const MATCH_WHERE = `p.status = 'open' AND p.expires_at > now() AND p.poster_role = ANY($1::text[])
    AND p.trade_key = ANY($2::text[]) AND p.city_key = ANY($3::text[]) AND p.sec_status = 'pass' AND p.contact_id <> $4`;
 
-type MatchGate = { ok: true; proId: string; trades: string[]; cities: string[] } | { ok: false; reason: string; needPay: boolean };
+type MatchGate = { ok: true; proId: string; trades: string[]; cities: string[]; freeLeft: number | null } | { ok: false; reason: string; needPay: boolean };
 
 async function matchGate(db: Db, contactId: string): Promise<MatchGate> {
   const p0 = await proByContact(db, contactId);
-  if (!p0) return { ok: false, needPay: false, reason: '先登记接活，核验通过后，和你工种、城市对口的活儿会出现在这里' };
+  if (!p0) return { ok: false, needPay: false, reason: '先登记接活儿，核验通过后，和你工种、城市对口的活儿会出现在这里' };
   const p = (await refreshPro(db, p0.id)) ?? p0;
   if (p.role === 'worker') return { ok: false, needPay: false, reason: '房主发的活儿要由核验过执照的施工队、师傅或专业服务来接' };
-  if (p.status === 'removed') return { ok: false, needPay: false, reason: '你的接活资料已被下架，请联系商会工作人员' };
+  if (p.status === 'removed') return { ok: false, needPay: false, reason: '你的接活儿资料已被下架，请联系商会工作人员' };
   if (p.status === 'returned') return { ok: false, needPay: false, reason: '你的资料被退回了，按退回原因改好再提交，核验通过后这里会有对口的活儿' };
   if (p.status !== 'verified') return { ok: false, needPay: false, reason: '你的资料还在核验，核验通过后，和你工种、城市对口的活儿会出现在这里' };
-  const { requirePaid } = await getSwitches(db);
-  if (needPayFor(p, requirePaid)) return { ok: false, needPay: true, reason: '核验已通过，成为缴费会员后，对口的活儿会出现在这里' };
-  return { ok: true, proId: p.id, trades: p.verified_trades, cities: p.cities };
+  const sw = await getSwitches(db);
+  if (needPayFor(p, sw.requirePaid)) return { ok: false, needPay: true, reason: '核验已通过，成为缴费会员后，对口的活儿会出现在这里' };
+  return { ok: true, proId: p.id, trades: p.verified_trades, cities: p.cities, freeLeft: await freeLeftFor(db, p, sw) };
 }
 
 /**
@@ -442,7 +464,7 @@ export async function recheckForViewer(
 export async function matchedPosts(contactId: string, cursor: string | null, opts: { mp?: boolean } = {}) {
   const pool = getPool();
   const g = await matchGate(pool, contactId);
-  if (!g.ok) return { eligible: false, reason: g.reason, needPay: g.needPay, items: [], nextCursor: null };
+  if (!g.ok) return { eligible: false, reason: g.reason, needPay: g.needPay, freeLeft: null, freeLeftText: null, items: [], nextCursor: null };
   if (opts.mp && !cursor) await recheckForViewer(pool, contactId, g).catch((e) => console.error('[jobs] viewer sec recheck', e instanceof Error ? e.message : e));
   const offset = Math.max(0, Number(cursor) || 0);
   const limit = 20;
@@ -458,6 +480,9 @@ export async function matchedPosts(contactId: string, cursor: string | null, opt
     eligible: true,
     reason: null,
     needPay: false,
+    // D28：免费额度时非会员还能免费联系几位（null = 不限）；小程序据此显示“还可以免费联系 X 位”
+    freeLeft: g.freeLeft,
+    freeLeftText: g.freeLeft != null ? freeLeftText(g.freeLeft) : null,
     items: rows.slice(0, limit).map((p) => ({
       id: p.id,
       city: (p.city_key && names.get(p.city_key)) || p.city,

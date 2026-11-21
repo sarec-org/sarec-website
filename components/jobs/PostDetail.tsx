@@ -8,7 +8,7 @@ import j from './jobs.module.css';
 import { ago, BottomBar, JobsShell, NeedLogin, ReportButton } from './shared';
 import type { Meta, PostDetailRes, PostFull } from './types';
 
-type ContactRes = { phone: string | null; wechat: string | null; callName: string | null };
+type ContactRes = { phone: string | null; wechat: string | null; callName: string | null; freeLeft?: number | null; freeLeftText?: string };
 
 export function PostDetail({ id }: { id: string }) {
   const [d, setD] = useState<PostDetailRes | null>(null);
@@ -43,7 +43,7 @@ export function PostDetail({ id }: { id: string }) {
       side="work"
       need="either"
       back={{ href: '/zh/jobs/posts', label: '‹ 全部活儿' }}
-      eyebrow="我要接活"
+      eyebrow="我要接活儿"
       footer={() =>
         p && !p.mine && open && !contact && !needLogin ? (
           <BottomBar>
@@ -67,8 +67,12 @@ export function PostDetail({ id }: { id: string }) {
                 <div className={j.phoneBox} style={{ borderColor: 'var(--gold)' }}>
                   {contact.callName ? `${contact.callName} · ` : ''}电话：{contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : '（发布人没留电话）'}
                   {contact.wechat && <><br />微信：<span className={s.mono}>{contact.wechat}</span></>}
-                  <p className={s.small} style={{ margin: '0.3rem 0 0' }}>发布人能看到是你看了电话。请只在执照范围内接活，价钱、合同、付款自己和对方谈清楚。</p>
+                  {contact.freeLeft != null && <p className={s.small} style={{ margin: '0.3rem 0 0' }}><b>{contact.freeLeftText ?? `还可以免费联系 ${contact.freeLeft} 位`}</b>（这条以后再看不再算次数）</p>}
+                  <p className={s.small} style={{ margin: '0.3rem 0 0' }}>发布人能看到是你看了电话。请只在执照范围内接活儿，价钱、合同、付款自己和对方谈清楚。</p>
                 </div>
+              )}
+              {!contact && !needLogin && open && !p.mine && d?.canContact && d.freeLeft != null && (
+                <p className={s.small}>你还可以免费联系 {d.freeLeft} 位发布人；看这一条会用掉 1 次（看过的再看不算）。</p>
               )}
               {needLogin && <NeedLogin why="登录后才能联系发布人（用邮箱或手机收验证码，不用密码）。" onDone={doContact} />}
               {!contact && !needLogin && open && !p.mine && (why || (d && !d.canContact && d.reasonCode !== 'unauthorized')) && (
@@ -86,13 +90,13 @@ export function PostDetail({ id }: { id: string }) {
   );
 }
 
-/** 没资格时给出路：没登记 → 去登记；不是会员 → 去交会费；其它 → 看我的接活 */
+/** 没资格时给出路：没登记 → 去登记；不是会员 → 去交会费；其它 → 看我的接活儿 */
 function WhyNext({ meta, needPay }: { meta: Meta; needPay: boolean }) {
   const pro = meta.me.pro;
   const a = { color: 'var(--gold)' };
-  if (!pro) return <p style={{ margin: '0.5rem 0 0' }}><Link href="/zh/jobs/register" style={a}>去登记接活 ›</Link></p>;
-  if (needPay || pro.needPay) return <p style={{ margin: '0.5rem 0 0' }}><Link href="/zh/join" style={a}>去交会费 ›</Link></p>;
-  return <p style={{ margin: '0.5rem 0 0' }}><Link href="/zh/jobs/mine" style={a}>看我的接活和核验状态 ›</Link></p>;
+  if (!pro) return <p style={{ margin: '0.5rem 0 0' }}><Link href="/zh/jobs/register" style={a}>去登记接活儿 ›</Link></p>;
+  if (needPay || pro.needPay) return <p style={{ margin: '0.5rem 0 0' }}><Link href="/zh/join" style={a}>成为商会会员 ›</Link></p>;
+  return <p style={{ margin: '0.5rem 0 0' }}><Link href="/zh/jobs/mine" style={a}>看我的接活儿和核验状态 ›</Link></p>;
 }
 
 function Body({ p }: { p: PostFull }) {

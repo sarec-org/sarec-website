@@ -1,12 +1,13 @@
 'use client';
-/** 后台「找工人接活统计」：每个工种的点击数、活儿数、联系次数、成了的数、平均多久有人联系 */
+/** 后台「找工人接活统计」：每个工种的点击数、活儿数、联系次数、成了的数、平均多久有人联系；D28 免费额度人数 */
 import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api } from '@/components/crm/client';
 
 type Row = { key: string; name: string; group: string; clicks: number; pros: number; posts: number; contacts: number; deals: number; avgHoursToContact: number | null };
-type Res = { days: number; trades: Row[]; pros: Record<string, number>; followups: { sent: number; answered: number; reached: number; deal: number; satisfied: number } };
+type Res = { days: number; trades: Row[]; pros: Record<string, number>; followups: { sent: number; answered: number; reached: number; deal: number; satisfied: number };
+  freeQuota?: { freeUsedPeople: number; usedUpPeople: number; joinedAfterUsedUp: number } };
 
 export default function StaffJobsStats() {
   return (
@@ -34,6 +35,7 @@ function Stats() {
       </div>
       <p className={styles.small}>“成了”= 第 7 天回访里回答“成了”，或发布人自己标了“已找到”。“平均多久有人联系”= 活儿发布到第一次有人看电话。“在列表上”是现在的人数。</p>
       <p className={styles.small}>接活人：{Object.entries(d.pros).map(([k, n]) => `${({ pending: '核验中', verified: '核验通过', returned: '退回', removed: '下架', draft: '没提交' } as Record<string, string>)[k] ?? k} ${n}`).join(' · ') || '还没有'}；回访：发出 {d.followups?.sent ?? 0}，回答 {d.followups?.answered ?? 0}，联系上 {d.followups?.reached ?? 0}，成了 {d.followups?.deal ?? 0}，满意 {d.followups?.satisfied ?? 0}。</p>
+      {d.freeQuota && <p className={styles.small}>免费额度（D28，累计）：用了免费额度的 {d.freeQuota.freeUsedPeople} 人，用完的 {d.freeQuota.usedUpPeople} 人，用完后入会的 {d.freeQuota.joinedAfterUsedUp} 人。</p>}
       {rows.length === 0 ? <p className={styles.muted}>这段时间还没有数据。</p> : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>

@@ -1,6 +1,6 @@
 /**
- * 我的接活
- * GET   —— { pro|null, prefill（现有会员资料自动带入）, rules, subscribeTemplate }
+ * 我的接活儿
+ * GET   —— { pro|null, freeLeft, freeLeftText, prefill（现有会员资料自动带入）, rules, subscribeTemplate }
  * POST  —— 新建或更新登记（agree=true 必填）；服务器决定状态、排队自动查 CSLB → { pro, autoCheck }
  * PATCH —— { availableNow } 只改“现在有空”，不用重新同意规则
  */
@@ -20,7 +20,9 @@ export const GET = handler(async (req: Request) => {
   const pool = getPool();
   const p0 = await proByContact(pool, me);
   const p = p0 ? await refreshPro(pool, p0.id) : null;
-  return ok({ pro: p ? await proSelf(pool, p) : null, prefill: await prefillFor(pool, me), rules: RULES, subscribeTemplate: jobsTemplate()?.id ?? null });
+  const pro = p ? await proSelf(pool, p) : null;
+  // D28：freeLeft = 还可以免费联系几位（null = 不限 / 不适用），freeLeftText 现成的一句
+  return ok({ pro, freeLeft: pro?.freeLeft ?? null, freeLeftText: pro?.freeLeftText ?? null, prefill: await prefillFor(pool, me), rules: RULES, subscribeTemplate: jobsTemplate()?.id ?? null });
 });
 export const POST = handler(async (req: Request) => {
   const v = await viewer(req);

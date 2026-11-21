@@ -32,14 +32,14 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/zh/staff/display', label: '官网展示', role: 'ops', group: '会员与客户', primary: true, words: ['官网展示审核', '官网', '展示'] },
   { href: '/zh/staff/channels', label: '渠道码', role: 'ops', group: '会员与客户', words: ['渠道', '合作商家', '专属码', '推广码'] },
   // 找工人接活（11/20 新增，只加不改原有项）
-  { href: '/zh/staff/jobs', label: '活儿', role: 'ops', group: '找工人接活', words: ['找工人', '接活', '发布的活儿', '下架活儿', '备注', '到期'] },
+  { href: '/zh/staff/jobs', label: '活儿', role: 'ops', group: '找工人接活', words: ['找工人', '接活', '接活儿', '发布的活儿', '下架活儿', '备注', '到期'] },
   { href: '/zh/staff/jobs/pros', label: '接活人核验', role: 'ops', group: '找工人接活', words: ['核验', '牌照', '执照', 'CSLB', '施工队', '师傅', '退回', '下架接活人'] },
   { href: '/zh/staff/jobs/trades', label: '工种与资质表', role: 'ops', group: '找工人接活', words: ['工种', '资质', '资质表', '分组', '首页入口', '方块'] },
   { href: '/zh/staff/jobs/cities', label: '找工人接活城市', role: 'ops', group: '找工人接活', words: ['城市', '地区', '尔湾', '橙县', '服务城市', '加城市', '城市排序'] },
-  { href: '/zh/staff/jobs/switches', label: '找工人接活开关', role: 'ops', group: '找工人接活', words: ['开关', '开放', '缴费会员', '接活开关', '找工人开关'] },
+  { href: '/zh/staff/jobs/switches', label: '找工人接活开关', role: 'ops', group: '找工人接活', words: ['开关', '开放', '缴费会员', '接活开关', '接活儿开关', '找工人开关', '收费方式', '免费额度', '免费次数'] },
   { href: '/zh/staff/jobs/stats', label: '找工人接活统计', role: 'ops', group: '找工人接活', words: ['统计', '点击数', '联系次数', '成了', '多久有人联系'] },
   { href: '/zh/staff/jobs/reports', label: '找工人接活投诉', role: 'ops', group: '找工人接活', words: ['投诉', '反馈', '举报'] },
-  { href: '/zh/staff/jobs/invite', label: '邀请登记接活', role: 'ops', group: '找工人接活', words: ['邀请', '行业标签', '来登记接活', '邀请会员'] },
+  { href: '/zh/staff/jobs/invite', label: '邀请登记接活', role: 'ops', group: '找工人接活', words: ['邀请', '行业标签', '来登记接活', '登记接活儿', '邀请会员'] },
   // 内容
   { href: '/zh/staff/newsletter', label: '邮件通讯', role: 'ops', group: '内容', words: ['邮件', '群发', '通讯', '发邮件', 'newsletter'] },
   { href: '/zh/staff/home-slides', label: '首页轮播', role: 'ops', group: '内容', words: ['轮播', 'banner', '横幅', '置顶'] },

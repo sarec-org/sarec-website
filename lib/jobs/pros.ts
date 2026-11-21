@@ -10,6 +10,7 @@ import { LANGUAGES, PRO_ROLES, PRO_STATUS_LABEL, REVIEW_DAYS, RULES, roleLabel, 
 import { getSwitches } from './settings';
 import { tradeMap, type Trade } from './trades';
 import { cityNames, loadCities, resolveCities, resolveCity } from './cities';
+import { freeLeftFor, freeLeftText } from './quota';
 
 export type ProRow = {
   id: string; contact_id: string; role: ProRole; name: string; avatar_url: string | null; trades: string[]; verified_trades: string[]; cities: string[];
@@ -52,6 +53,10 @@ export async function refreshPro(db: Db, proId: string): Promise<ProRow | null> 
   const listed = listedFor({ ...p, is_paid_member: paid }, requirePaid);
   if (paid !== p.is_paid_member || listed !== p.listed) {
     await db.query(`UPDATE jobs_pros SET is_paid_member = $2, listed = $3, updated_at = now() WHERE id = $1`, [proId, paid, listed]);
+  }
+  if (paid && !p.is_paid_member) {
+    // D28 统计“用完免费额度后入会的人数”：用完过免费次数、现在成了会员
+    await db.query(`UPDATE jobs_pros SET joined_after_quota_at = now() WHERE id = $1 AND free_used_up_at IS NOT NULL AND joined_after_quota_at IS NULL`, [proId]).catch(() => undefined);
   }
   return { ...p, is_paid_member: paid, listed };
 }
@@ -105,8 +110,10 @@ export function proCard(p: ProRow, trades: Map<string, Trade>, cities: Map<strin
 /** 本人看的完整资料 */
 export async function proSelf(db: Db, p: ProRow) {
   const trades = await tradeMap(db);
-  const { requirePaid } = await getSwitches(db);
+  const sw = await getSwitches(db);
+  const requirePaid = sw.requirePaid;
   const names = await cityNames(db);
+  const freeLeft = await freeLeftFor(db, p, sw);
   return {
     ...proCard(p, trades, names),
     // 本人编辑用：cities 是 key，cityNames 是名字
@@ -129,6 +136,10 @@ export async function proSelf(db: Db, p: ProRow) {
     nextReviewAt: ymd(p.next_review_at),
     listed: p.listed,
     needPay: needPayFor(p, requirePaid),
+    /** D28：接活儿收费方式；免费额度时非会员还能免费联系几位（null = 不限 / 不适用） */
+    feeMode: sw.feeMode,
+    freeLeft,
+    freeLeftText: freeLeft != null ? freeLeftText(freeLeft) : null,
     agreedAt: p.agreed_at,
     designNoCaStamp: p.design_no_ca_stamp
   };
@@ -139,8 +150,9 @@ export async function proBrief(db: Db, contactId: string | null) {
   if (!contactId) return null;
   const p = await proByContact(db, contactId);
   if (!p) return null;
-  const { requirePaid } = await getSwitches(db);
-  return { id: p.id, role: p.role, status: p.status, listed: p.listed, needPay: needPayFor(p, requirePaid) };
+  const sw = await getSwitches(db);
+  const freeLeft = await freeLeftFor(db, p, sw);
+  return { id: p.id, role: p.role, status: p.status, listed: p.listed, needPay: needPayFor(p, sw.requirePaid), freeLeft, freeLeftText: freeLeft != null ? freeLeftText(freeLeft) : null };
 }
 
 // ── 现有会员资料自动带入 ─────────────────────────────────────────────
@@ -265,7 +277,7 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
     needsReview = changedKey || tradeKeys.some((k) => !verifiedTrades.includes(k));
     status = changedKey ? 'pending' : 'verified';
   } else if (cur && cur.status === 'removed' && !v.staff) {
-    throw new CrmError('forbidden', '你的接活资料已被下架，请联系商会工作人员');
+    throw new CrmError('forbidden', '你的接活儿资料已被下架，请联系商会工作人员');
   } else {
     status = 'pending';
     verifiedTrades = [];
@@ -307,16 +319,18 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
 export async function setAvailable(contactId: string, available: boolean) {
   const pool = getPool();
   const { rows } = await pool.query<{ id: string }>(`UPDATE jobs_pros SET available_now = $2, updated_at = now() WHERE contact_id = $1 RETURNING id`, [contactId, available]);
-  if (!rows[0]) throw new CrmError('not_found', '你还没有登记接活');
+  if (!rows[0]) throw new CrmError('not_found', '你还没有登记接活儿');
   return proSelf(pool, (await proById(pool, rows[0].id))!);
 }
 
 // ── 找工人：列表 ───────────────────────────────────────────────────────
-export async function listPros(q: { trade?: string | null; group?: string | null; city?: string | null; role?: string | null; cursor?: string | null }) {
+export async function listPros(q: { trade?: string | null; trades?: string | null; group?: string | null; city?: string | null; role?: string | null; cursor?: string | null }) {
   const pool = getPool();
   const trades = await tradeMap(pool);
   let keys: string[] | null = null;
+  const multi = (q.trades ?? '').split(',').map((x) => x.trim()).filter(Boolean).slice(0, 60);
   if (q.trade) keys = [q.trade];
+  else if (multi.length) keys = multi;
   else if (q.group) keys = Array.from(trades.values()).filter((t) => t.group === q.group).map((t) => t.key);
   const worker = q.role === 'worker';
   const offset = Math.max(0, Number(q.cursor) || 0);

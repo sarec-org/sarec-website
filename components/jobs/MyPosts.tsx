@@ -24,7 +24,7 @@ export function MyPosts() {
     >
       {(meta) => (
         <>
-          <p className={s.small} style={{ marginTop: 0 }}>登记了接活的，看<Link href="/zh/jobs/mine" style={{ color: 'var(--ivory)' }}>「我的接活」›</Link></p>
+          <p className={s.small} style={{ marginTop: 0 }}>登记了接活儿的，看<Link href="/zh/jobs/mine" style={{ color: 'var(--ivory)' }}>「我的接活儿」›</Link></p>
           <Mine meta={meta} />
         </>
       )}

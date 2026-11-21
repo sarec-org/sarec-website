@@ -1,6 +1,6 @@
 -- 找工人 · 接活（11/20）。幂等：可以重复跑。不依赖 0037。
 -- 表：工种分组、工种（资质表）、首页入口、接活人、核验记录、活儿、联系记录（谁看过电话）、通知记录、回访、投诉。
--- 开关：沿用 crm_settings（D11：jobs_find_on、jobs_work_on 默认开——审核的和上线的是同一个东西，开关只留给日后整栏下线；jobs_require_paid_member 默认开），改动记 updated_by + crm_audit_log。
+-- 开关：沿用 crm_settings（D11：jobs_find_on、jobs_work_on 默认开——审核的和上线的是同一个东西，开关只留给日后整栏下线；指令 9 · D28 起收费方式 jobs_work_fee_mode 默认免费额度，见文件末尾），改动记 updated_by + crm_audit_log。
 -- 统计点击：沿用 track_events（name = 'jobs_trade' / 'jobs_home_entry'）。
 
 -- ── 1. 工种分组 ─────────────────────────────────────────────────────────
@@ -232,11 +232,11 @@ CREATE TABLE IF NOT EXISTS jobs_reports (
 );
 CREATE INDEX IF NOT EXISTS jobs_reports_status_idx ON jobs_reports (status, created_at DESC);
 
--- ── 11. 三个开关（D11：找工人、接活默认开；要求缴费会员默认开。只影响新建，已有的值不改）──
+-- ── 11. 两个栏目开关（D11：找工人、接活儿默认开。只影响新建，已有的值不改）──
+-- 指令 9 · D28：原来的 jobs_require_paid_member 不再种（换成文件末尾的「接活儿收费方式」jobs_work_fee_mode，默认免费额度）。
 INSERT INTO crm_settings (key, value, updated_by) VALUES
   ('jobs_find_on', 'true', 'migration-0038'),
-  ('jobs_work_on', 'true', 'migration-0038'),
-  ('jobs_require_paid_member', 'true', 'migration-0038')
+  ('jobs_work_on', 'true', 'migration-0038')
 ON CONFLICT (key) DO NOTHING;
 
 -- ── 12. 种子：分组（按资质表核实.md ② 分组建议）─────────────────────
@@ -389,3 +389,24 @@ CREATE TABLE IF NOT EXISTS jobs_pro_clicks (
 CREATE INDEX IF NOT EXISTS jobs_pro_clicks_viewer_idx ON jobs_pro_clicks (viewer_contact_id, created_at DESC) WHERE viewer_contact_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS jobs_pro_clicks_ip_idx ON jobs_pro_clicks (ip_hash, created_at DESC) WHERE ip_hash IS NOT NULL;
 CREATE INDEX IF NOT EXISTS jobs_pro_clicks_pro_idx ON jobs_pro_clicks (pro_id, created_at DESC);
+
+-- 指令 9 · D28：接活儿收费方式 + 免费额度。
+-- jobs_work_fee_mode：'all_free' 全部免费 / 'free_quota' 免费额度（默认）/ 'members_only' 必须是会员；
+-- jobs_free_contacts：免费额度时非会员免费看发布人电话几次（默认 2）；jobs_free_posts：非会员免费发活儿几次（null = 不限，默认）。
+-- 旧开关 jobs_require_paid_member 留着不删（兼容）：库里已经有它（跑过旧版 0038 的库）就按旧值转换——开 = 必须是会员，关 = 全部免费；
+-- 全新的库没有旧键 → 种子用新默认「免费额度」。都是 ON CONFLICT DO NOTHING，重复跑无害。
+INSERT INTO crm_settings (key, value, updated_by)
+  SELECT 'jobs_work_fee_mode', CASE WHEN value = 'false'::jsonb OR value = '"false"'::jsonb THEN '"all_free"'::jsonb ELSE '"members_only"'::jsonb END, 'migration-0038'
+    FROM crm_settings WHERE key = 'jobs_require_paid_member'
+ON CONFLICT (key) DO NOTHING;
+INSERT INTO crm_settings (key, value, updated_by) VALUES
+  ('jobs_work_fee_mode', '"free_quota"', 'migration-0038'),
+  ('jobs_free_contacts', '2', 'migration-0038'),
+  ('jobs_free_posts', 'null', 'migration-0038')
+ON CONFLICT (key) DO NOTHING;
+-- 扣次数：接活人看一条新活儿的发布人电话、而且用的是免费额度 → 这一行 free_used = true（同一条重复看不新增行，不扣）
+ALTER TABLE jobs_contacts ADD COLUMN IF NOT EXISTS free_used boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS jobs_contacts_free_idx ON jobs_contacts (viewer_contact_id) WHERE direction = 'post' AND free_used;
+-- 统计：用完免费次数的时间、用完后成为会员的时间
+ALTER TABLE jobs_pros ADD COLUMN IF NOT EXISTS free_used_up_at timestamptz;
+ALTER TABLE jobs_pros ADD COLUMN IF NOT EXISTS joined_after_quota_at timestamptz;

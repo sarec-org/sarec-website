@@ -166,7 +166,7 @@ export async function dispatchPost(postId: string, round: number): Promise<{ pic
     if (!ins[0]) continue;
     const st = await deliver(pool, {
       kind: 'dispatch', contactId: c.contact_id, postId, proId: c.id, round,
-      sms: `SAREC 接活提醒：${post.title}（${timingLabel(post.timing)}）。在商会网站查看：${link}`,
+      sms: `SAREC 接活儿提醒：${post.title}（${timingLabel(post.timing)}）。在商会网站查看：${link}`,
       wx: { title: `${trade.name} · ${post.city}`, place: post.city, note: `有新活儿，${timingLabel(post.timing)}`, page: process.env.JOBS_WX_PAGE || 'pages/index/index' }
     }, ins[0].id);
     if (st === 'sent') sent++;
@@ -288,5 +288,5 @@ export async function followupAnswer(token: string, b: Record<string, unknown>) 
 
 /** 核验结果、执照下架：告诉本人（同样走保险） */
 export async function notifyPro(contactId: string, proId: string, kind: 'verify' | 'license', text: string) {
-  await deliver(getPool(), { kind, contactId, proId, sms: `SAREC 接活：${text}` });
+  await deliver(getPool(), { kind, contactId, proId, sms: `SAREC 接活儿：${text}` });
 }

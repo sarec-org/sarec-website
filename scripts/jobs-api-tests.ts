@@ -77,7 +77,11 @@ async function main() {
   const { rows: sw } = await pool.query<{ key: string; value: unknown }>(`SELECT key, value FROM crm_settings WHERE key LIKE 'jobs_%'`);
   savedSwitches = Object.fromEntries(sw.map((r) => [r.key, r.value]));
   await pool.query(`UPDATE crm_settings SET value = 'false' WHERE key IN ('jobs_find_on', 'jobs_work_on')`);
-  await pool.query(`UPDATE crm_settings SET value = 'true' WHERE key = 'jobs_require_paid_member'`);
+  // D28：收费方式先设成“必须是会员”（原来 requirePaid 开着的测试照旧）；免费次数 2、发活儿不限
+  await pool.query(
+    `INSERT INTO crm_settings (key, value, updated_by) VALUES ('jobs_work_fee_mode', '"members_only"', 'test'), ('jobs_free_contacts', '2', 'test'), ('jobs_free_posts', 'null', 'test')
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`
+  );
 
   const staff = await person('验收工-工作人员', { staff: true });
   const owner = await person('验收工-房主');
@@ -119,7 +123,24 @@ async function main() {
 
   // ── 指令 7 · D16：测试站手机验证走得通（只在 VERCEL_ENV=preview；正式站、本地不出现） ──
   {
-    const { testFixedCodeOn, TEST_FIXED_CODE } = await import('@/lib/crm/testFixedCode');
+    const { testFixedCodeOn, TEST_FIXED_CODE, TEST_FIXED_CODE_TEXT, TEST_PHONE_ONLY_TEXT } = await import('@/lib/crm/testFixedCode');
+    const { isFictionalTestPhone, testPhoneAllowed } = await import('@/lib/crm/testPhones');
+    // D22：名单 = 555-0100～555-0199 虚构号（任何区号）+ 测试库 test_fixed_code_phones
+    assert.equal(isFictionalTestPhone('+19495550199'), true);
+    assert.equal(isFictionalTestPhone('+12135550100'), true);
+    assert.equal(isFictionalTestPhone('+19495550200'), false);
+    assert.equal(isFictionalTestPhone('+19495551234'), false);
+    assert.equal(isFictionalTestPhone('+16265550123'), true);
+    {
+      const extra = `+1626${String(Math.floor(1e6 + Math.random() * 8.9e6))}`;
+      const { rows: old } = await pool.query<{ value: unknown }>(`SELECT value FROM crm_settings WHERE key = 'test_fixed_code_phones'`);
+      assert.equal(await testPhoneAllowed(extra), false);
+      await pool.query(`INSERT INTO crm_settings (key, value) VALUES ('test_fixed_code_phones', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [JSON.stringify([extra])]);
+      assert.equal(await testPhoneAllowed(extra), true);
+      if (old[0]) await pool.query(`UPDATE crm_settings SET value = $1 WHERE key = 'test_fixed_code_phones'`, [JSON.stringify(old[0].value)]);
+      else await pool.query(`DELETE FROM crm_settings WHERE key = 'test_fixed_code_phones'`);
+    }
+    ok('D22：名单 = 555-01xx 虚构号（任何区号）+ 测试库 test_fixed_code_phones；名单外不认');
     const saved = process.env.VERCEL_ENV;
     for (const env of ['production', undefined, 'development']) {
       if (env === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = env;
@@ -138,10 +159,34 @@ async function main() {
       ok('D16：不是测试站时没有固定验证码（testFixedCodeOn 只认 VERCEL_ENV=preview；接口不给 testFixedCode）');
     } else {
       assert.equal(r.j.testFixedCode, true);
-      assert.equal(r.j.testFixedCodeText, '测试站：验证码固定为 246810');
+      assert.equal(r.j.testFixedCodeText, TEST_FIXED_CODE_TEXT);
       assert.equal(r.j.smsAvailable, true);
       assert.equal(vp.j.testFixedCode, true);
-      const ph = `+1626${String(Math.floor(1e6 + Math.random() * 8.9e6))}`;
+      const fict = async () => {
+        for (;;) {
+          const p = `+1${200 + Math.floor(Math.random() * 700)}55501${String(Math.floor(Math.random() * 100)).padStart(2, '0')}`;
+          if (!(await phoneTaken(p)) && !(await pool.query(`SELECT 1 FROM contact_methods WHERE value = $1`, [p])).rows[0]) return p;
+        }
+      };
+      // D22：名单外的号码在测试站发不出码、登不了
+      const realish = `+1626${String(Math.floor(1e6 + Math.random() * 8.9e6))}`;
+      testPhones.push(realish);
+      r = await call('POST', '/auth/code/send', null, { channel: 'sms', target: realish });
+      assert.equal(r.status, 400, JSON.stringify(r.j));
+      assert.equal(r.j.error.code, 'test_phone_only');
+      assert.equal(r.j.error.message, TEST_PHONE_ONLY_TEXT);
+      r = await call('POST', '/auth/code/verify', null, { channel: 'sms', target: realish, code: '246810' });
+      assert.notEqual(r.status, 200);
+      r = await call('POST', '/me/contact', noPhone, { phone: realish });
+      assert.equal(r.status, 200, JSON.stringify(r.j));
+      r = await call('POST', '/me/phone/send', noPhone, {}, MP);
+      assert.equal(r.j.error?.code, 'test_phone_only');
+      r = await call('POST', '/me/phone/verify', noPhone, { code: '246810' }, MP);
+      assert.equal(r.j.error?.code, 'test_phone_only');
+      await pool.query(`DELETE FROM contact_methods WHERE contact_id = $1 AND kind = 'phone'`, [noPhone.id]);
+      await pool.query(`UPDATE contacts SET phone_e164 = NULL, phone_verified_at = NULL WHERE id = $1`, [noPhone.id]);
+      ok('D22：测试站名单外的号码发不出码、登不了（短信登录、验证手机都拦，提示“测试站只认测试号码”）');
+      const ph = await fict();
       r = await call('POST', '/me/contact', noPhone, { phone: ph });
       assert.equal(r.status, 200, JSON.stringify(r.j));
       r = await call('GET', '/me/contact', noPhone, undefined, MP);
@@ -151,7 +196,7 @@ async function main() {
       r = await call('POST', '/me/phone/send', noPhone, {}, MP);
       assert.equal(r.status, 200, JSON.stringify(r.j));
       assert.equal(r.j.testFixedCode, true);
-      assert.equal(r.j.message, '测试站：验证码固定为 246810');
+      assert.equal(r.j.message, TEST_FIXED_CODE_TEXT);
       r = await call('POST', '/me/phone/verify', noPhone, { code: '123456' }, MP);
       assert.equal(r.status, 400);
       assert.ok(r.j.error.message.includes('246810'));
@@ -162,7 +207,7 @@ async function main() {
       const { rows: sends } = await pool.query(`SELECT 1 FROM phone_verify_sends WHERE contact_id = $1`, [noPhone.id]);
       assert.equal(sends.length, 0, '测试站不发短信、不记发送');
       // 网站手机号登录：同样固定 246810
-      const ph2 = `+1626${String(Math.floor(1e6 + Math.random() * 8.9e6))}`;
+      const ph2 = await fict();
       testPhones.push(ph, ph2);
       r = await call('POST', '/auth/code/send', null, { channel: 'sms', target: ph2 });
       assert.equal(r.status, 200, JSON.stringify(r.j));
@@ -448,6 +493,121 @@ async function main() {
   await pool.query(`UPDATE jobs_posts SET sec_status = 'pass' WHERE id = $1`, [pHandy]);
   ok('D10：工人、没登记、核验中、未缴费（开关开）一律不给；内容安全没过的不给');
 
+  // ── 指令 9 · D28：接活儿收费方式（全部免费 / 免费额度 / 必须是会员）+ 免费联系次数 + 非会员免费发活儿条数 ──
+  {
+    r = await call('PATCH', '/workbench/jobs/switches', owner, { feeMode: 'free_quota' });
+    assert.equal(r.status, 403);
+    r = await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'nope' });
+    assert.equal(r.status, 400);
+    r = await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'free_quota', freeContacts: 2, freePosts: null });
+    assert.equal(r.status, 200, JSON.stringify(r.j));
+    assert.equal(r.j.switches.feeMode, 'free_quota');
+    assert.equal(r.j.switches.requirePaid, false);
+    assert.equal(r.j.switches.freeContacts, 2);
+    assert.equal(r.j.switches.freePosts, null);
+    const lg = r.j.log.find((x: { key: string }) => x.key === 'jobs_work_fee_mode');
+    assert.ok(lg && lg.actor.includes('验收工-工作人员') && lg.before === 'all_free' && lg.after === 'free_quota', '操作记录：谁、改前改后');
+    ok('D28：收费设置只有管理员能改、值不对给人话、立即生效、留操作记录（谁、何时、改前改后）');
+    r = await call('GET', '/jobs/meta', proA);
+    assert.equal(r.j.switches.feeMode, 'free_quota');
+    assert.equal(r.j.me.pro.listed, true, '免费额度：非会员核验通过即上列表');
+    assert.equal(r.j.me.pro.needPay, false);
+    assert.equal(r.j.me.pro.freeLeft, 2);
+    assert.ok(r.j.openTradeCount > 30 && r.j.allTradesText === `全部 ${r.j.openTradeCount} 项 ›`);
+    assert.ok(r.j.groups.every((g: { tradeKeys: string[] }) => Array.isArray(g.tradeKeys)));
+    // 再发三条同工种同城的活儿
+    r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], cityKey: 'arcadia', city: '阿凯迪亚', description: '验收工-额度 1', timing: 'asap' });
+    const q1 = r.j.ids[0];
+    r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], city: '阿凯迪亚', description: '验收工-额度 2', timing: 'asap' });
+    const q2 = r.j.ids[0];
+    r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], city: '阿凯迪亚', description: '验收工-额度 3', timing: 'asap' });
+    const q3 = r.j.ids[0];
+    assert.ok(q1 && q2 && q3);
+    await pool.query(`UPDATE jobs_posts SET sec_status = 'pass' WHERE id = ANY($1::uuid[])`, [[q1, q2, q3]]);
+    // pHandy 之前（全部免费时）看过：再看不扣
+    r = await call('POST', `/jobs/posts/${pHandy}/contact`, proA);
+    assert.equal(r.status, 200);
+    assert.equal(r.j.freeLeft, 2);
+    r = await call('POST', `/jobs/posts/${q1}/contact`, proA);
+    assert.equal(r.status, 200);
+    assert.equal(r.j.freeLeft, 1);
+    assert.equal(r.j.freeLeftText, '还可以免费联系 1 位');
+    r = await call('POST', `/jobs/posts/${q1}/contact`, proA);
+    assert.equal(r.j.freeLeft, 1, '同一条重复看不扣');
+    r = await call('GET', '/jobs/me/pro', proA);
+    assert.equal(r.j.freeLeft, 1);
+    assert.equal(r.j.pro.freeLeft, 1);
+    r = await call('GET', '/jobs/me/matched', proA, undefined, MP);
+    assert.equal(r.j.freeLeft, 1);
+    assert.ok(!JSON.stringify(r.j).match(/\$|￥|美元/), '小程序返回里不出现金额');
+    r = await call('POST', `/jobs/posts/${q2}/contact`, proA, undefined, MP);
+    assert.equal(r.status, 200, JSON.stringify(r.j));
+    assert.equal(r.j.freeLeft, 0);
+    r = await call('POST', `/jobs/posts/${q3}/contact`, proA);
+    assert.equal(r.status, 403);
+    assert.equal(r.j.error.code, 'quota_used_up');
+    assert.equal(r.j.error.message, '免费次数用完了，成为商会会员后可以继续');
+    r = await call('GET', `/jobs/posts/${q3}`, proA);
+    assert.equal(r.j.canContact, false);
+    assert.equal(r.j.reasonCode, 'quota_used_up');
+    assert.equal(r.j.needPay, true);
+    r = await call('POST', `/jobs/posts/${q1}/contact`, proA);
+    assert.equal(r.status, 200, '用完后，看过的那几条照样能看');
+    r = await call('GET', '/workbench/jobs/stats', staff);
+    assert.ok(r.j.freeQuota.freeUsedPeople >= 1 && r.j.freeQuota.usedUpPeople >= 1);
+    ok('D28 免费额度：每看一条新活儿扣一次、重复看不扣、用完 quota_used_up + 人话；/me/pro、matched、详情都给 freeLeft；统计有人数');
+    // 必须是会员：非会员不上列表、不能看
+    await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'members_only' });
+    r = await call('GET', '/jobs/meta', proA);
+    assert.equal(r.j.me.pro.listed, false);
+    assert.equal(r.j.me.pro.freeLeft, null);
+    r = await call('POST', `/jobs/posts/${q3}/contact`, proA);
+    assert.equal(r.j.error.code, 'not_eligible');
+    // 全部免费：不扣、不限
+    await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'all_free' });
+    r = await call('POST', `/jobs/posts/${q3}/contact`, proA);
+    assert.equal(r.status, 200);
+    assert.equal(r.j.freeLeft, null);
+    const { rows: fu } = await pool.query<{ free_used: boolean }>(`SELECT free_used FROM jobs_contacts WHERE post_id = $1 AND viewer_contact_id = $2`, [q3, proA.id]);
+    assert.equal(fu[0].free_used, false, '全部免费时不扣');
+    ok('D28：必须是会员 → 非会员不上列表、不能看；全部免费 → 不扣不限');
+    // 会员一律不限（用完后入会也计入统计）
+    await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'free_quota' });
+    await pool.query(
+      `INSERT INTO applications (application_type, application_status, payment_status, email, contact_id, selected_tier_slug, membership_start_date, membership_end_date, payment_plan, notes)
+       VALUES ('membership', 'approved', 'paid', $1, $2, 'member', current_date, current_date + 365, 'offline', '验收工-测试会籍（jobs-api-tests，测完删）')`,
+      [`jobs-${uniq}-member@example.com`, proA.id]
+    );
+    r = await call('POST', `/jobs/posts/${q2}/contact`, proA);
+    r = await call('GET', '/jobs/meta', proA);
+    assert.equal(r.j.me.pro.freeLeft, null, '会员不限');
+    r = await call('POST', `/jobs/posts/${q3}/contact`, proA);
+    assert.equal(r.status, 200);
+    r = await call('GET', '/workbench/jobs/stats', staff);
+    assert.ok(r.j.freeQuota.joinedAfterUsedUp >= 1);
+    ok('D28：会员一律不限；统计“用完后入会的人数”');
+    // 非会员免费发活儿条数（owner 不是会员，已经发过好几次）
+    r = await call('PATCH', '/workbench/jobs/switches', staff, { freePosts: 'abc' });
+    assert.equal(r.status, 400);
+    await call('PATCH', '/workbench/jobs/switches', staff, { freePosts: 1 });
+    r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], city: '阿凯迪亚', description: '验收工-超了', timing: 'asap' });
+    assert.equal(r.status, 403);
+    assert.equal(r.j.error.code, 'post_quota_used_up');
+    assert.ok(r.j.error.message.includes('成为商会会员后可以继续'));
+    r = await call('POST', '/jobs/posts', proA, { posterRole: 'owner', trades: ['handyman'], city: '阿凯迪亚', description: '验收工-会员发', timing: 'asap' });
+    assert.equal(r.status, 200, '会员发活儿不限');
+    await pool.query(`DELETE FROM jobs_posts WHERE id = ANY($1::uuid[])`, [r.j.ids]);
+    r = await call('PATCH', '/workbench/jobs/switches', staff, { freePosts: '' });
+    assert.equal(r.j.switches.freePosts, null);
+    r = await call('POST', '/jobs/posts', owner, { posterRole: 'owner', trades: ['handyman'], city: '阿凯迪亚', description: '验收工-不限了', timing: 'asap' });
+    assert.equal(r.status, 200);
+    ok('D28：非会员发活儿限条数时超了给人话；会员不限；留空 = 不限');
+    // 恢复成后面测试要的状态：proA 不是会员、全部免费
+    await pool.query(`DELETE FROM applications WHERE contact_id = $1`, [proA.id]);
+    await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'all_free' });
+    await pool.query(`DELETE FROM jobs_posts WHERE id = ANY($1::uuid[])`, [[q1, q2, q3]]);
+  }
+
   // ── 指令 7 · D19：网站发的活儿（发布人没有小程序 openid）用查看的接活人身份补检 ──
   {
     const openid = `dev-openid-jobs-${uniq}`;
@@ -683,6 +843,7 @@ main()
     await pool.query(`DELETE FROM jobs_reports WHERE reporter_contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM jobs_posts WHERE contact_id = ANY($1::uuid[])`, [ids]).catch((e) => console.error(e.message));
     await pool.query(`DELETE FROM jobs_pros WHERE contact_id = ANY($1::uuid[])`, [ids]).catch((e) => console.error(e.message));
+    await pool.query(`DELETE FROM applications WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM jobs_notifications WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM track_events WHERE contact_id = ANY($1::uuid[])`, [ids]).catch(() => undefined);
     await pool.query(`DELETE FROM crm_audit_log WHERE actor LIKE 'staff:验收工-%'`).catch(() => undefined);
