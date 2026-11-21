@@ -171,7 +171,10 @@ export async function getStaffEvent(id: string) {
   if (!rows[0]) throw new CrmError('not_found', '找不到这场活动');
   const { rows: regs } = await getPool().query(
     `SELECT r.status, r.arrival_status, r.source, r.checked_in_at, r.created_at, c.id AS contact_id, c.name, c.member_no::int,
-            c.email, c.phone_e164, c.is_placeholder,
+            c.email, COALESCE(c.phone_e164, (SELECT m.value FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current)) AS phone_e164, c.is_placeholder,
+            c.account_kind,
+            EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.membership_end_date >= current_date
+                     AND (a.application_status IN ('approved','paid','second_payment_due') OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))) AS is_member,
             (SELECT ab.name FROM contacts ab WHERE ab.id = r.added_by) AS added_by_name,
             (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status,
             (SELECT o.order_no FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_no,
@@ -301,6 +304,28 @@ async function eventById(db: Db, id: string): Promise<EventRow> {
 }
 
 /** 工作人员代签到：同样套用入场判断（收费活动未核款不显示签到成功）。 */
+/** 档案里有没有手机号（身份号或当前联系方式） */
+export async function hasPhone(db: Db, contactId: string): Promise<boolean> {
+  const { rows } = await db.query(
+    `SELECT 1 FROM contacts c WHERE c.id = $1 AND (c.phone_e164 IS NOT NULL OR EXISTS (SELECT 1 FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current))`,
+    [contactId]
+  );
+  return !!rows[0];
+}
+
+/** 后台综合优化 七.3：工作人员给到场的人补手机号（记成当前联系方式，未验证；号码没被别人占用时也写进档案） */
+export async function addPhone(s: Staff, contactId: string, raw: string, cc?: string) {
+  const phone = normalizePhone(String(raw ?? ''), cc === '+86' ? '+86' : '+1');
+  if (!phone) throw new CrmError('bad_phone', '手机号格式不对，美国号码 10 位，中国号码 11 位');
+  return withTransaction(async (db) => {
+    await setMethod(db, contactId, 'phone', phone, 'staff');
+    const { rows: t } = await db.query(`SELECT 1 FROM contacts WHERE phone_e164 = $1 AND id <> $2`, [phone, contactId]);
+    if (!t[0]) await db.query(`UPDATE contacts SET phone_e164 = coalesce(phone_e164, $2), updated_at = now() WHERE id = $1`, [contactId, phone]);
+    await audit(db, s, 'add_phone', 'contact', contactId, { after: { phone: phone.slice(0, -4) + '****' } });
+    return { ok: true };
+  });
+}
+
 export async function staffCheckIn(s: Staff, eventId: string, contactId: string) {
   return withTransaction(async (db) => {
     const ev = await eventById(db, eventId);
@@ -326,7 +351,8 @@ export async function onsiteRegister(
   const email = b.email ? normalizeEmail(b.email) : null;
   if (b.phone && !phone) throw new CrmError('bad_request', '手机号格式不对，美国号码 10 位，其他国家请加 +国家码');
   if (b.email && !email) throw new CrmError('bad_request', '邮箱格式不对');
-  if (!phone && !email) throw new CrmError('bad_request', '请填写手机号或邮箱');
+  // 后台综合优化 七.3：现场登记必须有手机号（以前只填邮箱也能登记到场，于是有人到场却没有手机号）
+  if (!phone) throw new CrmError('need_phone', '请填写手机号（到场的人档案里必须有手机号，以后好认出来）');
   const role = findRoleSub(b.roleSub || 'other');
   if (!role) throw new CrmError('bad_request', '请选择主要行业');
   return withTransaction(async (db) => {
@@ -381,20 +407,23 @@ async function staffFindOrCreate(db: Db, v: { phone: string | null; email: strin
 
 // ── 核款工作台 ────────────────────────────────────────────────────────────
 export async function listOrders(f: { status?: string | null; purpose?: string | null; q?: string | null }) {
-  const status = f.status && f.status !== 'open' ? f.status : null;
+  // 后台综合优化 八.2：审核演示 / 内部 / 测试账号的订单不进“待处理”，单独放在“审核演示订单”（status = demo）
+  const demo = f.status === 'demo';
+  const status = f.status && f.status !== 'open' && !demo ? f.status : null;
   const q = (f.q ?? '').trim();
   const { rows } = await getPool().query(
     `SELECT o.order_no, o.purpose, o.description, o.amount_cents, o.gross_cents, o.points_redeemed, o.status, o.provider,
             o.payer_name, o.payer_note, o.submitted_at, o.paid_at, o.verified_by, o.bank_reference, o.reject_reason, o.created_at,
-            c.id AS contact_id, c.name, c.email, c.phone_e164, c.member_no::int
+            c.id AS contact_id, c.name, c.email, c.phone_e164, c.member_no::int, c.account_kind
        FROM orders o JOIN contacts c ON c.id = o.contact_id
       WHERE ($1::text IS NULL AND o.status IN ('payment_submitted','pending_payment') OR o.status = $1)
+        AND (CASE WHEN $4::boolean THEN c.account_kind IS NOT NULL ELSE c.account_kind IS NULL END)
         AND ($2::text IS NULL OR o.purpose = $2)
         AND ($3 = '' OR o.order_no ILIKE '%' || $3 || '%' OR c.name ILIKE '%' || $3 || '%' OR c.email ILIKE '%' || $3 || '%')
       ORDER BY CASE o.status WHEN 'payment_submitted' THEN 0 WHEN 'pending_payment' THEN 1 ELSE 2 END,
                coalesce(o.submitted_at, o.created_at) DESC
       LIMIT 200`,
-    [status, f.purpose || null, q]
+    [status, f.purpose || null, q, demo]
   );
   return rows.map((o) => ({
     ...o,
@@ -431,7 +460,26 @@ export type ContactFilter = {
   member?: 'member' | 'registered' | null;
   /** 邮箱状态：confirmed 已确认 / unconfirmed 未确认 / invalid 无效 / none 没填 */
   emailStatus?: 'confirmed' | 'unconfirmed' | 'invalid' | 'none' | null;
+  /** 后台综合优化 七.1：customers（默认）= 有姓名或手机号的客户；opened = 只打开过、未登记的“微信用户”；all = 全部 */
+  view?: 'customers' | 'opened' | 'all' | null;
 };
+
+/** “只打开过、未登记”：没有真实姓名、也没有手机号的“微信用户”（不算客户） */
+export const OPENED_ONLY_SQL = `(NULLIF(NULLIF(trim(c.name), ''), '微信用户') IS NULL AND c.phone_e164 IS NULL
+  AND NOT EXISTS (SELECT 1 FROM contact_methods pm WHERE pm.contact_id = c.id AND pm.kind = 'phone' AND pm.is_current))`;
+
+/** 客户列表上面的数字：客户（不含内部 / 测试账号）、只打开过未登记、会员 */
+export async function contactCounts() {
+  const { rows } = await getPool().query<{ customers: number; opened: number; members: number; internal: number }>(
+    `SELECT count(*) FILTER (WHERE NOT ${OPENED_ONLY_SQL} AND c.account_kind IS NULL)::int AS customers,
+            count(*) FILTER (WHERE ${OPENED_ONLY_SQL} AND c.account_kind IS NULL)::int AS opened,
+            count(*) FILTER (WHERE c.account_kind IS NULL AND EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.membership_end_date >= current_date
+                     AND (a.application_status IN ('approved','paid','second_payment_due') OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))))::int AS members,
+            count(*) FILTER (WHERE c.account_kind IS NOT NULL)::int AS internal
+       FROM contacts c WHERE c.merged_into IS NULL`
+  );
+  return rows[0];
+}
 
 export async function searchContacts(f: ContactFilter, limit = 200) {
   const q = (f.q ?? '').trim();
@@ -444,8 +492,14 @@ export async function searchContacts(f: ContactFilter, limit = 200) {
           AND (a.application_status IN ('approved','paid','second_payment_due')
                OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
         ORDER BY a.contact_id, a.membership_end_date DESC)
-     SELECT c.id, c.member_no::int, c.name, c.name_alt, c.email, c.phone_e164, c.role_category, c.role_sub, c.created_at,
+     SELECT c.id, c.member_no::int, c.name, c.name_alt, c.email, c.phone_e164, c.role_category, c.role_sub, c.created_at, c.account_kind,
             m.selected_tier_slug AS tier, m.membership_end_date::text AS member_until,
+            (SELECT t.name_zh FROM membership_tiers t WHERE t.slug = m.selected_tier_slug) AS tier_name,
+            GREATEST(c.created_at,
+              (SELECT max(GREATEST(r.created_at, coalesce(r.checked_in_at, r.created_at))) FROM registrations r WHERE r.contact_id = c.id),
+              (SELECT max(x.last_seen_at) FROM sessions x WHERE x.contact_id = c.id),
+              (SELECT max(o.created_at) FROM orders o WHERE o.contact_id = c.id),
+              (SELECT max(j.created_at) FROM join_requests j WHERE j.contact_id = c.id)) AS last_active_at,
             (SELECT coalesce(sum(points),0)::int FROM points_ledger p WHERE p.contact_id = c.id) AS points,
             (SELECT array_agg(DISTINCT t.tag) FROM contact_tags t WHERE t.contact_id = c.id) AS tags,
             (SELECT count(*)::int FROM registrations r WHERE r.contact_id = c.id AND r.arrival_status = 'checked_in') AS attended,
@@ -462,8 +516,10 @@ export async function searchContacts(f: ContactFilter, limit = 200) {
         AND ($5::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag = '主题:' || $5))
         AND ($6::text IS NULL OR EXISTS (SELECT 1 FROM contact_tags t WHERE t.contact_id = c.id AND t.tag ILIKE '%' || $6 || '%'))
         AND ($7::text IS NULL OR ($7 = 'member' AND m.contact_id IS NOT NULL) OR ($7 = 'registered' AND m.contact_id IS NULL))
-      ORDER BY c.created_at DESC LIMIT $8`,
-    [q, phone, f.region || null, f.roleCategory || null, f.topic || null, f.tag || null, f.member || null, limit, f.emailStatus || null]
+        AND c.merged_into IS NULL
+        AND ($10 = 'all' OR ($10 = 'opened' AND ${OPENED_ONLY_SQL}) OR ($10 = 'customers' AND NOT ${OPENED_ONLY_SQL}))
+      ORDER BY last_active_at DESC NULLS LAST LIMIT $8`,
+    [q, phone, f.region || null, f.roleCategory || null, f.topic || null, f.tag || null, f.member || null, limit, f.emailStatus || null, f.view || (q ? 'all' : 'customers')]
   );
   return rows.map((r) => ({
     ...r,
@@ -492,7 +548,7 @@ export async function exportContactsCsv(s: Staff, f: ContactFilter): Promise<str
 
 export async function contactDetail(id: string) {
   const pool = getPool();
-  const { rows: c } = await pool.query(`SELECT c.*, c.member_no::int AS member_no FROM contacts c WHERE c.id = $1`, [id]);
+  const { rows: c } = await pool.query(`SELECT c.*, c.member_no::int AS member_no, (SELECT m.wechat_id FROM member_cards m WHERE m.contact_id = c.id) AS wechat_id FROM contacts c WHERE c.id = $1`, [id]);
   if (!c[0]) throw new CrmError('not_found', '找不到这个人');
   const { rows: tags } = await pool.query(`SELECT tag, source, created_at FROM contact_tags WHERE contact_id = $1 ORDER BY tag`, [id]);
   const { rows: answers } = await pool.query(
@@ -558,7 +614,10 @@ export async function contactDetail(id: string) {
     [id]
   );
   const balance = points.reduce((n, p) => n + Number(p.points), 0);
+  const { memberStatus } = await import('./membership');
+  const ms = await memberStatus(pool, id).catch(() => null);
   return {
+    member: ms ? { isMember: ms.isMember, tierName: ms.tierName, endDate: ms.endDate } : null,
     contact: c[0],
     contactMethods: methods.map((m) => ({ ...m, status_text: STATUS_TEXT[m.kind as 'email' | 'phone'][m.status as MethodStatus] })),
     roleLabel: findRoleSub(c[0].role_sub)?.label ?? null,

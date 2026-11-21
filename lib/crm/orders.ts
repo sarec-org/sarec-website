@@ -122,7 +122,8 @@ export async function submitOrderNote(
   note: string,
   payerName?: string | null
 ): Promise<OrderRow> {
-  return withTransaction(async (db) => {
+  let fresh = false;
+  const out = await withTransaction(async (db) => {
     if (!(await zelleEnabled(db))) {
       const cur = await getOwnOrder(db, orderNo, contactId);
       if (cur.status === 'pending_payment') throw new CrmError('zelle_off', 'Zelle 付款暂未开放，请用银行卡在线支付');
@@ -134,8 +135,18 @@ export async function submitOrderNote(
         WHERE order_no = $1 AND contact_id = $2 AND status = 'pending_payment' RETURNING *`,
       [orderNo, contactId, note.slice(0, 500), payerName?.slice(0, 100) ?? null]
     );
+    fresh = !!rows[0];
     return rows[0] ?? (await getOwnOrder(db, orderNo, contactId)); // 重复提交：原样返回
   });
+  if (fresh) {
+    // 后台综合优化 五：Zelle 待核款，立即通知（同一张订单只通知一次）
+    const { notifyStaffSafe } = await import('./staffNotify');
+    const { isNotReal } = await import('./accountKind');
+    if (!(await isNotReal(getPool(), contactId))) {
+      await notifyStaffSafe({ category: 'zelle_pending', key: `zelle:${orderNo}`, title: '有一笔 Zelle 付款待核对', href: `/zh/staff/payments?order=${encodeURIComponent(orderNo)}` });
+    }
+  }
+  return out;
 }
 
 // ── 到账（Zelle 核款 / Stripe 回调 / 免单）────────────────────────────────

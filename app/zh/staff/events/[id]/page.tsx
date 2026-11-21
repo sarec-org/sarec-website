@@ -6,6 +6,7 @@ import { useQr } from '@/components/crm/staff/QrCode';
 import { api, copyText, fmtDateTime, money } from '@/components/crm/client';
 import { EventForm } from '../EventForm';
 import Link from 'next/link';
+import { EventData, EventHub } from '@/components/crm/staff/EventHub';
 import { checkinA4, registerPoster, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
 import { saveImage, savedText } from '@/components/crm/staff/SaveImage';
 import { AiPoster } from '@/components/crm/staff/AiPoster';
@@ -18,6 +19,8 @@ type Reg = { contact_id: string; name: string; member_no: number; email: string 
 export default function StaffEventDetail({ params }: { params: { id: string } }) {
   const [data, setData] = useState<{ event: Ev; registrations: Reg[] } | null>(null);
   const [editing, setEditing] = useState(false);
+  const [tabData, setTabData] = useState(false);
+  useEffect(() => setTabData(new URLSearchParams(location.search).get('tab') === 'data'), []);
   const [full, setFull] = useState(false);
   // 1.3：门口签到码统一用小程序码（微信扫一扫直接进小程序签到）；网页链接码只作应急，收在下面
   const [mpCode, setMpCode] = useState<string | null>(null);
@@ -162,6 +165,8 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
         data && (
           <>
             <Msg m={msg} />
+            <EventHub eventId={params.id} current={tabData ? 'data' : 'regs'} />
+            {tabData && <EventData eventId={params.id} />}
             {/* 1.4.0（改动单 C6）：本场相册、筹备清单、活动回顾放在最上面 */}
             <div className={styles.btnRow} style={{ marginBottom: '1rem' }}>
               {can(s, 'ops') && <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/album?event=${params.id}`}>本场相册</Link>}
