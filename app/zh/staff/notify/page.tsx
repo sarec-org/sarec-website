@@ -104,7 +104,7 @@ export default function NotifySettings() {
           ))}
           <h2 className={styles.h}>最近的通知</h2>
           {!d.notices.length && <p className={styles.muted}>还没有。</p>}
-          {d.notices.map((n) => (
+          {d.notices.slice(0, 15).map((n) => (
             <div key={n.id} className={styles.card} style={{ padding: '0.6rem 0.9rem', margin: '0 0 0.4rem' }}>
               <div>{n.title}</div>
               <div className={styles.small}>{n.category_label} · {d.isAdmin && n.staff_name ? `${n.staff_name} · ` : ''}{NST[n.status] ?? n.status} · {fmtDateTime(n.created_at)}</div>
@@ -112,7 +112,8 @@ export default function NotifySettings() {
           ))}
           {d.isAdmin && (
             <>
-              <h2 className={styles.h}>发送记录（收件人已打码）</h2>
+              <details>
+              <summary className={styles.h} style={{ cursor: 'pointer' }}>发送记录：本该发什么、发给谁（收件人已打码）</summary>
               {!d.log.length && <p className={styles.muted}>还没有。</p>}
               {d.log.map((l) => (
                 <div key={l.id} className={styles.card} style={{ padding: '0.6rem 0.9rem', margin: '0 0 0.4rem' }}>
@@ -120,6 +121,7 @@ export default function NotifySettings() {
                   <div style={{ whiteSpace: 'pre-wrap', fontSize: '0.92rem' }}>{l.body}</div>
                 </div>
               ))}
+              </details>
             </>
           )}
         </>
