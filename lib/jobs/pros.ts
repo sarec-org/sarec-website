@@ -50,7 +50,12 @@ export async function refreshPro(db: Db, proId: string): Promise<ProRow | null> 
   if (!p) return null;
   const { requirePaid } = await getSwitches(db);
   const paid = (await memberStatus(db, p.contact_id).catch(() => ({ isMember: false }))).isMember;
-  const listed = listedFor({ ...p, is_paid_member: paid }, requirePaid);
+  let listed = listedFor({ ...p, is_paid_member: paid }, requirePaid);
+  if (listed) {
+    // 代登记（0041）：本人说了不用登记的不上；没本人确认的按设置（默认上）
+    const f = await proxyFlags(db, proId);
+    if (f.declined || (f.proxy && !f.confirmed && !(await proxyListBeforeConfirm(db)))) listed = false;
+  }
   if (paid !== p.is_paid_member || listed !== p.listed) {
     await db.query(`UPDATE jobs_pros SET is_paid_member = $2, listed = $3, updated_at = now() WHERE id = $1`, [proId, paid, listed]);
   }
@@ -205,6 +210,47 @@ const urlOr = (v: unknown): string | null => {
   return /^https:\/\//.test(s) ? s : null;
 };
 
+/**
+ * 资质规则（本人登记和工作人员代登记共用这一份，规则完全一样）：
+ * 施工队 / 持牌师傅必须有牌照号；设计与专业服务选了要州执照的工种（A、B 类）必须有执照号；
+ * 选了只要营业登记的工种（C 类）要有营业登记（或执照号）。工人不用。返回一句人话，没问题返回 null。
+ */
+export function qualificationError(role: ProRole, tradeKeys: string[], trades: Map<string, Trade>, ev: { licenseNo: string | null; hasBizReg: boolean }): string | null {
+  const needsLicense = tradeKeys.filter((k) => trades.get(k)!.licType !== 'C');
+  const needsBizReg = tradeKeys.filter((k) => trades.get(k)!.licType === 'C');
+  if ((role === 'company' || role === 'licensed') && !ev.licenseNo) return '请填牌照号（施工队和持牌师傅必须核验牌照）';
+  if (role === 'pro_service' && needsLicense.length && !ev.licenseNo) return `「${needsLicense.map((k) => trades.get(k)!.name).join('、')}」需要州执照，请填执照号`;
+  if (role !== 'worker' && needsBizReg.length && !ev.hasBizReg && !ev.licenseNo) return `「${needsBizReg.map((k) => trades.get(k)!.name).join('、')}」不需要州执照，但要上传营业登记`;
+  return null;
+}
+/** 工种要存在、要开放登记（工作人员自己登记时可以选没开放的；代登记按本人登记的规则，不放宽） */
+export function tradeOpenError(tradeKeys: string[], trades: Map<string, Trade>, staff: boolean): string | null {
+  for (const k of tradeKeys) {
+    const t = trades.get(k);
+    if (!t) return '选的工种里有一项已经不存在了，请重新选';
+    if (!t.open && !staff) return `「${t.name}」暂时还没开放登记`;
+  }
+  return null;
+}
+
+/** 代登记（0041）的几项状态；库里还没跑 0041 时一律当成不是代登记 */
+export async function proxyFlags(db: Db, proId: string): Promise<{ proxy: boolean; confirmed: boolean; declined: boolean }> {
+  const { rows } = await db
+    .query<{ proxy: boolean; confirmed: boolean; declined: boolean }>(
+      `SELECT proxy_by IS NOT NULL AS proxy, self_confirmed_at IS NOT NULL AS confirmed, self_declined_at IS NOT NULL AS declined FROM jobs_pros WHERE id = $1`,
+      [proId]
+    )
+    .catch(() => ({ rows: [] as { proxy: boolean; confirmed: boolean; declined: boolean }[] }));
+  return rows[0] ?? { proxy: false, confirmed: false, declined: false };
+}
+export const PROXY_LIST_KEY = 'jobs_proxy_list_before_confirm';
+/** 代登记的人没本人确认前上不上公开列表（默认上：核验通过即上，和本人登记一致） */
+export async function proxyListBeforeConfirm(db: Db): Promise<boolean> {
+  const { getSetting } = await import('@/lib/crm/orders');
+  const v = await getSetting<unknown>(db, PROXY_LIST_KEY, true);
+  return !(v === false || v === 'false');
+}
+
 export type SaveResult = { pro: Awaited<ReturnType<typeof proSelf>>; autoCheck: unknown };
 
 export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, unknown>): Promise<SaveResult> {
@@ -217,11 +263,8 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
   const trades = await tradeMap(pool);
   const tradeKeys = strArr(b.trades, 40, 30);
   if (!tradeKeys.length) throw new CrmError('bad_request', '请至少选一个能做的工种');
-  for (const k of tradeKeys) {
-    const t = trades.get(k);
-    if (!t) throw new CrmError('bad_request', '选的工种里有一项已经不存在了，请重新选');
-    if (!t.open && !v.staff) throw new CrmError('bad_request', `「${t.name}」暂时还没开放登记`);
-  }
+  const tErr = tradeOpenError(tradeKeys, trades, v.staff);
+  if (tErr) throw new CrmError('bad_request', tErr);
   const cities = (await resolveCities(pool, b.cities)).map((c) => c.key);
   if (!cities.length) throw new CrmError('bad_request', '请至少选一个服务城市');
   const languages = strArr(b.languages, 20, 8).filter((x) => LANGUAGES.includes(x) || x.length <= 20);
@@ -231,19 +274,8 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
   const licenseDocUrl = urlOr(b.licenseDocUrl);
   const photos = strArr(b.photos, 600, 10).filter((u) => /^https:\/\//.test(u));
   if (photos.length > 9) throw new CrmError('bad_request', '活儿照片最多 9 张');
-  const needsLicense = tradeKeys.filter((k) => trades.get(k)!.licType !== 'C');
-  const needsBizReg = tradeKeys.filter((k) => trades.get(k)!.licType === 'C');
-  if (role === 'company' || role === 'licensed') {
-    if (!licenseNo) throw new CrmError('bad_request', '请填牌照号（施工队和持牌师傅必须核验牌照）');
-  }
-  if (role === 'pro_service') {
-    if (needsLicense.length && !licenseNo) {
-      throw new CrmError('bad_request', `「${needsLicense.map((k) => trades.get(k)!.name).join('、')}」需要州执照，请填执照号`);
-    }
-  }
-  if (role !== 'worker' && needsBizReg.length && !businessRegUrl && !licenseNo) {
-    throw new CrmError('bad_request', `「${needsBizReg.map((k) => trades.get(k)!.name).join('、')}」不需要州执照，但要上传营业登记`);
-  }
+  const qErr = qualificationError(role, tradeKeys, trades, { licenseNo, hasBizReg: !!businessRegUrl });
+  if (qErr) throw new CrmError('bad_request', qErr);
   const phone = await verifiedPhone(pool, contactId);
   if (!phone) throw new CrmError('need_phone', '请先验证手机号：找工人的人要能打电话给你');
   const intro = str(b.intro, 300) || null;
@@ -276,7 +308,7 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
     verifiedTrades = changedKey ? [] : cur.verified_trades.filter((k) => tradeKeys.includes(k));
     needsReview = changedKey || tradeKeys.some((k) => !verifiedTrades.includes(k));
     status = changedKey ? 'pending' : 'verified';
-  } else if (cur && cur.status === 'removed' && !v.staff) {
+  } else if (cur && cur.status === 'removed' && !v.staff && !(await proxyFlags(pool, cur.id)).declined) {
     throw new CrmError('forbidden', '你的接活儿资料已被下架，请联系商会工作人员');
   } else {
     status = 'pending';
@@ -299,6 +331,12 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
     params
   );
   const id = rows[0].id;
+  // 商会代登记的人自己登录改资料并提交 = 本人已确认（确认链接随之作废）；本人点过“不用登记”后又自己来登记，也算确认
+  await pool.query(
+    `UPDATE jobs_pros SET self_confirmed_at = now(), self_confirm_via = 'edit', self_declined_at = NULL, confirm_nonce = NULL
+      WHERE id = $1 AND proxy_by IS NOT NULL AND self_confirmed_at IS NULL`,
+    [id]
+  ).catch(() => undefined);
   if (role === 'worker') {
     await pool.query(`UPDATE jobs_pros SET next_review_at = NULL WHERE id = $1`, [id]);
   }

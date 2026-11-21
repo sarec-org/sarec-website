@@ -20,6 +20,7 @@ type Pro = {
   licenseExpiresOn: string | null; businessRegUrl: string | null; insuranceUrl: string | null; licenseDocUrl: string | null; intro: string | null; photos: string[];
   returnReason: string | null; removedReason: string | null; listed: boolean; isPaidMember?: boolean; verifiedAt: string | null; nextReviewAt: string | null; createdAt: string;
   officialUrls: { agency: string; url: string }[]; checklist: string[]; cslbDetailUrl: string | null;
+  proxy?: boolean; proxyBy?: string | null; selfConfirmed?: boolean; businessRegNo?: string | null;
 };
 const TABS = [['pending', '待核验'], ['verified', '已通过'], ['returned', '退回'], ['removed', '下架']] as const;
 const RETURN_REASONS = ['牌照号查不到', '牌照已过期或被停', '牌照类别和所选工种对不上', '名字和牌照登记的不一致', '缺营业登记或责任保险', '照片看不清，请重拍'];
@@ -98,9 +99,11 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
         {p.needsReview && <span className={`${styles.badge} ${styles.badgeRed}`}>改了资料，待再看</span>}
         {p.isPaidMember && <span className={`${styles.badge} ${styles.badgeGreen}`}>缴费会员</span>}
         {p.listed && <span className={`${styles.badge} ${styles.badgeGreen}`}>在列表上</span>}
+        {p.proxy && <span className={`${styles.badge} ${styles.badgeMuted}`}>商会代登记{p.selfConfirmed ? ' · 本人已确认' : ' · 本人未确认'}</span>}
       </div>
       <div className={styles.small}>{p.contactName && p.contactName !== p.name ? `${p.contactName} · ` : ''}{p.phone ?? '没有手机号'} · 城市：{p.cities.join('、') || '—'} · 登记 {fmtDateTime(p.createdAt)}{p.verifiedAt ? ` · 通过 ${fmtDate(p.verifiedAt)}` : ''}{p.nextReviewAt ? ` · 下次复核 ${fmtDate(p.nextReviewAt)}` : ''}</div>
       {p.licenseNo && <div className={styles.small}>牌照 / 执照号 <span className={styles.mono}>{p.licenseNo}</span>{p.licenseExpiresOn ? ` · 到期 ${p.licenseExpiresOn}` : ''}</div>}
+      {p.businessRegNo && <div className={styles.small}>营业登记号 <span className={styles.mono}>{p.businessRegNo}</span>（代登记填的号码，照号码到官方查询页核对）</div>}
       {p.intro && <div className={styles.small}>介绍：{p.intro}</div>}
       <Cslb s={p.licenseState} />
       {p.returnReason && <div className={styles.small}>退回原因：{p.returnReason}</div>}
