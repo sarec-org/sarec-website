@@ -1,4 +1,4 @@
-# 找工人·接活 定时任务（11/20 新增，独立文件；不改已有的 event-reminders.yml 和 vercel.json）：
+# 找工人·接活儿 定时任务（11/20 新增，独立文件；不改已有的 event-reminders.yml 和 vercel.json）：
 # - 每 15 分钟：/api/cron/jobs?task=dispatch（漏发的第一批、24 小时没人联系发第二批）
 # - 每天 14:00 UTC（洛杉矶早上 6/7 点）：?task=daily（14 天到期下架、第 12 天续期提醒、第 7 天回访、90 天复核）
 # - 每周牌照比对（CSLB 总表）：指令 7 · D20 起改由 jobs-cslb-weekly.yml 在 GitHub runner 上下载，这里不再调 weekly

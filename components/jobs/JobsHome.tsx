@@ -1,6 +1,6 @@
 'use client';
 /**
- * /zh/jobs：找工人 · 接活 首页。上「找工人／施工队」（藏蓝），下「我要接活儿」（金），中间留明显间隔。
+ * /zh/jobs：找工人 · 接活儿 首页。上「找工人／施工队」（藏蓝），下「我要接活儿」（金），中间留明显间隔。
  * 指令 9：两栏标题加粗大一号（D24）；「全部工种和服务」金底＋“全部 N 项 ›”（D26）；首页入口直接进列表页、「我要接活儿」直接摆四个身份方块（D27）。
  * 两个开关各管一个栏目；都关时普通人看到"还没开放"，工作人员照常看到并有一行提示。
  */
@@ -100,7 +100,7 @@ export function WorkPanel({ meta }: { meta: Meta }) {
 
 export function JobsHome() {
   return (
-    <JobsShell side="none" need="either" back={{ href: '/zh', label: '‹ 返回首页' }} eyebrow="FIND WORKERS · FIND WORK" title="找工人 · 接活" noStaffLine>
+    <JobsShell side="none" need="either" back={{ href: '/zh', label: '‹ 返回首页' }} eyebrow="FIND WORKERS · FIND WORK" title="找工人 · 接活儿" noStaffLine>
       {(meta) => {
         const showFind = meta.switches.find || meta.staffPreview;
         const showWork = meta.switches.work || meta.staffPreview;

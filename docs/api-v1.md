@@ -197,7 +197,7 @@ DATABASE_URL=… pnpm dlx tsx scripts/crm-api-tests.ts    # 工作人员后台�
 BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts   # 总指令 I.2 全流程，8 组（真实 HTTP）
 ```
 
-## 12. 找工人 · 接活 `/api/v1/jobs/*`（迁移 0038）
+## 12. 找工人 · 接活儿 `/api/v1/jobs/*`（迁移 0038）
 
 小程序判断：请求头 `X-Sarec-Client: mp-…`、`servicewechat.com` 来源或小程序会话都算小程序。**小程序调用活儿相关接口（`/jobs/posts*`、`/jobs/me/posts`、`/jobs/upload`）一律 404**（D1：活儿只在网站）；**例外（D10）**：`GET /jobs/me/matched` 小程序可调；`POST /jobs/posts/:id/contact` 小程序只对 matched 里的活儿开放，其余照旧 404。
 开关默认（D11）：迁移 0038 新建时 `jobs_find_on`、`jobs_work_on` 默认**开**（开关只留给日后整栏下线）；已有的值不改。
@@ -235,7 +235,7 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 | `POST /jobs/me/subscribe` | 👤 | `{accepted:[模板ID]}` | `{saved, quota}`：允许一次记一次，派活时用掉一次 |
 | `GET /jobs/me/notified` | 👤 | — | `{count, webUrl}`；网站另有 `items[活儿卡片 + notifiedAt]` |
 | `GET /jobs/me/matched?cursor=` | 👤（work）· **小程序可调**（D10） | — | **指令 7 · D19**：小程序头调第一页时，对口活儿里 `sec_status='unchecked'` 且 `sec_note='no_openid'`（网站发的、发布人没有小程序 openid）的，用当前接活人的 openid 补检 `msgSecCheck`，结果记回 `sec_status`、`sec_checked_at`，`sec_note='viewer:<pro id>'`，检一次就记住；补检没结果（没配微信密钥 `no_wx_config` / 出错）不记、下次再试。`{eligible, reason, needPay, items[{id, city（名字）, trade（key）, tradeName, description（情况说明）, timing, timingLabel, createdAt, contacted（我联系过没有）}], nextCursor}`。只给 `status=verified` 的施工队/持牌师傅/设计与专业服务，且 `requirePaid` 开着时要是缴费会员（否则 `eligible=false` + 一句人话 `reason`，未缴费时 `needPay=true`）；工人、没登记的 `eligible=false`。活儿条件：房主/房东/物业/开发商发的（招工不给）、找人中没到期、工种在他的 `verifiedTrades` 里、城市在他的服务城市里、情况说明内容安全 `sec_status='pass'`、不是自己发的。**不给预算、任何金额、照片、语音、标题** |
-| `GET /jobs/entry` | 🌐 | — | `{show, find, work}`（D12：网站顶部菜单「找工人·接活」和首页入口跟开关走，两个都关 `show=false`；可缓存 60 秒） |
+| `GET /jobs/entry` | 🌐 | — | `{show, find, work}`（D12：网站顶部菜单「找工人·接活儿」和首页入口跟开关走，两个都关 `show=false`；可缓存 60 秒） |
 | `GET /jobs/posts?trade=&city=&cursor=` | 🌐（work）· 小程序 404 | `city` = 城市 key | `items[活儿卡片]`、`cities[{key,name}]`（有活儿的城市）、`nextCursor`。只列找人中、没到期的 |
 | `GET /jobs/posts/:id` | 🌐 · 小程序 404 | — | `post`（卡片 + `description,photos,voiceUrl,propertyType,propertyTypeLabel,callName,wantSiteVisit,turnover,mine`）、`canContact`、`reason`（不能联系的人话原因）、`reasonCode`、`needPay`。**不含电话、不含地址** |
 | `POST /jobs/posts` | 👤（find）· 小程序 404 | `{posterRole:'owner'\|'landlord'\|'property'\|'developer'\|'crew', trades[]（或 trade）, cityKey（城市表里启用的 key；旧写法 `city` 传名字也认，表里没有的一律 400）, description?, photos[≤9]?, voiceUrl?, timing:'asap'\|'week'\|'month'\|'flexible', budget?, propertyType?:'house'\|'condo'\|'commercial', callName?, wechat?, wantSiteVisit?, turnover?, crewHeadcount?, crewDuration?, crewPay?}` | `{ids[], batchId, next}`。**按工种拆单**：选几个工种就拆成几条（同一 `batchId`），退租整修 `turnover=true` 时页面预选 `options.turnoverTrades`。描述 / 语音 / 照片至少一样；`crew` 必填 `crewHeadcount`、`crewDuration`。手机号用已验证的（没有 → `need_phone`）。标题自动生成：`城市 · 工种 · 一句话`（从描述第一句截 16 字；招工为 `城市 · 工种 · 招工人 N 人`）。发布即通知第一批（`next` 是给发布人看的“接下来会发生什么”） |
@@ -299,7 +299,7 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 - **发消息的保险**：正式环境（`VERCEL_ENV=production`）只有 `find`、`work` 两个开关都开才真发；其它环境只发测试身份（姓名以「验收」开头，或 `JOBS_TEST_CONTACT_IDS`、`PREVIEW_SMS_ALLOW` 里的）。没发的都记 `blocked`。渠道：微信订阅消息（`WX_SUBSCRIBE_TEMPLATES.jobs`，用户允许过才有）优先，短信兜底。给工作人员的提醒只进后台待跟进，不发消息。
 - CSLB：用官方免费总表（Data Portal「License Master」CSV，D20 起由 GitHub runner 下载）比对状态、到期日、类别、工伤保险、保证金；避开周日晚 8 点到周一早 6 点。单个牌照详情页要先过带验证码的查询页，程序不去开，只给工作人员一键打开（`cslbDetailUrl`）。其它机构一律一键打开官方查询页 + 核验清单。
 
-**城市**：表 `jobs_cities`（key、名字、地区、地区顺序、地区内顺序、启用），后台「找工人接活城市」页 `/zh/staff/jobs/cities` 增删改排序，不用发版。接活人 `jobs_pros.cities` 存 key，活儿存 `jobs_posts.city_key`（`city` 留发布时的名字给标题用），改名不影响历史。派活按 key 匹配。种子：洛杉矶 15 个、橙县（尔湾、橙县其他）、旧金山湾区 6 个、加州其他 4 个。
+**城市**：表 `jobs_cities`（key、名字、地区、地区顺序、地区内顺序、启用），后台「找工人接活儿城市」页 `/zh/staff/jobs/cities` 增删改排序，不用发版。接活人 `jobs_pros.cities` 存 key，活儿存 `jobs_posts.city_key`（`city` 留发布时的名字给标题用），改名不影响历史。派活按 key 匹配。种子：洛杉矶 15 个、橙县（尔湾、橙县其他）、旧金山湾区 6 个、加州其他 4 个。
 
 ### 网站页面会用到的路径（通知里的链接）
 `/zh/jobs`（看全部活儿）、`/zh/jobs/post`（发布）、`/zh/jobs/posts/<id>`、`/zh/jobs/mine`（我的活儿 / 我的接活）、`/zh/jobs/register`（登记接活）、`/zh/jobs/renew/<id>?t=<token>`（一键续期：页面调 `PATCH /jobs/posts/:id {renew:true, token}`）、`/zh/jobs/followup/<token>`。

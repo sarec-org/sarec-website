@@ -1,5 +1,5 @@
 /**
- * 找工人 · 接活 定时任务鉴权：Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>；
+ * 找工人 · 接活儿 定时任务鉴权：Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>；
  * 测试站（VERCEL_ENV=preview）另认 JOBS_CRON_TEST_SECRET（D14），正式环境即使误配了也不认。
  */
 import { createHash, timingSafeEqual } from 'node:crypto';

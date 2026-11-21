@@ -1,5 +1,5 @@
 /**
- * 找工人 · 接活 定时任务（Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>；测试站（VERCEL_ENV=preview）另认 JOBS_CRON_TEST_SECRET，正式环境不认）
+ * 找工人 · 接活儿 定时任务（Authorization: Bearer <CRON_SECRET 或 REMINDER_CRON_SECRET>；测试站（VERCEL_ENV=preview）另认 JOBS_CRON_TEST_SECRET，正式环境不认）
  * ?task=dispatch —— 漏发的第一批 + 24 小时没人联系发第二批并提醒工作人员（排队的 CSLB 比对 D20 起交给 GitHub runner）（.github/workflows/jobs-dispatch.yml：每 15 分钟；daily 每天、weekly 每周二）
  * ?task=daily    —— 14 天到期下架、第 12 天提醒续期、第 7 天回访、90 天复核、执照到期下架
  * ?task=weekly   —— 指令 7 · D20 起不再在这里下载 CSLB 总表：每周比对改由 .github/workflows/jobs-cslb-weekly.yml 在 GitHub runner 上下载，

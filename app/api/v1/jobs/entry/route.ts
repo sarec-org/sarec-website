@@ -1,5 +1,5 @@
 /**
- * GET /api/v1/jobs/entry —— D12 网站顶部菜单、网站首页的「找工人·接活」入口要不要出：{ show, find, work }（两个开关都关 show = false）。
+ * GET /api/v1/jobs/entry —— D12 网站顶部菜单、网站首页的「找工人·接活儿」入口要不要出：{ show, find, work }（两个开关都关 show = false）。
  * 只看开关，不分工作人员 / 普通人。公开、可短时缓存。
  */
 import { NextResponse } from 'next/server';

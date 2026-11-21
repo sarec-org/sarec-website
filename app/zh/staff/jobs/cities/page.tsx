@@ -1,6 +1,6 @@
 'use client';
 /**
- * 后台「城市」：找工人·接活用的城市表（按地区分组）。增删改、排序、停用；改了立即生效，不用发版。
+ * 后台「城市」：找工人·接活儿用的城市表（按地区分组）。增删改、排序、停用；改了立即生效，不用发版。
  * 发活儿、登记接活、所有城市筛选都用这一张表。有人用过的城市“删除”= 停用（不再出现在选项里，原来的记录照样显示）。
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -16,7 +16,7 @@ const small = `${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`;
 
 export default function StaffJobsCities() {
   return (
-    <StaffGate title="找工人接活 · 城市" role="ops" wide>
+    <StaffGate title="找工人接活儿 · 城市" role="ops" wide>
       {() => <Cities />}
     </StaffGate>
   );

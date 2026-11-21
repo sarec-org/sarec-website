@@ -1,4 +1,4 @@
-/* D12：网站首页「找工人·接活」入口（只用现有藏蓝 / 金 / 象牙色变量，不新增颜色） */
+/* D12：网站首页「找工人·接活儿」入口（只用现有藏蓝 / 金 / 象牙色变量，不新增颜色） */
 .wrap { max-width: 1440px; margin: 56px auto 0; padding: 0 64px; box-sizing: border-box; }
 .band {
   display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center;

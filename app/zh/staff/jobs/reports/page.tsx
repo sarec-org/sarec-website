@@ -1,5 +1,5 @@
 'use client';
-/** 后台「找工人接活投诉」：每张接活人卡片、每条活儿上的"反馈 / 投诉"直达这里（同时进「待跟进」）；处理完写一句、标已处理 */
+/** 后台「找工人接活儿投诉」：每张接活人卡片、每条活儿上的"反馈 / 投诉"直达这里（同时进「待跟进」）；处理完写一句、标已处理 */
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
@@ -9,7 +9,7 @@ type R = { id: string; targetType: 'pro' | 'post'; targetId: string; targetLabel
 
 export default function StaffJobsReports() {
   return (
-    <StaffGate title="找工人接活投诉" role="ops" wide>
+    <StaffGate title="找工人接活儿投诉" role="ops" wide>
       {() => <Reports />}
     </StaffGate>
   );

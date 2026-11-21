@@ -1,4 +1,4 @@
-/** 找工人 · 接活：谁在看（登录、工作人员、小程序）、开关把门、小程序不碰活儿（D1） */
+/** 找工人 · 接活儿：谁在看（登录、工作人员、小程序）、开关把门、小程序不碰活儿（D1） */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
 import { staffFor } from '@/lib/crm/auth';

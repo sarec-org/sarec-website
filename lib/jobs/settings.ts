@@ -1,5 +1,5 @@
 /**
- * 找工人 · 接活：开关和收费设置（存 crm_settings，改动记谁、什么时候，并写 crm_audit_log：谁、何时、改前改后）。
+ * 找工人 · 接活儿：开关和收费设置（存 crm_settings，改动记谁、什么时候，并写 crm_audit_log：谁、何时、改前改后）。
  * 指令 9 · D28：原来的「接活是否要求缴费会员」(jobs_require_paid_member) 扩成「接活儿收费方式」三选一 + 免费联系次数 + 非会员免费发活儿条数。
  *   - feeMode：all_free 全部免费 / free_quota 免费额度（默认）/ members_only 必须是会员
  *   - freeContacts：免费额度时，非会员免费看发布人电话几次（默认 2）

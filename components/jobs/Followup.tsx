@@ -43,15 +43,15 @@ export function Followup({ token }: { token: string }) {
 
   return (
     <div className={`${s.page} ${j.work}`}>
-      <p className={s.eyebrow}>找工人 · 接活</p>
+      <p className={s.eyebrow}>找工人 · 接活儿</p>
       <h1 className={s.h1}>问你三个小问题</h1>
       {err && <div className={s.error}>{err}</div>}
-      {err && <Link href="/zh/jobs" className={`${s.btn} ${s.btnBlock}`}>回找工人 · 接活</Link>}
+      {err && <Link href="/zh/jobs" className={`${s.btn} ${s.btnBlock}`}>回找工人 · 接活儿</Link>}
       {!f && !err && <p className={s.muted}>正在加载…</p>}
       {f && (done || f.answered) && (
         <>
           <div className={s.success}>收到了，谢谢！你的回答只给商会工作人员看，不会公开。</div>
-          <Link href="/zh/jobs" className={`${s.btn} ${s.btnBlock}`}>回找工人 · 接活</Link>
+          <Link href="/zh/jobs" className={`${s.btn} ${s.btnBlock}`}>回找工人 · 接活儿</Link>
         </>
       )}
       {f && !done && !f.answered && (

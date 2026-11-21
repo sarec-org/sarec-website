@@ -1,6 +1,6 @@
 'use client';
 /**
- * 后台「找工人接活开关」：两个栏目开关 + 指令 9 · D28「接活儿收费方式」（全部免费 / 免费额度 / 必须是会员）、免费联系次数、非会员免费发活儿条数。
+ * 后台「找工人接活儿开关」：两个栏目开关 + 指令 9 · D28「接活儿收费方式」（全部免费 / 免费额度 / 必须是会员）、免费联系次数、非会员免费发活儿条数。
  * 改动前确认；立即生效；每项改动记谁、何时、改前改后（页面下方列出最近的操作记录）。手机工作台调同一个接口。
  */
 import { useCallback, useEffect, useState } from 'react';
@@ -36,7 +36,7 @@ function show(key: string, v: unknown): string {
 
 export default function StaffJobsSwitches() {
   return (
-    <StaffGate title="找工人接活开关" role="ops">
+    <StaffGate title="找工人接活儿开关" role="ops">
       {(me) => <Switches admin={me.roles.includes('admin')} />}
     </StaffGate>
   );

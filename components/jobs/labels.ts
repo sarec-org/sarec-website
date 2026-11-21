@@ -1,4 +1,4 @@
-/** 找工人 · 接活：网站页面里的点选选项（身份、工种、城市、时间等从 /api/v1/jobs/meta 的 options 来；这里只放 meta 没有的） */
+/** 找工人 · 接活儿：网站页面里的点选选项（身份、工种、城市、时间等从 /api/v1/jobs/meta 的 options 来；这里只放 meta 没有的） */
 export const BUDGETS = ['$500 以下', '$500–2,000', '$2,000–10,000', '$10,000–50,000', '$50,000 以上', '还不确定'];
 export const HEADCOUNTS = [{ key: '1', label: '1 人' }, { key: '2', label: '2 人' }, { key: '3', label: '3 人' }, { key: '5', label: '4–6 人' }, { key: '8', label: '7 人以上' }];
 export const DURATIONS = ['1 天', '2–3 天', '1 周以内', '1 个月以内', '1 个月以上'];

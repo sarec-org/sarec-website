@@ -1,5 +1,5 @@
 /**
- * 找工人 · 接活 —— 演示数据（D15，给 1.4.3 体验版连测试站用）。**只能对测试库跑。**
+ * 找工人 · 接活儿 —— 演示数据（D15，给 1.4.3 体验版连测试站用）。**只能对测试库跑。**
  *
  * 放进测试库：
  *   - 首页 7 个入口每个至少 1 个核验通过的演示接活人（名字以「演示-」开头，电话是明显假的 555 号码，介绍里写明“演示数据”）；
@@ -79,7 +79,7 @@ async function main() {
     // 演示用会籍：让“要求缴费会员”开着时也上列表（备注写明，清理脚本一起删）
     await pool.query(
       `INSERT INTO applications (application_type, application_status, payment_status, email, contact_id, selected_tier_slug, membership_start_date, membership_end_date, payment_plan, notes)
-       VALUES ('membership', 'approved', 'paid', $1, $2, 'member', current_date, current_date + 365, 'offline', '演示数据（找工人·接活 体验版），不是真实会员，清理脚本会删')`,
+       VALUES ('membership', 'approved', 'paid', $1, $2, 'member', current_date, current_date + 365, 'offline', '演示数据（找工人·接活儿 体验版），不是真实会员，清理脚本会删')`,
       [`demo-jobs-${n}${DEMO_EMAIL_DOMAIN}`, c.id]
     );
     const { rows } = await pool.query<{ id: string }>(
@@ -121,7 +121,7 @@ async function main() {
   out.push({ kind: '发布人', id: crewBoss.id, name: `${DEMO_PREFIX}施工队`, extra: `电话 ${crewBoss.phone}` });
 
   const md = [
-    `# 找工人·接活 演示数据（测试库，${new Date().toISOString().slice(0, 16)}Z 生成）`,
+    `# 找工人·接活儿 演示数据（测试库，${new Date().toISOString().slice(0, 16)}Z 生成）`,
     '',
     '由 scripts/jobs-demo-seed.ts 生成；清理：scripts/jobs-demo-clean.ts（按「演示-」前缀和下面的 ID 删）。',
     '',

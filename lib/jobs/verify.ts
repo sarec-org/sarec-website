@@ -1,5 +1,5 @@
 /**
- * 找工人 · 接活：核验（D5）
+ * 找工人 · 接活儿：核验（D5）
  * ------------------------------------------------------------------
  * 加州承包商牌照（CSLB）自动查：用 CSLB 官方免费下载的「License Master」总表（Data Portal，CSV，每天更新），
  *   https://www.cslb.ca.gov/OnlineServices/DataPortal/DownLoadFile.ashx?fName=MasterLicenseData&type=C

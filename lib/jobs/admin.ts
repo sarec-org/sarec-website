@@ -1,4 +1,4 @@
-/** 找工人 · 接活：meta（首页、方块页要的一切）和工作人员后台（活儿、统计、投诉、邀请） */
+/** 找工人 · 接活儿：meta（首页、方块页要的一切）和工作人员后台（活儿、统计、投诉、邀请） */
 import { getPool } from '@/lib/db/client';
 import { CrmError } from '@/lib/crm/events';
 import { staffCan, type Staff } from '@/lib/crm/auth';
@@ -226,7 +226,7 @@ export async function sendInvites(s: Staff, b: Record<string, unknown>) {
     }
   }
   const out = { dryRun, sent: 0, blocked: 0, failed: 0, skipped: 0, wouldSend: 0 };
-  const text = `SAREC：商会新开了「找工人·接活」。登记一次，有对口的活儿会第一时间通知你：${webBase()}${WEB_JOBS_PATH}/register`;
+  const text = `SAREC：商会新开了「找工人·接活儿」。登记一次，有对口的活儿会第一时间通知你：${webBase()}${WEB_JOBS_PATH}/register`;
   for (const id of ids) {
     const { rows } = await pool.query(
       `SELECT 1 FROM jobs_notifications WHERE kind = 'invite' AND contact_id = $1 AND status <> 'dry_run' AND created_at > now() - interval '30 days'`,

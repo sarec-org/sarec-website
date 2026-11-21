@@ -1,5 +1,5 @@
 'use client';
-/** 后台「找工人接活统计」：每个工种的点击数、活儿数、联系次数、成了的数、平均多久有人联系；D28 免费额度人数 */
+/** 后台「找工人接活儿统计」：每个工种的点击数、活儿数、联系次数、成了的数、平均多久有人联系；D28 免费额度人数 */
 import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
@@ -11,7 +11,7 @@ type Res = { days: number; trades: Row[]; pros: Record<string, number>; followup
 
 export default function StaffJobsStats() {
   return (
-    <StaffGate title="找工人接活统计" role="ops" wide>
+    <StaffGate title="找工人接活儿统计" role="ops" wide>
       {() => <Stats />}
     </StaffGate>
   );

@@ -1,4 +1,4 @@
-/** 找工人 · 接活：图片、语音上传（存 Vercel Blob，返回网址） */
+/** 找工人 · 接活儿：图片、语音上传（存 Vercel Blob，返回网址） */
 import { randomUUID } from 'node:crypto';
 import { put } from '@vercel/blob';
 import { CrmError } from '@/lib/crm/events';

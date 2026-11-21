@@ -42,7 +42,7 @@ export function PostDone() {
               ))}
             </div>
           )}
-          <p style={{ marginTop: '1rem' }}><Link href="/zh/jobs" style={{ color: 'var(--ivory)' }}>‹ 回找工人 · 接活</Link></p>
+          <p style={{ marginTop: '1rem' }}><Link href="/zh/jobs" style={{ color: 'var(--ivory)' }}>‹ 回找工人 · 接活儿</Link></p>
         </>
       )}
     </JobsShell>

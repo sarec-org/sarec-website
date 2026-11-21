@@ -1,4 +1,4 @@
-/** 找工人 · 接活：网站页面用到的接口形状（照 lib/jobs 的返回） */
+/** 找工人 · 接活儿：网站页面用到的接口形状（照 lib/jobs 的返回） */
 export type Side = 'find' | 'work' | 'none';
 
 export type Group = { key: string; name: string; order: number; tradeKeys?: string[]; hasPros?: boolean };

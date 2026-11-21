@@ -384,7 +384,7 @@ export async function report(contactId: string | null, b: Record<string, unknown
     [type, targetId, contactId, reason]
   );
   const { recordException } = await import('@/lib/crm/followups');
-  await recordException('jobs_report', `jobs_report:${rows[0].id}`, targetId, `找工人·接活 反馈：${type === 'pro' ? '接活人' : '活儿'}「${t[0].label}」——${reason.slice(0, 200)}`, {
+  await recordException('jobs_report', `jobs_report:${rows[0].id}`, targetId, `找工人·接活儿 反馈：${type === 'pro' ? '接活人' : '活儿'}「${t[0].label}」——${reason.slice(0, 200)}`, {
     reportId: rows[0].id, targetType: type, targetId
   });
   return { id: rows[0].id, message: '已收到，工作人员会尽快处理' };

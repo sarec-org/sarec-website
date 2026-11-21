@@ -10,7 +10,7 @@ import { Msg, StaffGate, can, type StaffInfo } from '@/components/crm/staff/Staf
 import { api, fmtDate } from '@/components/crm/client';
 
 type C = { id: string; name: string; roleCategory: string | null; roleSub: string | null; registered: boolean; invitedAt: string | null };
-const PREVIEW = 'SAREC：商会新开了「找工人·接活」。登记一次，有对口的活儿会第一时间通知你：sinoamericanrec.org/zh/jobs/register';
+const PREVIEW = 'SAREC：商会新开了「找工人·接活儿」。登记一次，有对口的活儿会第一时间通知你：sinoamericanrec.org/zh/jobs/register';
 
 export default function StaffJobsInvite() {
   return (

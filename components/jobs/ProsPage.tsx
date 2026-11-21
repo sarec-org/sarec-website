@@ -23,7 +23,7 @@ export function ProsPage({ trade: trade0, group: group0 }: { trade?: string | nu
     <JobsShell
       side="find"
       need="find"
-      back={{ href: '/zh/jobs', label: '‹ 找工人 · 接活' }}
+      back={{ href: '/zh/jobs', label: '‹ 找工人 · 接活儿' }}
       eyebrow="找工人／施工队"
       footer={() => (
         <BottomBar>

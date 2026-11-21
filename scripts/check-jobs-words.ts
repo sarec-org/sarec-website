@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 找工人 · 接活：禁用词检查（D6）。界面文字和接口返回给人看的文字都算；代码里的变量名、注释不算。
+ * 找工人 · 接活儿：禁用词检查（D6）。界面文字和接口返回给人看的文字都算；代码里的变量名、注释不算。
  *
  * 用法：
  *   node scripts/check-jobs-words.ts                # 扫默认范围（服务器 + 网站页面里所有找工人 / 接活相关文件）
@@ -86,10 +86,10 @@ function main() {
     }
   }
   if (bad) {
-    console.error(`\n找工人·接活 禁用词：${bad} 处（${files.length} 个文件）。界面和接口给人看的文字里不许出现：${JOBS_FORBIDDEN.join('、')}`);
+    console.error(`\n找工人·接活儿 禁用词：${bad} 处（${files.length} 个文件）。界面和接口给人看的文字里不许出现：${JOBS_FORBIDDEN.join('、')}`);
     process.exitCode = 1;
   } else {
-    console.log(`✓ 找工人·接活 禁用词检查通过（${files.length} 个文件）`);
+    console.log(`✓ 找工人·接活儿 禁用词检查通过（${files.length} 个文件）`);
   }
 }
 main();

@@ -1,6 +1,6 @@
 'use client';
 /**
- * D12：网站首页 /zh 的「找工人·接活」入口（11/20 东哥同意）。只新增这一块，不动首页已有内容。
+ * D12：网站首页 /zh 的「找工人·接活儿」入口（11/20 东哥同意）。只新增这一块，不动首页已有内容。
  * 跟开关走：两个都关不出；只开一个时只出那一边的按钮。
  */
 import Link from 'next/link';
@@ -25,7 +25,7 @@ export function JobsSiteEntry() {
     <section className={st.wrap} aria-labelledby="home-jobs">
       <div className={st.band}>
         <div>
-          <h2 id="home-jobs" className={st.title}>找工人 · 接活</h2>
+          <h2 id="home-jobs" className={st.title}>找工人 · 接活儿</h2>
           <p className={st.desc}>
             {sw.find && '房子要修、要装、要打理，发布活儿等对口的人联系。'}
             {sw.work && '做这一行的，登记一次，有活儿通知你。'}

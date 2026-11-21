@@ -1,8 +1,8 @@
 'use client';
-/** D12：网站顶部菜单 / 首页的「找工人·接活」入口跟着开关走（两个都关不出）。整页只请求一次。 */
+/** D12：网站顶部菜单 / 首页的「找工人·接活儿」入口跟着开关走（两个都关不出）。整页只请求一次。 */
 import { useEffect, useState } from 'react';
 
-export const JOBS_ENTRY = { label: '找工人·接活', href: '/zh/jobs' } as const;
+export const JOBS_ENTRY = { label: '找工人·接活儿', href: '/zh/jobs' } as const;
 
 let cached: Promise<boolean> | null = null;
 function load(): Promise<boolean> {

@@ -1,6 +1,6 @@
 'use client';
 /**
- * 找工人 · 接活（网站）共用：读 /api/v1/jobs/meta、开关拦截、统一声明（D8）、反馈/投诉、登录提示、底部固定按钮。
+ * 找工人 · 接活儿（网站）共用：读 /api/v1/jobs/meta、开关拦截、统一声明（D8）、反馈/投诉、登录提示、底部固定按钮。
  * 颜色：找工人一律藏蓝（j.find），接活一律金色（j.work）。
  */
 import Link from 'next/link';
@@ -47,7 +47,7 @@ export function tradeName(meta: Meta | null, key: string) {
 export function JobsShell({
   side,
   need,
-  back = { href: '/zh/jobs', label: '‹ 找工人 · 接活' },
+  back = { href: '/zh/jobs', label: '‹ 找工人 · 接活儿' },
   eyebrow,
   title,
   children,
@@ -224,7 +224,7 @@ export function ago(iso: string) {
   return new Date(iso).toLocaleDateString('zh-CN', { timeZone: 'America/Los_Angeles' });
 }
 
-/** 点击统计（后台「找工人接活统计」的点击数）：工种 / 首页入口；失败不影响页面 */
+/** 点击统计（后台「找工人接活儿统计」的点击数）：工种 / 首页入口；失败不影响页面 */
 export function trackJobs(name: 'jobs_trade' | 'jobs_home_entry', target: string) {
   try {
     void fetch('/api/v1/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', keepalive: true, body: JSON.stringify({ client: 'web', items: [{ name, target }] }) });

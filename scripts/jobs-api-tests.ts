@@ -1,5 +1,5 @@
 /**
- * 找工人 · 接活 —— 接口测试（真实 HTTP + 测试库）。只建「验收工-」/「DEVJOBS-」数据，结束按 ID 清理干净。
+ * 找工人 · 接活儿 —— 接口测试（真实 HTTP + 测试库）。只建「验收工-」/「DEVJOBS-」数据，结束按 ID 清理干净。
  * 用法：
  *   1) 用测试库起本地服务：DATABASE_URL=<测试库> CRON_SECRET=<随便一串> pnpm dev -p 3417
  *   2) BASE=http://localhost:3417 CRON_SECRET=<同上> DATABASE_URL=<测试库> pnpm dlx tsx scripts/jobs-api-tests.ts --i-know-this-is-not-production

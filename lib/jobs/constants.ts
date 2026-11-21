@@ -1,5 +1,5 @@
 /**
- * 找工人 · 接活：固定文字和选项。界面上给人看的字都在这里，scripts/check-jobs-words.ts 会扫。
+ * 找工人 · 接活儿：固定文字和选项。界面上给人看的字都在这里，scripts/check-jobs-words.ts 会扫。
  */
 export type ProRole = 'company' | 'licensed' | 'pro_service' | 'worker';
 export type PosterRole = 'owner' | 'landlord' | 'property' | 'developer' | 'crew';
