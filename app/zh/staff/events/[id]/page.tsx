@@ -167,12 +167,6 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
             <Msg m={msg} />
             <EventHub eventId={params.id} current={tabData ? 'data' : 'regs'} />
             {tabData && <EventData eventId={params.id} />}
-            {/* 1.4.0（改动单 C6）：本场相册、筹备清单、活动回顾放在最上面 */}
-            <div className={styles.btnRow} style={{ marginBottom: '1rem' }}>
-              {can(s, 'ops') && <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/album?event=${params.id}`}>本场相册</Link>}
-              <Link className={`${styles.btn} ${styles.btnGhost}`} href={prep ? `/zh/staff/prep/${params.id}` : '#prep'}>筹备清单</Link>
-              {can(s, 'ops') && <Link className={`${styles.btn} ${styles.btnGhost}`} href={`/zh/staff/recaps?event=${params.id}`}>活动回顾</Link>}
-            </div>
             <div className={styles.card}>
               <div className={styles.row}><span className={styles.rowLabel}>时间</span><span className={styles.rowValue}>{fmtDateTime(String(data.event.starts_at))}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>费用</span><span className={styles.rowValue}>{data.event.fee_cents ? money(data.event.fee_cents) : '免费'}</span></div>
