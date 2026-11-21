@@ -86,14 +86,20 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
 
 /**
  * 后台综合优化 五：真实客户咨询立即通知工作人员（短信只写“有一条新客户咨询”）。
- * B 的自动分类（客户咨询 / 合作或推销 / 垃圾）写在 followups.detail.class 时：只有“客户咨询”立即通知，其余进每日汇总。
+ * 分类看 followups.category（B 的自动分类：customer 客户咨询 / pitch 合作或推销 / spam 垃圾）：只有客户咨询立即通知，其余进每日汇总。
+ * 还没分类的（category 为空）当客户咨询通知，宁可多通知一条也不漏。内部 / 审核演示 / 测试账号不通知。
  */
-export async function notifyNewInquiry(followupId: string, contactId: string | null): Promise<void> {
-  const { notifyStaffSafe } = await import('./staffNotify');
+export async function shouldNotifyInquiry(followupId: string, contactId: string | null): Promise<boolean> {
   const { isNotReal } = await import('./accountKind');
-  if (await isNotReal(getPool(), contactId)) return;
-  const { rows } = await getPool().query<{ cls: string | null }>(`SELECT detail->>'class' AS cls FROM followups WHERE id = $1`, [followupId]).catch(() => ({ rows: [] as { cls: string | null }[] }));
-  const cls = rows[0]?.cls;
-  if (cls && !['customer', '客户咨询'].includes(cls)) return;
-  await notifyStaffSafe({ category: 'inquiry', key: `inquiry:${followupId}`, title: '有一条新客户咨询', href: `/zh/staff/followups?id=${followupId}` });
+  if (await isNotReal(getPool(), contactId)) return false;
+  const { rows } = await getPool().query<{ category: string | null }>(`SELECT category FROM followups WHERE id = $1`, [followupId]);
+  if (!rows[0]) return false;
+  return (rows[0].category ?? 'customer') === 'customer';
+}
+
+export async function notifyNewInquiry(followupId: string, contactId: string | null): Promise<void> {
+  if (!(await shouldNotifyInquiry(followupId, contactId).catch(() => false))) return;
+  const { notifyStaffSafe } = await import('./staffNotify');
+  // 链接直接打开这一条的处理页（和通知邮件一样），不是列表
+  await notifyStaffSafe({ category: 'inquiry', key: `inquiry:${followupId}`, title: '有一条新客户咨询', href: `/zh/staff/followups/${followupId}` });
 }

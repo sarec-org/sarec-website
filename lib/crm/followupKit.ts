@@ -428,6 +428,23 @@ export async function checkActionToken(id: string, token: string | null | undefi
   return !!rows[0];
 }
 
+/**
+ * 邮件按钮自动执行：口令一次有效（J13-3）。对的口令第一次用 → 'ok' 并立刻标成用过（库里存 'used:' + 哈希，不加列）；
+ * 再用同一个口令 → 'used'（页面只显示这一条现在的样子，不再执行）；不对 / 过期 → 'bad'。
+ */
+export async function consumeActionToken(id: string, token: string | null | undefined): Promise<'ok' | 'used' | 'bad'> {
+  if (!token || token.length < 16 || !/^[0-9a-f-]{36}$/i.test(id)) return 'bad';
+  const h = sha(token);
+  const pool = getPool();
+  const { rowCount } = await pool.query(
+    `UPDATE followups SET action_token_hash = 'used:' || action_token_hash WHERE id = $1 AND action_token_hash = $2 AND action_token_expires > now()`,
+    [id, h]
+  );
+  if (rowCount) return 'ok';
+  const { rows } = await pool.query(`SELECT 1 FROM followups WHERE id = $1 AND action_token_hash = $2`, [id, `used:${h}`]);
+  return rows[0] ? 'used' : 'bad';
+}
+
 export async function issueBatch(ids: string[]): Promise<{ id: string; token: string }> {
   const t = randomBytes(18).toString('base64url');
   const { rows } = await getPool().query<{ id: string }>(

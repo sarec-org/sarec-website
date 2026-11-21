@@ -128,7 +128,14 @@ function Followups() {
   // 改动单 D9：首页“N 条失败 / 异常”带 ?tab=exceptions，直接打开“待处理”页签
   const [tab, setTab] = useState<'tasks' | 'exceptions'>('tasks');
   useEffect(() => {
-    if (new URLSearchParams(location.search).get('tab') === 'exceptions') setTab('exceptions');
+    const sp = new URLSearchParams(location.search);
+    // 早先发出的通知链接是 /zh/staff/followups?id=<编号>：直接转到这一条的处理页
+    const id = sp.get('id');
+    if (id && /^[0-9a-f-]{36}$/i.test(id)) {
+      location.replace(`/zh/staff/followups/${id}`);
+      return;
+    }
+    if (sp.get('tab') === 'exceptions') setTab('exceptions');
   }, []);
   const [status, setStatus] = useState('todo');
   const [source, setSource] = useState('');

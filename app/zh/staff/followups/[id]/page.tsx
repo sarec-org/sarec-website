@@ -3,6 +3,7 @@
  * 一条待跟进的处理页（后台综合优化 B，四.2–四.7）：通知邮件和「今天」卡片都直达这里，不是列表。
  * 手机一屏看完：这是什么 + 建议怎么办 → 原话 → 联系按钮（草稿按谁联系）→ 联系回填 → 不跟进 / 我来联系 / 转给助理 → 负责人、下一步日期。
  * 邮件按钮带 ?do=drop|claim|assist&t=口令：已登录的工作人员打开就自动执行（没登录先登录，登录完自动执行），只执行一次。
+ * 口令在服务器上一次有效：执行过一次后再打开同一封邮件的按钮，只显示这一条现在的状态，不再执行。
  */
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -42,6 +43,7 @@ function One({ id }: { id: string }) {
   const act = useCallback(
     async (action: string, extra: Record<string, unknown> = {}) => {
       const r = await api<{ message: string }>(`/api/v1/staff/followups/${id}/act`, { body: { action, ...extra } });
+      // 邮件按钮口令一次有效：用过的再打开只看这一条现在的样子（reused），不再执行
       setMsg(r.ok ? { ok: true, text: r.data.message } : { ok: false, text: r.message });
       load();
     },

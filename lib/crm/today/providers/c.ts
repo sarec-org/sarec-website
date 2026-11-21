@@ -150,28 +150,92 @@ async function complaints(): Promise<TodayItem[]> {
 }
 
 // 7) 失败和异常（待处理）
-const FAILURE_TEXT: Record<string, string> = {
-  followup_email: '通知邮件没发出去', photo_notice: '相册通知没发出去', followup_scan: '每日跟进扫描出错', agent_lead_email: 'AI 助手线索邮件没发出去',
-  pay_link: '付款链接没送到本人', contact_merge: '有两份档案需要人工核对后合并', wecom_unmatched: '企业微信新好友没关联上档案', join_scan: '入会申请扫描出错',
-  prep_reminder: '筹备提醒没发出去', pay_reminder: '付款提醒没发出去', newsletter_queue: '邮件通讯续发出错', post_event: '活动回顾整理出错', feature_report: '功能月报出错', agent_digest: 'AI 助手日报出错', join_link: '缴费链接没发出去'
+/**
+ * 失败和异常（J13-4）：每类一个人话标题 + 一句建议。原始报错（常是邮件 / 短信服务的英文）不进建议，只放在收起来的“看详情”里。
+ */
+const FAILURE: Record<string, { title: string; suggest: string }> = {
+  followup_email: { title: '新咨询的通知邮件没发出去', suggest: '咨询本身已在「待跟进」里，不会丢；点“重试”再发一次邮件' },
+  photo_notice: { title: '相册通知没发出去', suggest: '照片已经传好了，只是没通知到场的人；点“重试”再发' },
+  photo_upload: { title: '有照片没传上去', suggest: '到「相册」里把这张照片重新传一次' },
+  followup_scan: { title: '每天的跟进扫描出错了', suggest: '今天可能有该提醒的跟进没生成；点“重试”再扫一次' },
+  agent_lead_email: { title: 'AI 助手线索的通知邮件没发出去', suggest: '线索已在「待跟进」里；点“重试”再发邮件' },
+  pay_link: { title: '付款链接没送到本人', suggest: '打开这个人的档案，用电话或微信把付款链接发给他' },
+  contact_merge: { title: '有两份档案要人工核对后合并', suggest: '到「合并重复档案」看一眼是不是同一个人' },
+  wecom_unmatched: { title: '企业微信新好友没对上档案', suggest: '在企业微信里看看是谁，到客户档案里补上' },
+  join_scan: { title: '入会申请扫描出错了', suggest: '可能有申请没自动提醒；点“重试”再扫一次' },
+  join_link: { title: '入会缴费链接没发出去', suggest: '到「入会申请」里点“短信再发缴费链接”，或复制链接用微信发' },
+  prep_reminder: { title: '筹备清单提醒没发出去', suggest: '到「活动筹备清单」看看今天到期的项；点“重试”再发提醒' },
+  pay_reminder: { title: '付款提醒没发出去', suggest: '点“重试”再发；急的话直接电话或微信提醒本人' },
+  newsletter_queue: { title: '邮件通讯接着发的时候出错了', suggest: '到「邮件通讯」看还剩多少没发，点“接着发”' },
+  newsletter_send: { title: '邮件通讯有几封没发出去', suggest: '系统会自动重试；也可以到「邮件通讯」点“接着发”' },
+  post_event: { title: '活动回顾整理出错了', suggest: '点“重试”再整理一次；不行就到「活动回顾」手动写' },
+  feature_report: { title: '功能月报没生成', suggest: '点“重试”再生成一次，不急' },
+  agent_digest: { title: 'AI 助手日报没发出去', suggest: '点“重试”再发一次，不急' },
+  junk_digest: { title: '推销和垃圾咨询的每日汇总没发出去', suggest: '到「待跟进」筛“推销 / 垃圾”直接处理；点“重试”再发汇总' },
+  staff_notify: { title: '给工作人员的手机通知出错了', suggest: '有通知可能没发到手机上；先在「今天」里把事办了，再点“重试”' },
+  flow_cron: { title: '每天自动跑的任务出错了', suggest: '点“重试”再跑一次；还不行交给开发看' },
+  confirm_unreachable: { title: '活动出席确认消息全部没发出去', suggest: '请电话或微信直接问本人来不来（系统不记爽约、不转候补）' },
+  jobs_no_pros: { title: '找工人：有条活儿发了，但没有对口的接活人可以通知', suggest: '看看这个工种和城市有没有可以邀请来登记的师傅；也可以电话告诉发布人先等等' },
+  jobs_no_contact: { title: '找工人：有条活儿发了 24 小时还没人联系', suggest: '系统已经通知了第二批接活人；可以打电话问问发布人还需不需要，或帮忙推荐师傅' },
+  jobs_cslb: { title: '找工人：这周的加州承包商牌照比对没做成', suggest: '到「接活人核验」里一键打开官方详情页，人工核对新登记和要复核的牌照' },
+  jobs_license: { title: '找工人：有接活人的执照出了问题，已自动下架', suggest: '已经通知本人更新执照；到「接活人核验」看一眼原因' },
+  jobs_review: { title: '找工人：有接活人到了 90 天复核', suggest: '到「接活人核验」打开官方查询页重新核对执照或营业登记' },
+  jobs_verify: { title: '找工人：有接活人等核验', suggest: '到「接活人核验」照清单核对，通过或退回' },
+  jobs_report: { title: '找工人：有人反馈或投诉', suggest: '到「找工人接活儿投诉」看内容，处理后标已处理' }
 };
+const CONFIRM_FAILED: Record<string, string> = { ask: '问出席的消息', remind: '出席提醒', released: '转候补的通知', offer: '候补补位的通知' };
+
+/** 原始报错 → 一句人话。中文报错本来就是给人看的，照用；英文的按常见原因翻成人话，认不出就说“原文在详情里” */
+export function humanizeError(raw: string | null | undefined): string {
+  const e = (raw ?? '').trim();
+  if (!e) return '原因没记下来';
+  if (/[\u4e00-\u9fff]/.test(e)) {
+    // 中文报错：括号里常是英文原因，去掉；「」里是名字，检查时不算；GitHub、CSLB、Zelle 这类名字照留
+    const zh = e.replace(/（[^）]*）|\([^)]*\)/g, '').trim();
+    const probe = zh.replace(/「[^」]*」/g, '').replace(/GitHub|CSLB|Zelle|Excel|Twilio/g, '');
+    if (!/[A-Za-z]{6,}/.test(probe)) return zh.length > 80 ? zh.slice(0, 80) + '…' : zh;
+  }
+  if (/domain.*(not verified|verify)|verify a domain/i.test(e)) return '发件域名还没在邮件服务里验证，邮件发不出去';
+  if (/rate.?limit|too many requests|\b429\b/i.test(e)) return '发得太快，被对方服务限流了，过一会儿重试就行';
+  if (/timeout|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|ENOTFOUND|fetch failed|network|socket hang up/i.test(e)) return '没连上对方的服务（网络问题），过一会儿重试就行';
+  if (/unauthori[sz]ed|forbidden|invalid api key|api key|\b401\b|\b403\b|authenticat/i.test(e)) return '对方服务的密钥或权限不对，需要开发看一下';
+  if (/(invalid|not a valid).*(phone|number|mobile)|unverified.*number|21211|21608|21614/i.test(e)) return '这个手机号收不了短信（号码不对或测试号码），请换电话或微信联系';
+  if (/(invalid|not a valid).*e-?mail|recipient|bounced|mailbox/i.test(e)) return '这个邮箱地址收不到邮件，请换别的方式联系';
+  if (/download|csv|master/i.test(e)) return '官方名单没下载下来';
+  return '系统报了一个错（原文在“看详情”里）';
+}
+
+function failureText(kind: string): { title: string; suggest: string } {
+  if (FAILURE[kind]) return FAILURE[kind];
+  const m = /^confirm_(\w+)_failed$/.exec(kind);
+  if (m) return { title: `活动${CONFIRM_FAILED[m[1]] ?? '通知'}没发出去`, suggest: '请电话或微信直接联系本人' };
+  if (kind.startsWith('jobs_cron_')) return { title: '找工人：每天自动跑的任务出错了', suggest: '点“重试”再跑一次；还不行交给开发看' };
+  return { title: '有一件自动办的事没办成', suggest: '点“重试”再试一次；还不行交给开发看' };
+}
+
 async function failures(): Promise<TodayItem[]> {
   const { rows } = await getPool().query<{ id: string; kind: string; error: string | null; updated_at: Date; attempts: number }>(
     `SELECT id, kind, error, updated_at, attempts FROM ops_exceptions WHERE status = 'open' ORDER BY updated_at DESC LIMIT 10`
   );
-  return rows.map((x) => ({
-    kind: 'exception',
-    id: `exception:${x.id}`,
-    priority: PRIORITY.other + 10,
-    title: FAILURE_TEXT[x.kind] ?? '有一件事没办成',
-    suggestion: `${(x.error ?? '').slice(0, 80) || '原因没记下'}。点“重试”再试一次；不用管的点“不处理”。`,
-    href: '/zh/staff/followups?tab=exceptions',
-    at: x.updated_at.toISOString(),
-    actions: [
-      { type: 'post', label: '重试', endpoint: '/api/v1/staff/exceptions', body: { id: x.id, action: 'retry' }, primary: true },
-      { type: 'post', label: '不处理', endpoint: '/api/v1/staff/exceptions', body: { id: x.id, action: 'ignore' } }
-    ]
-  }));
+  return rows.map((x) => {
+    const f = failureText(x.kind);
+    const why = humanizeError(x.error);
+    return {
+      kind: 'exception',
+      id: `exception:${x.id}`,
+      priority: PRIORITY.other + 10,
+      title: f.title,
+      suggestion: `${why.replace(/[。.]$/, '')}。${f.suggest}；不用管的点“不处理”。`,
+      // 原始报错只放在收起来的“看详情”里
+      detail: x.error ? `系统记下的原文：${x.error.slice(0, 500)}${x.attempts > 1 ? `\n（已经出过 ${x.attempts} 次）` : ''}` : undefined,
+      href: '/zh/staff/followups?tab=exceptions',
+      at: x.updated_at.toISOString(),
+      actions: [
+        { type: 'post', label: '重试', endpoint: '/api/v1/staff/exceptions', body: { id: x.id, action: 'retry' }, primary: true },
+        { type: 'post', label: '不处理', endpoint: '/api/v1/staff/exceptions', body: { id: x.id, action: 'ignore' } }
+      ]
+    };
+  });
 }
 
 

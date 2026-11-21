@@ -10,12 +10,14 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { getPool } from '@/lib/db/client';
 import { sendLoginCode, verifyLoginCode } from '@/lib/crm/auth';
-import { createInquiry } from '@/lib/crm/inquiries';
+import { createInquiry, shouldNotifyInquiry } from '@/lib/crm/inquiries';
+import { humanizeError } from '@/lib/crm/today/providers/c';
 import { upsertFollowup } from '@/lib/crm/followups';
 import { setSetting } from '@/lib/crm/orders';
 import {
   buildDraft,
   checkActionToken,
+  consumeActionToken,
   classifyInquiry,
   detectLang,
   dropJunk,
@@ -78,6 +80,26 @@ async function main() {
   assert.equal(fc.category, 'customer');
   assert.equal(fc.lang, 'en');
   ok('新咨询进来先分类并存下；推销不生成草稿');
+
+  // J13-1：立即通知只给真实客户咨询（看 followups.category），推销 / 垃圾进每日汇总；通知链接直达这一条
+  const spam = await createInquiry({ source: 'web_form', name: `${P}赌场`, email: `spam-${sfx}@example.com`, message: '线上赌场 注册就送 888 彩金 百家乐 真人荷官 http://example.com' });
+  const { rows: sc } = await pool.query<{ category: string }>(`SELECT category FROM followups WHERE id = $1`, [spam.followupId]);
+  assert.equal(sc[0].category, 'spam');
+  assert.equal(await shouldNotifyInquiry(pitch.followupId, null), false, '推销不立即通知');
+  assert.equal(await shouldNotifyInquiry(spam.followupId, null), false, '垃圾不立即通知');
+  assert.equal(await shouldNotifyInquiry(cust.followupId, null), true, '客户咨询立即通知');
+  const { rows: sn } = await pool.query<{ dedupe_key: string; href: string | null }>(
+    `SELECT dedupe_key, href FROM staff_notices WHERE dedupe_key = ANY($1::text[])`, [[`inquiry:${pitch.followupId}`, `inquiry:${spam.followupId}`, `inquiry:${cust.followupId}`]]
+  );
+  assert.ok(!sn.some((x) => x.dedupe_key !== `inquiry:${cust.followupId}`), '推销 / 垃圾没有进立即通知');
+  for (const x of sn) assert.equal(x.href, `/zh/staff/followups/${cust.followupId}`, '通知链接直达这一条处理页');
+  ok('J13-1/J13-2：只有客户咨询立即通知（推销、垃圾不通知）；通知链接是 /zh/staff/followups/<编号>');
+
+  // J13-4：失败异常的建议里不出现英文原文
+  assert.equal(humanizeError('You need to verify a domain to send emails (resend)'), '发件域名还没在邮件服务里验证，邮件发不出去');
+  assert.ok(!/[A-Za-z]{6,}/.test(humanizeError('Error: something weird happened in provider')));
+  assert.equal(humanizeError('CSLB 官方名单在 GitHub 上下载失败（HTTP 503 Service Unavailable），请在「接活人核验」里一键打开详情页人工核对'), 'CSLB 官方名单在 GitHub 上下载失败，请在「接活人核验」里一键打开详情页人工核对');
+  ok('J13-4：报错翻成人话，英文原文不进建议');
 
   console.log('会员识别和草稿口气（一.2、四.6）');
   const { rows: mc } = await pool.query<{ id: string }>(`INSERT INTO contacts (name, phone_e164) VALUES ($1, $2) RETURNING id`, [`${P}会员`, `+1626555${String(Date.now()).slice(-4)}`]);
@@ -193,16 +215,34 @@ async function main() {
   assert.equal(h.j.error?.code, 'bad_token', '口令不对不自动执行');
   h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: 'claim', auto: true, token: t });
   assert.equal(h.status, 200);
+  assert.ok(!h.j.reused);
   const { rows: ow } = await pool.query<{ owner: string }>(`SELECT owner FROM followups WHERE id = $1`, [cust.followupId]);
   assert.equal(ow[0].owner, `${P}助理`);
-  h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: 'assist', auto: true, token: t });
+  // J13-3：口令一次有效——同一个口令再打开，只回 reused、不再执行（处理记录不多一行、状态不变）
+  const logN = async () => (await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM followup_log WHERE followup_id = $1`, [cust.followupId])).rows[0].n;
+  const before = await logN();
+  const stBefore = (await pool.query<{ status: string; owner: string }>(`SELECT status, owner FROM followups WHERE id = $1`, [cust.followupId])).rows[0];
+  for (const d of ['claim', 'drop']) {
+    h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: d, auto: true, token: t });
+    assert.equal(h.status, 200);
+    assert.equal(h.j.reused, true, '用过的口令不再执行');
+  }
+  assert.equal(await logN(), before, '处理记录没有多');
+  assert.deepEqual((await pool.query(`SELECT status, owner FROM followups WHERE id = $1`, [cust.followupId])).rows[0], stBefore, '状态没变');
+  assert.equal(await checkActionToken(cust.followupId, t), false);
+  ok('J13-3：邮件按钮口令一次有效，第二次打开只看现状不执行');
+  // 新一封邮件 = 新口令
+  let t2 = await issueActionToken(cust.followupId);
+  h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: 'assist', auto: true, token: t2 });
   assert.equal(h.status, 200, String(h.j.error?.message));
-  h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: 'drop', auto: true, token: t });
+  assert.equal(await consumeActionToken(cust.followupId, t2), 'used');
+  t2 = await issueActionToken(cust.followupId);
+  h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: 'drop', auto: true, token: t2 });
   const { rows: st } = await pool.query<{ status: string }>(`SELECT status FROM followups WHERE id = $1`, [cust.followupId]);
   assert.equal(st[0].status, 'dropped');
-  h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: 'drop', auto: true, token: t });
+  h = await http(`/api/v1/staff/followups/${cust.followupId}/act`, cookie, { action: 'drop' });
   assert.equal(h.status, 200, '重复点不出错');
-  ok('三个按钮：要登录 + 口令对才自动执行；我来联系 / 转给助理 / 不跟进直接生效；重复点不出错');
+  ok('三个按钮：要登录 + 口令对才自动执行（每个口令一次）；我来联系 / 转给助理 / 不跟进直接生效；重复点不出错');
 
   h = await http(`/api/v1/staff/followups/${mf.id}/result`, cookie, { result: 'no_answer' });
   assert.equal(h.status, 200);

@@ -20,7 +20,7 @@ export async function patrolAndRecord(base: string, trigger: 'daily' | 'deploy' 
   if (run.failed > 0 && trigger !== 'manual') {
     // 后台综合优化 五：系统故障立即通知（夜里也发；同一组失败一天一次）
     const { notifyStaffSafe } = await import('@/lib/crm/staffNotify');
-    await notifyStaffSafe({ category: 'system_fault', key: `patrol:${new Date().toISOString().slice(0, 10)}`, title: `系统故障：线上巡检 ${r.failed} 项不正常`, href: '/zh/staff/settings' });
+    await notifyStaffSafe({ category: 'system_fault', key: `patrol:${new Date().toISOString().slice(0, 10)}`, title: `系统故障：线上巡检 ${r.failed} 项不正常`, href: '/zh/staff/system' });
   }
   if (run.failed > 0) run.emailed = await maybeEmail(run).catch((e) => { console.log('[patrol] email failed', (e as Error).message); return false; });
   return run;
