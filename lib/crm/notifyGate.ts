@@ -8,6 +8,7 @@
  *   · 测试站 / 本机：不看总闸，只发给测试身份——邮件看 PREVIEW_EMAIL_ALLOW 白名单，短信看测试号名单
  *     （555-01xx 虚构号 + test_fixed_code_phones）；企业微信在测试站一律不发。其余 status='blocked' 只记录。
  *   · 真发了记 status='sent'；发送函数抛错记 status='failed'（错误文字截 300 字，不含密钥）。
+ * 例外：opts.existing = 改版前正式站就在发的同一封通知（只改了内容），正式站照发、照记；测试站仍只发测试身份。
  * 同一件事不重复发：传 dedupeKey，notify_log 里已有 sent/held 的同 key 直接返回 duplicate。
  *
  * 表 notify_log 在 db/migrations/0039_today.sql（IF NOT EXISTS；C 的 0040 如也需要，原样 CREATE TABLE IF NOT EXISTS 同一份即可）。
@@ -72,7 +73,11 @@ async function log(m: NotifyMessage, status: NotifyStatus, error?: string | null
  * 过总闸发一条。send 只在允许真发时才被调用。
  * 返回 status：sent 真发了 / held 正式站总闸关着只记录 / blocked 测试站非测试身份只记录 / failed 发送出错 / duplicate 已发过或已记录过
  */
-export async function gateSend(m: NotifyMessage, send: () => Promise<unknown>): Promise<{ status: NotifyStatus }> {
+export async function gateSend(
+  m: NotifyMessage,
+  send: () => Promise<unknown>,
+  opts: { existing?: boolean } = {}
+): Promise<{ status: NotifyStatus }> {
   if (m.dedupeKey) {
     const { rows } = await getPool()
       .query(`SELECT 1 FROM notify_log WHERE dedupe_key = $1 AND status IN ('sent','held') LIMIT 1`, [m.dedupeKey])
@@ -82,7 +87,8 @@ export async function gateSend(m: NotifyMessage, send: () => Promise<unknown>): 
   let allowed: boolean;
   let stop: NotifyStatus;
   if (isProduction()) {
-    allowed = await notifyLive();
+    // existing：改版前正式站就在发的通知（例如新咨询发到 info@ 的邮件），只是换了内容；不受总闸影响，避免改版后反而收不到。
+    allowed = opts.existing ? true : await notifyLive();
     stop = 'held';
   } else {
     allowed = await isTestIdentity(m.channel, m.to);
