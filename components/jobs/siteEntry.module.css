@@ -1,0 +1,22 @@
+/* D12：网站首页「找工人·接活」入口（只用现有藏蓝 / 金 / 象牙色变量，不新增颜色） */
+.wrap { max-width: 1440px; margin: 56px auto 0; padding: 0 64px; box-sizing: border-box; }
+.band {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center;
+  padding: 24px 28px; border-radius: 10px; background: var(--navy-deep); border: 1px solid var(--line-3);
+}
+.title { font-family: var(--serif-zh); font-size: 24px; font-weight: 600; color: var(--ivory); margin: 0; }
+.desc { margin: 8px 0 0; font-size: 15px; line-height: 1.6; color: var(--ivory-mute); }
+.btns { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border-radius: 6px;
+  font-size: 16px; font-weight: 600; text-decoration: none; white-space: nowrap;
+}
+.find { background: var(--ivory); color: var(--navy-deep); }
+.work { background: var(--gold); color: var(--ink-deepest); }
+@media (max-width: 768px) {
+  .wrap { margin-top: 24px; padding: 0 20px; }
+  .band { grid-template-columns: minmax(0, 1fr); padding: 18px 16px; gap: 14px; }
+  .title { font-size: 20px; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; }
+  .btn { padding: 0 10px; }
+}

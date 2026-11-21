@@ -4,6 +4,7 @@ import { smsConfigured } from '@/lib/crm/auth';
 import { handler, ok, optionalContact } from '@/lib/crm/http';
 import { wechatQrFor } from '@/lib/wecom';
 import { twilioVerifyConfigured } from '@/lib/crm/contactInfo';
+import { TEST_FIXED_CODE_TEXT, testFixedCodeOn } from '@/lib/crm/testFixedCode';
 import { publicTemplateIds } from '@/lib/crm/reminders';
 import { getPool } from '@/lib/db/client';
 import { getSetting } from '@/lib/crm/orders';
@@ -17,8 +18,10 @@ export const GET = handler(async (req: Request) => {
     roleCategories: ROLE_CATEGORIES.map((c) => ({ key: c.key, label: c.label, subs: c.subs.map((s) => ({ key: s.key, label: s.label })) })),
     quickRoles: QUICK_ROLES.map((k) => ({ key: k, label: findRoleSub(k)!.label })),
     topics: TOPIC_LABELS,
-    smsAvailable: smsConfigured(),
-    phoneVerifyAvailable: twilioVerifyConfigured(),
+    smsAvailable: smsConfigured() || testFixedCodeOn(),
+    phoneVerifyAvailable: twilioVerifyConfigured() || testFixedCodeOn(),
+    /** D16：只在测试站出现——手机验证码不真发、固定 246810，页面显示 testFixedCodeText 这行小字 */
+    ...(testFixedCodeOn() ? { testFixedCode: true, testFixedCodeText: TEST_FIXED_CODE_TEXT } : {}),
     /** 活动提醒订阅消息模板 ID（未申请时为 null，小程序不弹授权） */
     subscribeTemplates: publicTemplateIds(),
     /** 1.2：商会微信二维码（后台可换图）、视频号 ID（没配置则小程序隐藏入口） */

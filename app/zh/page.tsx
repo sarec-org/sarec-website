@@ -17,6 +17,7 @@ import { contentResearchList } from '@/lib/mpContent';
 import { AgentChat } from '@/components/agent/AgentChat';
 import { listArticles } from '@/lib/geo/content';
 import { columnLabel } from '@/lib/geo/labels';
+import { JobsSiteEntry } from '@/components/jobs/JobsSiteEntry';
 
 export const metadata: Metadata = {
   title: 'SAREC · 中美房地产商会 — 跨境地产资本与项目协作平台',
@@ -63,6 +64,9 @@ export default function HomePage() {
 
       {/* 1.2 近期活动 + 商会 AI 助手（电脑版） */}
       <HomeEventsAndAgent agent={<AgentChat variant="panel" context={{ page: 'home' }} />} />
+
+      {/* D12（11/20 东哥同意）：找工人·接活 入口，只新增这一块，跟开关走（两个都关不出） */}
+      <JobsSiteEntry />
 
       {/* H02–H10 — Placeholders for Phase 1 visual implementation.
           Each is a 100vh dark section with a section ID and copy stub.
