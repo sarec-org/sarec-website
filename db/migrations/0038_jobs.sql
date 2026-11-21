@@ -50,6 +50,8 @@ CREATE TABLE IF NOT EXISTS jobs_home_entries (
 );
 ALTER TABLE jobs_home_entries DROP CONSTRAINT IF EXISTS jobs_home_entries_target_type_check;
 ALTER TABLE jobs_home_entries ADD CONSTRAINT jobs_home_entries_target_type_check CHECK (target_type IN ('trade', 'group'));
+-- D29：常显（不管有没有核验通过的人都在首页出，没人时标“招募中”），后台可勾
+ALTER TABLE jobs_home_entries ADD COLUMN IF NOT EXISTS pinned boolean NOT NULL DEFAULT false;
 ALTER TABLE jobs_home_entries DROP CONSTRAINT IF EXISTS jobs_home_entries_slot_check;
 ALTER TABLE jobs_home_entries ADD CONSTRAINT jobs_home_entries_slot_check CHECK (slot BETWEEN 1 AND 7);
 
@@ -321,6 +323,8 @@ INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort)
   (6, '装修',     'hammer',    'group', 'repair',     6),
   (7, '设计',     'compass',   'group', 'design',     7)
 ON CONFLICT (slot) DO NOTHING;
+-- D29：种子里只有「家政保洁」常显（只改后台没动过的行；后台取消了勾的不会被重跑勾回来）
+UPDATE jobs_home_entries SET pinned = true WHERE target_type = 'group' AND target_key = 'clean' AND updated_by IS NULL AND NOT pinned;
 
 -- ── 15. 城市（后台可增删改、排序，不用发版；发活儿、登记接活、所有城市筛选都用这一张表）──────────
 -- 记录里存稳定的 key（jobs_pros.cities、jobs_posts.city_key），改名不影响历史。用过的城市“删除”= 停用（enabled=false）。

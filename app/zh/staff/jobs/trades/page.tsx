@@ -10,7 +10,7 @@ import { api } from '@/components/crm/client';
 
 type G = { key: string; name: string; order: number };
 type T = { key: string; name: string; group: string; licType: 'A' | 'B' | 'C'; issuer: string | null; licenseClass: string | null; lookupUrl: string | null; verifyPoints: string | null; open: boolean; noPost: boolean; noNotify: boolean; sort: number; verified: boolean; note: string | null };
-type E = { label: string; target: { type: 'trade' | 'group'; key: string } };
+type E = { label: string; icon?: string | null; pinned?: boolean; target: { type: 'trade' | 'group'; key: string } };
 type Res = { groups: G[]; trades: T[]; homeEntries: E[] };
 const LIC: Record<string, string> = { A: 'A 加州承包商牌照', B: 'B 其他州执照', C: 'C 无州执照要求（营业登记 + 责任保险）' };
 const BLANK: T = { key: '', name: '', group: '', licType: 'A', issuer: '', licenseClass: '', lookupUrl: '', verifyPoints: '', open: false, noPost: false, noNotify: false, sort: 999, verified: false, note: '' };
@@ -206,7 +206,7 @@ function HomeEntries({ d, save }: { d: Res; save: (e: E[]) => Promise<boolean> }
   return (
     <section className={styles.card}>
       <p className={styles.cardTitle}>首页 7 个入口</p>
-      <p className={styles.small}>第 8 个固定是“全部工种和服务”。入口可以指向一个工种，也可以指向一组工种（点进去先出这一组的方块）。还没有核验通过的人的工种，首页不显示。</p>
+      <p className={styles.small}>第 8 个固定是“全部工种和服务”。入口可以指向一个工种，也可以指向一组工种（点进去先出这一组的方块）。还没有核验通过的人的工种，首页不显示；勾了“常显”的入口不管有没有人都显示（没人时标“招募中”）。</p>
       {list.map((e, i) => (
         <div key={i} className={styles.inputRow} style={{ marginBottom: '0.5rem' }}>
           <span style={{ alignSelf: 'center', minWidth: 24 }}>{i + 1}</span>
@@ -214,6 +214,9 @@ function HomeEntries({ d, save }: { d: Res; save: (e: E[]) => Promise<boolean> }
           <select className={styles.select} value={`${e.target.type}:${e.target.key}`} onChange={(ev) => { const [type, ...k] = ev.target.value.split(':'); upd(i, { ...e, target: { type: type as 'trade' | 'group', key: k.join(':') } }); }}>
             {options.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
           </select>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minHeight: 44, whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={!!e.pinned} onChange={(ev) => upd(i, { ...e, pinned: ev.target.checked })} />常显
+          </label>
           <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} disabled={i === 0} onClick={() => swap(i, i - 1)}>↑</button>
           <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} disabled={i === list.length - 1} onClick={() => swap(i, i + 1)}>↓</button>
         </div>

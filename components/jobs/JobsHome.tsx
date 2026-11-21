@@ -20,13 +20,14 @@ export function entryHref(e: HomeEntry, meta?: Meta) {
 
 /** 找工人这边只显示已经有核验通过的人的工种（指向一组的：组里有一个就显示）；工作人员预览时全显示 */
 export function entryVisible(meta: Meta, e: HomeEntry) {
-  if (meta.staffPreview) return true;
+  if (meta.staffPreview || e.pinned) return true; // D29：常显的入口不管有没有人都出
   const ok = (t: Meta['trades'][number]) => t.open && t.hasPros;
   return e.target.type === 'trade' ? meta.trades.some((t) => t.key === e.target.key && ok(t)) : meta.trades.some((t) => t.group === e.target.key && ok(t));
 }
 
 export function FindPanel({ meta }: { meta: Meta }) {
   const entries = meta.homeEntries.slice(0, 7).filter((e) => entryVisible(meta, e));
+  const pinnedOnly = entries.filter((e) => e.pinned);
   // D11 冷启动：一个核验通过的人都没有时，方块区换成一行招募说明 +「全部工种和服务」
   const coldStart = meta.anyPros === false;
   return (
@@ -38,9 +39,15 @@ export function FindPanel({ meta }: { meta: Meta }) {
       </Link>
       {coldStart && <p className={j.recruitLine}>{meta.recruitingText ?? '正在招募各工种的接活人，可先发布活儿等人联系'}</p>}
       <div className={j.tiles}>
-        {!coldStart && entries.map((e) => (
-          <Link key={`${e.target.type}:${e.target.key}`} href={entryHref(e, meta)} className={j.tile} onClick={() => trackJobs('jobs_home_entry', e.target.key)}>{e.label}</Link>
-        ))}
+        {/* D29：冷启动时照样出常显的入口；没人的入口标“招募中” */}
+        {(coldStart ? pinnedOnly : entries).map((e) => {
+          const recruiting = e.hasPros === false;
+          return (
+            <Link key={`${e.target.type}:${e.target.key}`} href={entryHref(e, meta)} className={`${j.tile} ${recruiting ? j.tileRecruit : ''}`} onClick={() => trackJobs('jobs_home_entry', e.target.key)}>
+              {recruiting ? (<><span>{e.label}</span><small className={j.tileTag}>{meta.recruitingLabel ?? '招募中'}</small></>) : e.label}
+            </Link>
+          );
+        })}
         <Link href="/zh/jobs/find" className={`${j.tile} ${j.tileAll}`}>
           <span>全部工种和服务</span>
           <small className={j.tileAllCount}>{meta.allTradesText ?? (meta.openTradeCount ? `全部 ${meta.openTradeCount} 项 ›` : '›')}</small>

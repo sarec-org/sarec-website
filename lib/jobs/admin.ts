@@ -41,7 +41,11 @@ export async function buildMeta(v: Viewer) {
     trades: trades.map((t) => ({
       key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon, scope: TRADE_SCOPE[t.key] ?? null
     })),
-    homeEntries: entries.map((e) => ({ label: e.label, icon: e.icon, target: e.target })),
+    // D29：pinned = 常显（不管有没有人都出，没人时标“招募中”）；hasPros = 这个入口指向的工种 / 这一组里有没有核验通过的人
+    homeEntries: entries.map((e) => ({
+      label: e.label, icon: e.icon, target: e.target, pinned: e.pinned,
+      hasPros: e.target.type === 'trade' ? withPros.has(e.target.key) : trades.some((t) => t.open && t.group === e.target.key && withPros.has(t.key))
+    })),
     // D11 冷启动：一个核验通过的人都没有时，首页方块区换成一行招募说明 +「全部工种和服务」；没人的工种标“招募中”
     anyPros: trades.some((t) => t.open && withPros.has(t.key)),
     recruitingText: RECRUITING_TEXT,

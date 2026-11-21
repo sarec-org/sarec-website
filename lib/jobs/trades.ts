@@ -8,7 +8,8 @@ export type Trade = {
   lookupUrl: string | null; verifyPoints: string | null; open: boolean; noPost: boolean; noNotify: boolean; sort: number; verified: boolean; note: string | null; icon: string | null;
 };
 export type Group = { key: string; name: string; order: number };
-export type HomeEntry = { slot: number; label: string; icon: string | null; target: { type: 'trade' | 'group'; key: string } };
+/** pinned（D29）：常显——不管有没有核验通过的人都在首页显示（没人时标“招募中”） */
+export type HomeEntry = { slot: number; label: string; icon: string | null; target: { type: 'trade' | 'group'; key: string }; pinned: boolean };
 
 type TradeRow = {
   key: string; name: string; group_key: string; lic_type: 'A' | 'B' | 'C'; issuer: string | null; license_class: string | null; lookup_url: string | null;
@@ -33,10 +34,10 @@ export async function loadGroups(db: Db = getPool()): Promise<Group[]> {
   return rows.map((r) => ({ key: r.key, name: r.name, order: r.sort }));
 }
 export async function loadHomeEntries(db: Db = getPool()): Promise<HomeEntry[]> {
-  const { rows } = await db.query<{ slot: number; label: string; icon: string | null; target_type: 'trade' | 'group'; target_key: string }>(
-    `SELECT slot, label, icon, target_type, target_key FROM jobs_home_entries ORDER BY sort, slot`
+  const { rows } = await db.query<{ slot: number; label: string; icon: string | null; target_type: 'trade' | 'group'; target_key: string; pinned: boolean }>(
+    `SELECT slot, label, icon, target_type, target_key, pinned FROM jobs_home_entries ORDER BY sort, slot`
   );
-  return rows.map((r) => ({ slot: r.slot, label: r.label, icon: r.icon, target: { type: r.target_type, key: r.target_key } }));
+  return rows.map((r) => ({ slot: r.slot, label: r.label, icon: r.icon, target: { type: r.target_type, key: r.target_key }, pinned: r.pinned === true }));
 }
 
 /** 有核验通过、上了列表的人（不算工人）的工种 */
@@ -122,20 +123,25 @@ export async function saveHomeEntries(list: unknown, actor: string): Promise<Hom
   const pool = getPool();
   const trades = await tradeMap(pool);
   const groups = new Set((await loadGroups(pool)).map((g) => g.key));
+  const before = await loadHomeEntries(pool);
   const clean = list.map((x, i) => {
-    const o = (x ?? {}) as { label?: unknown; icon?: unknown; target?: { type?: unknown; key?: unknown } };
+    const o = (x ?? {}) as { label?: unknown; icon?: unknown; pinned?: unknown; target?: { type?: unknown; key?: unknown } };
     const label = s(o.label, 12);
     const type = o.target?.type === 'group' ? 'group' : o.target?.type === 'trade' ? 'trade' : null;
     const key = s(o.target?.key, 40);
     if (!label) throw new CrmError('bad_request', `第 ${i + 1} 个入口没有名字`);
     if (!type || !key || (type === 'trade' ? !trades.has(key) : !groups.has(key))) throw new CrmError('bad_request', `第 ${i + 1} 个入口指向的工种或分组不存在`);
-    return { slot: i + 1, label, icon: s(o.icon, 40) || null, type, key };
+    // D29：没传 pinned（旧版调用方）就沿用这个入口原来的值（按指向的工种 / 分组找）
+    const old = before.find((b) => b.target.type === type && b.target.key === key);
+    const pinned = typeof o.pinned === 'boolean' ? o.pinned : old?.pinned ?? false;
+    const icon = s(o.icon, 40) || old?.icon || null;
+    return { slot: i + 1, label, icon, type, key, pinned };
   });
   for (const e of clean) {
     await pool.query(
-      `INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort, updated_by) VALUES ($1,$2,$3,$4,$5,$1,$6)
-       ON CONFLICT (slot) DO UPDATE SET label=$2, icon=$3, target_type=$4, target_key=$5, sort=$1, updated_by=$6, updated_at=now()`,
-      [e.slot, e.label, e.icon, e.type, e.key, actor]
+      `INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort, updated_by, pinned) VALUES ($1,$2,$3,$4,$5,$1,$6,$7)
+       ON CONFLICT (slot) DO UPDATE SET label=$2, icon=$3, target_type=$4, target_key=$5, sort=$1, updated_by=$6, pinned=$7, updated_at=now()`,
+      [e.slot, e.label, e.icon, e.type, e.key, actor, e.pinned]
     );
   }
   await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value) VALUES ($1, 'jobs_home_entries', 'jobs_home_entries', 'all', $2)`, [actor, JSON.stringify(clean)]);
