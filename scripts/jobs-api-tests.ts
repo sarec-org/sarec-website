@@ -174,6 +174,25 @@ async function main() {
       assert.equal(await testPhoneAllowed(extra), false);
       await pool.query(`INSERT INTO crm_settings (key, value) VALUES ('test_fixed_code_phones', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [JSON.stringify([extra])]);
       assert.equal(await testPhoneAllowed(extra), true);
+      // J9-1：名单里时发了码，随后从名单拿掉 → 验证时也拦（只在测试站；这里在本进程里模拟 VERCEL_ENV=preview）
+      {
+        const auth = await import('@/lib/crm/auth');
+        const env0 = process.env.VERCEL_ENV;
+        const pv0 = process.env.CRMPREVIEW_DATABASE_URL;
+        process.env.VERCEL_ENV = 'preview';
+        process.env.CRMPREVIEW_DATABASE_URL = process.env.DATABASE_URL; // 本进程里模拟测试站：连的还是这次的库
+        try {
+          await pool.query(`DELETE FROM login_codes WHERE target = $1`, [extra]);
+          await auth.sendLoginCode('sms', extra);
+          testPhones.push(extra);
+          await pool.query(`UPDATE crm_settings SET value = '[]' WHERE key = 'test_fixed_code_phones'`);
+          await assert.rejects(auth.verifyLoginCode('sms', extra, TEST_FIXED_CODE), (e: Error & { code?: string }) => e.code === 'test_phone_only');
+        } finally {
+          if (env0 === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = env0;
+          if (pv0 === undefined) delete process.env.CRMPREVIEW_DATABASE_URL; else process.env.CRMPREVIEW_DATABASE_URL = pv0;
+        }
+        ok('J9-1：测试站验证时也查名单（拿掉以后之前发的码也登不了）');
+      }
       if (old[0]) await pool.query(`UPDATE crm_settings SET value = $1 WHERE key = 'test_fixed_code_phones'`, [JSON.stringify(old[0].value)]);
       else await pool.query(`DELETE FROM crm_settings WHERE key = 'test_fixed_code_phones'`);
     }
@@ -536,6 +555,16 @@ async function main() {
     assert.equal(r.status, 403);
     r = await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'nope' });
     assert.equal(r.status, 400);
+    // J9-2：超范围、负数、小数、不是数字一律 400 人话，不悄悄改值
+    for (const bad of [100, -1, 1.5, 'abc', '2.5']) {
+      r = await call('PATCH', '/workbench/jobs/switches', staff, { freeContacts: bad });
+      assert.equal(r.status, 400, `freeContacts=${bad}`);
+      assert.ok(r.j.error.message.includes('0 到 99'));
+    }
+    for (const bad of [1000, -2, 0.5]) {
+      r = await call('PATCH', '/workbench/jobs/switches', staff, { freePosts: bad });
+      assert.equal(r.status, 400, `freePosts=${bad}`);
+    }
     r = await call('PATCH', '/workbench/jobs/switches', staff, { feeMode: 'free_quota', freeContacts: 2, freePosts: null });
     assert.equal(r.status, 200, JSON.stringify(r.j));
     assert.equal(r.j.switches.feeMode, 'free_quota');
@@ -580,6 +609,7 @@ async function main() {
     r = await call('POST', `/jobs/posts/${q2}/contact`, proA, undefined, MP);
     assert.equal(r.status, 200, JSON.stringify(r.j));
     assert.equal(r.j.freeLeft, 0);
+    assert.equal(r.j.freeLeftText, '免费次数用完了，成为商会会员后可以继续', 'J9-3：用完时不说“还可以免费联系 0 位”');
     r = await call('POST', `/jobs/posts/${q3}/contact`, proA);
     assert.equal(r.status, 403);
     assert.equal(r.j.error.code, 'quota_used_up');

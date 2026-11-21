@@ -20,7 +20,13 @@ const ITEMS: { k: 'find' | 'work'; name: string; on: string; off: string }[] = [
 ];
 const MODE_LABEL: Record<FeeMode, string> = { all_free: '全部免费', free_quota: '免费额度', members_only: '必须是会员' };
 
+const FIELD: Record<string, string> = { find: '找工人', work: '接活儿', requirePaid: '要求缴费会员', feeMode: '收费方式', freeContacts: '免费联系次数', freePosts: '非会员免费发活儿' };
+const FIELD_KEY: Record<string, string> = { feeMode: 'jobs_work_fee_mode', freePosts: 'jobs_free_posts' };
 function show(key: string, v: unknown): string {
+  // J9-4：老记录（指令 6 一次改三个开关）存的是对象 → 逐项写出来
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    return Object.entries(v as Record<string, unknown>).map(([k, x]) => `${FIELD[k] ?? k} ${show(FIELD_KEY[k] ?? k, x)}`).join('、') || '—';
+  }
   if (key === 'jobs_work_fee_mode' && typeof v === 'string') return MODE_LABEL[v as FeeMode] ?? v;
   if (key === 'jobs_free_posts' && (v === null || v === undefined)) return '不限';
   if (typeof v === 'boolean') return v ? '开' : '关';

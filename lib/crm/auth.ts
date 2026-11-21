@@ -127,6 +127,8 @@ export async function verifyLoginCode(
 ): Promise<{ token: string; contactId: string; created: boolean }> {
   const target = normalizeTarget(channel, rawTarget);
   if (!target) throw new CrmError('bad_target', '联系方式格式不对');
+  // D22（指令 9 · J9-1）：测试站验证时也查名单——号码从名单里拿掉以后，之前发的码也登不了；正式站 testFixedCodeOn() 恒为 false
+  if (channel === 'sms' && testFixedCodeOn() && !reviewLogin(channel, target)) await assertTestPhone(target);
   const clean = (code || '').replace(/\D/g, '');
   return withTransaction(async (db) => {
     const { rows } = await db.query<{ id: string; code_hash: string; attempts: number; expires_at: Date }>(

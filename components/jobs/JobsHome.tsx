@@ -70,7 +70,7 @@ export function WorkPanel({ meta }: { meta: Meta }) {
       {registered ? (
         <Link href="/zh/jobs/mine" className={`${j.bigBtn} ${j.bigBtnWork}`}>
           我的接活儿
-          <small>{meta.me.pro?.freeLeftText ? `${meta.me.pro.freeLeftText} · ` : ''}改资料、看通知给我的活儿、看核验状态</small>
+          <small>{meta.me.pro?.freeLeft != null ? (meta.me.pro.freeLeft > 0 ? `还可以免费联系 ${meta.me.pro.freeLeft} 位 · ` : '免费次数用完了 · ') : ''}改资料、看通知给我的活儿、看核验状态</small>
         </Link>
       ) : (
         <>

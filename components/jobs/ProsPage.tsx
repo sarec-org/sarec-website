@@ -86,6 +86,8 @@ function FindBody({ meta, trade, setTrade, group0 }: { meta: Meta; trade: string
           </>
         )}
       </div>
+      {/* J10-1：选中的工种有范围说明就在标签下面写一行（和小程序一致） */}
+      {sel?.scope && <p className={s.small} style={{ margin: '-0.4rem 0 0.9rem' }}>{sel.name}：{sel.scope}</p>}
       {sel && sel.open && !sel.hasPros ? (
         <Recruiting name={sel.name} trade={sel.key} text={meta.tradeRecruitingText} />
       ) : (

@@ -13,7 +13,8 @@ import type { Switches } from './settings';
 
 export const QUOTA_USED_UP_TEXT = '免费次数用完了，成为商会会员后可以继续';
 export const POST_QUOTA_USED_UP_TEXT = '免费发布次数用完了，成为商会会员后可以继续发布';
-export const freeLeftText = (n: number) => `还可以免费联系 ${n} 位`;
+/** J9-3：用完（0）时不说“还可以免费联系 0 位”，直接说用完了 */
+export const freeLeftText = (n: number) => (n > 0 ? `还可以免费联系 ${n} 位` : QUOTA_USED_UP_TEXT);
 
 type ProLike = { id: string; contact_id: string; role: string; is_paid_member: boolean };
 

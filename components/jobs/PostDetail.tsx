@@ -67,7 +67,11 @@ export function PostDetail({ id }: { id: string }) {
                 <div className={j.phoneBox} style={{ borderColor: 'var(--gold)' }}>
                   {contact.callName ? `${contact.callName} · ` : ''}电话：{contact.phone ? <a href={`tel:${contact.phone}`}>{contact.phone}</a> : '（发布人没留电话）'}
                   {contact.wechat && <><br />微信：<span className={s.mono}>{contact.wechat}</span></>}
-                  {contact.freeLeft != null && <p className={s.small} style={{ margin: '0.3rem 0 0' }}><b>{contact.freeLeftText ?? `还可以免费联系 ${contact.freeLeft} 位`}</b>（这条以后再看不再算次数）</p>}
+                  {contact.freeLeft != null && (
+                    <p className={s.small} style={{ margin: '0.3rem 0 0' }}>
+                      {contact.freeLeft > 0 ? <><b>还可以免费联系 {contact.freeLeft} 位</b>（这条以后再看不再算次数）</> : <><b>免费次数用完了，成为商会会员后可以继续</b>（看过的这条以后照样能看）</>}
+                    </p>
+                  )}
                   <p className={s.small} style={{ margin: '0.3rem 0 0' }}>发布人能看到是你看了电话。请只在执照范围内接活儿，价钱、合同、付款自己和对方谈清楚。</p>
                 </div>
               )}

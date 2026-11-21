@@ -42,6 +42,12 @@
 .tileAll:hover { border-color: var(--gold-bright); }
 .tileAll > span { font-size: 0.92rem; line-height: 1.25; }
 .tileAllCount { font-size: 0.8rem; font-weight: 700; color: var(--navy-deep); white-space: nowrap; }
+/* J9-5：小屏（320 / 360）方块窄，“全部 40 项 ›”允许折行、字再小一点，不被切 */
+@media (max-width: 380px) {
+  .tileAll { padding-left: 0.15rem; padding-right: 0.15rem; }
+  .tileAll > span { font-size: 0.82rem; }
+  .tileAllCount { font-size: 0.72rem; white-space: normal; line-height: 1.2; }
+}
 .tileOff { opacity: 0.5; }
 /* D11：没人的工种标“招募中”（不变淡，照样能点） */
 .tileRecruit { flex-direction: column; gap: 2px; border-style: dashed; }

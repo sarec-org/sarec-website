@@ -2,7 +2,7 @@
 export type Side = 'find' | 'work' | 'none';
 
 export type Group = { key: string; name: string; order: number; tradeKeys?: string[]; hasPros?: boolean };
-export type Trade = { key: string; name: string; group: string; licType: 'A' | 'B' | 'C'; open: boolean; hasPros: boolean; noPost: boolean; noNotify: boolean; icon?: string | null };
+export type Trade = { key: string; name: string; group: string; licType: 'A' | 'B' | 'C'; open: boolean; hasPros: boolean; noPost: boolean; noNotify: boolean; icon?: string | null; scope?: string | null };
 export type HomeEntry = { label: string; icon?: string | null; target: { type: 'trade' | 'group'; key: string }; pinned?: boolean; hasPros?: boolean };
 export type ProRole = 'company' | 'licensed' | 'pro_service' | 'worker';
 export type PosterRole = 'owner' | 'landlord' | 'property' | 'developer' | 'crew';

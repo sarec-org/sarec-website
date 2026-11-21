@@ -91,7 +91,7 @@ function Body({ meta }: { meta: Meta }) {
         {st === 'removed' && <p className={s.error} style={{ marginTop: '0.6rem' }}>已下架{pro.removedReason ? `：${pro.removedReason}` : ''}。有疑问请联系商会工作人员。</p>}
         {st === 'pending' && <p className={s.small} style={{ margin: '0.6rem 0 0' }}>正在核验，通常 1–2 个工作日。结果会通知你。</p>}
         {st === 'verified' && pro.freeLeft != null && (
-          <div className={s.row}><span className={s.rowLabel}>免费联系</span><span className={s.rowValue}><b>{pro.freeLeftText ?? `还可以免费联系 ${pro.freeLeft} 位`}</b></span></div>
+          <div className={s.row}><span className={s.rowLabel}>免费联系</span><span className={s.rowValue}><b>{pro.freeLeft > 0 ? `还可以免费联系 ${pro.freeLeft} 位` : '免费次数用完了'}</b></span></div>
         )}
         {st === 'verified' && pro.freeLeft === 0 && (
           <div className={s.notice} style={{ marginTop: '0.6rem' }}>

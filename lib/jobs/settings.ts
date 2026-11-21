@@ -38,6 +38,12 @@ const intOrNull = (v: unknown, max = 999): number | null => {
   return Number.isFinite(n) && n >= 0 ? Math.min(max, Math.floor(n)) : null;
 };
 
+/** 后台改设置用：只认 0..max 的整数（数字或数字字符串），别的一律 null（调用方报 400） */
+function strictInt(v: unknown, max: number): number | null {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && /^\s*\d+\s*$/.test(v) ? Number(v) : NaN;
+  return Number.isInteger(n) && n >= 0 && n <= max ? n : null;
+}
+
 export async function getSwitches(db: Db = getPool()): Promise<Switches> {
   const find = await getSetting<unknown>(db, BOOL_KEYS.find, true);
   const work = await getSetting<unknown>(db, BOOL_KEYS.work, true);
@@ -95,7 +101,7 @@ export async function switchesDetail(db: Db = getPool()) {
       freeContacts: by[FEE_KEYS.freeContacts] ?? null,
       freePosts: by[FEE_KEYS.freePosts] ?? null
     },
-    log: log.map((r) => ({ key: r.target_id, name: NAME[r.target_id] ?? r.target_id, actor: r.actor, at: r.created_at, before: parse(r.before_value), after: parse(r.after_value) }))
+    log: log.map((r) => ({ key: r.target_id, name: NAME[r.target_id] ?? (r.target_id === 'jobs_*' ? '开关（一次改多项）' : r.target_id), actor: r.actor, at: r.created_at, before: parse(r.before_value), after: parse(r.after_value) }))
   };
 }
 
@@ -131,7 +137,8 @@ export async function setSwitches(patch: Partial<Record<string, unknown>>, actor
   }
   if (patch.freeContacts !== undefined) {
     const { CrmError } = await import('@/lib/crm/events');
-    const n = intOrNull(patch.freeContacts, 99);
+    // J9-2：超出 0–99、负数、小数、不是数字一律 400 人话（不悄悄改成 99）
+    const n = strictInt(patch.freeContacts, 99);
     if (n === null) throw new CrmError('bad_request', '免费联系次数请填 0 到 99 的整数');
     if (n !== before.freeContacts) {
       await setSetting(pool, FEE_KEYS.freeContacts, n, actor);
@@ -141,7 +148,7 @@ export async function setSwitches(patch: Partial<Record<string, unknown>>, actor
   if (patch.freePosts !== undefined) {
     const { CrmError } = await import('@/lib/crm/events');
     const empty = patch.freePosts === null || patch.freePosts === '';
-    const n = empty ? null : intOrNull(patch.freePosts, 999);
+    const n = empty ? null : strictInt(patch.freePosts, 999);
     if (!empty && n === null) throw new CrmError('bad_request', '非会员免费发活儿条数请填 0 到 999 的整数，或者留空（不限）');
     if (n !== before.freePosts) {
       await setSetting(pool, FEE_KEYS.freePosts, n, actor);
