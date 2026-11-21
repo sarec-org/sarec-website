@@ -40,7 +40,8 @@
 /* 指令 9 · D26：「全部工种和服务」金底深字、带“全部 N 项 ›”，和旁边藏蓝方块明显不同 */
 .tileAll { flex-direction: column; gap: 2px; color: var(--navy-deep); background: var(--gold); border-color: var(--gold); font-weight: 700; }
 .tileAll:hover { border-color: var(--gold-bright); }
-.tileAllCount { font-size: 0.85rem; font-weight: 700; color: var(--navy-deep); }
+.tileAll > span { font-size: 0.92rem; line-height: 1.25; }
+.tileAllCount { font-size: 0.8rem; font-weight: 700; color: var(--navy-deep); white-space: nowrap; }
 .tileOff { opacity: 0.5; }
 /* D11：没人的工种标“招募中”（不变淡，照样能点） */
 .tileRecruit { flex-direction: column; gap: 2px; border-style: dashed; }
