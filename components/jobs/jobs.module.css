@@ -74,7 +74,7 @@
 .cardActions > * { flex: 1 1 auto; }
 .linkBtn { background: none; border: 0; color: var(--ivory-mute); font-size: 0.95rem; text-decoration: underline; cursor: pointer; min-height: 44px; padding: 0 0.4rem; flex: 0 0 auto !important; }
 .phoneBox { margin-top: 0.6rem; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px dashed var(--line-3); }
-.phoneBox a { color: inherit; font-family: var(--mono); font-size: 1.15rem; }
+.phoneBox a:not(.btnFind) { color: inherit; font-family: var(--mono); font-size: 1.15rem; }
 
 /* 折叠 */
 .fold { border: 1px solid var(--line-3); border-radius: 8px; padding: 0 1rem; margin: 0 0 1.1rem; }

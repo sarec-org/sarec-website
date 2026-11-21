@@ -152,7 +152,7 @@ export function ContactInfoCard({ info, onChange }: { info: ContactInfo; onChang
               <button className={`${s.btn} ${s.btnQuiet}`} style={{ marginTop: '0.6rem' }} disabled={busy} onClick={sendCode}>验证手机号</button>
             )
           )}
-          {info.testFixedCode && info.phone && info.phone.status === 'unconfirmed' && <p className={s.small} style={{ margin: '0.4rem 0 0' }}>{info.testFixedCodeText}</p>}
+          {info.testFixedCode && !codeSent && info.phone && info.phone.status === 'unconfirmed' && <p className={s.small} style={{ margin: '0.4rem 0 0' }}>{info.testFixedCodeText}</p>}
           <button className={`${s.btn} ${info.needsUpdate ? '' : s.btnGhost}`} style={{ marginTop: '0.6rem' }} onClick={() => setEditing(true)}>{info.needsUpdate ? '请更新' : '修改'}</button>
         </>
       ) : (

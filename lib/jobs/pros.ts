@@ -370,7 +370,7 @@ async function overLimit(db: Db, col: 'viewer_contact_id' | 'ip_hash', key: stri
     `SELECT count(DISTINCT pro_id) FILTER (WHERE created_at > now() - interval '1 hour')::int AS hour,
             count(DISTINCT pro_id)::int AS day,
             coalesce(bool_or(pro_id = $2), false) AS seen
-       FROM jobs_pro_clicks WHERE ${col} = $1 AND NOT limited AND created_at > now() - interval '1 day'`,
+       FROM jobs_pro_clicks WHERE ${col} = $1 ${col === 'ip_hash' ? 'AND viewer_contact_id IS NULL ' : ''}AND NOT limited AND created_at > now() - interval '1 day'`,
     [key, proId]
   );
   const r = rows[0];
