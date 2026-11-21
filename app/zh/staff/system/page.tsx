@@ -1,14 +1,20 @@
 'use client';
-/** 东哥 11/12 定：小程序线上报错看板。按天汇总，这一天第一次出现的错误类型标红。只有次数，不带任何个人信息。 */
+/**
+ * 系统状态（后台综合优化 11/21，十.3）：线上巡检 + 线上报错放在一页，在「设置与团队」下面。
+ * - 线上巡检：原来在后台首页最上面（红条、巡检邮件开关），挪到这里。
+ * - 线上报错：原来的「线上报错」页（/zh/staff/client-errors 自动跳到这里）。按天汇总，这一天第一次出现的错误类型标红。只有次数，不带任何个人信息。
+ * - 新出现的报错由开发处理，不进东哥的待办（「今天」页和待跟进里都不放）。
+ */
 import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
-import { StaffGate } from '@/components/crm/staff/StaffGate';
+import { StaffGate, can } from '@/components/crm/staff/StaffGate';
+import { PatrolBar } from '@/components/crm/staff/PatrolBar';
 import { api } from '@/components/crm/client';
 
 type Row = { day: string; sig: string; page: string; api: string; status: number; code: string; versions: string[]; n: number; isNew: boolean };
 const STATUS: Record<number, string> = { 0: '网络不通', 401: '没登录', 403: '没权限', 404: '找不到', 429: '太频繁', 500: '服务器出错', 502: '上游出错', 503: '暂时不可用' };
 
-export default function ClientErrors() {
+export default function SystemStatus() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [err, setErr] = useState('');
   const [days, setDays] = useState(14);
@@ -22,10 +28,17 @@ export default function ClientErrors() {
   const hidden = (rows ?? []).filter(expected).reduce((n, r) => n + r.n, 0);
   for (const r of rows ?? []) if (showExpected || !expected(r)) byDay.set(r.day, [...(byDay.get(r.day) ?? []), r]);
   return (
-    <StaffGate title="线上报错" role={['ops', 'admin']} wide>
-      {() => (
+    <StaffGate title="系统状态" role={['ops', 'admin']} wide>
+      {(s) => (
         <>
+          <h2 className={styles.h2} id="patrol">线上巡检</h2>
+          <div className={styles.card}>
+            <PatrolBar admin={can(s, 'admin')} />
+            <p className={styles.small} style={{ marginBottom: 0 }}>巡检每次部署后和每天自动跑一次，只读，不改任何数据；有不正常的项会在这里显示红条。{can(s, 'admin') ? '' : '「现在巡检一次」和巡检邮件开关只有管理员能点。'}</p>
+          </div>
+          <h2 className={styles.h2} id="errors">线上报错</h2>
           <p className={styles.lead}>小程序里出现报错时自动上报（页面、接口、状态码、版本号，不带个人信息）。红色 = 这一天第一次出现的错误类型。</p>
+          <p className={styles.small}>新出现的报错交给开发处理（开发每天看这里），不进东哥的待办，也不发通知。</p>
           <div className={styles.btnRow}>
             {[7, 14, 30].map((d) => <button key={d} className={`${styles.btn} ${d === days ? '' : styles.btnQuiet}`} onClick={() => setDays(d)}>最近 {d} 天</button>)}
             <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setShowExpected(!showExpected)}>{showExpected ? '收起正常的 403 / 404' : `显示正常的 403 / 404（${hidden} 次）`}</button>

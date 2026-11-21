@@ -329,6 +329,20 @@ export async function pollQrLogin(poll: string): Promise<{ status: 'pending' | '
 export type StaffRole = 'checkin' | 'finance' | 'ops' | 'admin';
 export type Staff = { contactId: string; email: string; name: string; roles: StaffRole[]; regions?: string[] }; // regions：地区管理员只管这些地区（空 = 全部）
 
+/**
+ * 后台综合优化 11/21（十一.1）：后台登录框只给工作人员邮箱发验证码。
+ * 不是（或已停用）的邮箱当场告诉对方，不发码、不假装已发送。审核账号永远不是工作人员。
+ */
+export async function assertStaffEmail(rawTarget: string): Promise<void> {
+  const target = normalizeTarget('email', rawTarget);
+  if (!target) throw new CrmError('bad_target', '邮箱格式不对，请检查后再试');
+  if (target === reviewEmail()) throw new CrmError('not_staff', NOT_STAFF_MSG(target));
+  const { rows } = await getPool().query<{ is_active: boolean }>(`SELECT is_active FROM staff_roles WHERE lower(email) = $1 LIMIT 1`, [target]);
+  if (!rows[0]) throw new CrmError('not_staff', NOT_STAFF_MSG(target));
+  if (!rows[0].is_active) throw new CrmError('not_staff', `${target} 的工作人员账号已停用，没有发验证码。需要的话请找管理员在后台「团队」页恢复。`);
+}
+const NOT_STAFF_MSG = (t: string) => `${t} 不是工作人员账号，没有发验证码。请换您在商会登记的工作邮箱；还没开通的，请把邮箱发给管理员，在后台「团队」页开通。`;
+
 export async function staffFor(contactId: string): Promise<Staff | null> {
   // 网站：已验证的邮箱和工作人员表一致；1.3 N 小程序：工作人员扫后台绑定码绑定过的微信账号
   const { rows } = await getPool().query<{ email: string; name: string; roles: StaffRole[]; regions?: string[] }>(

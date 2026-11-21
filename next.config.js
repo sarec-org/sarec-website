@@ -36,6 +36,8 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // 后台综合优化（11/21）：顶栏 13 → 7，搬了家的后台页面旧网址自动跳到新位置（以前邮件里的链接不失效）；清单在 components/crm/staff/staff-redirects.json
+      ...require('./components/crm/staff/staff-redirects.json').map((r) => ({ source: r.from, destination: r.to, permanent: false })),
       // 首页语言跳转:裸首页 / → /zh 用永久 308(带 Location),取代 app/page.tsx 的 RSC redirect()
       // ——后者被 Vercel 缓存成无 Location 的 307,Googlebot 跟不过去,致首页/权重无法传给 /zh。
       { source: '/', destination: '/zh', permanent: true },

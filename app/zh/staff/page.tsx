@@ -20,27 +20,24 @@ const DESC: Record<string, string> = {
   '/zh/staff/join-requests': '小程序“加入商会”提交的申请：一键发网站缴费链接（短信 / 邮件 / 复制发微信），满 7 天没入会提醒跟进',
   '/zh/staff/payments': '核对 Zelle 到账，一键确认或标记未到账',
   '/zh/staff/docs': '公司 PPT 介绍等：上传 PDF（自动逐页转图）或一组图片，小程序里能看、能转发、能看 PDF 原件；看打开 / 转发次数',
-  '/zh/staff/client-errors': '小程序里出现报错时自动上报，按天汇总；红色是新出现的错误类型（不带个人信息）',
+  '/zh/staff/system': '线上巡检、线上报错（新报错交给开发处理，不进待办）',
+  '/zh/staff/data': '一页看懂：来了多少新人、多少人到场、多少人入会、哪些功能和渠道带来的最多；明细（每场活动、功能、点击、推荐排行、操作记录）可展开',
+  '/zh/staff/content-visibility': '每篇文章在网站和小程序里显示全文、只给简介还是不显示',
   '/zh/staff/home-slides': '系统自动排；只处理例外：置顶、隐藏、改文案 / 换图、手动加一张（都要截止时间）；预览新人 / 已报名 / 会员分别看到什么',
   '/zh/staff/events': '新建、编辑、关闭报名、下载签到码',
   '/zh/staff/contacts': '档案、时间线、积分、标签、导出',
   '/zh/staff/album': '按活动看照片墙：传照片（传好大家就能看到）、下架、禁止某人上传、通知到场的人',
   '/zh/staff/rooms': '线下预约登记（防撞期）、收款登记、会议室展示信息、电子屏审核',
-  // 「换商会微信二维码」已挪进「设置」（东哥已点头），这里不再写
-  '/zh/staff/growth': '点击统计、推荐排行、视频号、专委会、内容显示范围',
   // 改动单 D3：原来写“按标签筛选”，实际没有；改成实际能做的
   '/zh/staff/newsletter': '给验证过邮箱的会员和注册用户发通讯：按身份、参加过的活动类型、行业、地区、渠道来源选人，个性化、先发测试给东哥、东哥确认后才群发；看送达、打开、点击、退订',
   '/zh/staff/prep': '每场活动按类型自动生成的筹备清单：负责人、截止时间、打勾、拍摄清单、复盘；模板也在这里改',
   '/zh/staff/recaps': '活动结束后自动整理好的照片精选、回顾、推文初稿，一次审核发布',
-  '/zh/staff/flow-stats': '一页看懂：扫码完成签到比例、报名到场率、分享带来的报名、入会转化、重复参加人数、每场人工处理多少项',
-  // 东哥已点头：功能排行不再调首页顺序，只看点击数据
-  '/zh/staff/features': '每个功能用了多少、带来多少报名到场入会（只看数据；小程序首页入口顺序固定，不在这里调）',
   '/zh/staff/channels': '合作商家 / 机构 / 副会长单位专属码，按渠道看报名到场',
   '/zh/staff/cards': '会员自己填写的电子名片、客户上传的照片：逐条查看，可下架、退回、删除',
   '/zh/staff/display': '会员资料能否在官网展示（不影响会员身份）',
   '/zh/staff/agent': '网站上的商会 AI 助手：月预算、每日用量、常见问题库、最近对话和线索',
-  '/zh/staff/team': '工作人员和权限：加人、每人一行「出码」（同事用微信扫一下就绑定好手机工作台）、停用、改角色，立即生效；网站登录邮箱也在这里管；关键操作记录',
-  '/zh/staff/settings': '会员价、屏幕费、积分比例、商家优惠、邮件额度、商会微信二维码',
+  '/zh/staff/team': '工作人员和权限：加人、每人一行「出码」（同事用微信扫一下就绑定好手机工作台）、停用、改角色，立即生效；网站登录邮箱也在这里管',
+  '/zh/staff/settings': '所有配置集中在这里：现在关着的功能、收款与价格、活动、小程序与微信、邮件；我的手机工作台绑定码',
   '/zh/staff/jobs': '发布的活儿：状态（自动到期）、联系次数、到期日；下架、写备注',
   '/zh/staff/jobs/pros': '登记接活的人：待核验 / 已通过 / 退回 / 下架；加州承包商牌照自动查，其余一键打开官方查询页 + 核验清单',
   '/zh/staff/jobs/trades': '工种与资质表：增删改、排序、分组、开放；首页 7 个入口换和排序',
@@ -52,43 +49,11 @@ const DESC: Record<string, string> = {
 };
 /** 不是单独页面、但常用的卡片（挪进「设置」后仍留一张直达卡） */
 const EXTRA: { href: string; title: string; desc: string; role: string; group: NavGroup; after: string }[] = [
-  { href: '/zh/staff/settings#wechat-qr', title: '换商会微信二维码', desc: '小程序和网站里所有“加商会微信”的码，手机上也能直接换图（在「设置」页）', role: 'admin', group: '设置与团队', after: '/zh/staff/settings' }
+  { href: '/zh/staff/settings#wechat-qr', title: '换商会微信二维码', desc: '小程序和网站里所有“加商会微信”的码，手机上也能直接换图（在「设置」页）', role: 'admin', group: '设置与团队', after: '/zh/staff/settings' },
+  { href: '/zh/staff/settings#mp-bind', title: '我的手机工作台绑定码', desc: '用自己的微信扫一下，在小程序「我的」里打开工作台（在「设置」页）', role: '', group: '设置与团队', after: '/zh/staff/settings' }
 ];
 
 type Results = { yesterday: { visits: number; newArrived: number; joined: number; inquiries: number }; pending: { todo: number; exceptions: number; cards: number; photos: number; recaps: number } };
-
-type Patrol = { run: { at: string; trigger: string; total: number; failed: number; bad: { name: string; detail: string }[] } | null; email: { on: boolean; to: string } };
-/** 东哥 11/12 定的发版关卡：线上只读巡检（部署后 + 每天）。有失败就在后台首页最上面显示红条；管理员可手动巡检、开关巡检邮件（默认关，只发给东哥本人） */
-function PatrolBar({ admin }: { admin: boolean }) {
-  const [p, setP] = useState<Patrol | null>(null);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { api<Patrol>('/api/v1/staff/qa-patrol').then((x) => x.ok && setP(x.data)); }, []);
-  const post = async (body: Record<string, unknown>) => { setBusy(true); const r = await api<Patrol>('/api/v1/staff/qa-patrol', { body }); setBusy(false); if (r.ok) setP(r.data); };
-  if (!p) return null;
-  const r = p.run;
-  const when = r ? new Date(r.at).toLocaleString('zh-CN') : '';
-  return (
-    <>
-      {r && r.failed > 0 && (
-        <div style={{ background: '#C0392B', color: '#fff', padding: '0.8rem 1rem', borderRadius: 8, marginBottom: '1rem' }}>
-          <strong>线上巡检发现 {r.failed} 项不正常</strong>（{when}，共查 {r.total} 项）
-          <ul style={{ margin: '0.4rem 0 0 1.2rem', padding: 0 }}>
-            {r.bad.slice(0, 8).map((x) => <li key={x.name}>{x.name}：{x.detail}</li>)}
-          </ul>
-          {r.bad.length > 8 && <div>还有 {r.bad.length - 8} 项…</div>}
-        </div>
-      )}
-      {admin && (
-        <p className={styles.small} style={{ marginTop: 0 }}>
-          线上巡检：{r ? `${when}，${r.total} 项，${r.failed ? `${r.failed} 项不正常` : '全部正常'}` : '还没跑过'}。
-          巡检邮件 {p.email.on ? '已开' : '已关'}（收件人 {p.email.to}）。
-          <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={busy} onClick={() => post({ action: 'run' })} style={{ marginLeft: 8 }}>{busy ? '巡检中…' : '现在巡检一次'}</button>
-          <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={busy} onClick={() => post({ action: 'email', on: !p.email.on })} style={{ marginLeft: 8 }}>{p.email.on ? '关掉巡检邮件' : '打开巡检邮件'}</button>
-        </p>
-      )}
-    </>
-  );
-}
 
 /** 1.3 J：每天看四个结果（昨天）+ 未完成的事集中列出 */
 function Today() {
@@ -123,56 +88,6 @@ function Today() {
   );
 }
 
-/**
- * 1.3 N / 1.4.0（改动单 A5、B2）：在小程序里用手机工作台——给“自己”的手机生成一次性绑定码，用自己的微信扫一下。
- * 放在问候语下面；给同事开通去「团队」页每人一行「出码」。
- */
-function MpBind({ admin }: { admin: boolean }) {
-  const [b, setB] = useState<{ code: string; qr: string | null; expiresAt: string } | null>(null);
-  const [err, setErr] = useState('');
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className={styles.card}>
-      <p className={styles.cardTitle}>在手机上管：小程序工作台</p>
-      <p className={styles.small} style={{ marginTop: 0 }}>
-        用您自己的微信扫一下下面的码，就能在商会小程序「我的」里打开工作台：拍照传相册、看实时报名签到、现场代签到、待办和筹备清单。收款和会费只在这个网站后台看。
-      </p>
-      <p className={styles.small}>
-        <strong>这个码是给您自己的手机用的；</strong>给同事开通请去{admin ? <Link href="/zh/staff/team" style={{ color: 'var(--gold)' }}>「团队」</Link> : '「团队」（请管理员操作）'}。
-      </p>
-      {!b && (
-        <button
-          className={styles.btn}
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            setErr('');
-            const r = await api<{ code: string; qr: string | null; expiresAt: string }>('/api/v1/staff/mp-bind', { body: {} });
-            setBusy(false);
-            if (r.ok) setB(r.data);
-            else setErr(r.message);
-          }}
-        >
-          {busy ? '生成中…' : '生成我的绑定码'}
-        </button>
-      )}
-      {err && <p className={styles.error}>{err}</p>}
-      {b && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {b.qr ? <img src={b.qr} alt="我的工作台绑定码" className={styles.qrImg} style={{ width: 200 }} /> : null}
-          <p className={b.qr ? styles.small : styles.notice}>
-            {b.qr ? '扫不了的：' : '小程序码这会儿生成不了。请'}打开小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里），输入 8 位码：
-            <b className={styles.mono} style={{ fontSize: '1.3rem', letterSpacing: 3, marginLeft: 6 }}>{b.code}</b>
-          </p>
-          <p className={styles.small}>10 分钟内有效，只能用一次。过期了再点一次生成。</p>
-          <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setB(null)}>重新生成</button>
-        </>
-      )}
-    </div>
-  );
-}
-
 /** 首页卡片：按组排，每组一个小标题；只放登录者能进的 */
 function Desk({ roles }: { roles: string[] }) {
   return (
@@ -180,7 +95,7 @@ function Desk({ roles }: { roles: string[] }) {
       {NAV_GROUPS.map((g) => {
         const cards: { href: string; title: string; desc: string }[] = [];
         for (const it of NAV_ITEMS) {
-          if (it.group !== g || !canSee(roles, it)) continue;
+          if (it.group !== g || it.href === '/zh/staff' || !canSee(roles, it)) continue;
           cards.push({ href: it.href, title: it.label, desc: DESC[it.href] ?? '' });
           for (const x of EXTRA) if (x.after === it.href && canSee(roles, x)) cards.push(x);
         }
@@ -208,11 +123,10 @@ export default function StaffHome() {
     <StaffGate title="工作人员后台">
       {(s) => (
         <>
-          <PatrolBar admin={can(s, 'admin')} />
           <p className={styles.lead}>
             {s.name}，您好。您的权限：{s.roles.map((r) => ROLE_NAME[r] ?? r).join('、')}
           </p>
-          <MpBind admin={can(s, 'admin')} />
+          {/* 后台综合优化 11/21（三.5）：线上巡检挪到「设置与团队 › 系统状态」，我的绑定码挪到「设置与团队 › 设置」 */}
           {can(s, 'ops') && <Today />}
           <Desk roles={s.roles} />
           <button

@@ -1,65 +1,109 @@
 /**
- * 1.4.0 后台导航清单（总则第 1、3、7、10 条）：每个后台页面一个固定的家、一个固定的名字。
- * - 顶部导航、「更多」下拉、手机「菜单」、导航搜索、后台首页卡片，全部从这一份清单出，名字不会再对不上。
- * - role：和页面 StaffGate 的角色一致（多个用 | 分开，满足其一即可；管理员全部能进）。
- * - primary：电脑上直接摆在导航条上；其余收进「更多」。手机上全部按分组列出。
- * - words：搜索时的常用叫法。
+ * 后台导航清单（总则第 1、3、7、10 条）：每个后台页面一个固定的家、一个固定的名字。
+ * - 顶栏、手机「菜单」、页面下的同栏小导航、「搜页面」、后台首页，全部从这一份清单出，名字不会再对不上。
+ * - 后台综合优化（11/21，东哥已同意 13 → 7）：顶栏只留 7 个——今天、活动、客户、收款、内容、数据、设置与团队。
+ *
+ * 加一个新页面：在下面 NAV 里找到它属于的那一栏，加一行 { href, label, role, words } 就行（要放进栏里的小组就写 sub）。
+ * 顶栏、菜单、搜索、首页都会自动带上，不用改别的文件。
+ * 旧网址搬家：在 staff-redirects.json 里加一行 { from, to }（next.config.js 和 scripts/check-staff-redirects.ts 都读它）。
+ *
+ * - role：和页面 StaffGate 的角色一致（多个用 | 分开，满足其一即可；管理员全部能进；空 = 所有工作人员）。
+ * - words：搜索时的常用叫法（含搬家前的旧名字，东哥按旧名字也能搜到）。
  * 改名、挪位置先给东哥“原来 → 改成 → 原因”，同意了再改这里。
  */
-export type NavGroup = '今天现场' | '活动' | '会员与客户' | '找工人接活儿' | '内容' | '设置与团队';
-export type NavItem = { href: string; label: string; role: string; group: NavGroup | null; primary?: boolean; words: string[] };
+import STAFF_REDIRECTS from './staff-redirects.json';
 
-export const NAV_GROUPS: NavGroup[] = ['今天现场', '活动', '会员与客户', '找工人接活儿', '内容', '设置与团队'];
+export type NavTab = '今天' | '活动' | '客户' | '收款' | '内容' | '数据' | '设置与团队';
+/** 顶栏 7 个，顺序固定 */
+export const NAV_TABS: NavTab[] = ['今天', '活动', '客户', '收款', '内容', '数据', '设置与团队'];
+/** 兼容旧代码：分组 = 顶栏的栏 */
+export type NavGroup = NavTab;
+export const NAV_GROUPS: NavGroup[] = NAV_TABS;
 
-export const NAV_ITEMS: NavItem[] = [
-  { href: '/zh/staff', label: '首页', role: '', group: null, primary: true, words: ['后台首页', '首页', '主页'] },
-  // 今天现场
-  { href: '/zh/staff/followups', label: '待跟进', role: 'ops', group: '今天现场', primary: true, words: ['待跟进任务', '线索', '咨询', '待处理', '失败', '异常', '跟进'] },
-  { href: '/zh/staff/checkin', label: '签到台', role: 'checkin', group: '今天现场', primary: true, words: ['现场签到台', '签到', '代签到', '现场登记', '扫码签到'] },
-  { href: '/zh/staff/backfill', label: '补登记到场', role: 'checkin', group: '今天现场', words: ['补签到', '补登记', '漏签', '补到场'] },
-  { href: '/zh/staff/payments', label: '核款', role: 'finance', group: '今天现场', primary: true, words: ['核款工作台', '收款', 'Zelle', '付款', '订单', '到账'] },
-  // 活动
-  { href: '/zh/staff/events', label: '活动', role: 'ops|checkin', group: '活动', primary: true, words: ['活动管理', '新建活动', '签到码', '门口签到码', '报名码', '海报', '二维码', '报名名单'] },
-  { href: '/zh/staff/prep', label: '活动筹备清单', role: 'ops|checkin', group: '活动', words: ['筹备', '筹备清单', '清单', '模板', '分工'] },
-  { href: '/zh/staff/album', label: '相册', role: 'ops', group: '活动', primary: true, words: ['活动相册', '照片', '传照片', '上传照片', '封面'] },
-  { href: '/zh/staff/recaps', label: '活动回顾', role: 'ops', group: '活动', words: ['回顾', '推文', '复盘'] },
-  { href: '/zh/staff/checkin-questions', label: '签到选择题', role: 'ops', group: '活动', words: ['选择题', '题库', '签到问题'] },
-  { href: '/zh/staff/rooms', label: '会议室与电子屏', role: 'ops', group: '活动', primary: true, words: ['会议室', '电子屏', '预约', '场地', '屏幕'] },
-  // 会员与客户
-  { href: '/zh/staff/contacts', label: '客户', role: 'ops', group: '会员与客户', primary: true, words: ['客户查询', '会员', '档案', '客户档案', '导出', '找人', '查人'] },
-  { href: '/zh/staff/join-requests', label: '入会申请', role: 'ops', group: '会员与客户', words: ['入会', '加入商会', '缴费链接', '会费'] },
-  { href: '/zh/staff/duplicates', label: '合并重复档案', role: 'ops', group: '会员与客户', words: ['重复', '合并', '去重'] },
-  { href: '/zh/staff/display', label: '官网展示', role: 'ops', group: '会员与客户', primary: true, words: ['官网展示审核', '官网', '展示'] },
-  { href: '/zh/staff/channels', label: '渠道码', role: 'ops', group: '会员与客户', words: ['渠道', '合作商家', '专属码', '推广码'] },
-  // 找工人接活儿（11/20 新增，只加不改原有项）
-  { href: '/zh/staff/jobs', label: '活儿', role: 'ops', group: '找工人接活儿', words: ['找工人', '接活', '接活儿', '找工人接活', '找工人接活儿', '发布的活儿', '下架活儿', '备注', '到期'] },
-  { href: '/zh/staff/jobs/pros', label: '接活人核验', role: 'ops', group: '找工人接活儿', words: ['核验', '牌照', '执照', 'CSLB', '施工队', '师傅', '退回', '下架接活人'] },
-  { href: '/zh/staff/jobs/trades', label: '工种与资质表', role: 'ops', group: '找工人接活儿', words: ['工种', '资质', '资质表', '分组', '首页入口', '方块'] },
-  { href: '/zh/staff/jobs/cities', label: '找工人接活儿城市', role: 'ops', group: '找工人接活儿', words: ['城市', '地区', '尔湾', '橙县', '服务城市', '加城市', '城市排序'] },
-  { href: '/zh/staff/jobs/switches', label: '找工人接活儿开关', role: 'ops', group: '找工人接活儿', words: ['开关', '开放', '缴费会员', '接活开关', '接活儿开关', '找工人开关', '收费方式', '免费额度', '免费次数'] },
-  { href: '/zh/staff/jobs/stats', label: '找工人接活儿统计', role: 'ops', group: '找工人接活儿', words: ['统计', '点击数', '联系次数', '成了', '多久有人联系'] },
-  { href: '/zh/staff/jobs/reports', label: '找工人接活儿投诉', role: 'ops', group: '找工人接活儿', words: ['投诉', '反馈', '举报'] },
-  { href: '/zh/staff/jobs/invite', label: '邀请登记接活', role: 'ops', group: '找工人接活儿', words: ['邀请', '行业标签', '来登记接活', '登记接活儿', '邀请会员'] },
-  // 内容
-  { href: '/zh/staff/newsletter', label: '邮件通讯', role: 'ops', group: '内容', words: ['邮件', '群发', '通讯', '发邮件', 'newsletter'] },
-  { href: '/zh/staff/home-slides', label: '首页轮播', role: 'ops', group: '内容', words: ['轮播', 'banner', '横幅', '置顶'] },
-  { href: '/zh/staff/docs', label: '商会资料', role: 'admin', group: '内容', words: ['资料', 'PPT', 'PDF', '介绍'] },
-  { href: '/zh/staff/cards', label: '内容审核', role: 'ops', group: '内容', words: ['审核', '名片', '电子名片', '客户照片', '下架'] },
-  { href: '/zh/staff/agent', label: 'AI 助手', role: 'ops', group: '内容', primary: true, words: ['AI', '人工智能', '机器人', '常见问题', 'FAQ', '对话'] },
-  // 设置与团队
-  { href: '/zh/staff/team', label: '团队', role: 'admin', group: '设置与团队', primary: true, words: ['工作人员', '同事', '权限', '绑定', '绑定码', '工作台', '出码', '加人', '角色'] },
-  { href: '/zh/staff/settings', label: '设置', role: 'admin', group: '设置与团队', primary: true, words: ['价格', '折扣', 'Zelle', '商家优惠', '商会微信', '微信二维码', '换二维码', '邮件额度'] },
-  { href: '/zh/staff/growth', label: '增长', role: 'ops', group: '设置与团队', primary: true, words: ['增长与设置', '点击统计', '推荐排行', '视频号', '专委会', '企业微信', '内容显示范围'] },
-  { href: '/zh/staff/flow-stats', label: '流程数据', role: 'ops', group: '设置与团队', words: ['数据', '统计', '到场率', '转化'] },
-  { href: '/zh/staff/features', label: '功能排行', role: 'ops', group: '设置与团队', words: ['排行', '点击数据', '功能月报'] },
-  { href: '/zh/staff/client-errors', label: '线上报错', role: 'ops', group: '设置与团队', words: ['报错', '错误', 'bug', '出错'] }
-];
+export type NavItem = {
+  href: string;
+  label: string;
+  role: string;
+  /** 在顶栏哪一栏 */
+  tab: NavTab;
+  /** 兼容旧代码（= tab） */
+  group: NavTab;
+  /** 栏里的小组（例如「客户」下面的「找工人 · 接活儿」） */
+  sub?: string;
+  words: string[];
+};
+type Entry = Omit<NavItem, 'tab' | 'group'>;
 
-/** 电脑上导航条直接摆的项，顺序沿用 1.3 的导航（只加了「团队」，「增长与设置」改名「增长」，均已点头） */
-export const PRIMARY_ORDER = [
-  '/zh/staff', '/zh/staff/followups', '/zh/staff/checkin', '/zh/staff/payments', '/zh/staff/events', '/zh/staff/contacts', '/zh/staff/album',
-  '/zh/staff/rooms', '/zh/staff/growth', '/zh/staff/display', '/zh/staff/agent', '/zh/staff/settings', '/zh/staff/team'
-];
+const JOBS = '找工人 · 接活儿';
+
+/** 每一栏有哪些页面（第一行是点顶栏时打开的那一页） */
+export const NAV: Record<NavTab, Entry[]> = {
+  今天: [
+    // 「今天」页本身由子任务 B 做，地址就是 /zh/staff
+    { href: '/zh/staff', label: '今天', role: '', words: ['后台首页', '首页', '主页', '今天要办', '待办', '昨天的四个结果'] },
+    { href: '/zh/staff/followups', label: '待跟进', role: 'ops', words: ['待跟进任务', '线索', '咨询', '待处理', '失败', '异常', '跟进'] }
+  ],
+  活动: [
+    { href: '/zh/staff/events', label: '活动', role: 'ops|checkin', words: ['活动管理', '新建活动', '签到码', '门口签到码', '报名码', '海报', '二维码', '报名名单'] },
+    { href: '/zh/staff/checkin', label: '签到台', role: 'checkin', words: ['现场签到台', '签到', '代签到', '现场登记', '扫码签到'] },
+    { href: '/zh/staff/backfill', label: '补登记到场', role: 'checkin', words: ['补签到', '补登记', '漏签', '补到场'] },
+    { href: '/zh/staff/prep', label: '活动筹备清单', role: 'ops|checkin', words: ['筹备', '筹备清单', '清单', '模板', '分工'] },
+    { href: '/zh/staff/album', label: '相册', role: 'ops', words: ['活动相册', '照片', '传照片', '上传照片', '封面'] },
+    { href: '/zh/staff/recaps', label: '活动回顾', role: 'ops', words: ['回顾', '推文', '复盘'] },
+    { href: '/zh/staff/checkin-questions', label: '签到选择题', role: 'ops', words: ['选择题', '题库', '签到问题'] }
+  ],
+  客户: [
+    { href: '/zh/staff/contacts', label: '客户', role: 'ops', words: ['客户查询', '会员', '档案', '客户档案', '导出', '找人', '查人'] },
+    { href: '/zh/staff/join-requests', label: '入会申请', role: 'ops', words: ['入会', '加入商会', '缴费链接', '会费'] },
+    { href: '/zh/staff/duplicates', label: '合并重复档案', role: 'ops', words: ['重复', '合并', '去重'] },
+    { href: '/zh/staff/display', label: '官网展示', role: 'ops', words: ['官网展示审核', '官网', '展示'] },
+    { href: '/zh/staff/channels', label: '渠道码', role: 'ops', words: ['渠道', '合作商家', '专属码', '推广码'] },
+    // 找工人 · 接活儿（1.4.3 新加的 8 个后台页，归到「客户」下面一个小组）
+    { href: '/zh/staff/jobs', label: '活儿', role: 'ops', sub: JOBS, words: ['找工人', '接活', '接活儿', '找工人接活', '找工人接活儿', '发布的活儿', '下架活儿', '备注', '到期'] },
+    { href: '/zh/staff/jobs/pros', label: '接活人核验', role: 'ops', sub: JOBS, words: ['核验', '牌照', '执照', 'CSLB', '施工队', '师傅', '退回', '下架接活人'] },
+    { href: '/zh/staff/jobs/trades', label: '工种与资质表', role: 'ops', sub: JOBS, words: ['工种', '资质', '资质表', '分组', '首页入口', '方块'] },
+    { href: '/zh/staff/jobs/cities', label: '找工人接活儿城市', role: 'ops', sub: JOBS, words: ['城市', '地区', '尔湾', '橙县', '服务城市', '加城市', '城市排序'] },
+    { href: '/zh/staff/jobs/switches', label: '找工人接活儿开关', role: 'ops', sub: JOBS, words: ['开关', '开放', '缴费会员', '接活开关', '接活儿开关', '找工人开关', '收费方式', '免费额度', '免费次数'] },
+    { href: '/zh/staff/jobs/stats', label: '找工人接活儿统计', role: 'ops', sub: JOBS, words: ['统计', '点击数', '联系次数', '成了', '多久有人联系'] },
+    { href: '/zh/staff/jobs/reports', label: '找工人接活儿投诉', role: 'ops', sub: JOBS, words: ['投诉', '反馈', '举报'] },
+    // 子任务 D（指令 13 第 3 条）：工作人员替师傅代登记、贴表批量录入；页面在 feat/admin-d-proxy，合并后才有
+    { href: '/zh/staff/jobs/proxy', label: '代登记接活人', role: 'ops', sub: JOBS, words: ['代登记', '替师傅登记', '批量登记', '贴表', '商会代登记', '登记师傅'] },
+    { href: '/zh/staff/jobs/invite', label: '邀请登记接活', role: 'ops', sub: JOBS, words: ['邀请', '行业标签', '来登记接活', '登记接活儿', '邀请会员'] }
+  ],
+  收款: [
+    { href: '/zh/staff/payments', label: '核款', role: 'finance', words: ['核款工作台', '收款', 'Zelle', '付款', '订单', '到账'] },
+    { href: '/zh/staff/rooms', label: '会议室与电子屏', role: 'ops', words: ['会议室', '电子屏', '预约', '场地', '屏幕', '收款登记'] }
+  ],
+  内容: [
+    { href: '/zh/staff/home-slides', label: '首页轮播', role: 'ops', words: ['轮播', 'banner', '横幅', '置顶'] },
+    { href: '/zh/staff/docs', label: '商会资料', role: 'admin', words: ['资料', 'PPT', 'PDF', '介绍'] },
+    { href: '/zh/staff/newsletter', label: '邮件通讯', role: 'ops', words: ['邮件', '群发', '通讯', '发邮件', 'newsletter'] },
+    { href: '/zh/staff/content-visibility', label: '文章显示范围', role: 'ops', words: ['内容显示范围', '显示范围', '文章', '全文', '简介', '隐藏文章'] },
+    { href: '/zh/staff/cards', label: '内容审核', role: 'ops', words: ['审核', '名片', '电子名片', '客户照片', '下架'] },
+    { href: '/zh/staff/agent', label: 'AI 助手', role: 'ops', words: ['AI', '人工智能', '机器人', '常见问题', 'FAQ', '对话'] }
+  ],
+  数据: [
+    { href: '/zh/staff/data', label: '数据', role: 'ops', words: ['统计', '增长', '点击统计', '推荐排行', '流程数据', '功能排行', '到场率', '转化', '排行', '功能月报', '操作记录'] }
+  ],
+  设置与团队: [
+    { href: '/zh/staff/settings', label: '设置', role: '', words: ['价格', '折扣', 'Zelle', '商家优惠', '商会微信', '微信二维码', '换二维码', '邮件额度', '企业微信', '视频号', '专委会', '邀请提醒', '带朋友', '名片模板', '贴图话题', '服务号', '首页与邀请', '关着的功能', '绑定码', '我的绑定码', '手机工作台', '增长与设置'] },
+    { href: '/zh/staff/team', label: '团队', role: 'admin', words: ['工作人员', '同事', '权限', '绑定', '工作台', '出码', '加人', '角色'] },
+    { href: '/zh/staff/system', label: '系统状态', role: 'ops', words: ['线上巡检', '巡检', '线上报错', '报错', '错误', 'bug', '出错'] }
+  ]
+};
+
+export const NAV_ITEMS: NavItem[] = NAV_TABS.flatMap((tab) => NAV[tab].map((e) => ({ ...e, tab, group: tab })));
+
+/** 顶栏每一栏点下去打开哪一页：登录者能进的第一页 */
+export function tabHref(tab: NavTab, items: NavItem[]): string | null {
+  return items.find((it) => it.tab === tab)?.href ?? null;
+}
+
+/** 别的子任务分支里才有的页面（合并前本分支打开是 404；scripts/check-staff-redirects.ts 合并前跳过） */
+export const PENDING_MERGE = ['/zh/staff/jobs/proxy'];
+
+/** 旧网址 → 新位置（东哥邮件里的旧链接也能打开）；next.config.js 读同一份 JSON */
+export const OLD_URLS: { from: string; to: string; was: string }[] = STAFF_REDIRECTS;
 
 export const ROLE_NAME: Record<string, string> = { admin: '管理员', ops: '运营', checkin: '签到员', finance: '财务' };
 
@@ -81,6 +125,12 @@ export function activeHref(pathname: string): string | null {
     if ((pathname === it.href || pathname.startsWith(it.href + '/')) && (!best || it.href.length > best.length)) best = it.href;
   }
   return best;
+}
+
+/** 当前路径在哪一栏 */
+export function activeTab(pathname: string): NavTab | null {
+  const h = activeHref(pathname);
+  return h ? NAV_ITEMS.find((it) => it.href === h)?.tab ?? null : null;
 }
 
 /** 导航搜索：名字、常用叫法里包含输入的字（不分大小写），名字开头的排前面 */

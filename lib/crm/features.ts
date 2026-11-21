@@ -130,7 +130,7 @@ export async function buildFeatureReport(): Promise<{ subject: string; text: str
   else if (moved.length) lines.push(`按点击量，${moved.map(label).join('、')} 点得多但排在第二行，可以考虑往前挪。建议顺序：${suggested.map(label).join(' / ')}`);
   else lines.push('点得多的入口已经在第一行，暂不需要调整。');
   lines.push('');
-  lines.push('首页顺序在后台“功能排行”页调整，小程序立即生效，不用发版本。不会按数据自动重排。');
+  lines.push('每个功能的明细在后台「数据」页（原「功能排行」）。小程序首页入口顺序按冻结清单固定，不会按数据自动重排。');
   lines.push('（本邮件由数据库直接生成，未调用 AI。）');
   const month = new Intl.DateTimeFormat('zh-CN', { timeZone: 'America/Los_Angeles', year: 'numeric', month: 'long' }).format(new Date());
   return { subject: `【SAREC 功能月报】${month}${r.sampleTooSmall ? '（样本太少，仅供参考）' : ''}`, text: lines.join('\n') };
