@@ -60,16 +60,40 @@ export function StaffGate({
           {msg || '这个账号还没有开通工作人员权限，请联系管理员'}
           <br />
           请把您登录用的邮箱发给商会管理员，请他在后台「团队」页给您开通。
+          <SwitchAccount onSwitched={() => setState('login')} />
         </div>
       )}
-      {state === 'ok' && staff && !allowed && <NoRight need={roles} mine={staff.roles} admins={admins} />}
+      {state === 'ok' && staff && !allowed && <NoRight need={roles} mine={staff.roles} admins={admins} onSwitched={() => { setStaff(null); setState('login'); }} />}
       {state === 'ok' && staff && allowed && children(staff)}
     </div>
   );
 }
 
 /** 1.4.0（改动单 B4）：没权限时说清需要什么权限、现在是什么权限、找哪位管理员开（只列名字，不列邮箱） */
-function NoRight({ need, mine, admins }: { need: string[]; mine: string[]; admins: string[] }) {
+/**
+ * 后台综合优化 11/21（十一.2）：“没有权限”时给两条出路——换个邮箱登录（退出后当场显示登录框）、退出（回官网）。
+ */
+function SwitchAccount({ onSwitched }: { onSwitched: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const out = async () => {
+    setBusy(true);
+    await api('/api/v1/auth/logout', { body: {} });
+    notifyStaffChanged();
+    setBusy(false);
+  };
+  return (
+    <div className={styles.btnRow} style={{ marginTop: '0.8rem' }}>
+      <button className={styles.btn} disabled={busy} onClick={async () => { await out(); onSwitched(); }}>
+        换个邮箱登录
+      </button>
+      <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={busy} onClick={async () => { await out(); location.href = '/zh'; }}>
+        退出
+      </button>
+    </div>
+  );
+}
+
+function NoRight({ need, mine, admins, onSwitched }: { need: string[]; mine: string[]; admins: string[]; onSwitched: () => void }) {
   const needText = need.map((r) => `「${ROLE_NAME[r] ?? r}」`).join('或');
   const mineText = mine.length ? mine.map((r) => ROLE_NAME[r] ?? r).join('、') : '没有任何权限';
   return (
@@ -83,6 +107,7 @@ function NoRight({ need, mine, admins }: { need: string[]; mine: string[]; admin
       <p style={{ margin: '0.6rem 0 0' }}>
         <Link href="/zh/staff" style={{ color: 'var(--gold)' }}>回后台首页，看看您能用的功能 ›</Link>
       </p>
+      <SwitchAccount onSwitched={onSwitched} />
     </div>
   );
 }
@@ -98,9 +123,14 @@ function StaffLogin({ onDone }: { onDone: () => void }) {
   async function send() {
     setBusy(true);
     setErr('');
-    const r = await api<{ devCode?: string }>('/api/v1/auth/code/send', { body: { channel: 'email', target: email } });
+    // 十一.1：只给工作人员邮箱发码；不是工作人员账号时服务器当场说清楚，不发、也不显示“已发送”
+    const r = await api<{ devCode?: string }>('/api/v1/auth/code/send', { body: { channel: 'email', target: email, purpose: 'staff' } });
     setBusy(false);
-    if (!r.ok) return setErr(r.message);
+    if (!r.ok) {
+      setSent(false);
+      setHint('');
+      return setErr(r.message);
+    }
     setSent(true);
     setHint(r.data.devCode ? `测试环境验证码：${r.data.devCode}` : '验证码已发到邮箱，10 分钟内有效');
   }
@@ -119,7 +149,7 @@ function StaffLogin({ onDone }: { onDone: () => void }) {
       {hint && <div className={styles.notice}>{hint}</div>}
       <div className={styles.field}>
         <label className={styles.label} htmlFor="staff-email">邮箱</label>
-        <input id="staff-email" className={styles.input} type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input id="staff-email" className={styles.input} type="email" autoComplete="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(''); if (sent) { setSent(false); setHint(''); setCode(''); } }} />
       </div>
       {sent && (
         <div className={styles.field}>

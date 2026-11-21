@@ -6,33 +6,11 @@ import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, copyText, fmtDateTime } from '@/components/crm/client';
 import { saveImage, savedText } from '@/components/crm/staff/SaveImage';
+import { AuditLog, type LogRow } from '@/components/crm/staff/AuditLog';
 
 type M = { id: string; name: string; roles: string[]; regions: string[]; phone: string | null; is_active: boolean; wechat_name: string | null; member_no: number | null; mp_bound_at: string | null; last_seen_at: string | null; email: string | null };
-type L = { created_at: string; actor: string; action: string; target_type: string; target_id: string; target_name: string | null; reason: string | null; before_value: { roles?: string[]; is_active?: boolean } | null; after_value: { roles?: string[]; active?: boolean; recipients?: number } | null };
 const ROLE: Record<string, string> = { admin: '管理员', ops: '运营', checkin: '签到员', finance: '财务' };
 const REGIONS = ['洛杉矶/橙县', '旧金山湾区', '纽约', '美国其他', '中国大陆', '其他'];
-const ACTION: Record<string, string> = {
-  capacity_change: '改名额', staff_admit: '现场放人', noshow_exempt: '解除爽约候补', confirm_timeline: '确认时间线开关', backfill_attendance: '补登记到场',
-  merge_contacts: '合并档案', undo_merge_contacts: '撤销合并', team_add: '加工作人员', team_update: '改权限', team_disable: '停用工作人员', team_bind_code: '生成绑定码',
-  join_link_sent: '发入会链接', home_slide: '首页轮播设置', home_slide_remove: '撤掉轮播设置', contact_region: '改客户地区', checkin_questions_update: '改签到题库',
-  staff_checkin: '代签到', onsite_register: '现场登记', newsletter_confirm: '确认群发邮件通讯', create_event: '新建活动', update_event: '修改活动',
-  regenerate_checkin_code: '重置签到码', upsert_staff: '改网站登录（按邮箱）'
-};
-const roleText = (r?: string[]) => (r ?? []).map((x) => ROLE[x] ?? x).join('、');
-function detail(l: L) {
-  if (l.action === 'team_update' || l.action === 'team_disable') {
-    const b = l.before_value ?? {};
-    const a = l.after_value ?? {};
-    const parts = [] as string[];
-    if (a.roles && roleText(b.roles) !== roleText(a.roles)) parts.push(`${roleText(b.roles)} → ${roleText(a.roles)}`);
-    if (a.active === false) parts.push('停用');
-    if (a.active === true && b.is_active === false) parts.push('恢复');
-    return parts.join('；');
-  }
-  if (l.action === 'newsletter_confirm' && l.after_value?.recipients) return `发给 ${l.after_value.recipients} 人`;
-  return l.reason ?? '';
-}
-
 /** 1.4.0（改动单 B1）：出码结果——小程序码（微信一扫即绑定）+ 8 位码备用 + 复制发微信 + 存图 */
 type Code = { code: string; expiresAt: string; who: string; qr: string | null };
 const BIND_TIP = '让同事用微信扫这个码，扫完就绑定好了；扫不了的：小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里）输入 8 位码';
@@ -84,7 +62,7 @@ const WEB_ROLES: [string, string][] = [['checkin', '签到员'], ['finance', '�
 
 export default function Team() {
   const [team, setTeam] = useState<M[]>([]);
-  const [log, setLog] = useState<L[]>([]);
+  const [log, setLog] = useState<LogRow[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // 刚加的人 / 某一行出的码：按工作人员 id 存，显示在那一行下面
   const [codes, setCodes] = useState<Record<string, Code>>({});
@@ -92,7 +70,7 @@ export default function Team() {
   const [web, setWeb] = useState({ email: '', name: '', roles: [] as string[] });
   const [busy, setBusy] = useState('');
   const load = useCallback(async () => {
-    const r = await api<{ team: M[]; log: L[] }>('/api/v1/staff/team');
+    const r = await api<{ team: M[]; log: LogRow[] }>('/api/v1/staff/team');
     if (r.ok) {
       setTeam(r.data.team);
       setLog(r.data.log);
@@ -337,26 +315,8 @@ export default function Team() {
           </div>
 
           <h2 className={styles.h2}>操作记录</h2>
-          {!log.length && <p className={styles.muted}>还没有记录。</p>}
-          {!!log.length && (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr><th>时间</th><th>谁（哪个账号）</th><th>做了什么</th><th>对象</th></tr>
-                </thead>
-                <tbody>
-                  {log.map((l, i) => (
-                    <tr key={i}>
-                      <td>{fmtDateTime(l.created_at)}</td>
-                      <td>{l.actor.replace(/^staff:/, '')}</td>
-                      <td>{ACTION[l.action] ?? '其他操作'}{detail(l) ? `（${detail(l)}）` : ''}</td>
-                      <td>{l.target_name ?? ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <p className={styles.small} style={{ marginTop: 0 }}>谁、对谁、做了什么（最近 200 条）。「数据」页最下面也能看。</p>
+          <AuditLog log={log} />
         </>
       )}
     </StaffGate>
