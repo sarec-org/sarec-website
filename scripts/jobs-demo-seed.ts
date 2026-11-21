@@ -131,10 +131,25 @@ async function main() {
     '|---|---|---|---|',
     ...out.map((o) => `| ${o.kind} | ${o.id} | ${o.name} | ${o.extra} |`)
   ].join('\n');
-  const file = join(homedir(), 'WeChatProjects', '找工人接活_演示数据清单.md');
-  writeFileSync(file, md + '\n');
   console.log(md);
-  console.log(`\n清单已写到 ${file}`);
+  // 清单文件只记测试库的 ID（本机一次性库跑的已经覆盖过它三次）：连的是测试库（主机名含 ep-empty-river）或明确 JOBS_DEMO_LIST_WRITE=1 才写，否则只打印
+  if (shouldWriteList()) {
+    const file = join(homedir(), 'WeChatProjects', '找工人接活_演示数据清单.md');
+    writeFileSync(file, md + '\n');
+    console.log(`\n清单已写到 ${file}`);
+  } else {
+    console.log('\n这不是测试库（主机名不含 ep-empty-river），清单只打印在上面，没写 ~/WeChatProjects/找工人接活_演示数据清单.md（确要写：JOBS_DEMO_LIST_WRITE=1）');
+  }
+}
+
+/** 只认测试库主机名或明确的环境变量；读不出主机名就不写 */
+function shouldWriteList(): boolean {
+  if (process.env.JOBS_DEMO_LIST_WRITE === '1') return true;
+  try {
+    return new URL(process.env.DATABASE_URL ?? '').hostname.includes('ep-empty-river');
+  } catch {
+    return false;
+  }
 }
 
 main()
