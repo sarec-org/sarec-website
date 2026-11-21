@@ -6,6 +6,7 @@ import { getPool, withTransaction } from '@/lib/db/client';
 import { CrmError, normalizeEmail, normalizePhone } from './events';
 import { notifyFollowup, upsertFollowup } from './followups';
 import { laToday } from '@/lib/laDate';
+import { classifyInquiry } from './followupKit';
 
 export type InquiryInput = {
   source: 'web_form' | 'agent' | 'mp';
@@ -42,6 +43,8 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
     const { rows } = await getPool().query<{ id: string }>(`SELECT id FROM contacts WHERE member_no = $1`, [Number(input.ref)]);
     refId = rows[0]?.id ?? null;
   }
+  // 四.1：先自动分类（规则，不调 AI）；只有客户咨询生成建议联系内容
+  const cls = classifyInquiry({ message, intent: input.intent, name, source: input.source });
   const out = await withTransaction(async (db) => {
     if (input.conversationId) {
       const { rows } = await db.query<{ id: string; inquiry_id: string | null }>(
@@ -68,11 +71,12 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
           ? (message ?? '').replace(/^\s*需求：/, '').trim()
           : [clip(input.intent, 60), message].filter(Boolean).join('：')
         ).slice(0, 2000) || null,
-      draft: input.draft ?? (name ? `${name}您好，我是 SAREC 中美房地产商会的工作人员，收到您在${input.source === 'mp' ? '小程序' : '网站'}上的咨询，想跟您确认一下具体需求，方便的时候我们通个电话？` : null),
-      draftBy: input.draft ? 'ai' : 'template',
+      draft: cls.category !== 'customer' ? null : input.draft ?? (name ? `${name}您好，我是 SAREC 中美房地产商会的工作人员，收到您在${input.source === 'mp' ? '小程序' : '网站'}上的咨询，想跟您确认一下具体需求，方便的时候我们通个电话？` : null),
+      draftBy: input.draft && cls.category === 'customer' ? 'ai' : 'template',
       inquiryId,
       nextDate: laToday()
     });
+    if (f.created) await db.query(`UPDATE followups SET category = $2, category_by = 'rule', lang = $3 WHERE id = $1`, [f.id, cls.category, cls.lang]);
     return { inquiryId, followupId: f.id, created: f.created };
   });
   if (out.created) await notifyFollowup(out.followupId, base);

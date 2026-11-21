@@ -9,7 +9,7 @@ import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend
 import { digestEmail, fmtUsd } from './config';
 import { addDays, clip, laDay, normalizeTight, TZ } from './text';
 
-export type DigestResult = { day: string; status: 'sent' | 'skipped_already_sent' | 'skipped_no_recipient' | 'failed'; conversations: number; leads: number; error?: string };
+export type DigestResult = { day: string; status: 'sent' | 'skipped_already_sent' | 'skipped_no_recipient' | 'skipped_empty' | 'failed'; conversations: number; leads: number; error?: string };
 
 const AUD: Record<string, string> = { visitor: '访客', logged_in: '已登录', registered: '已报名用户', member: '会员' };
 const PAGE: Record<string, string> = { home: '首页', article: '文章页', event: '活动页' };
@@ -135,6 +135,11 @@ export async function runAgentDigest(now: Date = new Date()): Promise<DigestResu
   if (!rows[0]) return { day, status: 'skipped_already_sent', conversations: 0, leads: 0 };
   try {
     const d = await buildAgentDigest(day);
+    // 后台综合优化 四.10：当天 0 对话 0 线索不发邮件（记成已处理，不再重试）
+    if (!d.conversations && !d.leads) {
+      await pool.query(`UPDATE agent_notices SET status = 'sent', sent_at = now(), error = '0 对话 0 线索，不发' WHERE key = $1`, [key]);
+      return { day, status: 'skipped_empty', conversations: 0, leads: 0 };
+    }
     const res = await getResend().emails.send({ from: getFromAddress(), to, subject: d.subject, text: d.text });
     if (res.error) throw new Error(res.error.message);
     await pool.query(`UPDATE agent_notices SET status = 'sent', sent_at = now(), error = NULL WHERE key = $1`, [key]);

@@ -52,6 +52,14 @@ async function run(req: Request) {
     await recordException('agent_digest', `agent_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.agentDigest = 'error';
   }
+  // 后台综合优化 四.3：推销和垃圾咨询每天汇总一封（带一键全部不跟进；过 notify_live 总闸）
+  try {
+    const { runJunkDigest } = await import('@/lib/crm/followupMail');
+    out.junkDigest = await runJunkDigest(new Date());
+  } catch (e) {
+    await recordException('junk_digest', `junk_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.junkDigest = 'error';
+  }
   // 1.3 M：筹备清单提醒（截止前一天给负责人；活动前 2 天给东哥汇总）、收费活动未付提醒（活动前 5 天）——按规则发，不调 AI
   try {
     out.prep = await runPrepReminders(new Date());

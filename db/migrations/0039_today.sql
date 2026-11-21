@@ -37,3 +37,15 @@ ALTER TABLE followups ADD COLUMN IF NOT EXISTS action_token_hash    text;
 ALTER TABLE followups ADD COLUMN IF NOT EXISTS action_token_expires timestamptz;
 
 CREATE INDEX IF NOT EXISTS idx_followups_cat ON followups (category, status, created_at DESC);
+
+-- 5. 推销 / 垃圾每日汇总（四.3）：一封邮件一批，邮件里"全部不跟进"凭这一批的口令（库里只存 sha256）
+CREATE TABLE IF NOT EXISTS followup_batches (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  kind          text NOT NULL DEFAULT 'junk_digest',
+  ids           uuid[] NOT NULL,
+  token_hash    text NOT NULL,
+  expires_at    timestamptz NOT NULL,
+  done_at       timestamptz,
+  done_by       text,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);

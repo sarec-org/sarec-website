@@ -84,6 +84,11 @@ export type TodayItem = {
   at?: string;
   /** 可选：卡片里多一段原话/摘要（≤ 200 字，页面会折叠） */
   detail?: string;
+  /**
+   * 可选（四.5）：卡片上点过打电话 / 短信 / 邮件 / 复制后，页面在这张卡上出"联系上了 / 没接 / 已约时间"三个按钮，
+   * POST 到这个地址 { result: 'reached' | 'no_answer' | 'scheduled', date?: 'YYYY-MM-DD' }。
+   */
+  contactResult?: { endpoint: string };
 };
 
 export type TodayContext = {
