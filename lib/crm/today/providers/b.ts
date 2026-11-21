@@ -25,7 +25,7 @@ async function followupItems(ctx: Parameters<TodayProvider['list']>[0]): Promise
     const draft = draftFor(c, v);
     const { what, suggest } = headline(c);
     const band = c.overdueDays > 0 ? PRIORITY.overdue : PRIORITY.inquiry;
-    const tags = [c.isMember ? '会员' : '', c.overdueDays > 0 ? `过期 ${c.overdueDays} 天` : '', c.sourceLabel, c.owner ? `负责人 ${c.owner}` : ''].filter(Boolean);
+    const tags = [c.isMember ? '会员' : '', c.overdueDays > 0 ? `过期 ${c.overdueDays} 天` : '', c.owner ? `负责人 ${c.owner}` : ''].filter(Boolean);
     out.push({
       id: `followup:${c.id}`,
       kind: isNew ? 'inquiry_new' : 'followup',

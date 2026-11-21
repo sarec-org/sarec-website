@@ -24,13 +24,11 @@ const siteBase = (base?: string) => (base || process.env.NEXT_PUBLIC_SITE_URL ||
 /** "这是什么" + "建议怎么办"（邮件标题、第一行、今天页卡片共用） */
 export function headline(c: FollowupCard): { what: string; suggest: string } {
   const who = `${c.name?.trim() || '一位访客'}${c.isMember ? '（会员）' : ''}`;
-  const need = c.need ? `：${oneLine(c.need, 30)}` : '';
-  const what =
-    c.source === 'expiring_member'
-      ? `${who}的会籍快到期了`
-      : c.source === 'inquiry' || c.source === 'agent_lead'
-        ? `${c.sourceLabel}，${who}${need}`
-        : `${c.sourceLabel}，${who}${need}`;
+  // 一句话：咨询只写咨询类型（"加入商会"）或留言开头 18 个字，原话放正文
+  const raw = (c.need ?? '').replace(/^需求[:：]\s*/, '');
+  const short = c.source === 'inquiry' || c.source === 'agent_lead' ? raw.match(/^([^:：]{2,8})[:：]/)?.[1] ?? oneLine(raw, 18) : oneLine(raw, 30);
+  const need = short ? `：${short}` : '';
+  const what = c.source === 'expiring_member' ? `${who}的会籍快到期了` : `${c.sourceLabel}，${who}${need}`;
   const how = c.phone ? '打个电话' : c.wechat ? '加微信联系' : c.email ? '回一封邮件' : '想办法联系上';
   const suggest =
     c.category !== 'customer'

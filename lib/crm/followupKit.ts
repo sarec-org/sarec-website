@@ -22,12 +22,15 @@ export type Lang = 'zh' | 'en';
 export const CATEGORY_LABEL: Record<InquiryCategory, string> = { customer: '客户咨询', pitch: '合作或推销', spam: '垃圾' };
 
 const CJK = /[㐀-鿿]/g;
+/** 按留言判断（留言优先，没留言才看称呼）：有两个以上汉字算中文，否则有英文字母算英文，都没有按中文 */
 export function detectLang(...texts: (string | null | undefined)[]): Lang {
-  const t = texts.filter(Boolean).join(' ');
-  const cjk = (t.match(CJK) ?? []).length;
-  const latin = (t.match(/[A-Za-z]/g) ?? []).length;
-  if (cjk >= 2) return 'zh';
-  if (latin >= 3) return 'en';
+  for (const t of texts) {
+    if (!t?.trim()) continue;
+    const cjk = (t.match(CJK) ?? []).length;
+    const latin = (t.match(/[A-Za-z]/g) ?? []).length;
+    if (cjk >= 2) return 'zh';
+    if (latin >= 3) return 'en';
+  }
   return 'zh';
 }
 
@@ -116,7 +119,14 @@ export type DraftInput = {
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + '…' : s);
 
 export function buildDraft(d: DraftInput): string {
-  const needShort = d.need ? clip(d.need.replace(/\s+/g, ' ').replace(/^(需求|入会申请（小程序）)[:：]?\s*/, ''), 40) : '';
+  // 草稿里不整段复述对方原话：活动后只取"希望了解"的内容；咨询只取表单上选的咨询类型（"加入商会"这种短词）
+  const raw = (d.need ?? '').replace(/\s+/g, ' ').replace(/^(需求|入会申请（小程序）)[:：]?\s*/, '');
+  const needShort =
+    d.source === 'post_event_interest'
+      ? clip(raw.replace(/^参加「[^」]*」后希望了解[:：]\s*/, ''), 30)
+      : d.source === 'inquiry' || d.source === 'agent_lead'
+        ? (raw.match(/^([^:：]{2,8})[:：]/)?.[1] ?? (raw.length <= 12 ? raw : ''))
+        : clip(raw, 40);
   const k = d.dedupeKey ?? '';
   if (d.lang === 'en') {
     const hi = `Hi ${d.name?.trim() || 'there'},`;
@@ -126,7 +136,7 @@ export function buildDraft(d: DraftInput): string {
     let body: string;
     if (d.source === 'expiring_member') body = ` Your membership is coming up for renewal soon; happy to help if you have any questions.`;
     else if (d.source === 'post_event_interest') body = ` Thanks for joining us${d.eventTitle ? ` at "${d.eventTitle}"` : ''}. You mentioned you'd like to learn more${needShort ? ` about ${needShort}` : ''} — could we find a time to chat?`;
-    else body = ` We received your message${needShort ? ` ("${needShort}")` : ''} and would love to learn more about what you need. Would you have time for a quick call this week?`;
+    else body = ` We received your message${needShort && /^[\x20-\x7e]+$/.test(needShort) ? ` about ${needShort}` : ''} and would love to learn more about what you need. Would you have time for a quick call this week?`;
     return `${hi} ${me}${sorry}${mem}${body}`;
   }
   const who = d.name?.trim() ? `${d.name.trim()}您好，` : '您好，';
