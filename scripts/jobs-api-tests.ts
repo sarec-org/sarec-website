@@ -109,6 +109,26 @@ async function main() {
   r = await call('GET', `/jobs/entry?t=${Date.now()}`);
   assert.equal(r.j.show, false);
   ok('D12：两个开关都关，网站菜单 / 首页入口不出（/jobs/entry show=false）');
+  // ── 指令 10：家政保洁一组排第一；首页第 1 个入口是「家政保洁」（指向这一组），屋顶让出位置但仍在全部工种里；家电维修（BHGS 登记，B 类） ──
+  {
+    const m = (await call('GET', '/jobs/meta')).j;
+    const gs = [...m.groups].sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+    assert.equal(gs[0].key, 'clean');
+    assert.equal(gs[0].name, '家政保洁');
+    assert.deepEqual([...gs[0].tradeKeys].sort(), ['appliance_repair', 'cleaning', 'gardening', 'junk']);
+    assert.ok(!m.groups.some((g: { name: string }) => g.name === '清洁、清运与搬家'));
+    assert.equal(m.trades.find((t: { key: string }) => t.key === 'movers').group, 'property');
+    assert.equal(m.trades.find((t: { key: string }) => t.key === 'cleaning').scope, '日常保洁、退租清洁、装修后清洁');
+    const ar = m.trades.find((t: { key: string }) => t.key === 'appliance_repair');
+    assert.ok(ar && ar.name === '家电维修' && ar.group === 'clean' && ar.licType === 'B' && ar.open === true);
+    assert.deepEqual(m.homeEntries[0], { label: '家政保洁', icon: 'sparkles', target: { type: 'group', key: 'clean' } });
+    assert.deepEqual(m.homeEntries.map((e: { label: string }) => e.label), ['家政保洁', '水管', '电工', '空调暖气', '房屋维修', '装修', '设计']);
+    assert.ok(m.trades.some((t: { key: string; open: boolean }) => t.key === 'roofing' && t.open), '屋顶仍在全部工种里');
+    const wt = (await call('GET', '/workbench/jobs/trades', staff)).j;
+    const ar2 = wt.trades.find((t: { key: string }) => t.key === 'appliance_repair');
+    assert.ok(ar2.lookupUrl.startsWith('https://search.dca.ca.gov') && String(ar2.issuer).includes('BHGS') && String(ar2.note).includes('9800'));
+    ok('指令 10：「家政保洁」一组排第一（清洁保洁、家电维修、垃圾清运、园艺养护），首页第 1 个入口；屋顶仍在全部工种；家电维修 = BHGS 登记（B 类，一键打开 DCA 查询）');
+  }
   r = await call('GET', '/jobs/pros?trade=plumbing');
   assert.equal(r.status, 403);
   assert.equal(r.j.error.code, 'not_open');

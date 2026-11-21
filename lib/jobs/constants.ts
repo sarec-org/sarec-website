@@ -79,3 +79,6 @@ export function webBase(): string {
 export const RECRUITING_TEXT = '正在招募各工种的接活人，可先发布活儿等人联系';
 export const TRADE_RECRUITING_TEXT = '这个工种正在招募接活人';
 export const RECRUITING_LABEL = '招募中';
+
+/** 指令 10：工种的范围说明（给人看，meta.trades[].scope；没有的为 null） */
+export const TRADE_SCOPE: Record<string, string> = { cleaning: '日常保洁、退租清洁、装修后清洁', appliance_repair: '洗衣机、烘干机、冰箱、炉灶、微波炉、洗碗机、房间空调的修理和安装' };

@@ -240,18 +240,19 @@ INSERT INTO crm_settings (key, value, updated_by) VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- ── 12. 种子：分组（按资质表核实.md ② 分组建议）─────────────────────
+-- 指令 10：原「清洁、清运与搬家」（key 仍是 clean）改名「家政保洁」并排第一（sort 5）；搬家挪到房产服务，施工后清理挪到建房与加建（要 CSLB 牌照，不算家政）。
 INSERT INTO jobs_trade_groups (key, name, sort) VALUES
+  ('clean', '家政保洁', 5),
   ('utility', '水电暖', 10),
   ('repair', '维修与装修', 20),
   ('build', '建房与加建', 30),
   ('outdoor', '屋外与庭院', 40),
-  ('clean', '清洁、清运与搬家', 50),
   ('design', '设计与专业服务', 60),
   ('property', '房产服务', 70),
   ('legal', '法律财税保险', 80)
 ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name, sort = EXCLUDED.sort WHERE jobs_trade_groups.updated_by IS NULL;
 
--- ── 13. 种子：工种（~/WeChatProjects/找工人接活_资质表.json，41 项，研究子任务 11/20 对照发证机构官网核实）──
+-- ── 13. 种子：工种（~/WeChatProjects/找工人接活_资质表.json，41 项，研究子任务 11/20 对照发证机构官网核实；指令 10 加家电维修，共 42 项）──
 -- open = 核实结论 verified（核实不了的 water_mold、pm_owner_rep 先不开放）；lookup_url 里的 {licNum} 由程序换成牌照号。
 -- 重跑时只刷新后台没改过的行（updated_by IS NULL）。
 INSERT INTO jobs_trades (key, name, group_key, lic_type, issuer, license_class, lookup_url, verify_points, open, no_post, no_notify, icon, sort, verified, note) VALUES
@@ -274,7 +275,7 @@ INSERT INTO jobs_trades (key, name, group_key, lic_type, issuer, license_class, 
   ('tree', '树木修剪', 'outdoor', 'A', '加州承包商执照委员会 CSLB', 'C-49 树木与棕榈（2024-01-01 起取代 D-49；旧 C-61/D-49 持有人仍可继续做）', 'https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/LicenseDetail.aspx?LicNum={licNum}', E'牌照状态为 active（页面写 This license is current and active）\n牌照类别里有本工种对应的类别（见牌照类别栏）\n保证金（Contractor''s Bond）有效、未注销\n工伤保险有效，或声明无雇员豁免（豁免的要提醒：不能带工人）\n到期日（Expire Date）记下来，到期前提醒\n牌照上的公司名/人名与登记人一致\n新牌照看 C-49；老牌照 D-49 也认', true, false, false, 'tree', 170, true, 'D-49 已于 2024 年停发，统一为 C-49。B&P 7026.1(a)(4)：园丁顺带修剪 15 英尺以下树木不需执照；15 英尺及以上必须持牌。'),
   ('water_mold', '水损霉菌修复', 'repair', 'A', '加州承包商执照委员会 CSLB', '无专门类别：常见 B、C-61/D-64 非专门类；拆石棉要 C-22 或 ASB 认证；灾后有害物清理要 HAZ 认证', 'https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/LicenseDetail.aspx?LicNum={licNum}', E'牌照状态为 active（页面写 This license is current and active）\n牌照类别里有本工种对应的类别（见牌照类别栏）\n保证金（Contractor''s Bond）有效、未注销\n工伤保险有效，或声明无雇员豁免（豁免的要提醒：不能带工人）\n到期日（Expire Date）记下来，到期前提醒\n牌照上的公司名/人名与登记人一致\n只抽水烘干/除霉而不拆不修的，州法没有明确牌照要求\n一旦拆墙、换板、修复，就是施工，要对口 CSLB 牌照\n涉及石棉：C-22 或牌照上有 ASB 认证', false, false, false, 'droplet', 180, false, '加州没有霉菌修复州执照。洛杉矶县消费者局指南列出修复常见牌照：B、C-21、C-12、C-61。是否对口需要人工判断。'),
   ('solar', '太阳能', 'utility', 'A', '加州承包商执照委员会 CSLB', 'C-46 太阳能（光伏也可 C-10；太阳能热水也可 C-36；B）', 'https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/LicenseDetail.aspx?LicNum={licNum}', E'牌照状态为 active（页面写 This license is current and active）\n牌照类别里有本工种对应的类别（见牌照类别栏）\n保证金（Contractor''s Bond）有效、未注销\n工伤保险有效，或声明无雇员豁免（豁免的要提醒：不能带工人）\n到期日（Expire Date）记下来，到期前提醒\n牌照上的公司名/人名与登记人一致', true, false, false, 'sun', 190, true, 'C-46 官方定义：安装维修光热与光伏系统。'),
-  ('post_clean', '施工后清理', 'clean', 'A', '加州承包商执照委员会 CSLB', 'C-61/D-63 施工清理；B 也可', 'https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/LicenseDetail.aspx?LicNum={licNum}', E'牌照状态为 active（页面写 This license is current and active）\n牌照类别里有本工种对应的类别（见牌照类别栏）\n保证金（Contractor''s Bond）有效、未注销\n工伤保险有效，或声明无雇员豁免（豁免的要提醒：不能带工人）\n到期日（Expire Date）记下来，到期前提醒\n牌照上的公司名/人名与登记人一致', true, false, false, 'broom', 200, true, 'D-63 官方定义：清除施工产生的混凝土、土、木料、石膏、墙板、油漆胶渍等。'),
+  ('post_clean', '施工后清理', 'build', 'A', '加州承包商执照委员会 CSLB', 'C-61/D-63 施工清理；B 也可', 'https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/LicenseDetail.aspx?LicNum={licNum}', E'牌照状态为 active（页面写 This license is current and active）\n牌照类别里有本工种对应的类别（见牌照类别栏）\n保证金（Contractor''s Bond）有效、未注销\n工伤保险有效，或声明无雇员豁免（豁免的要提醒：不能带工人）\n到期日（Expire Date）记下来，到期前提醒\n牌照上的公司名/人名与登记人一致', true, false, false, 'broom', 200, true, 'D-63 官方定义：清除施工产生的混凝土、土、木料、石膏、墙板、油漆胶渍等。'),
   ('pest', '虫害白蚁', 'repair', 'B', '结构害虫控制委员会 SPCB（Structural Pest Control Board）', '分支 1 熏蒸 / 分支 2 一般害虫 / 分支 3 白蚁等木材害虫；公司须为注册公司（Registered Company），个人为 Operator / Field Rep / Applicator', 'https://search.dca.ca.gov/', E'在 DCA 查询里选 Structural Pest Control Board，查公司注册号和本人执照\n分支对口：白蚁要 Branch 3；熏蒸要 Branch 1；蟑螂老鼠要 Branch 2\nField Rep / Applicator 只能替注册公司干活，不能自己单独接\n状态 current / 到期日', true, false, false, 'bug', 210, true, '官方三分支说明见 pestboard.ca.gov/howdoi/3branches.shtml。注销的执照查不到，要打电话问。'),
   ('architect', '建筑设计', 'design', 'B', '加州建筑师委员会 CAB（California Architects Board）', 'Architect（个人执照，委员会不发公司执照）', 'https://search.dca.ca.gov/', E'在 DCA 查询选 Architects Board，按姓名/执照号查\n只认个人；设计院按其持牌建筑师核\n没有加州执照的设计院只能标“方案与咨询，不提供加州报批签章”', true, false, false, 'compass', 220, true, '注意：B&P 5537 允许无照人员设计两层加地下室以内的木结构独栋、四户以内住宅及其车库。所以市场上有很多无照“建筑设计师”（building designer）合法做小住宅。本平台按初稿只收持牌建筑师；如要收无照设计师，需另开一个 C 类“住宅绘图”工种并写清范围。'),
   ('engineer', '结构土木岩土', 'design', 'B', '工程师、测量师与地质师委员会 BPELSG', 'C 土木工程师 / S 结构工程师 / GE 岩土工程师（另有 EG 工程地质师）', 'https://search.dca.ca.gov/?BD=31', E'DCA 查询（BPELSG）按执照号查，执照号只填数字，注意同号可能对应不同类型，核对类型\n结构计算/签章要 C 或 S；土壤报告要 GE\n委员会不发公司执照，公司按其持牌工程师核\n执法记录不全在网上，有疑问打 (916) 999-3593', true, false, false, 'beam', 230, true, ''),
@@ -282,13 +283,14 @@ INSERT INTO jobs_trades (key, name, group_key, lic_type, issuer, license_class, 
   ('property_mgmt', '物业管理', 'property', 'B', '加州房地产局 DRE', '房地产经纪人执照（Broker）；销售员（Salesperson）须挂在经纪人名下', 'https://www2.dre.ca.gov/PublicASP/pplinfo.asp', E'在 DRE 公开查询页输入执照号/姓名\n状态 Licensed；公司要查公司（Corporation）执照和指定经纪人\n销售员要看挂靠的 Responsible Broker', true, false, false, 'building-key', 250, true, '加州没有单独的“物业经理执照”；替别人出租、收租、招租收费，按 B&P 10131(b) 要 DRE 经纪执照。业主管自己房子不用。HOA 社区管理经理不用 DRE 执照（另有自愿认证）。'),
   ('appraiser', '房产估价', 'property', 'B', '房地产估价师局 BREA（原 OREA）', 'Trainee 实习 / Licensed Residential / Certified Residential / Certified General', 'https://www2.brea.ca.gov/breasearch/faces/party/search.xhtml', E'BREA 查询页按姓名或执照号查\n实习估价师（Trainee）不能独立接活\n级别对口：商业物业要 Certified General', true, false, false, 'clipboard-check', 260, true, ''),
   ('locksmith', '锁匠', 'repair', 'B', '安保与调查服务局 BSIS', '锁匠公司执照 LCO；员工须有锁匠员工注册', 'https://search.dca.ca.gov/', E'DCA 查询选 Security and Investigative Services，查公司 LCO 执照\n上门师傅要有员工注册卡\n状态 current', true, false, false, 'key', 270, true, 'BSIS 官方要求开锁前出示公司执照或员工注册卡加带照片证件。注意：装门禁/保险柜工程另属 CSLB C-28 / D-16。'),
-  ('movers', '搬家', 'clean', 'B', '家居用品与服务局 BHGS（Bureau of Household Goods and Services，属 DCA）', '家庭搬运商许可，编号格式 CAL-T xxxxxx', 'https://search.dca.ca.gov/hhm_search', E'在 BHGS 搬家公司查询里输入 Cal-T 号\n状态 Active\n广告和合同上必须印 Cal-T 号', true, false, false, 'truck', 280, true, '2018-07-01 起搬家业由 CPUC 移交给 DCA 下的 BHGS 管，Cal-T 号保留。'),
+  ('movers', '搬家', 'property', 'B', '家居用品与服务局 BHGS（Bureau of Household Goods and Services，属 DCA）', '家庭搬运商许可，编号格式 CAL-T xxxxxx', 'https://search.dca.ca.gov/hhm_search', E'在 BHGS 搬家公司查询里输入 Cal-T 号\n状态 Active\n广告和合同上必须印 Cal-T 号', true, false, false, 'truck', 280, true, '2018-07-01 起搬家业由 CPUC 移交给 DCA 下的 BHGS 管，Cal-T 号保留。'),
   ('lawyer', '地产律师', 'legal', 'B', '加州律师协会 State Bar of California', 'California 律师执照（Active 才能执业）', 'https://apps.calbar.ca.gov/attorney/Licensee/Detail/{licNum}', E'按律师号打开详情页\nLicense Status 为 Active\n看有无公开纪律处分', true, true, true, 'scale', 290, true, '只展示、可联系；不发通知；不接受针对律师的活儿发布。'),
   ('tax', '会计税务', 'legal', 'B', '会计委员会 CBA（CPA）/ 美国国税局 IRS（EA，联邦）/ 加州税务教育委员会 CTEC（普通报税员）', 'CPA 执照 / IRS 注册代理人 EA / CTEC 注册报税员 CRTP', 'https://search.dca.ca.gov/', E'CPA：DCA 查询选 Accountancy, Board of\nEA：IRS 持证报税人目录 https://irs.treasury.gov/rpo/rpo.jsf\n普通报税员：CTEC 查询 https://ctec.org/taxpayers/find-verify-preparer/\nCPA、律师、EA 免 CTEC 注册；其他收费报税的必须 CTEC 注册\n只做记账（不报税、不出审计报告）的没有州执照要求', true, false, false, 'calculator', 300, true, '三种都认，按他选的身份去对应查询页核。'),
   ('insurance', '保险', 'legal', 'B', '加州保险局 CDI', '保险代理/经纪执照（Property & Casualty 财产险、Life 寿险等）', 'https://cdicloud.insurance.ca.gov/cal/LicenseNumberSearch', E'按执照号或姓名查\n状态有效，险种对口（房屋保险要 Property & Casualty）\n看纪律处分记录', true, false, false, 'shield', 310, true, ''),
-  ('cleaning', '清洁保洁', 'clean', 'C', '无州执照（改交营业登记和责任保险）', '无（加州无清洁业州执照）', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n只做清洁；涉及拆除、修补就要 CSLB 牌照', true, false, false, 'sparkles', 320, true, '州层面无执照，地方市县营业执照照常要。'),
+  ('cleaning', '清洁保洁', 'clean', 'C', '无州执照（改交营业登记和责任保险）', '无（加州无清洁业州执照）', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n只做清洁；涉及拆除、修补就要 CSLB 牌照', true, false, false, 'sparkles', 320, true, '范围：日常保洁、退租清洁、装修后清洁（装修后清走建筑垃圾、残料的是「施工后清理」，要 CSLB 牌照）。州层面无执照，地方市县营业执照照常要。'),
+  ('appliance_repair', '家电维修', 'clean', 'B', '家居用品与服务局 BHGS（Bureau of Household Goods and Services，属 DCA）', '家电维修商登记 Appliance Service Dealer Registration，编号格式 A-xxxxx（持对口 CSLB 牌照的可免）', 'https://search.dca.ca.gov/', E'在 DCA 统一查询（search.dca.ca.gov）输入登记号或名称，工作人员手点打开\n登记状态：有效（Current / Active）\n类别是 Appliance（家电维修商）\n名称与登记人一致\n到期日记下来（每年续期），到期前提醒\n如果交的是 CSLB 牌照（如 C-20 装空调）按 A 类核', true, false, false, 'washer', 325, true, '依据 B&P §9800–9873（Electronic and Appliance Repair Dealer Registration Law）：修理或安装大型家电（洗衣机、烘干机、冰箱、冰柜、炉灶、微波炉、洗碗机、垃圾压缩机、房间空调），或替这类活儿接单、收费的，都要有 BHGS 有效登记（分包、独立承包也不例外；持对口 CSLB 牌照或汽修局登记的除外）。来源：https://bhgs.dca.ca.gov/forms_pubs/subcontractors_flyer.pdf（11/20 核过原文）、https://www.bhgs.dca.ca.gov/consumers/bear_faq.shtml（11/20 打开是 404，按指挥窗口给的链接留着）。只给工作人员一键打开查询页，不程序抓取。'),
   ('junk', '垃圾清运', 'clean', 'C', '无州执照（改交营业登记和责任保险）', '无州执照；但很多城市要求清运许可/特许', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n看所在城市是否要清运许可：如洛杉矶市要 AB 939 清运许可（LASAN Waste Hauler Permit）；洛杉矶县非建制区为特许经营区、只能用授权清运商\n在城市方块里写明“限有当地许可的城市”', true, false, false, 'dumpster', 330, true, '例：洛杉矶市规定所有私营清运商都要 AB 939 合规许可，建筑垃圾要运到认证处理厂；业主自己拉自家装修垃圾除外。各城市规则不同，审核时按服务城市逐个看。'),
-  ('gardening', '园艺养护', 'outdoor', 'C', '无州执照（改交营业登记和责任保险）', '无（除草、剪草、修灌木不用执照）', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n范围限日常养护：割草、除草、修灌木、15 英尺以下树的顺带修剪\n种植草皮/植物、装灌溉、景观灯、排水都要 C-27，不在此工种\n代客打药除虫要县农业专员的园丁除虫营业执照（Maintenance Gardener）', true, false, false, 'leaf', 340, true, 'CSLB 官方《园丁还是景观承包商》：日常养护一般不需州执照；“植物和草皮”“灌溉”列在需执照项目里。'),
+  ('gardening', '园艺养护', 'clean', 'C', '无州执照（改交营业登记和责任保险）', '无（除草、剪草、修灌木不用执照）', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n范围限日常养护：割草、除草、修灌木、15 英尺以下树的顺带修剪\n种植草皮/植物、装灌溉、景观灯、排水都要 C-27，不在此工种\n代客打药除虫要县农业专员的园丁除虫营业执照（Maintenance Gardener）', true, false, false, 'leaf', 340, true, 'CSLB 官方《园丁还是景观承包商》：日常养护一般不需州执照；“植物和草皮”“灌溉”列在需执照项目里。'),
   ('interior', '室内设计', 'design', 'C', '无州执照（改交营业登记和责任保险）', '无强制执照；CCIDC“Certified Interior Designer”为自愿认证', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n自称“Certified Interior Designer”或“CID”的，要有 CCIDC 认证（https://www.ccidc.org/）\n包施工的要另有 CSLB 牌照', true, false, false, 'sofa', 350, true, 'B&P 5800 起：自愿认证，只保护“认证室内设计师”这个称呼，不认证也能做室内设计。'),
   ('inspection', '房屋检查', 'design', 'C', '无州执照（改交营业登记和责任保险）', '无州执照（B&P 7195–7199 只规定行为准则）', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n报告必须书面\n验房员不能对自己验过的房子揽修理活（B&P 7197）', true, false, false, 'search-house', 360, true, 'B&P 7195 定义了房屋检查和检查员，但州里没有发执照；2019 年 AB 1024 曾提议由 CSLB 发照，未成为法律（据第三方资料，未在立法网站直接核到）。行业常见自愿认证 ASHI、InterNACHI、CREIA。'),
   ('photo', '房产摄影', 'property', 'C', '无州执照（改交营业登记和责任保险）', '无', 'https://bizfileonline.sos.ca.gov/search/business', E'营业登记：公司/LLC 查加州州务卿 bizfile（https://bizfileonline.sos.ca.gov/search/business）；个体户看市/县营业执照或虚构商号（DBA）登记\n责任保险单（COI）：保额、有效期、被保人名称\n用无人机航拍的要有联邦 FAA Part 107 遥控驾驶员证', true, false, false, 'camera', 370, true, '州无执照；无人机商业飞行属联邦管。'),
@@ -304,13 +306,19 @@ ON CONFLICT (key) DO UPDATE SET
 WHERE jobs_trades.updated_by IS NULL;
 
 -- ── 14. 种子：首页 7 个入口（装修 → 维修与装修这一组；设计 → 设计与专业服务这一组；屋顶 → 屋顶防水）──
+-- 指令 10：「家政保洁」（指向家政保洁这一组）放第一个；「屋顶」让出位置（仍在全部工种里）。后台照样能调。
+-- 后台没动过（updated_by 全是空）、还是旧默认（第 6 个是屋顶）的库，换成新默认；动过的一律不碰。
+DELETE FROM jobs_home_entries
+ WHERE NOT EXISTS (SELECT 1 FROM jobs_home_entries WHERE updated_by IS NOT NULL)
+   AND EXISTS (SELECT 1 FROM jobs_home_entries WHERE slot = 6 AND target_type = 'trade' AND target_key = 'roofing')
+   AND NOT EXISTS (SELECT 1 FROM jobs_home_entries WHERE target_key = 'clean');
 INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort) VALUES
-  (1, '水管',     'faucet',    'trade', 'plumbing',   1),
-  (2, '电工',     'bolt',      'trade', 'electrical', 2),
-  (3, '空调暖气', 'snowflake', 'trade', 'hvac',       3),
-  (4, '房屋维修', 'wrench',    'trade', 'handyman',   4),
-  (5, '装修',     'hammer',    'group', 'repair',     5),
-  (6, '屋顶',     'roof',      'trade', 'roofing',    6),
+  (1, '家政保洁', 'sparkles',  'group', 'clean',      1),
+  (2, '水管',     'faucet',    'trade', 'plumbing',   2),
+  (3, '电工',     'bolt',      'trade', 'electrical', 3),
+  (4, '空调暖气', 'snowflake', 'trade', 'hvac',       4),
+  (5, '房屋维修', 'wrench',    'trade', 'handyman',   5),
+  (6, '装修',     'hammer',    'group', 'repair',     6),
   (7, '设计',     'compass',   'group', 'design',     7)
 ON CONFLICT (slot) DO NOTHING;
 

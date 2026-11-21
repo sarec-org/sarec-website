@@ -7,7 +7,7 @@ import { TEST_FIXED_CODE_TEXT, testFixedCodeOn } from '@/lib/crm/testFixedCode';
 import type { Viewer } from './access';
 import {
   DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
-  TURNOVER_TRADES, RECRUITING_TEXT, TRADE_RECRUITING_TEXT, RECRUITING_LABEL, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
+  TURNOVER_TRADES, TRADE_SCOPE, RECRUITING_TEXT, TRADE_RECRUITING_TEXT, RECRUITING_LABEL, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
 } from './constants';
 import { deliver, isProduction, jobsTemplate } from './notify';
 import { getSwitches } from './settings';
@@ -39,7 +39,7 @@ export async function buildMeta(v: Viewer) {
     openTradeCount: trades.filter((t) => t.open).length,
     allTradesText: `全部 ${trades.filter((t) => t.open).length} 项 ›`,
     trades: trades.map((t) => ({
-      key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon
+      key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon, scope: TRADE_SCOPE[t.key] ?? null
     })),
     homeEntries: entries.map((e) => ({ label: e.label, icon: e.icon, target: e.target })),
     // D11 冷启动：一个核验通过的人都没有时，首页方块区换成一行招募说明 +「全部工种和服务」；没人的工种标“招募中”
