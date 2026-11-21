@@ -1,0 +1,157 @@
+/* 找工人 · 接活儿（网站）：沿用 crm.module.css 的底色、字号、按钮尺寸。
+ * 颜色只用网站现有的两种：找工人 = 藏蓝（--navy-deep #0A1730）；接活 = 金（--gold 一套）。不新增颜色。
+ * .find / .work 套在页面最外层，里面的按钮、方块、选中态跟着变。 */
+
+.find { --side: var(--navy-deep); --side-line: rgba(242, 234, 214, 0.55); --side-text: var(--ivory); --side-on: var(--navy-deep); }
+.work { --side: var(--gold); --side-line: var(--gold); --side-text: var(--gold-bright); --side-on: var(--gold-faint); }
+
+/* 栏目大块 */
+.panel { border-radius: 10px; padding: 1.1rem 1rem 1.2rem; margin: 0 0 1.25rem; }
+.find .panel, .panelFind { background: var(--navy-deep); border: 1px solid var(--side-line); }
+.work .panel, .panelWork { background: var(--gold-faint); border: 1px solid var(--gold-dim); }
+.panelTitle { font-family: var(--serif-zh); font-size: 1.35rem; margin: 0 0 0.75rem; color: var(--ivory); display: flex; align-items: center; gap: 0.5rem; }
+.panelWork .panelTitle, .work .panelTitle { color: var(--gold-bright); }
+.gap { height: 1.75rem; }
+
+/* 大按钮（带一行小字） */
+.bigBtn {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.15rem; width: 100%;
+  min-height: 64px; padding: 0.8rem 1rem; border-radius: 8px; text-decoration: none; cursor: pointer; text-align: left;
+  font-size: 1.15rem; font-weight: 700; border: 1px solid; box-sizing: border-box;
+}
+.bigBtn small { font-size: 0.9rem; font-weight: 400; opacity: 0.9; }
+.bigBtnFind { background: var(--ivory); color: var(--navy-deep); border-color: var(--ivory); }
+.bigBtnWork { background: var(--gold); color: var(--ink-deepest); border-color: var(--gold); }
+
+/* 主按钮两种颜色（固定在底部的也用这个） */
+.btnFind { background: var(--ivory); color: var(--navy-deep); border-color: var(--ivory); }
+.btnWork { background: var(--gold); color: var(--ink-deepest); border-color: var(--gold); }
+.btnFindGhost { background: var(--navy-deep); color: var(--ivory); border-color: rgba(242, 234, 214, 0.55); }
+
+/* 工种方块：一行四个（手机三个也放得下字） */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.55rem; margin: 0.9rem 0 0; }
+.tile {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  min-height: 64px; padding: 0.5rem 0.3rem; border-radius: 8px; text-decoration: none; cursor: pointer;
+  font-size: 1rem; line-height: 1.3; font-weight: 600; word-break: keep-all; overflow-wrap: anywhere;
+  color: var(--ivory); background: var(--navy-deep); border: 1px solid rgba(242, 234, 214, 0.35);
+}
+.tile:hover { border-color: var(--ivory); }
+/* 指令 9 · D26：「全部工种和服务」金底深字、带“全部 N 项 ›”，和旁边藏蓝方块明显不同 */
+.tileAll { flex-direction: column; gap: 2px; color: var(--navy-deep); background: var(--gold); border-color: var(--gold); font-weight: 700; }
+.tileAll:hover { border-color: var(--gold-bright); }
+.tileAll > span { font-size: 0.92rem; line-height: 1.25; }
+.tileAllCount { font-size: 0.8rem; font-weight: 700; color: var(--navy-deep); white-space: nowrap; }
+/* J9-5：小屏（320 / 360）方块窄，“全部 40 项 ›”允许折行、字再小一点，不被切 */
+@media (max-width: 380px) {
+  .tileAll { padding-left: 0.15rem; padding-right: 0.15rem; }
+  .tileAll > span { font-size: 0.82rem; }
+  .tileAllCount { font-size: 0.72rem; white-space: normal; line-height: 1.2; }
+}
+.tileOff { opacity: 0.5; }
+/* D11：没人的工种标“招募中”（不变淡，照样能点） */
+.tileRecruit { flex-direction: column; gap: 2px; border-style: dashed; }
+.tileTag { font-size: 0.75rem; font-weight: 400; color: var(--ivory-mute); }
+.recruitLine { margin: 0.9rem 0 0; color: var(--ivory); font-size: 1rem; line-height: 1.6; }
+.groupTitle { font-family: var(--serif-zh); font-size: 1.1rem; margin: 1.4rem 0 0.2rem; color: var(--ivory); }
+@media (max-width: 380px) { .tile { font-size: 0.95rem; } }
+
+/* 选项（点选）：两边各自颜色 */
+.opt {
+  min-height: 48px; padding: 0.55rem 1rem; border-radius: 999px; border: 1px solid var(--line-3);
+  background: transparent; color: var(--ivory); font-size: 1rem; cursor: pointer;
+}
+.find .optOn { background: var(--ivory); color: var(--navy-deep); border-color: var(--ivory); font-weight: 600; }
+.work .optOn { background: var(--gold-faint); color: var(--gold-bright); border-color: var(--gold); font-weight: 600; }
+.opts { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* 卡片 */
+.card { border-radius: 8px; padding: 1rem; margin: 0 0 0.9rem; border: 1px solid var(--line-3); background: rgba(242, 234, 214, 0.03); }
+.find .card { background: var(--navy-deep); border-color: rgba(242, 234, 214, 0.25); }
+.work .card { border-left: 3px solid var(--gold); }
+.cardHead { display: flex; gap: 0.75rem; align-items: center; }
+.avatar { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--ink-2); display: flex; align-items: center; justify-content: center; font-family: var(--serif-zh); font-size: 1.3rem; color: var(--ivory); border: 1px solid var(--line-3); }
+.name { font-family: var(--serif-zh); font-size: 1.2rem; margin: 0; color: var(--ivory); }
+.meta { font-size: 0.95rem; color: var(--ivory-mute); margin: 0.25rem 0 0; }
+.tag { display: inline-block; font-size: 0.85rem; padding: 0.1rem 0.55rem; border-radius: 999px; border: 1px solid var(--line-3); color: var(--ivory-mute); margin: 0.2rem 0.3rem 0 0; }
+.find .tagSide { border-color: rgba(242, 234, 214, 0.6); color: var(--ivory); }
+.work .tagSide { border-color: var(--gold); color: var(--gold-bright); }
+.badge { display: inline-block; font-size: 0.85rem; padding: 0.1rem 0.55rem; border-radius: 4px; border: 1px solid var(--line-3); color: var(--ivory); margin: 0.3rem 0.3rem 0 0; }
+.badgeOk { border-color: rgba(111, 193, 140, 0.6); color: var(--signal-green); }
+.desc2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0.4rem 0; color: var(--ivory-warm); }
+.title { font-family: var(--serif-zh); font-size: 1.15rem; margin: 0; color: var(--ivory); text-decoration: none; }
+.cardActions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.7rem; align-items: center; }
+.cardActions > * { flex: 1 1 auto; }
+.linkBtn { background: none; border: 0; color: var(--ivory-mute); font-size: 0.95rem; text-decoration: underline; cursor: pointer; min-height: 44px; padding: 0 0.4rem; flex: 0 0 auto !important; }
+.phoneBox { margin-top: 0.6rem; padding: 0.6rem 0.8rem; border-radius: 6px; border: 1px dashed var(--line-3); }
+.phoneBox a:not(.btnFind) { color: inherit; font-family: var(--mono); font-size: 1.15rem; }
+
+/* 折叠 */
+.fold { border: 1px solid var(--line-3); border-radius: 8px; padding: 0 1rem; margin: 0 0 1.1rem; }
+.fold summary { min-height: 52px; display: flex; align-items: center; cursor: pointer; font-size: 1rem; color: var(--ivory); list-style: none; }
+.fold summary::after { content: '展开 ›'; margin-left: auto; color: var(--ivory-mute); font-size: 0.9rem; }
+.fold[open] summary::after { content: '收起'; }
+.fold[open] { padding-bottom: 0.5rem; }
+
+/* 底部声明（D8） */
+.disclaimer { margin: 2rem 0 0; padding-top: 1rem; border-top: 1px solid var(--line-2); font-size: 0.875rem; color: var(--ivory-mute); line-height: 1.6; }
+.staffOnly { border: 1px dashed var(--gold-dim); color: var(--gold-bright); padding: 0.5rem 0.8rem; border-radius: 6px; font-size: 0.95rem; margin: 0 0 1rem; }
+
+/* 照片 */
+.photos { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 0; }
+.photo { position: relative; width: 84px; height: 84px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line-3); }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo button { position: absolute; top: 2px; right: 2px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: rgba(2, 6, 16, 0.75); color: var(--ivory); cursor: pointer; }
+.addPhoto { width: 84px; height: 84px; border-radius: 6px; border: 1px dashed var(--line-3); display: flex; align-items: center; justify-content: center; text-align: center; color: var(--ivory-mute); font-size: 0.9rem; cursor: pointer; background: transparent; }
+
+/* 弹层（投诉、确认） */
+.mask { position: fixed; inset: 0; background: rgba(2, 6, 16, 0.8); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 640px; background: var(--ink-2); border-top: 1px solid var(--line-3); border-radius: 12px 12px 0 0; padding: 1.1rem 1rem calc(1rem + env(safe-area-inset-bottom)); max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
+@media (min-width: 761px) { .mask { align-items: center; } .sheet { border-radius: 12px; border: 1px solid var(--line-3); } }
+
+.steps { margin: 0.5rem 0 1rem; padding-left: 1.3rem; }
+.steps li { margin: 0 0 0.45rem; }
+.toggleRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 52px; border-bottom: 1px solid var(--line-2); }
+.switch { width: 56px; height: 32px; border-radius: 999px; border: 1px solid var(--line-3); background: transparent; position: relative; cursor: pointer; flex-shrink: 0; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--ivory-mute); transition: left 0.15s; }
+.switchOn { background: var(--gold-faint); border-color: var(--gold); }
+.switchOn::after { left: 27px; background: var(--gold); }
+
+/* ── 指令 9 · D24：两栏标题加粗、大一号、两栏分量一致。网站是深色底，深藏蓝字直接放在藏蓝底上看不见，
+ *    所以做成标题条：找工人 = 象牙底 + 深藏蓝粗字；我要接活儿 = 深金底（--gold-muted）+ 深藏蓝粗字。只用已有颜色变量。 */
+.panelHead { font-family: var(--serif-zh); font-size: 1.6rem; font-weight: 800; line-height: 1.25; letter-spacing: 0.02em;
+  margin: -0.2rem 0 0.9rem; padding: 0.45rem 0.8rem; border-radius: 6px; color: var(--navy-deep); }
+.panelHeadFind { background: var(--ivory); }
+.panelHeadWork { background: var(--gold-muted); }
+
+/* ── 指令 9 · D27：「我要接活儿」栏里直接摆四个身份方块（点了进登记表单、身份已选） */
+.roleTiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.55rem; margin: 0.9rem 0 0; }
+.roleTile {
+  display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 64px; padding: 0.55rem 0.7rem; border-radius: 8px;
+  text-decoration: none; color: var(--gold-bright); background: transparent; border: 1px solid var(--gold); font-size: 1.05rem; font-weight: 700; line-height: 1.3;
+}
+.roleTile small { font-size: 0.8rem; font-weight: 400; color: var(--ivory-mute); }
+.roleTile:hover { background: var(--gold-faint); }
+
+/* 登记表单顶上四个身份切换条 */
+.roleBar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.35rem; }
+.roleTab {
+  min-height: 52px; padding: 0.35rem 0.25rem; border-radius: 8px; border: 1px solid var(--gold-dim); background: transparent;
+  color: var(--ivory); font-size: 0.95rem; line-height: 1.25; cursor: pointer; word-break: keep-all; overflow-wrap: anywhere;
+}
+.roleTabOn { background: var(--gold); color: var(--ink-deepest); border-color: var(--gold); font-weight: 700; }
+@media (max-width: 400px) { .roleTab { font-size: 0.88rem; } }
+
+/* 找工人列表页顶上的工种标签（同页切换，不跳页） */
+.tabGroup { margin: 0 0 0.5rem; }
+.tabGroupName { font-size: 0.85rem; color: var(--ivory-mute); margin: 0 0 0.25rem; }
+.tabRow { display: flex; gap: 0.4rem; overflow-x: auto; padding-bottom: 0.25rem; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.tabRowWrap { flex-wrap: wrap; overflow-x: visible; }
+.tradeTab {
+  flex: 0 0 auto; min-height: 44px; padding: 0.3rem 0.85rem; border-radius: 999px; border: 1px solid rgba(242, 234, 214, 0.35);
+  background: var(--navy-deep); color: var(--ivory); font-size: 0.95rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap;
+}
+.tradeTabOn { background: var(--ivory); color: var(--navy-deep); border-color: var(--ivory); font-weight: 700; }
+.tradeTabTag { font-size: 0.72rem; color: var(--ivory-mute); border: 1px dashed rgba(242, 234, 214, 0.45); border-radius: 999px; padding: 0 0.35rem; }
+.tradeTabOn .tradeTabTag { color: var(--navy-deep); border-color: var(--navy-deep); }
+.tabsBox { border-bottom: 1px solid var(--line-2); padding-bottom: 0.6rem; margin: 0 0 1rem; }
