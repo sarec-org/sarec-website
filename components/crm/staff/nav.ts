@@ -98,7 +98,9 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/team', label: '团队', role: 'admin', words: ['工作人员', '同事', '权限', '绑定', '工作台', '出码', '加人', '角色'] },
     // 子任务 C（第二部分 五）：每人选收哪几类通知、走哪个渠道；通知总闸、发送记录
     { href: '/zh/staff/notify', label: '手机通知', role: 'ops|checkin|finance', words: ['通知', '手机通知', '短信通知', '企业微信', '每日汇总', '通知渠道', '通知设置', '总闸', '发送记录'] },
-    { href: '/zh/staff/system', label: '系统状态', role: 'ops', words: ['线上巡检', '巡检', '线上报错', '报错', '错误', 'bug', '出错'] }
+    { href: '/zh/staff/system', label: '系统状态', role: 'ops', words: ['线上巡检', '巡检', '线上报错', '报错', '错误', 'bug', '出错'] },
+    // 指令 31：体验版小程序真机计时（只在测试站有数据）
+    { href: '/zh/staff/system/speed', label: '真机速度', role: 'ops', words: ['速度', '打开慢', '卡', '真机', '计时', '性能', '慢请求', '机型'] }
   ]
 };
 
