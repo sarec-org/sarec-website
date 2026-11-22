@@ -377,7 +377,8 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
           <div className={s.card}>
             <p className={s.cardTitle}>接活儿规则</p>
             <ul className={j.steps}>
-              {(res.rules.length ? res.rules : meta.rules).map((r) => <li key={r}>{r}</li>)}
+              {/* 指令 31 补：不要执照的工种（家政保洁等）这一页，规则第一条「只在自己的执照范围内接活儿」换个说法；只换显示的字，提交不变（规则是服务器给的，在这里换这一行） */}
+              {(res.rules.length ? res.rules : meta.rules).map((r) => (fc?.kind === 'nolic' && /执照范围/.test(r) ? `只接自己会做、做得好的活儿${/。$/.test(r) ? '。' : ''}` : r)).map((r) => <li key={r}>{r}</li>)}
             </ul>
             <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', minHeight: 44 }}>
               <input type="checkbox" checked={f.agree} onChange={(e) => set({ agree: e.target.checked })} />
