@@ -6,6 +6,7 @@ import { getPool, withTransaction } from '@/lib/db/client';
 import { CrmError, normalizeEmail, normalizePhone } from './events';
 import { notifyFollowup, upsertFollowup } from './followups';
 import { laToday } from '@/lib/laDate';
+import { classifyInquiry } from './followupKit';
 
 export type InquiryInput = {
   source: 'web_form' | 'agent' | 'mp';
@@ -42,6 +43,8 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
     const { rows } = await getPool().query<{ id: string }>(`SELECT id FROM contacts WHERE member_no = $1`, [Number(input.ref)]);
     refId = rows[0]?.id ?? null;
   }
+  // 四.1：先自动分类（规则，不调 AI）；只有客户咨询生成建议联系内容
+  const cls = classifyInquiry({ message, intent: input.intent, name, source: input.source });
   const out = await withTransaction(async (db) => {
     if (input.conversationId) {
       const { rows } = await db.query<{ id: string; inquiry_id: string | null }>(
@@ -68,13 +71,35 @@ export async function createInquiry(input: InquiryInput, base?: string): Promise
           ? (message ?? '').replace(/^\s*需求：/, '').trim()
           : [clip(input.intent, 60), message].filter(Boolean).join('：')
         ).slice(0, 2000) || null,
-      draft: input.draft ?? (name ? `${name}您好，我是 SAREC 中美房地产商会的工作人员，收到您在${input.source === 'mp' ? '小程序' : '网站'}上的咨询，想跟您确认一下具体需求，方便的时候我们通个电话？` : null),
-      draftBy: input.draft ? 'ai' : 'template',
+      draft: cls.category !== 'customer' ? null : input.draft ?? (name ? `${name}您好，我是 SAREC 中美房地产商会的工作人员，收到您在${input.source === 'mp' ? '小程序' : '网站'}上的咨询，想跟您确认一下具体需求，方便的时候我们通个电话？` : null),
+      draftBy: input.draft && cls.category === 'customer' ? 'ai' : 'template',
       inquiryId,
       nextDate: laToday()
     });
+    if (f.created) await db.query(`UPDATE followups SET category = $2, category_by = 'rule', lang = $3 WHERE id = $1`, [f.id, cls.category, cls.lang]);
     return { inquiryId, followupId: f.id, created: f.created };
   });
   if (out.created) await notifyFollowup(out.followupId, base);
+  if (out.created) await notifyNewInquiry(out.followupId, input.contactId ?? null);
   return out;
+}
+
+/**
+ * 后台综合优化 五：真实客户咨询立即通知工作人员（短信只写“有一条新客户咨询”）。
+ * 分类看 followups.category（B 的自动分类：customer 客户咨询 / pitch 合作或推销 / spam 垃圾）：只有客户咨询立即通知，其余进每日汇总。
+ * 还没分类的（category 为空）当客户咨询通知，宁可多通知一条也不漏。内部 / 审核演示 / 测试账号不通知。
+ */
+export async function shouldNotifyInquiry(followupId: string, contactId: string | null): Promise<boolean> {
+  const { isNotReal } = await import('./accountKind');
+  if (await isNotReal(getPool(), contactId)) return false;
+  const { rows } = await getPool().query<{ category: string | null }>(`SELECT category FROM followups WHERE id = $1`, [followupId]);
+  if (!rows[0]) return false;
+  return (rows[0].category ?? 'customer') === 'customer';
+}
+
+export async function notifyNewInquiry(followupId: string, contactId: string | null): Promise<void> {
+  if (!(await shouldNotifyInquiry(followupId, contactId).catch(() => false))) return;
+  const { notifyStaffSafe } = await import('./staffNotify');
+  // 链接直接打开这一条的处理页（和通知邮件一样），不是列表
+  await notifyStaffSafe({ category: 'inquiry', key: `inquiry:${followupId}`, title: '有一条新客户咨询', href: `/zh/staff/followups/${followupId}` });
 }

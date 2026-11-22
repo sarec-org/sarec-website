@@ -1,0 +1,42 @@
+# 找工人·接活儿 牌照比对（指令 7 · D20，新文件；不改已有工作流）：
+# 服务器不再自己下载 CSLB 官方总表（从 Vercel 下载 78MB 会被断开 / 超时），改在 GitHub runner 上下载：
+# 先问服务器要查哪些牌照号 → 下载总表 → 只把对得上的那几行 POST 给 /api/cron/jobs/cslb-ingest → 服务器比对、过期或被停自动下架并通知。
+# - 每周二 16:00 UTC：mode=weekly（全部已通过的 A 类接活人 + 排队的）
+# - 每天 15:00 UTC：mode=queued（新登记 / 改了牌照号 / 90 天复核排队的；没有排队的就不下载）
+# 沿用仓库已有的 Secrets REMINDER_CRON_SECRET（和 jobs-dispatch.yml 一样），不新增密钥。
+name: jobs-cslb-weekly
+on:
+  schedule:
+    - cron: '0 16 * * 2'
+    - cron: '0 15 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'weekly / queued'
+        required: false
+        default: 'weekly'
+permissions:
+  contents: read
+jobs:
+  cslb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/jobs-cslb-runner.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Download CSLB master and send matching rows
+        env:
+          SECRET: ${{ secrets.REMINDER_CRON_SECRET }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+          BASE: https://sinoamericanrec.org
+        run: |
+          mode="${INPUT_MODE:-weekly}"
+          if [ "$SCHEDULE" = "0 15 * * *" ]; then mode=queued; fi
+          if [ "$SCHEDULE" = "0 16 * * 2" ]; then mode=weekly; fi
+          MODE="$mode" node scripts/jobs-cslb-runner.mjs

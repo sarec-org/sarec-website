@@ -409,7 +409,7 @@ export default function Page() {
       {(s) => (
         <>
           <BroadcastDesk staff={s} />
-          {/* 东哥 11/14 定：「邮件通讯」并进群发，作为邮件渠道（按期发的通讯）；旧网址 /zh/staff/newsletter 跳到这里 */}
+          {/* 东哥 11/14 定：「邮件通讯」并进群发，作为邮件渠道（按期发的通讯）；「内容 › 邮件通讯」/zh/staff/newsletter 也是同一块 */}
           <section id="newsletter" style={{ marginTop: 40, paddingTop: 16, borderTop: '1px solid var(--line-2)' }}>
             <h2 className={styles.h2}>邮件通讯（按期发的邮件）</h2>
             {/* 测试窗口 Q15：和上面的演练分清楚 */}

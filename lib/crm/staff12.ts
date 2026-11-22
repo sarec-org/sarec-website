@@ -191,25 +191,102 @@ export type Committee = { key: string; name: string; status: 'active' | 'prepari
 export async function committees(contactId: string | null) {
   const pool = getPool();
   const list = await getSetting<Committee[]>(pool, 'committees', []);
-  const mine = contactId
-    ? new Set((await pool.query<{ committee: string }>(`SELECT committee FROM committee_interests WHERE contact_id = $1`, [contactId])).rows.map((r) => r.committee))
-    : new Set<string>();
-  return list.map((c) => ({ ...c, statusLabel: c.status === 'active' ? '已成立' : '筹备中', interested: mine.has(c.key) }));
+  const mineRows = contactId
+    ? (await pool.query<{ committee: string; needs_fill: boolean }>(`SELECT committee, needs_fill FROM committee_interests WHERE contact_id = $1`, [contactId])).rows
+    : [];
+  const mine = new Map(mineRows.map((r) => [r.committee, r.needs_fill]));
+  return list.map((c) => ({ ...c, statusLabel: c.status === 'active' ? '已成立' : '筹备中', interested: mine.has(c.key), needsFill: mine.get(c.key) === true }));
 }
 
-export async function setCommitteeInterest(contactId: string, key: string, on: boolean) {
+/** 本人档案里有没有真实姓名和手机号（表达意向要用） */
+export async function committeeProfile(contactId: string | null): Promise<{ name: string | null; phone: string | null; needsFill: boolean }> {
+  if (!contactId) return { name: null, phone: null, needsFill: false };
+  const pool = getPool();
+  const { rows } = await pool.query<{ name: string | null; phone: string | null; pending: boolean }>(
+    `SELECT NULLIF(NULLIF(trim(c.name), ''), '微信用户') AS name,
+            COALESCE(c.phone_e164, (SELECT value FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current)) AS phone,
+            EXISTS (SELECT 1 FROM committee_interests ci WHERE ci.contact_id = c.id AND ci.needs_fill) AS pending
+       FROM contacts c WHERE c.id = $1`,
+    [contactId]
+  );
+  const r = rows[0];
+  return { name: r?.name ?? null, phone: r?.phone ?? null, needsFill: !!r?.pending };
+}
+
+/**
+ * 后台综合优化 一.4：表达意向时必须已有姓名和手机号。
+ * - 档案里没有的，请求里带 name / phone 补上；还是缺 → 错误码 need_name_phone（小程序下个版本据此弹出补填）。
+ * - 旧版小程序（legacy = true，还不会补填）：照常记下，但标“待补填”，下次打开时提示补填（needsFill）。
+ * - 补填后：本人档案里还是“微信用户”的改成真实姓名；手机号记成当前联系方式（未验证）；所有“待补填”的意向一起补齐。
+ */
+export async function setCommitteeInterest(contactId: string, key: string, on: boolean, fill: { name?: unknown; phone?: unknown; legacy?: boolean } = {}) {
   const pool = getPool();
   const list = await getSetting<Committee[]>(pool, 'committees', []);
   if (!list.some((c) => c.key === key)) throw new CrmError('bad_request', '没有这个专委会');
-  if (on) await pool.query(`INSERT INTO committee_interests (contact_id, committee) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [contactId, key]);
-  else await pool.query(`DELETE FROM committee_interests WHERE contact_id = $1 AND committee = $2`, [contactId, key]);
+  if (!on) {
+    await pool.query(`DELETE FROM committee_interests WHERE contact_id = $1 AND committee = $2`, [contactId, key]);
+    return committees(contactId);
+  }
+  const prof = await committeeProfile(contactId);
+  const inName = typeof fill.name === 'string' ? fill.name.trim().slice(0, 60) : '';
+  const rawPhone = typeof fill.phone === 'string' ? fill.phone.trim() : '';
+  const { normalizePhone } = await import('./events');
+  const inPhone = rawPhone ? normalizePhone(rawPhone) ?? normalizePhone(rawPhone, '+86') : null;
+  if (rawPhone && !inPhone) throw new CrmError('bad_phone', '手机号格式不对：美国号码 10 位，中国号码 11 位');
+  const name = inName && inName !== '微信用户' ? inName : prof.name;
+  const phone = inPhone ?? prof.phone;
+  if (!name || !phone) {
+    if (!fill.legacy) {
+      const miss = [name ? '' : '姓名', phone ? '' : '手机号'].filter(Boolean).join('和');
+      throw new CrmError('need_name_phone', `表达意向需要留${miss}，方便负责人联系您`);
+    }
+    await pool.query(
+      `INSERT INTO committee_interests (contact_id, committee, needs_fill) VALUES ($1, $2, true)
+       ON CONFLICT (contact_id, committee) DO UPDATE SET needs_fill = committee_interests.phone IS NULL`,
+      [contactId, key]
+    );
+    return committees(contactId);
+  }
+  if (inName && !prof.name) await pool.query(`UPDATE contacts SET name = $2, updated_at = now() WHERE id = $1 AND (name IS NULL OR trim(name) = '' OR name = '微信用户')`, [contactId, inName]);
+  if (inPhone && !prof.phone) {
+    const { setMethod } = await import('./contactInfo');
+    await setMethod(pool, contactId, 'phone', inPhone, 'committee');
+  }
+  await pool.query(
+    `INSERT INTO committee_interests (contact_id, committee, name, phone, needs_fill) VALUES ($1, $2, $3, $4, false)
+     ON CONFLICT (contact_id, committee) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone, needs_fill = false`,
+    [contactId, key, name, phone]
+  );
+  // 补齐这个人其他“待补填”的意向
+  await pool.query(`UPDATE committee_interests SET name = $2, phone = $3, needs_fill = false WHERE contact_id = $1 AND needs_fill`, [contactId, name, phone]);
   return committees(contactId);
+}
+
+/** 后台名单：真实姓名和联系方式；匿名的老意向标“待补填” */
+export async function committeeInterestList() {
+  const pool = getPool();
+  const list = await getSetting<Committee[]>(pool, 'committees', []);
+  const names = new Map(list.map((c) => [c.key, c.name]));
+  const { rows } = await pool.query<{ committee: string; contact_id: string; member_no: number; name: string | null; phone: string | null; email: string | null; needs_fill: boolean; created_at: Date; is_member: boolean }>(
+    `SELECT ci.committee, c.id AS contact_id, c.member_no::int,
+            COALESCE(ci.name, NULLIF(NULLIF(trim(c.name), ''), '微信用户')) AS name,
+            COALESCE(ci.phone, c.phone_e164, (SELECT value FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current)) AS phone,
+            COALESCE(c.email, (SELECT value FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'email' AND m.is_current)) AS email,
+            ci.needs_fill, ci.created_at,
+            EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.membership_end_date >= current_date
+                     AND (a.application_status IN ('approved','paid','second_payment_due') OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))) AS is_member
+       FROM committee_interests ci JOIN contacts c ON c.id = ci.contact_id
+      WHERE c.account_kind IS NULL
+      ORDER BY ci.committee, ci.needs_fill, ci.created_at DESC`
+  );
+  return rows.map((r) => ({ ...r, committee_name: names.get(r.committee) ?? r.committee }));
 }
 
 export async function committeeInterestStats() {
   const { rows } = await getPool().query(
-    `SELECT ci.committee, count(*)::int AS n, array_agg(c.name ORDER BY ci.created_at DESC) AS names
-       FROM committee_interests ci JOIN contacts c ON c.id = ci.contact_id GROUP BY ci.committee`
+    `SELECT ci.committee, count(*)::int AS n,
+            array_agg(COALESCE(ci.name, NULLIF(c.name, '微信用户'), '待补填') || CASE WHEN ci.needs_fill THEN '（待补填）' ELSE '' END ORDER BY ci.created_at DESC) AS names
+       FROM committee_interests ci JOIN contacts c ON c.id = ci.contact_id WHERE c.account_kind IS NULL GROUP BY ci.committee`
   );
   return rows;
 }

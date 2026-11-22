@@ -23,7 +23,10 @@ export default function Backfill() {
       if (!r.ok) return setMsg({ ok: false, text: r.message });
       const past = r.data.events.filter((e) => new Date(e.starts_at).getTime() < Date.now() + 86400_000).sort((a, b) => +new Date(b.starts_at) - +new Date(a.starts_at));
       setEvents(past);
-      if (past[0]) setEventId(past[0].id);
+      // 后台综合优化 六.1：从活动页点“补登记到场”过来（?event=<id>）直接选中这场
+      const want = new URLSearchParams(location.search).get('event');
+      if (want && past.some((e) => e.id === want)) setEventId(want);
+      else if (past[0]) setEventId(past[0].id);
     });
   }, []);
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client';
 /** 邮件通讯：各期列表（送达 / 打开 / 点击 / 退订）、发信额度、新建一期。
- *  东哥 11/14 定：「邮件通讯」并进「群发」作为邮件渠道——这个组件放在群发页里（#newsletter），原来的 /zh/staff/newsletter 跳过去。
+ *  东哥 11/14 定：「邮件通讯」并进「群发」作为邮件渠道——这个组件放在群发页里（#newsletter）；
+ *  后台综合优化又把它放在「内容 › 邮件通讯」（/zh/staff/newsletter），两处用同一个组件、同一份数据，都能用。
  *  规矩不变：每一期先发测试邮件给东哥，东哥确认才群发。 */
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

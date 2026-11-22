@@ -11,7 +11,11 @@ import { memberStatus } from '@/lib/crm/membership';
 import { benefitsContent } from '@/lib/benefitsContent';
 import type { Staff } from '@/lib/crm/auth';
 import { actor, audit } from '@/lib/crm/staff';
-import { notifyFollowup, upsertFollowup } from '@/lib/crm/followups';
+import { notifyFollowup, recordException, upsertFollowup } from '@/lib/crm/followups';
+import { isNotReal, realContact } from '@/lib/crm/accountKind';
+import { maskTarget } from '@/lib/crm/notifyGate';
+import { gatedSend } from '@/lib/crm/notifySend';
+import { notifyStaffSafe } from '@/lib/crm/staffNotify';
 
 export const INDUSTRIES = ['开发商', '经纪', '贷款', '投资人', '律师会计', '建筑装修', '其他'];
 
@@ -81,28 +85,37 @@ export async function submitJoin(contactId: string, b: { name?: string; company?
     );
     return { id: rows[0].id, created: true };
   });
+  let linkSent = false;
   if (created) {
-    const f = await upsertFollowup(pool, {
-      source: 'manual',
-      dedupeKey: `join:${id}`,
-      contactId,
-      name,
-      contactText: phone,
-      need: `入会申请（小程序）${company ? ' · ' + company : ''}${industry ? ' · ' + industry : ''}。确认后在后台“入会申请”里一键发网站缴费链接。`
-    });
-    await notifyFollowup(f.id, base).catch(() => false);
+    const internal = await isNotReal(pool, contactId);
+    // 后台综合优化 一.1：申请一提交，系统立刻把网站缴费链接发给申请人（短信，有邮箱同时发邮件）；走通知总闸
+    const auto = await autoSendJoinLink(id).catch(() => ({ sent: false, skipped: 'error' as string | null }));
+    linkSent = auto.sent;
+    if (!internal) {
+      const f = await upsertFollowup(pool, {
+        source: 'manual',
+        dedupeKey: `join:${id}`,
+        contactId,
+        name,
+        contactText: phone,
+        need: `入会申请（小程序）${company ? ' · ' + company : ''}${industry ? ' · ' + industry : ''}。${auto.sent ? '系统已自动把网站缴费链接发给申请人。' : '系统自动发缴费链接没有送到（见入会申请页记录），请在后台“入会申请”里再发一次。'}`
+      });
+      await notifyFollowup(f.id, base).catch(() => false);
+      await notifyStaffSafe({ category: 'join_request', key: `join:${id}`, title: '有一条新入会申请', href: `/zh/staff/join-requests?id=${id}` });
+    }
   }
-  return { id, message: '已收到申请，工作人员会联系您' };
+  return { id, message: linkSent ? '已收到申请，入会链接已发到您的手机' : '已收到申请，工作人员会联系您', linkSent };
 }
 
-export async function listJoinRequests(status?: string | null) {
+export async function listJoinRequests(status?: string | null, id?: string | null) {
   const { rows } = await getPool().query(
-    `SELECT j.*, c.member_no::int, e.title AS event_title,
-            (j.status IN ('new','link_sent') AND j.created_at < now() - interval '7 days') AS overdue
+    `SELECT j.*, c.member_no::int, e.title AS event_title, c.account_kind,
+            (j.status IN ('new','link_sent') AND j.created_at < now() - interval '7 days') AS overdue,
+            (j.status IN ('new','link_sent') AND j.created_at < now() - interval '3 days' AND j.nudged_at IS NULL) AS unpaid3
        FROM join_requests j JOIN contacts c ON c.id = j.contact_id LEFT JOIN events e ON e.id = j.event_id
-      WHERE ($1::text IS NULL OR j.status = $1)
+      WHERE ($1::text IS NULL OR j.status = $1) AND ($2::uuid IS NULL OR j.id = $2)
       ORDER BY (j.status IN ('new','link_sent')) DESC, j.created_at DESC LIMIT 200`,
-    [status || null]
+    [status || null, id && /^[0-9a-f-]{36}$/i.test(id) ? id : null]
   );
   return rows;
 }
@@ -132,8 +145,9 @@ export async function sendJoinLink(s: Staff, id: string, channel: 'sms' | 'email
     if (res.error) throw new CrmError('email_failed', '邮件没发出去，请改用短信或复制链接');
   }
   await pool.query(
-    `UPDATE join_requests SET status = CASE WHEN status = 'new' THEN 'link_sent' ELSE status END, link_sent_at = now(), link_sent_by = $2, link_channel = $3, updated_at = now() WHERE id = $1`,
-    [id, actor(s), channel]
+    `UPDATE join_requests SET status = CASE WHEN status = 'new' THEN 'link_sent' ELSE status END, link_sent_at = now(), link_sent_by = $2, link_channel = $3, updated_at = now(),
+            link_log = link_log || $4::jsonb WHERE id = $1`,
+    [id, actor(s), channel, JSON.stringify([{ at: new Date().toISOString(), by: s.name, channel, to: channel === 'sms' && j.phone ? maskTarget('sms', j.phone) : channel === 'email' && j.email ? maskTarget('email', j.email) : '复制后自己发', status: channel === 'copy' ? 'copied' : 'sent', text }])]
   );
   await audit(pool as never, s, 'join_link_sent', 'join_request', id, { after: { channel } });
   return { ok, text: channel === 'copy' ? text : undefined };
@@ -146,11 +160,79 @@ export async function setJoinStatus(s: Staff, id: string, status: 'paid' | 'clos
   return { ok: true };
 }
 
+/** 3 天没缴费的那条，工作人员跟过一次（今天页“我跟进了”） */
+export async function markJoinNudged(s: Staff, id: string) {
+  const { rowCount } = await getPool().query(`UPDATE join_requests SET nudged_at = now(), nudged_by = $2, updated_at = now() WHERE id = $1`, [id, s.name]);
+  if (!rowCount) throw new CrmError('not_found', '找不到这份申请');
+  await audit(getPool() as never, s, 'join_nudged', 'join_request', id, {});
+  return { ok: true };
+}
+
+export type LinkLogEntry = { at: string; by: string; channel: 'sms' | 'email' | 'copy'; to: string; status: string; text: string };
+
+/**
+ * 后台综合优化 一.1：系统自动发网站缴费链接（短信；有邮箱同时发邮件）。全部过通知总闸：
+ * 总闸关着只记录“本该发什么、发给谁（打码）”，记在这条申请的 link_log 上。
+ * 内部 / 审核演示 / 测试账号不发。已经自动发过（auto_link_at）不再发，除非 force（补发脚本在总闸打开后用）。
+ */
+export async function autoSendJoinLink(id: string, opts: { force?: boolean } = {}): Promise<{ sent: boolean; skipped: string | null; log: LinkLogEntry[] }> {
+  const pool = getPool();
+  const { rows } = await pool.query<{ id: string; name: string; phone: string | null; email: string | null; status: string; auto_link_at: Date | null; link_sent_at: Date | null; account_kind: string | null }>(
+    `SELECT j.id, j.name, j.phone, COALESCE(j.email, c.email) AS email, j.status, j.auto_link_at, j.link_sent_at, c.account_kind
+       FROM join_requests j JOIN contacts c ON c.id = j.contact_id WHERE j.id = $1`,
+    [id]
+  );
+  const j = rows[0];
+  if (!j) throw new CrmError('not_found', '找不到这份申请');
+  if (j.account_kind) return { sent: false, skipped: '内部 / 测试账号，不发', log: [] };
+  if (!['new', 'link_sent'].includes(j.status)) return { sent: false, skipped: '申请已处理', log: [] };
+  if (!opts.force && (j.auto_link_at || j.link_sent_at)) return { sent: false, skipped: '已经发过', log: [] };
+  const text = joinLinkText(j.name);
+  const log: LinkLogEntry[] = [];
+  const targets: { channel: 'sms' | 'email'; to: string }[] = [];
+  if (j.phone) targets.push({ channel: 'sms', to: j.phone });
+  if (j.email) targets.push({ channel: 'email', to: j.email });
+  for (const t of targets) {
+    const r = await gatedSend({ kind: '入会缴费链接', channel: t.channel, to: t.to, subject: '【SAREC】入会申请：请在网站完成入会', text, ref: id, dedupeKey: `join_link:${id}:${t.channel}${opts.force ? `:${Date.now()}` : ''}` });
+    log.push({ at: new Date().toISOString(), by: '系统自动', channel: t.channel, to: maskTarget(t.channel, t.to), status: r.status, text });
+  }
+  const sent = log.some((l) => l.status === 'sent');
+  const firstSent = log.find((l) => l.status === 'sent');
+  await pool.query(
+    `UPDATE join_requests SET link_log = link_log || $2::jsonb, auto_link_at = now(), updated_at = now(),
+            status = CASE WHEN $3::boolean AND status = 'new' THEN 'link_sent' ELSE status END,
+            link_sent_at = CASE WHEN $3::boolean THEN now() ELSE link_sent_at END,
+            link_sent_by = CASE WHEN $3::boolean THEN '系统自动' ELSE link_sent_by END,
+            link_channel = CASE WHEN $3::boolean THEN $4 ELSE link_channel END
+      WHERE id = $1`,
+    [id, JSON.stringify(log), sent, firstSent?.channel ?? null]
+  );
+  if (log.some((l) => l.status === 'failed') && !sent) {
+    await recordException('join_link', `join_link:${id}`, id, !targets.length ? '申请人没留手机和邮箱，缴费链接发不出去' : '缴费链接短信 / 邮件都没发出去，请在入会申请页手动再发一次').catch(() => undefined);
+  }
+  if (!targets.length) {
+    await recordException('join_link', `join_link:${id}`, id, '申请人没留手机和邮箱，缴费链接发不出去，请复制链接发微信').catch(() => undefined);
+  }
+  return { sent, skipped: null, log };
+}
+
+/** 积压的未处理申请（没发过链接的）：补发脚本用。内部 / 测试账号除外。 */
+export async function backlogJoinRequests() {
+  const { rows } = await getPool().query<{ id: string; name: string; phone: string | null; email: string | null; created_at: Date; auto_link_at: Date | null }>(
+    `SELECT j.id, j.name, j.phone, COALESCE(j.email, c.email) AS email, j.created_at, j.auto_link_at
+       FROM join_requests j JOIN contacts c ON c.id = j.contact_id
+      WHERE j.status = 'new' AND j.link_sent_at IS NULL AND ${realContact('c')}
+      ORDER BY j.created_at`
+  );
+  return rows;
+}
+
 /** 每天跑：申请满 7 天还没付 → 提醒助理跟进一次（不给客户发）。会员已生效的自动标“已付”。 */
 export async function scanJoinFollowups(): Promise<{ paid: number; reminded: number }> {
   const pool = getPool();
-  const { rows: open } = await pool.query<{ id: string; contact_id: string; name: string; phone: string | null; created_at: Date; followup_at: Date | null }>(
-    `SELECT id, contact_id, name, phone, created_at, followup_at FROM join_requests WHERE status IN ('new','link_sent')`
+  const { rows: open } = await pool.query<{ id: string; contact_id: string; name: string; phone: string | null; created_at: Date; followup_at: Date | null; account_kind: string | null }>(
+    `SELECT j.id, j.contact_id, j.name, j.phone, j.created_at, j.followup_at, c.account_kind FROM join_requests j JOIN contacts c ON c.id = j.contact_id
+      WHERE j.status IN ('new','link_sent')`
   );
   let paid = 0;
   let reminded = 0;
@@ -160,7 +242,7 @@ export async function scanJoinFollowups(): Promise<{ paid: number; reminded: num
       paid++;
       continue;
     }
-    if (!j.followup_at && Date.now() - new Date(j.created_at).getTime() > 7 * 86400_000) {
+    if (!j.account_kind && !j.followup_at && Date.now() - new Date(j.created_at).getTime() > 7 * 86400_000) {
       await upsertFollowup(pool, {
         source: 'manual',
         dedupeKey: `join7:${j.id}`,

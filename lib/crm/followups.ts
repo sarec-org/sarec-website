@@ -9,7 +9,6 @@
  *   · 每一步失败都进 ops_exceptions（待处理），可在后台重试，重试同样幂等。
  */
 import { getPool } from '@/lib/db/client';
-import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
 import { CrmError } from './events';
 import type { Db } from './profile';
 import { laToday } from '@/lib/laDate';
@@ -76,7 +75,14 @@ export async function upsertFollowup(db: Db, f: FollowupInput): Promise<{ id: st
 
 // ── 待处理（失败 / 异常）────────────────────────────────────────────────
 
+/** 这些是“系统故障”（每日任务整段出错）：立即通知（夜里也发），同一件事只通知一次 */
+export const FAULT_KINDS = ['join_scan', 'followup_scan', 'agent_digest', 'prep_reminder', 'pay_reminder', 'newsletter_queue', 'post_event', 'feature_report', 'staff_notify', 'flow_cron'];
+
 export async function recordException(kind: string, dedupeKey: string, ref: string | null, error: string, payload?: unknown): Promise<void> {
+  if (FAULT_KINDS.includes(kind)) {
+    const { notifyStaffSafe } = await import('./staffNotify');
+    await notifyStaffSafe({ category: 'system_fault', key: `fault:${dedupeKey}`, title: '系统故障：每天自动跑的任务出错了，请看一眼', href: '/zh/staff/followups?tab=exceptions' });
+  }
   await getPool()
     .query(
       `INSERT INTO ops_exceptions (kind, dedupe_key, ref, error, payload) VALUES ($1, $2, $3, $4, $5)
@@ -97,52 +103,18 @@ export async function resolveException(dedupeKey: string, by: string): Promise<v
 // ── 邮件通知（线索 / 新咨询 → info@；只发一次）──────────────────────────────
 
 /** 线索通知收件人：LEAD_NOTIFY_EMAIL，默认 info@sinoamericanrec.org（预览环境只会发到测试白名单） */
-/** 邮件标题不能有换行：压成一行再截断 */
-const oneLine = (t: string, n: number) => t.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, n);
 
 export function leadNotifyEmail(): string {
   return (process.env.LEAD_NOTIFY_EMAIL || 'info@sinoamericanrec.org').trim();
 }
 
-/** 发一次“新线索 / 新咨询”通知邮件。已发过不再发；失败进待处理。返回是否已通知。 */
+/**
+ * 发一次“新线索 / 新咨询”通知邮件。已发过不再发；失败进待处理。返回是否已通知。
+ * 后台综合优化 B（四.2）：内容改成"这是什么 + 建议怎么办"、原话、三个按钮，推销 / 垃圾不单发（进每日汇总），过 notify_live 总闸。
+ */
 export async function notifyFollowup(id: string, base?: string): Promise<boolean> {
-  const pool = getPool();
-  const { rows } = await pool.query<{
-    id: string; source: FollowupSource; name: string | null; contact_text: string | null; need: string | null;
-    draft: string | null; notified_at: Date | null; detail: Record<string, unknown> | null;
-  }>(`SELECT id, source, name, contact_text, need, draft, notified_at, detail FROM followups WHERE id = $1`, [id]);
-  const f = rows[0];
-  if (!f) return false;
-  if (f.notified_at) return true;
-  const key = `followup_email:${id}`;
-  if (!isEmailConfigured()) {
-    await recordException('followup_email', key, id, '邮件服务未配置');
-    return false;
-  }
-  const link = `${(base || process.env.NEXT_PUBLIC_SITE_URL || 'https://sinoamericanrec.org').replace(/\/$/, '')}/zh/staff/followups`;
-  const lines = [
-    `来源：${SOURCE_LABEL[f.source]}`,
-    `称呼：${f.name || '未留'}`,
-    `联系方式：${f.contact_text || '未留'}`,
-    `需求：${f.need || '—'}`,
-    f.draft ? `\n建议联系内容（草稿，请人工确认后再发）：\n${f.draft}` : '',
-    `\n后台处理：${link}`
-  ].filter(Boolean);
-  try {
-    const res = await getResend().emails.send({
-      from: getFromAddress(),
-      to: leadNotifyEmail(),
-      subject: `【SAREC ${SOURCE_LABEL[f.source]}】${oneLine(f.name || '访客', 40)}${f.need ? ' · ' + oneLine(f.need, 30) : ''}`,
-      text: lines.join('\n')
-    });
-    if (res.error) throw new Error(res.error.message);
-    await pool.query(`UPDATE followups SET notified_at = now() WHERE id = $1 AND notified_at IS NULL`, [id]);
-    await resolveException(key, 'system');
-    return true;
-  } catch (e) {
-    await recordException('followup_email', key, id, e instanceof Error ? e.message : 'send failed');
-    return false;
-  }
+  const { sendFollowupEmail } = await import('./followupMail');
+  return sendFollowupEmail(id, base);
 }
 
 // ── 后台列表与状态流转 ──────────────────────────────────────────────────
@@ -268,6 +240,7 @@ export async function scanFollowups(now = new Date()): Promise<{ postEvent: numb
        JOIN registrations r ON r.event_id = e.id AND r.contact_id = c.id AND r.status <> 'cancelled'
       WHERE coalesce(e.ends_at, e.starts_at) BETWEEN $1::timestamptz - interval '24 hours' AND $1::timestamptz
         AND e.event_status <> 'cancelled'
+        AND c.account_kind IS NULL -- 后台综合优化 八：内部 / 审核演示 / 测试账号不收跟进提醒
       ORDER BY a.contact_id, e.id, a.created_at DESC`,
     [now]
   );
@@ -294,7 +267,7 @@ export async function scanFollowups(now = new Date()): Promise<{ postEvent: numb
        FROM applications a
        JOIN contacts c ON c.id = a.contact_id
        LEFT JOIN membership_tiers t ON t.slug = a.selected_tier_slug
-      WHERE (a.application_status IN ('approved','paid','second_payment_due')
+      WHERE c.account_kind IS NULL AND (a.application_status IN ('approved','paid','second_payment_due')
              OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
         AND a.membership_end_date BETWEEN $1::date AND $1::date + 30
         -- 已经续费（有更晚的有效会籍）的不提醒

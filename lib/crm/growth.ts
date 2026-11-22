@@ -117,6 +117,7 @@ export async function referralLeaderboard(days = 90) {
          WHERE x.referred_by = c.id AND a.membership_start_date IS NOT NULL) AS joined,
        (SELECT count(*)::int FROM inquiries i WHERE i.ref_contact_id = c.id AND i.created_at > now() - make_interval(days => $1)) AS inquiries
        FROM refs JOIN contacts c ON c.id = refs.id
+      WHERE c.account_kind IS NULL -- 后台综合优化 八：内部 / 审核演示 / 测试账号不进推荐排行
       ORDER BY registered DESC, visits DESC LIMIT 100`,
     [days]
   );

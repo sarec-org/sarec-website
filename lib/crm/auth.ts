@@ -8,6 +8,8 @@
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { getFromAddress, getResend, isEmailConfigured } from '@/lib/email/resend-client';
+import { TEST_FIXED_CODE, testFixedCodeOn } from './testFixedCode';
+import { assertTestPhone } from './testPhones';
 import { CrmError, findOrCreateContact, normalizeEmail, normalizePhone } from './events';
 import type { Db } from './profile';
 import { SMS_FALLBACK, noteVerified, phoneSendLimits, twilioVerify, twilioVerifyConfigured } from './contactInfo';
@@ -52,13 +54,17 @@ export function normalizeTarget(channel: Channel, raw: string): string | null {
 }
 
 /** 发送验证码。返回 devCode 仅在测试环境。 */
-export async function sendLoginCode(channel: Channel, rawTarget: string): Promise<{ target: string; devCode?: string }> {
+export async function sendLoginCode(channel: Channel, rawTarget: string): Promise<{ target: string; devCode?: string; testFixedCode?: true }> {
   const target = normalizeTarget(channel, rawTarget);
   if (!target) {
     throw new CrmError('bad_target', channel === 'email' ? '邮箱格式不对，请检查后再试' : '手机号格式不对，请加国家码，例如 +1 626 555 1234');
   }
+  // D22（指令 9）：测试站固定验证码只认名单里的号码（555-01xx 虚构号 + 测试库名单）；正式站 testFixedCodeOn() 永远 false，不进这里
+  if (channel === 'sms' && testFixedCodeOn() && !reviewLogin(channel, target)) await assertTestPhone(target);
   const viaVerify = channel === 'sms' && smsConfigured();
-  if (channel === 'sms' && !viaVerify && !devEcho()) throw new CrmError('sms_unavailable', SMS_FALLBACK);
+  // D16：测试站短信验证码不真发、固定 246810（正式站 fixed 永远是 false）
+  const fixed = channel === 'sms' && !viaVerify && testFixedCodeOn();
+  if (channel === 'sms' && !viaVerify && !devEcho() && !fixed) throw new CrmError('sms_unavailable', SMS_FALLBACK);
   const pool = getPool();
   const { rows: recent } = await pool.query(
     `SELECT 1 FROM login_codes WHERE target = $1 AND created_at > now() - make_interval(secs => $2) LIMIT 1`,
@@ -68,7 +74,7 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
 
   // 小程序审核账号：固定验证码（环境变量配置），不发邮件；该账号不能成为工作人员
   const review = reviewLogin(channel, target);
-  const code = review ?? String(randomInt(0, 1_000_000)).padStart(6, '0');
+  const code = review ?? (fixed ? TEST_FIXED_CODE : String(randomInt(0, 1_000_000)).padStart(6, '0'));
 
   if (viaVerify) {
     // 短信：Twilio Verify 发码；同一号码 60 秒一次、一天 10 次；发不出 → 提示改用邮箱
@@ -108,6 +114,7 @@ export async function sendLoginCode(channel: Channel, rawTarget: string): Promis
     }
   }
   // 短信（仅本地测试、未配置 Twilio 时）：验证码随响应返回，不真正发送
+  if (fixed) return devEcho() ? { target, devCode: code, testFixedCode: true } : { target, testFixedCode: true };
   return devEcho() ? { target, devCode: code } : { target };
 }
 
@@ -120,6 +127,8 @@ export async function verifyLoginCode(
 ): Promise<{ token: string; contactId: string; created: boolean }> {
   const target = normalizeTarget(channel, rawTarget);
   if (!target) throw new CrmError('bad_target', '联系方式格式不对');
+  // D22（指令 9 · J9-1）：测试站验证时也查名单——号码从名单里拿掉以后，之前发的码也登不了；正式站 testFixedCodeOn() 恒为 false
+  if (channel === 'sms' && testFixedCodeOn() && !reviewLogin(channel, target)) await assertTestPhone(target);
   const clean = (code || '').replace(/\D/g, '');
   return withTransaction(async (db) => {
     const { rows } = await db.query<{ id: string; code_hash: string; attempts: number; expires_at: Date }>(
@@ -319,6 +328,20 @@ export async function pollQrLogin(poll: string): Promise<{ status: 'pending' | '
 // ── 工作人员 ────────────────────────────────────────────────────────────
 export type StaffRole = 'checkin' | 'finance' | 'ops' | 'admin';
 export type Staff = { contactId: string; email: string; name: string; roles: StaffRole[]; regions?: string[] }; // regions：地区管理员只管这些地区（空 = 全部）
+
+/**
+ * 后台综合优化 11/21（十一.1）：后台登录框只给工作人员邮箱发验证码。
+ * 不是（或已停用）的邮箱当场告诉对方，不发码、不假装已发送。审核账号永远不是工作人员。
+ */
+export async function assertStaffEmail(rawTarget: string): Promise<void> {
+  const target = normalizeTarget('email', rawTarget);
+  if (!target) throw new CrmError('bad_target', '邮箱格式不对，请检查后再试');
+  if (target === reviewEmail()) throw new CrmError('not_staff', NOT_STAFF_MSG(target));
+  const { rows } = await getPool().query<{ is_active: boolean }>(`SELECT is_active FROM staff_roles WHERE lower(email) = $1 LIMIT 1`, [target]);
+  if (!rows[0]) throw new CrmError('not_staff', NOT_STAFF_MSG(target));
+  if (!rows[0].is_active) throw new CrmError('not_staff', `${target} 的工作人员账号已停用，没有发验证码。需要的话请找管理员在后台「团队」页恢复。`);
+}
+const NOT_STAFF_MSG = (t: string) => `${t} 不是工作人员账号，没有发验证码。请换您在商会登记的工作邮箱；还没开通的，请把邮箱发给管理员，在后台「团队」页开通。`;
 
 export async function staffFor(contactId: string): Promise<Staff | null> {
   // 网站：已验证的邮箱和工作人员表一致；1.3 N 小程序：工作人员扫后台绑定码绑定过的微信账号

@@ -23,6 +23,9 @@ export default function StaffCheckin() {
   const [form, setForm] = useState({ name: '', phone: '', email: '', roleSub: '' });
   const [roles, setRoles] = useState<Role[]>([]);
   // 1.2 个人签到码：工作人员用手机扫会员的签到码 → 打开本页并定位到这条报名，核对后一键签到
+  // 后台综合优化 七.3：签到的人档案里没有手机号 → 当场问一下补上
+  const [needPhone, setNeedPhone] = useState<{ id: string; name: string } | null>(null);
+  const [newPhone, setNewPhone] = useState('');
   const [regCard, setRegCard] = useState<(Person & { event_id: string; title: string; starts_at: string; status: string }) | null>(null);
 
   // 1.4.0：登录成功（StaffGate 放行）以后再取数据——没登录的工作人员从个人码说明页点“登录后台”，登录完自动定位到这条报名
@@ -36,7 +39,12 @@ export default function StaffCheckin() {
       // 默认选今天（或最近一场）
       list.sort((a, b) => Math.abs(new Date(a.starts_at).getTime() - now) - Math.abs(new Date(b.starts_at).getTime() - now));
       setEvents(list);
-      if (list[0]) setEventId(list[0].id);
+      // 后台综合优化 六：从「今天现场」/ 活动页点过来（?event=<id>&onsite=1）直接选中这场、打开现场登记
+      const sp = new URLSearchParams(location.search);
+      const want = sp.get('event');
+      if (want && list.some((e) => e.id === want)) setEventId(want);
+      else if (list[0]) setEventId(list[0].id);
+      if (sp.get('onsite') === '1') setOnsite(true);
     });
     api<{ quickRoles: Role[] }>('/api/v1/meta').then((r) => r.ok && setRoles([...r.data.quickRoles, { key: 'other', label: '其他' }]));
     const reg = new URLSearchParams(location.search).get('reg');
@@ -60,10 +68,12 @@ export default function StaffCheckin() {
   async function checkin(p: Person) {
     setBusy(true);
     setErr('');
-    const r = await api<{ result: Result }>('/api/v1/staff/checkin', { body: { eventId, contactId: p.id } });
+    const r = await api<{ result: Result; missingPhone?: boolean }>('/api/v1/staff/checkin', { body: { eventId, contactId: p.id } });
     setBusy(false);
     if (!r.ok) return setErr(r.message);
     setResult({ who: p.name, r: r.data.result });
+    setNeedPhone(r.data.missingPhone ? { id: p.id, name: p.name } : null);
+    setNewPhone('');
     search();
   }
   async function register() {
@@ -101,6 +111,24 @@ export default function StaffCheckin() {
                   <p className={styles.muted}>订单号 {result.r.orderNo}，请引导付款；财务核款后系统自动完成签到。</p>
                 )}
               </div>
+            </div>
+          )}
+          {needPhone && (
+            <div className={`${styles.card} ${styles.cardGold}`}>
+              <p style={{ margin: '0 0 0.5rem', fontSize: '1.1rem' }}><b>{needPhone.name}</b> 的档案里没有手机号，请问一下补上（以后好认出来）</p>
+              <div className={styles.inputRow}>
+                <input className={styles.input} inputMode="tel" placeholder="手机号" aria-label="手机号" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+                <button className={styles.btn} disabled={busy || newPhone.replace(/\D/g, '').length < 10} onClick={async () => {
+                  setBusy(true);
+                  const r = await api('/api/v1/staff/checkin', { body: { eventId, contactId: needPhone.id, addPhone: newPhone } });
+                  setBusy(false);
+                  if (!r.ok) return setErr(r.message);
+                  setErr('');
+                  setNeedPhone(null);
+                  setResult((x) => (x ? { ...x, r: { ...x.r, message: `${x.r.message}（手机号已补上）` } } : x));
+                }}>保存手机号</button>
+              </div>
+              <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} style={{ marginTop: 8 }} onClick={() => setNeedPhone(null)}>他不愿意留，先跳过</button>
             </div>
           )}
           {err && <div className={styles.error}>{err}</div>}
@@ -156,7 +184,7 @@ export default function StaffCheckin() {
               <p className={styles.small}>填三项即完成报名和签到。手机号或邮箱填一项即可。</p>
               {(['name', 'phone', 'email'] as const).map((k) => (
                 <div className={styles.field} key={k}>
-                  <label className={styles.label} htmlFor={`on-${k}`}>{{ name: '姓名 *', phone: '手机号', email: '邮箱' }[k]}</label>
+                  <label className={styles.label} htmlFor={`on-${k}`}>{{ name: '姓名 *', phone: '手机号 *', email: '邮箱' }[k]}</label>
                   <input id={`on-${k}`} className={styles.input} inputMode={k === 'phone' ? 'tel' : k === 'email' ? 'email' : 'text'} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
                 </div>
               ))}
@@ -171,7 +199,7 @@ export default function StaffCheckin() {
                 </div>
               </div>
               <div className={styles.btnRow}>
-                <button className={styles.btn} disabled={busy || !form.name || !(form.phone || form.email)} onClick={register}>
+                <button className={styles.btn} disabled={busy || !form.name || !form.phone} onClick={register}>
                   {busy ? '处理中…' : '登记并签到'}
                 </button>
                 <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setOnsite(false)}>返回查找</button>

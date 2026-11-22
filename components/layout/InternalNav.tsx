@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './InternalNav.module.css';
 import { MobileNav } from './MobileNav';
+import { JobsMenuItem } from '@/components/jobs/JobsMenuItem';
 
 // CMS V2 PR-2 最终导航:一级项直接表达用户意图,右侧独立行动按钮 [加入商会]。
 // 与 HeroV3B / MobileNav 三处保持完全一致,顺序不变。
@@ -68,6 +69,8 @@ export function InternalNav() {
                 </Link>
               </li>
             ))}
+            {/* D12（11/20 东哥同意）：只追加一项，跟开关走 */}
+            <JobsMenuItem activeClassName={styles.navItemActive} />
           </ul>
 
           <div className={styles.navRight}>
@@ -125,6 +128,7 @@ export function InternalNav() {
               </Link>
             </li>
           ))}
+          <JobsMenuItem activeClassName={styles.navItemActive} onClick={close} />
         </ul>
       </aside>
     </>

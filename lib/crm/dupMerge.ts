@@ -189,7 +189,7 @@ export async function duplicateSuggestions(limit = 60): Promise<DupPair[]> {
 
 export async function recentMerges(limit = 30) {
   const { rows } = await getPool().query(
-    `SELECT m.id, m.kept_id, m.merged_id, m.merged_by, m.created_at, m.undone_at, m.undone_by, m.reason,
+    `SELECT m.id, m.kept_id, m.merged_id, m.merged_by, m.created_at, m.undone_at, m.undone_by, m.reason, m.auto,
             k.name AS kept_name, k.member_no::int AS kept_no, d.name AS merged_name, d.member_no::int AS merged_no
        FROM contact_merges m JOIN contacts k ON k.id = m.kept_id JOIN contacts d ON d.id = m.merged_id
       ORDER BY m.created_at DESC LIMIT $1`,

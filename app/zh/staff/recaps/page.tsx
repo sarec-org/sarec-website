@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
+import { EventHub } from '@/components/crm/staff/EventHub';
 import { api, copyText, fmtDateTime } from '@/components/crm/client';
 
 type Stats = { registered: number; arrived: number; companions: number; newPeople: number; staffPhotos: number; guestPhotos: number; referrers: { name: string; brought: number }[] };
@@ -60,6 +61,7 @@ export default function StaffRecaps() {
       {() => (
         <>
           <div className={styles.notice}>活动结束 2 小时后，系统自动整理：签到和照片汇总、相似照片分组和精选建议、回顾文章 / 分享文案 / 服务号推文初稿、需求汇总和跟进任务、给到场的人推荐下一场。<strong>只有您在这里点“审核通过并发布”才会发布。</strong></div>
+          {cur && <EventHub eventId={cur.event_id} current="recap" />}
           <Msg m={msg} />
           {!cur && (
             <>

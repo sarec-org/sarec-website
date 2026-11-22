@@ -23,6 +23,7 @@ import Link from 'next/link';
 import styles from './HeroV3B.module.css';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { HeroDeskCard } from '@/components/home/HomeDesk';
+import { JobsMenuItem } from '@/components/jobs/JobsMenuItem';
 
 const cx = (...keys: Array<string | false | null | undefined>) =>
   keys
@@ -322,6 +323,8 @@ export function HeroV3B() {
           <li>
             <Link href="/zh/members">会员风采</Link>
           </li>
+          {/* D12（11/20 东哥同意）：只追加一项，跟开关走 */}
+          <JobsMenuItem />
         </ul>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <Link href="/zh/me" className={styles['nav-me']}>

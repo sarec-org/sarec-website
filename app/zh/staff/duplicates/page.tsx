@@ -7,7 +7,7 @@ import { api, fmtDateTime } from '@/components/crm/client';
 
 type P = { id: string; memberNo: number; name: string; phone: string | null; email: string | null; regs: number; createdAt: string };
 type Pair = { a: P; b: P; why: string[] };
-type M = { id: string; kept_name: string; kept_no: number; merged_name: string; merged_no: number; merged_by: string; created_at: string; undone_at: string | null };
+type M = { id: string; kept_name: string; kept_no: number; merged_name: string; merged_no: number; merged_by: string; created_at: string; undone_at: string | null; auto?: boolean; reason?: string | null };
 
 const who = (p: P) => `#${p.memberNo} ${p.name}`;
 
@@ -38,7 +38,8 @@ export default function Duplicates() {
       {() => (
         <>
           <p className={styles.small}>
-            下面只是“可能是同一个人”的提示（同手机号、同邮箱、同名）。确认是同一人再点合并：报名、签到、缴费、积分明细都搬到保留的那份，重复的积分不相加；合并不会带来管理员权限。合错了可以在下面“合并记录”里撤销。
+            手机号相同、两边都验证过的档案，系统会自动合并（下面“合并记录”里标“系统自动”，合错了一样可以撤销）。
+            下面只是“可能是同一个人”的提示（同手机号、同邮箱、同名），拿不准的也会进「今天」。确认是同一人再点合并：报名、签到、缴费、积分明细都搬到保留的那份，重复的积分不相加；合并不会带来管理员权限。合错了可以在下面“合并记录”里撤销。
           </p>
           <Msg m={msg} />
           {!pairs.length && <p className={styles.muted}>现在没有疑似重复的档案。</p>}
@@ -60,7 +61,7 @@ export default function Duplicates() {
               <thead><tr><th>时间</th><th>保留</th><th>合并掉</th><th>谁做的</th><th></th></tr></thead>
               <tbody>{merges.map((m) => (
                 <tr key={m.id}>
-                  <td>{fmtDateTime(m.created_at)}</td><td>#{m.kept_no} {m.kept_name}</td><td>#{m.merged_no} {m.merged_name}</td><td>{m.merged_by.replace(/^staff:/, '')}</td>
+                  <td>{fmtDateTime(m.created_at)}</td><td>#{m.kept_no} {m.kept_name}</td><td>#{m.merged_no} {m.merged_name}</td><td>{m.auto ? <>系统自动<br /><span className={styles.small}>手机号相同且两边都已验证</span></> : m.merged_by.replace(/^staff:/, '')}</td>
                   <td>{m.undone_at ? <span className={styles.small}>已撤销</span> : <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => act({ action: 'undo', mergeId: m.id }, '已撤销合并，两份档案恢复独立')}>撤销</button>}</td>
                 </tr>
               ))}</tbody>
