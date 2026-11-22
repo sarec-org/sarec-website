@@ -2,11 +2,13 @@
 import { listEvents } from '@/lib/crm/flow';
 import { handler, isMp12, isMp131, mp131Safe, ok } from '@/lib/crm/http';
 import { noMoneySummaries } from '@/lib/noMoney';
+import { withEdgeCache } from '@/lib/crm/edgeCache';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   const events = await listEvents(new URL(req.url).searchParams.get('past') === '1');
   const out = (await isMp12(req)) ? noMoneySummaries(events) : events;
   // 1.3.1 小程序：不给人数和金额（测试 B 段 P2）
-  return ok({ events: isMp131(req) ? mp131Safe(out) : out });
+  // 指令 31：小程序的公开地址（c=mp、不带令牌）让边缘缓存 20 秒；其他请求照旧不缓存
+  return withEdgeCache(req, ok({ events: isMp131(req) ? mp131Safe(out) : out }));
 });
