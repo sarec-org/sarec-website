@@ -396,20 +396,30 @@ async function main() {
   const mineClubs = (h.j.clubs as { key: string; name: string; sortOrder: number; position: number; icon: string | null; coverUrl: string | null; active: boolean; status: string }[]).filter((c) => c.name.startsWith(P));
   assert.equal(mineClubs[0].key, `v150g${sfx}`, '按后台排序，数字小的在前');
   assert.equal(mineClubs[0].icon, '🃏扑', '图标最多两个字');
-  assert.ok(mineClubs.every((c) => typeof c.sortOrder === 'number' && typeof c.position === 'number' && c.active === true && 'coverUrl' in c && c.status));
+  assert.ok(mineClubs.every((c) => typeof c.sortOrder === 'number' && typeof c.position === 'number' && c.active === (c.status === 'active') && 'coverUrl' in c && c.status));
+  assert.equal(mineClubs.find((c) => c.key === ck)!.status, 'active', '设置里已成立');
+  assert.equal(mineClubs.find((c) => c.key === `v150g${sfx}`)!.status, 'preparing', '设置里没有 = 筹备中，首页不放');
+  // 后台俱乐部页改状态：写进同一份设置，记 update_setting 操作记录
+  h = await http('/api/v1/staff/clubs', adm.token, { action: 'save_club', key: `v150g${sfx}`, name: `${P}排第一`, sortOrder: -5, status: 'active' });
+  assert.equal(h.status, 200, JSON.stringify(h.raw));
+  h = await http('/api/v1/clubs', null);
+  assert.equal((h.j.clubs as { key: string; active: boolean; statusLabel: string }[]).find((c) => c.key === `v150g${sfx}`)!.statusLabel, '已成立');
+  const { rows: au } = await pool.query(`SELECT 1 FROM crm_audit_log WHERE target_id = 'committees' AND action = 'update_setting' AND after_value @> $1::jsonb`, [JSON.stringify([{ key: `v150g${sfx}`, status: 'active' }])]);
+  assert.ok(au[0], '改状态有操作记录');
+  h = await http('/api/v1/clubs', null);
   assert.ok((h.j.clubs as { memberCount?: number }[]).every((c) => typeof c.memberCount === 'number'), '大方块要的成员数 memberCount');
   const all = h.j.clubs as { position: number }[];
   assert.deepEqual(all.map((c) => c.position), all.map((_, i) => i + 1));
   h = await http('/api/v1/me/committees', null);
   const cms = h.j.committees as { key: string; name: string; active: boolean; sortOrder: number; icon: string | null; coverUrl: string | null; hasClub: boolean; statusLabel: string }[];
-  assert.equal(cms.length, 2);
-  assert.equal(cms[0].key, ck, '有俱乐部的按俱乐部排序排前面');
+  assert.equal(cms.length, 3, '俱乐部页改状态时补进了设置');
+  assert.deepEqual(cms.map((c) => c.key), [`v150g${sfx}`, ck, `v150p${sfx}`], '有俱乐部的按俱乐部排序排前面，没有的在后');
   assert.equal(cms[0].active, true);
-  assert.equal(cms[0].hasClub, true);
-  assert.equal(cms[1].active, false);
-  assert.equal(cms[1].statusLabel, '筹备中');
+  assert.equal(cms[1].hasClub, true);
+  assert.equal(cms[2].active, false);
+  assert.equal(cms[2].statusLabel, '筹备中');
   assert.ok(cms.every((c) => 'icon' in c && 'coverUrl' in c && typeof c.sortOrder === 'number'));
-  ok('GET /clubs 带 key、名字、sortOrder、position、icon、coverUrl、active、status；专委会接口带 active、sortOrder、icon、coverUrl、hasClub，按后台排序（没写死名字）');
+  ok('GET /clubs 带 key、名字、sortOrder、position、icon、coverUrl、active（=已成立）、status；后台俱乐部页能改已成立 / 筹备中；专委会接口带 active、sortOrder、icon、coverUrl、hasClub，按后台排序（没写死名字）');
 
   console.log(`\n全部通过：${passed} 项`);
 }

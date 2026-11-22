@@ -15,7 +15,7 @@ import { findContactByNo, Lightbox, uploadForm, Toast } from '@/components/crm/s
 
 type Club = {
   id: string; key: string; name: string; intro: string | null; members_only: boolean; leader_contact_id: string | null; leader_name: string | null;
-  group_qr_url: string | null; group_qr_expires: string | null; sort_order: number; icon?: string | null; cover_url?: string | null; closed_at: string | null; members: number; open_meetups: number;
+  group_qr_url: string | null; group_qr_expires: string | null; sort_order: number; status?: 'active' | 'preparing'; icon?: string | null; cover_url?: string | null; closed_at: string | null; members: number; open_meetups: number;
 };
 type Meetup = {
   id: string; title: string; starts_at: string; location: string | null; capacity: number; note: string | null; status: string; sec_status: string;
@@ -24,7 +24,7 @@ type Meetup = {
 type Ban = { contact_id: string; name: string | null; reason: string | null; banned_by: string; banned_at: string };
 type Action = { kind: string; target_id: string | null; action: string; actor: string; note: string | null; created_at: string };
 type Data = { clubs: Club[]; meetups: Meetup[]; bans: Ban[]; actions: Action[] };
-type Form = { editing: boolean; key: string; name: string; intro: string; membersOnly: boolean; sortOrder: string; icon: string; leaderNo: string; dropLeader: boolean; leaderName: string | null };
+type Form = { editing: boolean; key: string; name: string; intro: string; membersOnly: boolean; sortOrder: string; icon: string; status: 'active' | 'preparing'; leaderNo: string; dropLeader: boolean; leaderName: string | null };
 
 const ACTION_TEXT: Record<string, string> = {
   save: '保存了俱乐部', close_club: '关闭了俱乐部', reopen_club: '重新打开了俱乐部', set_qr: '换了群二维码', take_down: '下架了组局', restore: '恢复了组局',
@@ -42,7 +42,7 @@ function qrState(c: Club): { text: string; bad: boolean } {
   if (days <= 3) return { text: `快过期了：${d}（还剩 ${days} 天），请换新的`, bad: true };
   return { text: `${d} 过期`, bad: false };
 }
-const blankForm = (): Form => ({ editing: false, key: '', name: '', intro: '', membersOnly: false, sortOrder: '0', icon: '', leaderNo: '', dropLeader: false, leaderName: null });
+const blankForm = (): Form => ({ editing: false, key: '', name: '', intro: '', membersOnly: false, sortOrder: '0', icon: '', status: 'preparing', leaderNo: '', dropLeader: false, leaderName: null });
 const plus7 = () => new Date(Date.now() + 7 * 86400e3).toLocaleDateString('en-CA');
 
 function Clubs() {
@@ -77,7 +77,7 @@ function Clubs() {
   async function saveClub() {
     if (!f) return;
     if (!f.key.trim() || !f.name.trim()) return setMsg({ ok: false, text: '请填英文短名和名字' });
-    const body: Record<string, unknown> = { action: 'save_club', key: f.key, name: f.name, intro: f.intro, membersOnly: f.membersOnly, sortOrder: Number(f.sortOrder) || 0, icon: f.icon };
+    const body: Record<string, unknown> = { action: 'save_club', key: f.key, name: f.name, intro: f.intro, membersOnly: f.membersOnly, sortOrder: Number(f.sortOrder) || 0, icon: f.icon, status: f.status };
     // 负责人：填了会员号就换；勾了「去掉负责人」就清空；都没有就不动
     if (f.leaderNo) body.leaderMemberNo = f.leaderNo;
     else if (f.dropLeader) body.leaderMemberNo = '';
@@ -151,7 +151,7 @@ function Clubs() {
               {c.members_only && <span className={styles.badge}>仅会员</span>}
               {c.closed_at && <span className={`${styles.badge} ${styles.badgeMuted}`}>已关闭</span>}
             </p>
-            <p className={styles.small} style={{ margin: 0 }}>{c.icon ? `${c.icon} · ` : ''}英文短名 {c.key} · 排序 {c.sort_order}（小程序首页方块按这个排，数字小的在前） · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
+            <p className={styles.small} style={{ margin: 0 }}>{c.status === 'active' ? '已成立' : '筹备中（小程序首页不显示，只在「全部」里）'} · {c.icon ? `${c.icon} · ` : ''}英文短名 {c.key} · 排序 {c.sort_order}（小程序首页方块按这个排，数字小的在前） · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
             {c.intro && <p style={{ margin: '0.3rem 0' }}>{c.intro}</p>}
             {!c.closed_at && (
               <div style={{ borderTop: '1px solid var(--line-2)', marginTop: 8, paddingTop: 8 }}>
@@ -184,7 +184,7 @@ function Clubs() {
               </label>
             </div>
             <div className={styles.btnRow} style={{ marginTop: 10 }}>
-              <button className={`${styles.btn} ${styles.btnSmall}`} onClick={() => { setMsg(null); setF({ editing: true, key: c.key, name: c.name, intro: c.intro ?? '', membersOnly: c.members_only, sortOrder: String(c.sort_order), icon: c.icon ?? '', leaderNo: '', dropLeader: false, leaderName: c.leader_name }); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>编辑</button>
+              <button className={`${styles.btn} ${styles.btnSmall}`} onClick={() => { setMsg(null); setF({ editing: true, key: c.key, name: c.name, intro: c.intro ?? '', membersOnly: c.members_only, sortOrder: String(c.sort_order), icon: c.icon ?? '', status: c.status === 'active' ? 'active' : 'preparing', leaderNo: '', dropLeader: false, leaderName: c.leader_name }); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>编辑</button>
               {c.closed_at
                 ? <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'reopen_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>重新打开</button>
                 : <button className={`${styles.btn} ${styles.btnDanger} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'close_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>关闭俱乐部</button>}
@@ -216,6 +216,13 @@ function Clubs() {
           <div className={styles.field}>
             <label className={styles.label} htmlFor="cl-sort">排序（数字小的排前面；小程序首页「专委会与俱乐部」方块也按这个排）</label>
             <input id="cl-sort" className={styles.input} inputMode="numeric" value={f.sortOrder} onChange={(e) => setF({ ...f, sortOrder: e.target.value.replace(/[^\d-]/g, '') })} />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="cl-status">状态（已成立的才上小程序首页；筹备中的只在「全部」里标“筹备中”）</label>
+            <select id="cl-status" className={styles.select} value={f.status} onChange={(e) => setF({ ...f, status: e.target.value === 'active' ? 'active' : 'preparing' })}>
+              <option value="active">已成立</option>
+              <option value="preparing">筹备中</option>
+            </select>
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="cl-icon">方块图标（一个表情或 1–2 个字，例如 🃏；不填 = 小程序用名字第一个字）</label>

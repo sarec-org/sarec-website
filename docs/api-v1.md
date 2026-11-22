@@ -437,3 +437,8 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 - `GET /api/v1/clubs` 另带 `memberCount`（= `members`，大方块写“N 位成员”用）。
 - **掼蛋默认第一（迁移 0044，只改数据）**：key = 'guandan' 不是第一个、且后台没人保存过俱乐部（`ugc_actions` 没有 kind='club' 的 save / reorder）时，排序改成其他俱乐部最小值减 1，没图标给 🃏；之后后台照样能调（保存时排序变了记 `reorder`，再跑 0044 不会改回去）。
 - 后台「俱乐部」页：编辑里加「方块图标」（一个表情或 1–2 个字），每个俱乐部加「上传封面」（`POST /api/v1/staff/clubs/cover` multipart file + key）。掼蛋俱乐部排第一：在后台把它的排序改成最小即可。
+
+### 已成立 / 筹备中（指令 27；迁移 0045）
+- 存在 `crm_settings.committees`（`[{ key, name, status: 'active'|'preparing' }]`）。后台两处能改、写同一份、都记 `crm_audit_log`（action `update_setting`）：「设置与团队 › 设置 › 专委会与俱乐部状态」，和「客户 › 俱乐部」编辑里的「状态」。
+- `GET /api/v1/clubs` 每项 `status`、`statusLabel`、`active`（= 已成立）。设置里没有的俱乐部算筹备中。小程序首页只放 `active` 的，筹备中的只在「全部」里标“筹备中”。
+- 0045 默认值（只改数据）：guandan 已成立，investment、design 筹备中，golf 不动；只有没人工改过这一项状态的才设。

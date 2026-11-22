@@ -44,10 +44,10 @@ export async function ensureClubsSeeded() {
   }
 }
 
-/** 专委会状态（后台设置「专委会状态」里的 已成立 / 筹备中），按 key */
+/** 专委会 / 俱乐部状态（crm_settings.committees 里的 已成立 / 筹备中），按 key；设置里没有的算筹备中（指令 27：首页只放已成立的） */
 async function committeeStatusMap(): Promise<Map<string, string>> {
   const list = await getSetting<{ key: string; status: string }[]>(getPool(), 'committees', []).catch(() => [] as { key: string; status: string }[]);
-  return new Map((Array.isArray(list) ? list : []).map((c) => [c.key, c.status === 'preparing' ? 'preparing' : 'active']));
+  return new Map((Array.isArray(list) ? list : []).map((c) => [c.key, c.status === 'active' ? 'active' : 'preparing']));
 }
 
 /** 首页方块：每个俱乐部的排序、图标、封面（按 key），给专委会接口用 */
@@ -97,7 +97,8 @@ export async function listClubs(contactId: string | null) {
     key: c.key, name: c.name, intro: c.intro, membersOnly: c.members_only, members: c.members, memberCount: c.members, joined: c.mine,
     sortOrder: c.sort_order, position: i + 1,
     icon: (c as Club & { icon?: string | null }).icon ?? null, coverUrl: (c as Club & { cover_url?: string | null }).cover_url ?? null,
-    active: true, status: statusOf.get(c.key) ?? 'active', statusLabel: (statusOf.get(c.key) ?? 'active') === 'preparing' ? '筹备中' : '已成立',
+    // active = 已成立（指令 27：小程序首页只放 active 的，筹备中的只在「全部」里标“筹备中”）
+    active: statusOf.get(c.key) === 'active', status: statusOf.get(c.key) ?? 'preparing', statusLabel: statusOf.get(c.key) === 'active' ? '已成立' : '筹备中',
     // 以前表达过意向、还没加入：提示“点一下加入”（不自动算加入）
     hint: !c.mine && c.interested ? '您之前表达过意向，点一下「加入」就行' : null
   }));
@@ -288,6 +289,21 @@ export async function leaderRemoveMember(contactId: string, key: string, memberI
 }
 
 /** 负责人上传群二维码（后台也能传） */
+/** 改一个俱乐部 / 专委会的状态（已成立 / 筹备中）。设置里没有这一项就补上 */
+export async function setClubStatus(s: Staff, key: string, name: string, status: 'active' | 'preparing') {
+  const { setSetting } = await import('./orders');
+  const { audit } = await import('./staff');
+  await withTransaction(async (db) => {
+    const before = await getSetting<{ key: string; name: string; status: string }[]>(db, 'committees', []);
+    const list = Array.isArray(before) ? before : [];
+    const i = list.findIndex((c) => c.key === key);
+    if (i >= 0 && list[i].status === status) return;
+    const after = i >= 0 ? list.map((c, j) => (j === i ? { ...c, status } : c)) : [...list, { key, name, status }];
+    await setSetting(db, 'committees', after, s.name);
+    await audit(db, s, 'update_setting', 'setting', 'committees', { before: list, after });
+  });
+}
+
 /** 后台上传首页方块 / 详情页封面 */
 export async function setClubCover(actor: string, key: string, url: string) {
   const { rowCount } = await getPool().query(`UPDATE clubs SET cover_url = $2, updated_at = now() WHERE key = $1`, [key, url]);
@@ -329,7 +345,8 @@ export async function staffClubs() {
   const { rows: actions } = await getPool().query(
     `SELECT kind, target_id, action, actor, note, created_at FROM ugc_actions WHERE kind IN ('club', 'meetup', 'club_member', 'club_ban') ORDER BY created_at DESC LIMIT 100`
   );
-  return { clubs: rows, meetups, bans, actions };
+  const st = await committeeStatusMap();
+  return { clubs: rows.map((r) => ({ ...r, status: st.get(r.key) ?? 'preparing' })), meetups, bans, actions };
 }
 
 export async function staffClubAction(s: Staff, b: Record<string, unknown>) {
@@ -357,6 +374,8 @@ export async function staffClubAction(s: Staff, b: Record<string, unknown>) {
       await pool.query(`UPDATE clubs SET icon = $2 WHERE key = $1`, [key, icon]);
     }
     if (b.clearCover === true) await pool.query(`UPDATE clubs SET cover_url = NULL WHERE key = $1`, [key]);
+    // 指令 27：已成立 / 筹备中——和「设置 › 专委会与俱乐部状态」写同一份 crm_settings.committees，记同样的操作记录（迁移 0045 据此认“人工改过”）
+    if (b.status === 'active' || b.status === 'preparing') await setClubStatus(s, key, name, b.status);
     await log(actor, 'club', key, 'save', name);
     // 人工调过顺序单独记一条（迁移 0044 看到有人调过就不再动默认顺序）
     const newSort = Math.floor(Number(b.sortOrder) || 0);
