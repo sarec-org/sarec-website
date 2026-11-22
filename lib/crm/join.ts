@@ -86,11 +86,14 @@ export async function submitJoin(contactId: string, b: { name?: string; company?
     return { id: rows[0].id, created: true };
   });
   let linkSent = false;
+  // 1.5.0 体验1（第三部分 7）：真发到了哪里——短信发到了说"手机"，只有邮件发到了说"邮箱"；都没发出去不提链接（不出现金额）
+  let linkChannel: 'sms' | 'email' | null = null;
   if (created) {
     const internal = await isNotReal(pool, contactId);
     // 后台综合优化 一.1：申请一提交，系统立刻把网站缴费链接发给申请人（短信，有邮箱同时发邮件）；走通知总闸
-    const auto = await autoSendJoinLink(id).catch(() => ({ sent: false, skipped: 'error' as string | null }));
+    const auto = await autoSendJoinLink(id).catch(() => ({ sent: false, skipped: 'error' as string | null, log: [] as LinkLogEntry[] }));
     linkSent = auto.sent;
+    linkChannel = auto.log.some((l) => l.channel === 'sms' && l.status === 'sent') ? 'sms' : auto.sent ? 'email' : null;
     if (!internal) {
       const f = await upsertFollowup(pool, {
         source: 'manual',
@@ -104,7 +107,12 @@ export async function submitJoin(contactId: string, b: { name?: string; company?
       await notifyStaffSafe({ category: 'join_request', key: `join:${id}`, title: '有一条新入会申请', href: `/zh/staff/join-requests?id=${id}` });
     }
   }
-  return { id, message: linkSent ? '已收到申请，入会链接已发到您的手机' : '已收到申请，工作人员会联系您', linkSent };
+  return {
+    id,
+    message: linkSent ? (linkChannel === 'sms' ? '已收到申请，缴费链接已发到您的手机' : '已收到申请，缴费链接已发到您的邮箱') : '已收到申请，工作人员会联系您',
+    linkSent,
+    linkChannel
+  };
 }
 
 export async function listJoinRequests(status?: string | null, id?: string | null) {

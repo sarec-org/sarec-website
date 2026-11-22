@@ -84,10 +84,16 @@ export async function listClubs(contactId: string | null) {
   }));
 }
 
-export async function joinClub(contactId: string, key: string) {
+/**
+ * 加入俱乐部。1.5.0 体验1（第三部分 5）：和专委会意向一样，必须已有姓名和手机号——
+ * 没有的带 fill.name / fill.phone 补上；还缺返回 need_name_phone（小程序先弹补填，再带上重新提交）。
+ */
+export async function joinClub(contactId: string, key: string, fill: { name?: unknown; phone?: unknown } = {}) {
   const c = await clubByKey(key);
   if (await isBanned(contactId)) throw new CrmError('club_banned', '您暂时不能参加俱乐部活动。有疑问请在「联系商会」里找工作人员。');
   if (c.members_only && !(await memberStatus(getPool(), contactId)).isMember) throw new CrmError('members_only', '这个俱乐部仅限会员加入。可以在「会员权益」里了解入会。');
+  const { requireNamePhone } = await import('./staff12');
+  await requireNamePhone(contactId, fill, '加入俱乐部');
   await getPool().query(
     `INSERT INTO club_members (club_id, contact_id) VALUES ($1, $2)
      ON CONFLICT (club_id, contact_id) DO UPDATE SET left_at = NULL, removed_by = NULL, joined_at = now()`,

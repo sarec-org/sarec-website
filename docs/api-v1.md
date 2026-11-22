@@ -344,3 +344,85 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 - 排序：`PRIORITY` 档位 —— 置顶 0（活动回顾待发布）→ 钱 100 → 已过期跟进 200 → 新咨询 300 → 待审核待确认 400 → 其他 500；同档按 `at`。
 - 注册：B 的在 `lib/crm/today/providers/b.ts`，C 的在 `lib/crm/today/providers/c.ts`（`C_PROVIDERS`、`C_LIVE_PROVIDERS` 今天现场三按钮 `TodayLive`）。汇总与排序在 `lib/crm/today/registry.ts`。
 - 对外发送总闸：`lib/crm/notifyGate.ts` 的 `gateSend(msg, send)`，设置 `notify_live`（正式站默认关 = 只记 `notify_log` 不发；测试站 / 本机只发测试身份）。
+
+## 14. 1.5.0 体验1 · 第三部分接口（服务器，feat/150-server；迁移 0037 + 0042）
+
+小程序请求头 `X-Sarec-Client: mp-1.5.0`。下面"小程序来的"= 带 `mp-` 版本头、或 `servicewechat.com` Referer、或小程序会话（`isMiniProgramRequest`）。
+
+| # | 第三部分 | 服务器状态 | 接口 |
+|---|---|---|---|
+| 1 | 工作台「今天」 | 做好 | `GET /api/v1/staff/today` |
+| 2 | 绑定扫一次码 | 做好（本次补齐） | `POST/GET /api/v1/staff/mp-bind`、`POST /api/v1/workbench/bind` |
+| 3 | 筹备清单打勾 | 已有，可用 | `GET/POST /api/v1/staff/prep/:eventId` |
+| 4 | 回顾预览 / 一键发布 | 做好（预览瘦身） | `GET /api/v1/staff/recaps/:eventId`、`POST …/publish` |
+| 5 | 专委会 / 俱乐部先补填 | 做好（俱乐部本次补） | `POST /api/v1/me/committees`、`POST /api/v1/clubs/:key {action:'join'}` |
+| 6 | 匿名微信用户补填提示 | 做好（新） | `GET/POST /api/v1/me/fill-prompt` |
+| 7 | 入会成功页 linkSent | 做好 | `POST /api/v1/join`（返回 `linkSent`、`linkChannel`、`message`） |
+| 8 | 通知落地页 | 做好 | 今天每条 `mpPath`；`GET /api/v1/workbench/notices` |
+| 9 | 「新活儿」订阅消息模板 | 只留接口 | 设置 `jobs_wx_template` / 环境 `WX_SUBSCRIBE_TEMPLATES.jobs`；`GET /api/v1/jobs/me/pro` 的 `subscribeTemplate` |
+
+### 1. 今天 `GET /api/v1/staff/today`
+- 网站和小程序同一份待办（`lib/crm/today`）。返回 `{ today, live, items, failed, yesterday, mpBind }`。
+- **小程序来的**（`lib/crm/today/mp.ts` 的 `forMiniProgram`）：
+  - 去掉钱相关的整条：`kind` 是 `payment_pending`（待核款）、`join_unpaid`（入会未缴费），带「钱」标签的，标题 / 建议里有收款字样的；详情里有收款字样的只去掉 `detail`。
+  - 按钮里去掉指向收款页 / 收款接口的（`/zh/staff/payments|rooms|settings`、`/api/v1/staff/orders|settings|rooms|…`）。
+  - 每条加 `mpPath = /pages/staff/today?item=<待办 id>`（待办 id 例：`followup:<跟进编号>`、`prep_due:<事项号>`、`recap:<活动编号>`、`ugc_report:meetup:<编号>`）。
+  - 加 `hiddenMoney`：去掉了几条钱的事（只给条数，小程序可写"另有 N 件收款的事请在网站后台办"，不出现金额）。
+- `mpBind = { bound, boundAt, bindHref }`：登录者这个工作人员有没有绑定手机工作台。网站「今天」页没绑时顶上提示去绑（`bindHref = /zh/staff/settings#mp-bind`）。
+- 1.5.0 的三类待办（`lib/crm/today/providers/v150.ts`，ops 可见，内部 / 审核演示 / 测试账号发的不算）：
+  - `ugc_report` 被举报的内容（同一条多人举报只出一张）：按钮「看一眼」「下架」（confirm）「不用处理」；
+  - `ugc_machine` 机器拦下、还没对大家显示的（组局没过检测、项目 / 照片图片没过检测）：「放行」「下架」「看一眼」；
+  - `profile_review` 个人主页 / 项目文本检测"建议看一眼"（照常显示）：「没问题」（以后不再出现）「下架」「看一眼」。
+  - 按钮都是 `post` 到 `/api/v1/staff/content {kind,id,action}`；处理页 `/zh/staff/content?tab=reported|machine&id=<编号>`（打开那一栏并定位那一条）。
+
+### 2. 绑定手机工作台：扫一次码
+- `POST /api/v1/staff/mp-bind`（网站后台「设置与团队 › 设置 › 我的手机工作台」）→ `{ code, expiresAt, qr, qrPlain }`：
+  - `qr`：小程序码（`pages/staff/bind`，scene `sb=<8 位码>`），微信扫一扫直接打开绑定页；没配微信密钥（测试站）时 `null`。
+  - `qrPlain`：普通二维码，内容 `sarec-bind:<8 位码>`，任何环境都有；在小程序「工作人员绑定码」/ 工作台里点「扫码绑定」（`wx.scanCode`）扫它。
+  - 10 分钟有效、只能用一次。团队页每人一行「出码」（24 小时码）和手输 8 位码照样能用。
+- `GET /api/v1/staff/mp-bind[?code=<8 位码>]` → `{ bound, boundAt[, used, usedAt] }`：网站出码后每 3 秒问一次，扫完自动显示"已绑定好"。
+- `POST /api/v1/workbench/bind { code, wxCode? }`：
+  - `code` 可以是 8 位码、小程序码 scene（`sb=XXXXXXXX`）、普通二维码内容（`sarec-bind:XXXXXXXX`），服务器自己认（`normalizeBindCode`）；
+  - 没有会话时带 `wxCode`（`wx.login` 的 code）：服务器先登录再绑定，一次请求完成，返回 `token`；
+  - 返回 `{ name, roles, workbench: true, todayPath: '/pages/staff/today'[, token] }`。
+
+### 3. 筹备清单打勾（已有）
+- `GET /api/v1/staff/prep/:eventId`（ops / checkin）；小程序来的：收款字样的事项标题换成"收款相关事项（内容请在网站后台查看）"，照样能打勾。
+- `POST /api/v1/staff/prep/:eventId { action: 'toggle', itemId, done: true|false }`。今天页 `prep_due` 卡片上的「打勾：做完了」就是这个。
+
+### 4. 回顾预览 / 一键发布
+- `GET /api/v1/staff/recaps/:eventId`（ops）。**小程序来的**只给预览要用的：`{ recap: { event_id, title, slug, status, drafted_at, published_at, recap_draft, share_draft, thanks_draft, pickPhotos[{id,thumb_url,url}], canPublish } }`（不给统计和推文初稿；文字里有收款字样的给 `null`）。
+- `POST /api/v1/staff/recaps/:eventId/publish`：按初稿原样发布，已发布过返回 `{ published: true, message: '这场已经发布过了' }`，草稿空 400。
+
+### 5. 专委会和俱乐部：先补填姓名手机号
+- 专委会意向 `POST /api/v1/me/committees { key, on, name?, phone? }`：缺 → 400 `need_name_phone`（1.4.3 及以前的旧版照常记下、标"待补填"）。`GET` 带 `profile { hasName, hasPhone, needsFill }`。
+- **俱乐部加入（本次补）** `POST /api/v1/clubs/:key { action: 'join', name?, phone? }`：缺姓名或手机号 → 400 `need_name_phone`，message 例"加入俱乐部需要留手机号，方便负责人联系您"；带上 name / phone 再提交即补进档案（"微信用户"改成真实姓名，手机号记成当前联系方式，未验证）。手机号格式错 → 400 `bad_phone`。
+- `GET /api/v1/clubs` 和 `GET /api/v1/clubs/:key` 都带 `profile { hasName, hasPhone }`，小程序可在点「加入」前先弹补填。
+
+### 6. 匿名“微信用户”补填提示（新，迁移 0042）
+- `GET /api/v1/me/fill-prompt` → `{ show, missing: ['name'|'phone'], reason: 'committee'|'anonymous'|null, prefillName, moments, never, title, body }`。
+  - `moments = ['home','me','after_success']`：可以提示的时机（首页加载完以后、「我的」页、报名 / 加入成功页下方，不挡成功提示）。
+  - `never = ['checkin','error','pay','register_form']`：签到、出错、付款 / 缴费、报名表填写中一律不提示（交互总则第 8 条）。
+  - 不提示：没登录、姓名手机都有、工作人员、内部 / 审核演示 / 测试账号、7 天内点过"以后再说"、累计点过 3 次"以后再说"、建档不到 1 天（有待补填专委会意向的例外，`reason='committee'`）。
+- `POST /api/v1/me/fill-prompt { action: 'later' }` → 7 天内不再提示；`{ action: 'fill', name?, phone? }` → 补进档案并补齐"待补填"的专委会意向；还缺 400 `need_name_phone`。
+- 签到页另有 `prefillName` / `needPhoneOnly`（后台综合优化已做）。
+
+### 7. 入会申请成功页
+- `POST /api/v1/join` 返回 `{ id, message, linkSent, linkChannel: 'sms'|'email'|null }`。
+  - 自动发缴费链接走通知总闸；**真发出去了**才 `linkSent=true`：短信发到了 message = "已收到申请，缴费链接已发到您的手机"，只有邮件发到了 = "…已发到您的邮箱"；没发出（总闸关着、测试站非测试号、没留手机邮箱）= "已收到申请，工作人员会联系您"。不出现金额。
+
+### 8. 通知点开后的落地页
+- 今天页每条 `mpPath`（见 1）。工作人员通知（`staff_notices`）的后台地址换成小程序路径：`mpPathForHref(href)`（`lib/crm/today/mp.ts`）：
+  - `/zh/staff/followups/<编号>` → `/pages/staff/today?item=followup:<编号>`；
+  - 其他后台地址 → `/pages/staff/today?h=<encodeURIComponent(后台地址)>`（小程序按地址转到能办的页面）；
+  - 收款相关（核款、会议室、设置、新会员缴费入会、Zelle 待核）→ `null`（只在网站后台办）。
+- `GET /api/v1/workbench/notices`（工作人员，小程序会话）→ `{ notices: [{ id, title, category, at, mpPath }] }`：本人最近 30 条，收款相关的不给。网站「手机通知」页的最近通知也带 `mpPath`。
+- 以后用企业微信 / 订阅消息通知工作人员时，消息里的小程序页面就用这个 `mpPath`。
+
+### 9. 「新活儿」微信订阅消息模板（只留接口）
+- 模板读取顺序：设置 `crm_settings.jobs_wx_template = { "id": "<模板 ID>", "fields": { "title": "thing1", "time": "time2", "place": "thing3", "note": "thing4" } }` → 环境 `WX_SUBSCRIBE_TEMPLATES.jobs` → 都没有就只发短信（现在的样子）。不新增 Vercel 变量，东哥申请到模板 ID 后在设置里写一行即可。
+- 小程序拿模板 ID：`GET /api/v1/jobs/meta`、`GET /api/v1/jobs/me/pro` 的 `subscribeTemplate`（没有为 `null`，小程序就不弹订阅）。允许后 `POST /api/v1/jobs/me/subscribe { accepted: ['jobs' 或模板 ID] }`（原有）记一次额度，派活时优先发订阅消息、没额度再发短信。
+
+### 群发也过通知总闸（1.5.0 合并后台综合优化）
+- `GET /api/v1/staff/broadcast` 多 `gateNote`（一句话：现在按了会怎样）。
+- 正式站：`crm_settings.broadcast_live` 没打开 = 演练（只记"本来会发给谁"）；打开后短信 / 邮件逐人走 `gatedSend`，总闸 `notify_live` 关着只记 `held`。测试站 / 本机：走总闸，只真发测试身份，其他 `blocked`。微信服务通知这一版只记录。每人结果记在 `broadcast_recipients.result`（`sent|held|blocked|failed|duplicate|dry_run|unreachable`）。正式站选人排除审核演示 / 测试账号。

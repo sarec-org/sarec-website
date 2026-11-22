@@ -44,7 +44,11 @@ export type TodayKind =
   | 'media_review'
   | 'dup_confirm'
   | 'complaint'
-  | 'exception';
+  | 'exception'
+  /** 1.5.0（providers/v150.ts）：举报 / 机器拦下的内容 / 个人主页建议看一眼 */
+  | 'ugc_report'
+  | 'ugc_machine'
+  | 'profile_review';
 
 /** 卡片上的按钮。页面按 type 渲染；所有按钮都要够大（手机上一指点中）。 */
 export type TodayAction =
@@ -128,4 +132,6 @@ export type TodayPayload = {
   failed: string[];
   /** 三.5 昨天的四个结果（ops 才有） */
   yesterday: { visits: number; newArrived: number; joined: number; inquiries: number } | null;
+  /** 1.5.0 体验1（第三部分 2）：登录者有没有绑定手机工作台；没绑时网站「今天」页顶上提示去绑 */
+  mpBind?: { bound: boolean; boundAt: string | Date | null; bindHref: string };
 };

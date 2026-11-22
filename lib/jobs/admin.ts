@@ -9,7 +9,7 @@ import {
   DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
   TURNOVER_TRADES, TRADE_SCOPE, RECRUITING_TEXT, TRADE_RECRUITING_TEXT, RECRUITING_LABEL, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
 } from './constants';
-import { deliver, isProduction, jobsTemplate } from './notify';
+import { deliver, isProduction, loadJobsTemplate } from './notify';
 import { getSwitches } from './settings';
 import { latestPosts } from './posts';
 import { proBrief } from './pros';
@@ -62,7 +62,7 @@ export async function buildMeta(v: Viewer) {
     },
     rules: RULES,
     disclaimer: DISCLAIMER,
-    subscribeTemplate: jobsTemplate()?.id ?? null,
+    subscribeTemplate: (await loadJobsTemplate(pool))?.id ?? null,
     webUrl: `${webBase()}${WEB_JOBS_PATH}`,
     postUrl: `${webBase()}${WEB_JOBS_PATH}/post`
   };

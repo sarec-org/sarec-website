@@ -214,6 +214,33 @@ export async function committeeProfile(contactId: string | null): Promise<{ name
 }
 
 /**
+ * 1.5.0 体验1（第三部分 5）：俱乐部"加入"和专委会意向同一条规矩——必须已有姓名和手机号。
+ * 档案里没有的，请求里带 name / phone 补上（补进档案：还是“微信用户”的改成真实姓名；手机号记成当前联系方式，未验证）；
+ * 还是缺 → 错误码 need_name_phone，message 说缺什么（what = "加入俱乐部"）。
+ */
+export async function requireNamePhone(contactId: string, fill: { name?: unknown; phone?: unknown }, what: string): Promise<{ name: string; phone: string }> {
+  const pool = getPool();
+  const prof = await committeeProfile(contactId);
+  const inName = typeof fill.name === 'string' ? fill.name.trim().slice(0, 60) : '';
+  const rawPhone = typeof fill.phone === 'string' ? fill.phone.trim() : '';
+  const { normalizePhone } = await import('./events');
+  const inPhone = rawPhone ? normalizePhone(rawPhone) ?? normalizePhone(rawPhone, '+86') : null;
+  if (rawPhone && !inPhone) throw new CrmError('bad_phone', '手机号格式不对：美国号码 10 位，中国号码 11 位');
+  const name = inName && inName !== '微信用户' ? inName : prof.name;
+  const phone = inPhone ?? prof.phone;
+  if (!name || !phone) {
+    const miss = [name ? '' : '姓名', phone ? '' : '手机号'].filter(Boolean).join('和');
+    throw new CrmError('need_name_phone', `${what}需要留${miss}，方便负责人联系您`);
+  }
+  if (inName && !prof.name) await pool.query(`UPDATE contacts SET name = $2, updated_at = now() WHERE id = $1 AND (name IS NULL OR trim(name) = '' OR name = '微信用户')`, [contactId, inName]);
+  if (inPhone && !prof.phone) {
+    const { setMethod } = await import('./contactInfo');
+    await setMethod(pool, contactId, 'phone', inPhone, 'committee');
+  }
+  return { name, phone };
+}
+
+/**
  * 后台综合优化 一.4：表达意向时必须已有姓名和手机号。
  * - 档案里没有的，请求里带 name / phone 补上；还是缺 → 错误码 need_name_phone（小程序下个版本据此弹出补填）。
  * - 旧版小程序（legacy = true，还不会补填）：照常记下，但标“待补填”，下次打开时提示补填（needsFill）。

@@ -120,6 +120,13 @@ function Today({ ops }: { ops: boolean }) {
   const y = d.yesterday;
   return (
     <>
+      {d.mpBind && !d.mpBind.bound && (
+        // 1.5.0 体验1（第三部分 2）：还没绑定手机工作台的，顶上提示去绑（出码 → 用自己的微信扫一下就好）
+        <div className={styles.notice} role="note" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+          <span>您还没绑定手机工作台。绑好后在小程序「我的 → 工作台」随时能看这一列待办，不用等短信。</span>
+          <Link href={d.mpBind.bindHref} className={styles.btn}>去绑定（扫一下就好）</Link>
+        </div>
+      )}
       {d.live.map((l) => (
         <section key={l.eventId} className={styles.card} style={{ borderColor: 'var(--gold)' }} aria-label="今天现场">
           <p className={styles.cardTitle}>今天现场：{l.title}</p>

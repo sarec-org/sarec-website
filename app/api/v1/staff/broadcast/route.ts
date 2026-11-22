@@ -1,16 +1,17 @@
 /**
- * 1.5.0 后台群发（运营选人、写内容；只有管理员能确认）。这一版一律演练：只记录“本来会发给谁”，不调用任何发送接口。
- * GET：条件目录、常用人群、群发记录、是不是演练
+ * 1.5.0 后台群发（运营选人、写内容；只有管理员能确认）。短信、邮件过通知总闸发（见 lib/crm/broadcast.ts：正式站默认演练，
+ * broadcast_live + notify_live 都打开才真发；测试站只发测试身份）。
+ * GET：条件目录、常用人群、群发记录、是不是演练、gateNote（现在按了会怎样，一句话）
  * POST { action: audience|estimate|save_audience|create|preview|confirm|recipients, ... }
  */
-import { broadcastRecipients, conditionCatalog, confirmBroadcast, createBroadcast, isDryRun, listAudiences, listBroadcasts, previewAudience, previewToOwner, saveAudience, smsEstimate, type Filters } from '@/lib/crm/broadcast';
+import { broadcastRecipients, gateNote, conditionCatalog, confirmBroadcast, createBroadcast, isDryRun, listAudiences, listBroadcasts, previewAudience, previewToOwner, saveAudience, smsEstimate, type Filters } from '@/lib/crm/broadcast';
 import { CrmError } from '@/lib/crm/events';
 import { body, handler, ok, requireStaff } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   await requireStaff(req, 'ops');
-  return ok({ catalog: await conditionCatalog(), audiences: await listAudiences(), broadcasts: await listBroadcasts(), dryRun: await isDryRun() });
+  return ok({ catalog: await conditionCatalog(), audiences: await listAudiences(), broadcasts: await listBroadcasts(), dryRun: await isDryRun(), gateNote: await gateNote() });
 });
 export const POST = handler(async (req: Request) => {
   const s = await requireStaff(req, 'ops');

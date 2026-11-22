@@ -37,6 +37,19 @@ function Content() {
     if (r.ok) setD(r.data); else setMsg({ ok: false, text: r.message });
   }, [tab]);
   useEffect(() => { load(); }, [load]);
+  // 从「今天」页 / 通知点进来：?tab=machine&id=<内容编号> 直接打开那一栏，并滚到那一条
+  const [focus, setFocus] = useState('');
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const t = q.get('tab');
+      if (t === 'reported' || t === 'machine' || t === 'down') setTab(t);
+      setFocus(q.get('id') ?? '');
+    } catch { /* 不影响使用 */ }
+  }, []);
+  useEffect(() => {
+    if (focus && d) { try { document.getElementById('c-' + focus)?.scrollIntoView({ block: 'center' }); } catch { /* 不影响使用 */ } }
+  }, [focus, d]);
   async function act(it: Item, action: string) {
     let reason: string | undefined;
     if (action === 'take_down' || action === 'ban') {
@@ -69,7 +82,7 @@ function Content() {
       <p className={styles.small}>{cur.tip}</p>
       {d && !d.items.length && <p className={styles.muted}>这里现在没有内容。</p>}
       {d?.items.map((it) => (
-        <div key={it.kind + it.id} className={styles.card}>
+        <div key={it.kind + it.id} id={'c-' + it.id} className={styles.card} style={focus === it.id ? { outline: '2px solid var(--gold)' } : undefined}>
           <p className={styles.cardTitle}>{it.title}</p>
           <p className={styles.small}>发的人：{it.owner ?? '（没留名字）'} · {fmtDateTime(it.at)} · 现在：{STATE[it.state]}{it.note ? ` · ${it.note}` : ''}</p>
           {it.text && <p style={{ whiteSpace: 'pre-wrap', margin: '6px 0' }}>{it.text}</p>}

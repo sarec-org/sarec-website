@@ -20,6 +20,7 @@ import { getSwitches } from './settings';
 import { tradeMap } from './trades';
 
 type Tmpl = { id: string; fields: { title?: string; time?: string; place?: string; note?: string } };
+/** 环境变量 WX_SUBSCRIBE_TEMPLATES.jobs（原来的读法，保留） */
 export function jobsTemplate(): Tmpl | null {
   try {
     const raw = JSON.parse(process.env.WX_SUBSCRIBE_TEMPLATES || '{}') as Record<string, Tmpl>;
@@ -28,6 +29,24 @@ export function jobsTemplate(): Tmpl | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * 1.5.0 体验1（第三部分 9）：「新活儿」微信订阅消息模板——只留接口，东哥在微信后台申请到模板 ID 后接上：
+ *   先读设置 crm_settings.jobs_wx_template = { id, fields: { title, time, place, note } }（不用新增 Vercel 变量，管理员在库里写一行即可），
+ *   没有再读环境变量 WX_SUBSCRIBE_TEMPLATES.jobs；都没有 → 只发短信（现在的样子）。
+ *   fields 的值是模板里对应字段的 key（例 thing1、time2、thing3、thing4）。
+ */
+export async function loadJobsTemplate(db?: Db): Promise<Tmpl | null> {
+  try {
+    const { getSetting } = await import('@/lib/crm/orders');
+    const v = await getSetting<unknown>(db ?? getPool(), 'jobs_wx_template', null);
+    const t = (typeof v === 'string' ? JSON.parse(v) : v) as Tmpl | null;
+    if (t && typeof t.id === 'string' && t.id.trim() && t.fields && typeof t.fields === 'object') return { id: t.id.trim(), fields: t.fields };
+  } catch {
+    /* 读不到设置就看环境变量 */
+  }
+  return jobsTemplate();
 }
 
 // ── 保险：能不能真发 ─────────────────────────────────────────────────
@@ -69,7 +88,7 @@ export async function deliver(db: Db, m: Msg, existingLogId?: string): Promise<s
   if (policy.real) {
     status = 'no_channel';
     detail = '';
-    const t = jobsTemplate();
+    const t = await loadJobsTemplate(db);
     if (m.wx && t && wxConfigured()) {
       const { rows } = await db.query<{ openid: string | null; pro_id: string | null }>(
         `SELECT c.wechat_openid AS openid,

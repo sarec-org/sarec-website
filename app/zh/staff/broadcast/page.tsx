@@ -45,6 +45,7 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
   const [audiences, setAudiences] = useState<Audience[]>([]);
   const [records, setRecords] = useState<Broadcast[]>([]);
   const [dryRun, setDryRun] = useState(true);
+  const [note, setNote] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const closeMsg = useCallback(() => setMsg(null), []);
@@ -74,8 +75,8 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
   const [recips, setRecips] = useState<Recip[] | null>(null);
 
   const loadAll = useCallback(async () => {
-    const r = await api<{ catalog: FieldDef[]; audiences: Audience[]; broadcasts: Broadcast[]; dryRun: boolean }>('/api/v1/staff/broadcast');
-    if (r.ok) { setCatalog(r.data.catalog); setAudiences(r.data.audiences); setRecords(r.data.broadcasts); setDryRun(r.data.dryRun); setLoaded(true); } else setMsg({ ok: false, text: r.message });
+    const r = await api<{ catalog: FieldDef[]; audiences: Audience[]; broadcasts: Broadcast[]; dryRun: boolean; gateNote?: string }>('/api/v1/staff/broadcast');
+    if (r.ok) { setCatalog(r.data.catalog); setAudiences(r.data.audiences); setRecords(r.data.broadcasts); setDryRun(r.data.dryRun); setNote(r.data.gateNote ?? ''); setLoaded(true); } else setMsg({ ok: false, text: r.message });
   }, []);
   useEffect(() => { loadAll(); }, [loadAll]);
 
@@ -188,8 +189,12 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
           这一节（按条件选人群发）是演练：只记录本来会发给谁，不会真的发出短信、邮件、微信通知。<b>页面下面的「邮件通讯」不是演练，会真的发邮件。</b>
         </div>
       )}
+      {!dryRun && note && (
+        // 1.5.0 体验1：不是演练时，按条件群发也过「手机通知」的总闸（正式站默认关；测试站只发测试身份）
+        <div role="note" className={styles.notice}>{note}</div>
+      )}
       <p className={styles.small} style={{ marginTop: 0 }}>
-        两种发法：上面<b>按条件选人群发</b>（短信 / 邮件 / 微信服务通知，现在是演练）；下面<a href="#newsletter" style={{ color: 'var(--gold)' }}>「邮件通讯」</a>按期发邮件（原来的邮件通讯，照常能用）。两种都要先发东哥预览，东哥确认才发。
+        两种发法：上面<b>按条件选人群发</b>（短信 / 邮件 / 微信服务通知，{dryRun ? '现在是演练' : '过通知总闸'}）；下面<a href="#newsletter" style={{ color: 'var(--gold)' }}>「邮件通讯」</a>按期发邮件（原来的邮件通讯，照常能用）。两种都要先发东哥预览，东哥确认才发。
       </p>
       <Toast m={msg} onClose={closeMsg} />
 
@@ -389,7 +394,7 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
                     <thead><tr><th>渠道</th><th>姓名</th><th>会员号</th><th>结果</th></tr></thead>
                     <tbody>
                       {recips.map((r, i) => (
-                        <tr key={i}><td>{CH_NAME[r.channel] ?? r.channel}</td><td>{r.name ?? 'SAREC 用户'}</td><td>{r.member_no ?? '—'}</td><td>{r.result === 'dry_run' ? '本来会发（演练没发）' : r.result === 'unreachable' ? '发不到' : r.result}</td></tr>
+                        <tr key={i}><td>{CH_NAME[r.channel] ?? r.channel}</td><td>{r.name ?? 'SAREC 用户'}</td><td>{r.member_no ?? '—'}</td><td>{RESULT_TEXT[r.result] ?? r.result}</td></tr>
                       ))}
                     </tbody>
                   </table>
@@ -402,6 +407,11 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
     </>
   );
 }
+
+const RESULT_TEXT: Record<string, string> = {
+  dry_run: '本来会发（演练没发）', unreachable: '发不到', sent: '已发出', held: '只记录没发（通知总闸关着）',
+  blocked: '只记录没发（测试站只发测试身份）', failed: '没发出去', duplicate: '已经发过'
+};
 
 export default function Page() {
   return (
