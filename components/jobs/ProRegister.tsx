@@ -217,7 +217,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
   return (
     <>
       {!editing && !fc && <p className={s.muted}>登记一次，有对口的活儿第一时间通知你。你在商会已有的资料已经带进来了，看一眼对不对就行。</p>}
-      {fc && <p className={s.muted}>{focusIntro(fc, f.role)}</p>}
+      {fc && <p className={s.muted}>{focusIntro(fc, f.role, choice)}</p>}
       {res.pro?.status === 'returned' && res.pro.returnReason && <div className={s.error}>上次被退回：{res.pro.returnReason}。改好再提交一次就行。</div>}
 
       {/* 指令 31：按工种进来——身份只出对这个工种说得通的（只剩一个就整排不出） */}

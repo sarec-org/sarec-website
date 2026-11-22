@@ -96,11 +96,12 @@ export const focusPickFor = (fc: TradeFocus, role: unknown) => allChoices(fc).fi
 export const focusChoice = (fc: TradeFocus, key: string) => allChoices(fc).find((c) => c.key === key) ?? null;
 
 /** 页面顶上的一句大白话（跟着身份变） */
-export function focusIntro(fc: TradeFocus, role: ProRole | ''): string {
+export function focusIntro(fc: TradeFocus, role: ProRole | '', choice?: FocusChoice | null): string {
   if (fc.kind === 'nolic') {
-    return role === 'worker'
-      ? `一个人做${fc.label}的，免费登记，不用交资料；有人在商会网站招${fc.label}帮手时，对口的会通知你。`
-      : `有团队或公司的，交一张营业登记，工作人员核对后，找${fc.label}的人就能看到你。`;
+    // V16-3：按选中的按钮说（室内设计等两个按钮提交的身份一样，不能只看身份）
+    if (choice ? !choice.firm && choice.role === 'worker' : role === 'worker') return `一个人做${fc.label}的，免费登记，不用交资料；有人在商会网站招${fc.label}帮手时，对口的会通知你。`;
+    if (choice && !choice.firm) return `一个人做${fc.label}的，交一张市或县的营业登记或 DBA，工作人员核对后，找${fc.label}的人就能看到你。`;
+    return `有团队或公司的，交一张营业登记，工作人员核对后，找${fc.label}的人就能看到你。`;
   }
   return role === 'worker'
     ? '没有执照的，可以免费登记，跟着有执照的师傅或施工队干活；房主直接发的活儿要有执照的人才能接。'
