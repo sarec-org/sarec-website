@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 /** 1.5.0 体验1（第三部分 5）：另带 profile { hasName, hasPhone }——缺的话小程序点「加入」前先弹补填 */
 export const GET = handler(async (req: Request) => {
   const me = await optionalContact(req);
-  const p = await committeeProfile(me);
-  return ok({ clubs: await listClubs(me), profile: { hasName: !!p.name, hasPhone: !!p.phone } });
+  // 指令 25 性能：两样同时查（以前先后查），返回不变
+  const [p, clubs] = await Promise.all([committeeProfile(me), listClubs(me)]);
+  return ok({ clubs, profile: { hasName: !!p.name, hasPhone: !!p.phone } });
 });
