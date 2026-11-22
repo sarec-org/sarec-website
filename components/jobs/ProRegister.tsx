@@ -259,7 +259,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
       {f.role && (
         <>
           <div className={s.field}>
-            <label className={s.label} htmlFor="pr-name">{f.role === 'worker' || f.role === 'licensed' ? '姓名' : fc && team && proService ? '公司或团队名称' : fc?.kind === 'pro' ? '名称（个人、公司或事务所名）' : '名称（公司、施工队或事务所名）'}<span className={s.required}>*</span></label>
+            <label className={s.label} htmlFor="pr-name">{f.role === 'worker' || f.role === 'licensed' ? '姓名' : fc && f.role === 'company' ? '公司或施工队名称' : fc && team && proService ? '公司或团队名称' : fc?.kind === 'pro' ? '名称（个人、公司或事务所名）' : '名称（公司、施工队或事务所名）'}<span className={s.required}>*</span></label>
             <input id="pr-name" className={s.input} value={f.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
           <div className={s.field}>
