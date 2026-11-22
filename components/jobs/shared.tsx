@@ -58,7 +58,8 @@ export function JobsShell({
   need: 'find' | 'work' | 'either' | 'none';
   back?: { href: string; label: string } | null;
   eyebrow?: string;
-  title?: ReactNode;
+  /** 指令 31：可以按 meta 算（登记页标题带工种名） */
+  title?: ReactNode | ((meta: Meta) => ReactNode);
   children: (meta: Meta) => ReactNode;
   footer?: (meta: Meta) => ReactNode;
   /** 首页自己按栏目显示"仅工作人员可见"，不用外壳再显示一次 */
@@ -94,7 +95,7 @@ export function JobsShell({
       {back && <Link href={back.href} className={s.back}>{back.label}</Link>}
       {!on && meta.staffPreview && !noStaffLine && <p className={j.staffOnly}>仅工作人员可见：开关未开</p>}
       {eyebrow && <p className={s.eyebrow}>{eyebrow}</p>}
-      {title && <h1 className={s.h1}>{title}</h1>}
+      {title && <h1 className={s.h1}>{typeof title === 'function' ? title(meta) : title}</h1>}
       {children(meta)}
       <Disclaimer />
       {footer?.(meta)}

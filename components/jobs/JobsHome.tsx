@@ -93,7 +93,9 @@ export function groupFirstTrade(meta: Meta, group: string, label: string): strin
 function workTileHref(meta: Meta, e: HomeEntry): string {
   if (meta.me?.pro) return '/zh/jobs/mine';
   const trade = e.target.type === 'group' ? groupFirstTrade(meta, e.target.key, e.label) : e.target.key;
-  return trade ? `/zh/jobs/register?trade=${encodeURIComponent(trade)}` : '/zh/jobs/register';
+  // 指令 31：一组入口（家政保洁、装修、设计）带上 group，登记页标题用入口名（登记接活儿 · 家政保洁）
+  const group = e.target.type === 'group' ? `&group=${encodeURIComponent(e.target.key)}` : '';
+  return trade ? `/zh/jobs/register?trade=${encodeURIComponent(trade)}${group}` : '/zh/jobs/register';
 }
 function WorkTiles({ meta }: { meta: Meta }) {
   const open = (e: HomeEntry) => (e.target.type === 'group' ? openTradesOf(meta, e.target.key).length > 0 : meta.trades.some((t) => t.key === e.target.key && t.open));

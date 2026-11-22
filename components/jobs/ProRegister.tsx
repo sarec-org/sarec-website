@@ -15,6 +15,7 @@ import j from './jobs.module.css';
 import { BottomBar, JobsShell, NeedLogin, PhoneCheck, Pick } from './shared';
 import { PRO_ROLE_HINT, TEAM_SIZES, YEARS } from './labels';
 import { PhotoPicker } from './PhotoPicker';
+import { focusAllows, focusIntro, tradeFocus, type TradeFocus } from './tradeFocus';
 import type { Meta, MeProRes, ProRole, ProSelf } from './types';
 
 export type ProForm = {
@@ -58,8 +59,16 @@ function startFrom(res: MeProRes): ProForm {
 }
 
 export function ProRegister() {
+  const sp = useSearchParams();
+  const urlTrade = sp.get('trade');
+  const urlGroup = sp.get('group');
+  // 指令 31：从工种方块进来，标题写成「登记接活儿 · 家政保洁」
+  const title = (meta: Meta) => {
+    const fc = urlTrade ? tradeFocus(meta, urlTrade, urlGroup) : null;
+    return fc ? `登记接活儿 · ${fc.label}` : '登记接活儿';
+  };
   return (
-    <JobsShell side="work" need="work" eyebrow="我要接活儿" title="登记接活儿">
+    <JobsShell side="work" need="work" eyebrow="我要接活儿" title={title}>
       {(meta) => <Loader meta={meta} />}
     </JobsShell>
   );
@@ -70,6 +79,7 @@ function Loader({ meta }: { meta: Meta }) {
   const urlRole = sp.get('role');
   // 指令 29：从接活儿一侧的工种方块点进来（?trade=）→ 这个工种已选好，身份按工种给默认（?role= 优先）
   const urlTrade = sp.get('trade');
+  const urlGroup = sp.get('group');
   const [res, setRes] = useState<MeProRes | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -92,12 +102,19 @@ function Loader({ meta }: { meta: Meta }) {
     );
   }
   const trade = urlTrade && meta.trades.some((t) => t.key === urlTrade && (t.open || meta.staffPreview)) ? urlTrade : null;
+  // 指令 31：带工种进来＝这个工种的登记页；身份只在对这个工种说得通的里面选（上次草稿 / 会员资料的身份说得通就用，否则用这个工种的默认）
+  const focus = trade ? tradeFocus(meta, trade, urlGroup) : null;
+  if (focus) {
+    const fits = (k: unknown): k is ProRole => isProRole(k) && focus.choices.some((c) => c.key === k);
+    const fr = [urlRole, res.pro?.role, res.prefill.role].find(fits) ?? focus.def;
+    return <ProFormView meta={meta} res={res} initialRole={fr} initialTrade={trade} focus={focus} />;
+  }
   const tradeRole = trade ? roleForTrade(meta, trade) : '';
   const role = isProRole(urlRole) ? urlRole : isProRole(tradeRole) ? tradeRole : null;
   return <ProFormView meta={meta} res={res} initialRole={role} initialTrade={trade} />;
 }
 
-export function ProFormView({ meta, res, editing, onSaved, initialRole, initialTrade }: { meta: Meta; res: MeProRes; editing?: boolean; onSaved?: (p: ProSelf) => void; initialRole?: ProRole | null; initialTrade?: string | null }) {
+export function ProFormView({ meta, res, editing, onSaved, initialRole, initialTrade, focus }: { meta: Meta; res: MeProRes; editing?: boolean; onSaved?: (p: ProSelf) => void; initialRole?: ProRole | null; initialTrade?: string | null; focus?: TradeFocus | null }) {
   const [f, setF, clear] = useDraft<ProForm>(editing ? 'jobs-pro-edit' : 'jobs-pro', startFrom(res));
   // D27：从身份方块点进来（?role=）→ 身份已选好；草稿里是别的身份也以点的为准。没有身份时默认施工队或公司。
   useEffect(() => {
@@ -112,16 +129,40 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
   const set = (p: Partial<ProForm>) => setF((x) => ({ ...x, ...p }));
   const licensed = f.role === 'company' || f.role === 'licensed';
   const proService = f.role === 'pro_service';
+  // 指令 31：按工种进来（focus）时只列这一组，点「我还能做别的工种 ›」才列全部
+  const fc = editing ? null : focus ?? null;
+  const [more, setMore] = useState(false);
 
   // 身份决定能选哪些工种：施工队 / 持牌师傅 = 要执照的（A、B 类）；设计与专业服务 = B、C 类；工人 = 全部
   const tradeOpts = useMemo(() => {
     const ok = (t: Meta['trades'][number]) =>
-      (t.open || meta.staffPreview) && (f.role === 'worker' ? true : licensed ? t.licType !== 'C' : proService ? t.licType !== 'A' : true);
-    return [...meta.groups].sort((a, b) => a.order - b.order).map((g) => ({ g, ts: meta.trades.filter((t) => t.group === g.key && ok(t)) })).filter((x) => x.ts.length);
-  }, [meta, f.role, licensed, proService]);
+      (t.open || meta.staffPreview) && (fc ? focusAllows(f.role, t.licType) : f.role === 'worker' ? true : licensed ? t.licType !== 'C' : proService ? t.licType !== 'A' : true);
+    const all = [...meta.groups].sort((a, b) => a.order - b.order).map((g) => ({ g, ts: meta.trades.filter((t) => t.group === g.key && ok(t)) })).filter((x) => x.ts.length);
+    if (!fc) return all;
+    const mine = all.filter((x) => x.g.key === fc.group);
+    return more ? [...mine, ...all.filter((x) => x.g.key !== fc.group)] : mine;
+  }, [meta, f.role, licensed, proService, fc, more]);
   const picked = meta.trades.filter((t) => f.trades.includes(t.key));
   const needLic = licensed || (proService && picked.some((t) => t.licType !== 'C'));
-  const needBizReg = proService && picked.some((t) => t.licType === 'C') && !f.licenseNo.trim();
+  // 指令 31：按工种进来时牌照 / 执照号只在要的时候出；没出的不算、不提交（不让上次草稿里看不见的号码顶掉营业登记）
+  const licVal = fc && !needLic ? '' : f.licenseNo.trim();
+  const needBizReg = proService && picked.some((t) => t.licType === 'C') && !licVal;
+  const cNames = picked.filter((t) => t.licType === 'C').map((t) => t.name).join('、');
+  const team = f.role === 'company' || (fc?.kind === 'nolic' && proService);
+  // 换身份（按工种进来时）：选了的工种新身份还能选就留着，进来的那个工种还能选就照旧勾着
+  const pickFocusRole = (r: ProRole) => {
+    if (!fc || f.role === r) return;
+    const keep = f.trades.filter((k) => { const t = meta.trades.find((x) => x.key === k); return !!t && focusAllows(r, t.licType); });
+    set({ role: r, trades: keep.length ? keep : focusAllows(r, fc.licType) ? [fc.trade] : [] });
+  };
+  // 要换别的身份：去掉 URL 里的工种，回到完整的登记页（和「登记接活儿」大按钮进来的一样），已填的不丢
+  const openFull = () => {
+    const u = new URL(window.location.href);
+    u.searchParams.delete('trade');
+    u.searchParams.delete('group');
+    if (f.role) u.searchParams.set('role', f.role);
+    window.history.replaceState(null, '', u.toString());
+  };
   const showStampNote = proService && picked.some((t) => t.group === 'design');
 
   const missing = [
@@ -130,7 +171,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
     f.trades.length === 0 && '能做的工种',
     f.cities.length === 0 && '服务城市',
     !f.years && '干了几年',
-    needLic && !f.licenseNo.trim() && '牌照号',
+    needLic && !licVal && (fc ? (licensed && picked.some((t) => t.licType === 'A') ? '牌照号' : '执照号') : '牌照号'),
     needBizReg && !f.businessRegUrl && '营业登记',
     !f.agree && '勾选同意规则'
   ].filter(Boolean) as string[];
@@ -143,7 +184,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
     const r = await api<{ pro: ProSelf; autoCheck: { message?: string } | null }>('/api/v1/jobs/me/pro', {
       body: {
         role: f.role, name: f.name.trim(), avatar: f.avatar || null, trades: f.trades, cities: f.cities, years: Number(f.years) || null,
-        languages: f.languages, availableNow: f.availableNow, licenseNo: worker ? null : f.licenseNo.trim() || null,
+        languages: f.languages, availableNow: f.availableNow, licenseNo: worker ? null : licVal || null,
         businessRegUrl: worker ? null : f.businessRegUrl || null, insuranceUrl: worker ? null : f.insuranceUrl || null, licenseDocUrl: worker ? null : f.licenseDocUrl || null,
         intro: f.intro.trim() || null, photos: f.photos, teamSize: licensed ? Number(f.teamSize) || null : null, wechat: f.wechat.trim() || null,
         designNoCaStamp: proService && f.designNoCaStamp, agree: f.agree
@@ -168,11 +209,31 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
 
   return (
     <>
-      {!editing && <p className={s.muted}>登记一次，有对口的活儿第一时间通知你。你在商会已有的资料已经带进来了，看一眼对不对就行。</p>}
+      {!editing && !fc && <p className={s.muted}>登记一次，有对口的活儿第一时间通知你。你在商会已有的资料已经带进来了，看一眼对不对就行。</p>}
+      {fc && <p className={s.muted}>{focusIntro(fc, f.role)}</p>}
       {res.pro?.status === 'returned' && res.pro.returnReason && <div className={s.error}>上次被退回：{res.pro.returnReason}。改好再提交一次就行。</div>}
 
+      {/* 指令 31：按工种进来——身份只出对这个工种说得通的（只剩一个就整排不出） */}
+      {fc && fc.choices.length > 1 && (
+        <div className={s.field}>
+          <div className={j.roleTiles} role="tablist" aria-label="身份" style={{ marginTop: '0.3rem' }}>
+            {fc.choices.map((c) => (
+              <button key={c.key} type="button" role="tab" aria-selected={f.role === c.key} className={`${j.roleTile} ${f.role === c.key ? j.roleTabOn : ''}`} onClick={() => pickFocusRole(c.key)}>
+                {c.label}
+                {c.sub && <small style={f.role === c.key ? { color: 'inherit' } : undefined}>{c.sub}</small>}
+              </button>
+            ))}
+          </div>
+          {fc.helper && (
+            <button type="button" className={j.linkBtn} style={{ marginTop: '0.4rem', fontWeight: f.role === fc.helper.key ? 700 : 400 }} aria-pressed={f.role === fc.helper.key} onClick={() => pickFocusRole(fc.helper!.key)}>
+              {f.role === fc.helper.key ? '✓ ' : ''}{fc.helper.label} ›
+            </button>
+          )}
+        </div>
+      )}
+
       {/* D27：四个身份切换条（点了下面的项当场变，不再有单独的选身份页） */}
-      <div className={s.field}>
+      {!fc && <div className={s.field}>
         <span className={s.label}>我是<span className={s.required}>*</span></span>
         {/* 指令 29：四个身份方块从「我要接活儿」首页挪到这里（选中的金底） */}
         <div className={j.roleTiles} role="tablist" aria-label="身份" style={{ marginTop: '0.3rem' }}>
@@ -193,12 +254,12 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
           ))}
         </div>
         {f.role && <p className={s.small} style={{ margin: '0.4rem 0 0' }}>{PRO_ROLE_HINT[f.role]}</p>}
-      </div>
+      </div>}
 
       {f.role && (
         <>
           <div className={s.field}>
-            <label className={s.label} htmlFor="pr-name">{f.role === 'worker' || f.role === 'licensed' ? '姓名' : '名称（公司、施工队或事务所名）'}<span className={s.required}>*</span></label>
+            <label className={s.label} htmlFor="pr-name">{f.role === 'worker' || f.role === 'licensed' ? '姓名' : fc && team && proService ? '公司或团队名称' : fc?.kind === 'pro' ? '名称（个人、公司或事务所名）' : '名称（公司、施工队或事务所名）'}<span className={s.required}>*</span></label>
             <input id="pr-name" className={s.input} value={f.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
           <div className={s.field}>
@@ -214,6 +275,9 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
                 <Pick multi options={ts.map((t) => ({ value: t.key, label: t.name }))} value={f.trades} onChange={(v) => set({ trades: v })} />
               </div>
             ))}
+            {/* 指令 31：不把人困死在一个工种里 */}
+            {fc && !more && <button type="button" className={j.linkBtn} style={{ marginTop: '0.5rem', color: 'var(--muted, #5B6B7F)' }} onClick={() => setMore(true)}>我还能做别的工种 ›</button>}
+            {fc && more && <button type="button" className={j.linkBtn} style={{ marginTop: '0.5rem', color: 'var(--muted, #5B6B7F)' }} onClick={openFull}>要换别的身份？看完整的登记选项 ›</button>}
           </div>
           <div className={s.field}>
             <span className={s.label}>服务城市<span className={s.required}>*</span><span className={s.small}>（可以多选）</span></span>
@@ -240,9 +304,9 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
 
           {(licensed || proService) && (
             <div className={s.card} style={{ marginTop: '1rem' }}>
-              {(needLic || proService) && (
+              {(fc ? needLic : needLic || proService) && (
                 <div className={s.field}>
-                  <label className={s.label} htmlFor="pr-lic">{licensed ? '牌照号（加州承包商牌照或州执照）' : '执照号'}{needLic && <span className={s.required}>*</span>}</label>
+                  <label className={s.label} htmlFor="pr-lic">{licensed ? (fc && !picked.some((t) => t.licType === 'A') && picked.length ? '执照号' : '牌照号（加州承包商牌照或州执照）') : '执照号'}{needLic && <span className={s.required}>*</span>}</label>
                   <input id="pr-lic" className={s.input} value={f.licenseNo} onChange={(e) => set({ licenseNo: e.target.value })} />
                   <p className={s.small} style={{ margin: 0 }}>
                     {licensed ? '提交后系统自动对照加州承包商执照局（CSLB）官方名单：状态、类别、工伤保险、保证金。' : needLic ? '工作人员会到发证机构官网核对。' : '你选的工种不需要州执照，有执照也可以填。'}
@@ -252,6 +316,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
               )}
               {needLic && !licensed && docUpload('执照照片（选填）', 'license', f.licenseDocUrl, 'licenseDocUrl')}
               {proService && picked.some((t) => t.licType === 'C') && docUpload('营业登记（Business License）', 'bizreg', f.businessRegUrl, 'businessRegUrl', needBizReg)}
+              {fc && proService && cNames && <p className={s.small} style={{ marginTop: '-0.4rem' }}>{cNames}不需要州执照，交一张营业登记就行：公司交州里的登记，个人交市或县的营业执照、DBA 都可以。</p>}
               {proService && docUpload('责任保险（选填）', 'insurance', f.insuranceUrl, 'insuranceUrl')}
               {showStampNote && (
                 <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', minHeight: 44 }}>
@@ -261,10 +326,10 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
               )}
               <div className={s.field}>
                 <label className={s.label} htmlFor="pr-intro">一句话介绍</label>
-                <input id="pr-intro" className={s.input} placeholder="例如：专做厨卫翻新，十五年经验" value={f.intro} onChange={(e) => set({ intro: e.target.value })} />
+                <input id="pr-intro" className={s.input} placeholder={fc ? `例如：专做${fc.tradeName}，十年经验` : '例如：专做厨卫翻新，十五年经验'} value={f.intro} onChange={(e) => set({ intro: e.target.value })} />
               </div>
               <div className={s.field}>
-                <span className={s.label}>{proService ? '案例图' : '活儿照片'}（最多 9 张，选填）</span>
+                <span className={s.label}>{proService && fc?.kind !== 'nolic' ? '案例图' : '活儿照片'}（最多 9 张，选填）</span>
                 <PhotoPicker photos={f.photos} max={9} endpoint="/api/v1/jobs/me/pro/photo?kind=work" onChange={(p) => set({ photos: p })} />
               </div>
               {licensed && (
@@ -280,7 +345,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
           )}
           {f.role === 'worker' && (
             <div className={s.card} style={{ marginTop: '1rem' }}>
-              <p className={s.small} style={{ marginTop: 0 }}>工人免费登记，不用填牌照。工人能联系施工队发的招工；房主、房东等发的活儿要有执照的人才能接。</p>
+              <p className={s.small} style={{ marginTop: 0 }}>{fc?.kind === 'nolic' ? `免费登记，不用交资料。能联系商会网站上招${fc.label}帮手的活儿；房主直接发的活儿，要选「我有团队或公司」、交营业登记后才能接。` : '工人免费登记，不用填牌照。工人能联系施工队发的招工；房主、房东等发的活儿要有执照的人才能接。'}</p>
               <div className={s.field}>
                 <label className={s.label} htmlFor="pr-intro2">一句话介绍（选填）</label>
                 <input id="pr-intro2" className={s.input} value={f.intro} onChange={(e) => set({ intro: e.target.value })} />
