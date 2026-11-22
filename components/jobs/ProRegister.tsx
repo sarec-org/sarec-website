@@ -101,7 +101,8 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
   const [f, setF, clear] = useDraft<ProForm>(editing ? 'jobs-pro-edit' : 'jobs-pro', startFrom(res));
   // D27：从身份方块点进来（?role=）→ 身份已选好；草稿里是别的身份也以点的为准。没有身份时默认施工队或公司。
   useEffect(() => {
-    if (initialRole && !editing) setF((x) => (x.role === initialRole ? (initialTrade && !x.trades.includes(initialTrade) ? { ...x, trades: [...x.trades, initialTrade] } : x) : { ...x, role: initialRole, trades: initialTrade ? [initialTrade] : [] }));
+    // V15-1：从工种方块点进来（?trade=）只选这一个工种，不合并草稿里上次没提交的工种（姓名、城市等照样带）
+    if (initialRole && !editing) setF((x) => (initialTrade ? { ...x, role: initialRole, trades: [initialTrade] } : x.role === initialRole ? x : { ...x, role: initialRole, trades: [] }));
     else setF((x) => (x.role ? x : { ...x, role: 'company' }));
   }, [initialRole, initialTrade, editing, setF]);
   const [busy, setBusy] = useState(false);
