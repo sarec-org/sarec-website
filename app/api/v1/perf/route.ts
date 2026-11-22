@@ -24,3 +24,5 @@ export const POST = handler(async (req: Request) => {
   const n = await recordPerf(await body<Record<string, unknown>>(req)).catch((e) => { console.log('[perf] record failed', (e as Error).message); return 0; });
   return ok({ n });
 });
+/** GET /api/v1/perf —— 不碰数据库的轻接口：测试站保温（本机 launchd 每 20 秒敲一次）用，顺便告诉客户端这个站收不收计时 */
+export const GET = handler(async () => ok({ on: perfEnabled() }));
