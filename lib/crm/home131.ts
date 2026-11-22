@@ -127,14 +127,14 @@ function eventSlide(e: Ev, mine: boolean): Slide {
 export async function home131(contactId: string | null, opts: { region?: string | null; persona?: Persona; now?: Date; simulateRegistered?: boolean; client14?: boolean } = {}) {
   const db = getPool();
   const now = opts.now ?? new Date();
-  const ms = contactId ? await memberStatus(db, contactId) : { isMember: false };
-  const reg = await regionOf(contactId);
-  const region = isRegion(opts.region) ? opts.region : reg.region;
-
-  // 本人报名（未取消、未结束）
+  // 指令 25 性能：下面这几样互不依赖，同时查（以前一句等一句；结果完全一样）
   type Mine = Ev & { reg_id: string; reg_status: string; confirm_status: string; offer_expires_at: Date | null; arrival_status: string };
-  const mine: Mine[] = contactId
-    ? (await db.query<Mine>(
+  const [ms, reg, mine, all0, hasProfile, all, albums] = await Promise.all([
+    contactId ? memberStatus(db, contactId) : Promise.resolve({ isMember: false }),
+    regionOf(contactId),
+    // 本人报名（未取消、未结束）
+    contactId
+    ? db.query<Mine>(
         `SELECT e.id, e.slug, e.title, e.summary, e.starts_at, e.ends_at, e.timezone, e.location_name, e.capacity, e.cover_url, e.region, e.notify_scope,
                 e.registration_open, e.event_status, e.album_published_at, 0 AS registered,
                 (SELECT p.template_key FROM event_prep p WHERE p.event_id = e.id LIMIT 1) AS template_key,
@@ -143,17 +143,20 @@ export async function home131(contactId: string | null, opts: { region?: string 
           WHERE r.contact_id = $1 AND r.status <> 'cancelled' AND e.event_status = 'scheduled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now()
           ORDER BY e.starts_at`,
         [contactId]
-      )).rows
-    : [];
-  const all0 = opts.simulateRegistered ? await upcomingEvents(db) : [];
+      ).then((r) => r.rows)
+    : Promise.resolve([] as Mine[]),
+    opts.simulateRegistered ? upcomingEvents(db) : Promise.resolve([] as Awaited<ReturnType<typeof upcomingEvents>>),
+    contactId
+      ? db.query(`SELECT 1 FROM contacts WHERE id = $1 AND NULLIF(name, '微信用户') IS NOT NULL`, [contactId]).then((r) => !!r.rows[0])
+      : Promise.resolve(false),
+    upcomingEvents(db),
+    contactId ? unseenAlbums(contactId) : Promise.resolve([] as Awaited<ReturnType<typeof unseenAlbums>>)
+  ]);
+  const region = isRegion(opts.region) ? opts.region : reg.region;
   if (opts.simulateRegistered && all0[0]) mine.push({ ...all0[0], reg_id: 'preview', reg_status: 'registered', confirm_status: 'none', offer_expires_at: null, arrival_status: 'none' });
-  const hasProfile = contactId
-    ? !!(await db.query(`SELECT 1 FROM contacts WHERE id = $1 AND NULLIF(name, '微信用户') IS NOT NULL`, [contactId])).rows[0]
-    : false;
   const persona: Persona = opts.persona ?? (ms.isMember ? 'member' : hasProfile || mine.length ? 'registered' : 'new');
   const isMember = persona === 'member';
 
-  const all = await upcomingEvents(db);
   const local = all.filter((e) => e.region === region);
   const national = all.filter((e) => e.region !== region && e.notify_scope === 'all');
   const elsewhere = all.filter((e) => e.region !== region && e.notify_scope !== 'all');
@@ -165,7 +168,6 @@ export async function home131(contactId: string | null, opts: { region?: string 
   const askReg = mine.find((m) => (m.reg_status === 'registered' && m.confirm_status === 'asked') || (m.reg_status === 'waitlisted' && m.confirm_status === 'offered' && m.offer_expires_at && new Date(m.offer_expires_at) > now));
   const todayReg = mine.find((m) => m.reg_status === 'registered' && dayWord(m.starts_at, m.timezone, now) === '今天');
   const nextReg = mine.find((m) => m.reg_status !== 'cancelled');
-  const albums = contactId ? await unseenAlbums(contactId) : [];
   if (askReg) {
     const tz = askReg.timezone || 'America/Los_Angeles';
     const offer = askReg.reg_status === 'waitlisted';
@@ -307,39 +309,43 @@ export async function home131(contactId: string | null, opts: { region?: string 
   });
 
   // ── 现场与回顾（大家传的公开照片；1.4.0 起不再等“发布”） ──
-  const { rows: wall } = await db.query<{ thumb: string; slug: string; title: string }>(
+  // 指令 25 性能：照片墙、最近结束的活动、会员企业、讲座回顾、工具开关互不依赖，同时查（结果完全一样）
+  const [{ rows: wall }, { rows: ended }, { rows: partners }, { rows: lectures }, toolsLive] = await Promise.all([
+    db.query<{ thumb: string; slug: string; title: string }>(
     `SELECT p.thumb_url AS thumb, e.slug, e.title FROM event_photos p JOIN events e ON e.id = p.event_id
       WHERE e.is_listed AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL AND coalesce(p.review_status, 'ok') = 'ok'
       ORDER BY e.starts_at DESC, p.sort_order, p.created_at LIMIT 9`
-  ).catch(() => ({ rows: [] as { thumb: string; slug: string; title: string }[] }));
+  ).catch(() => ({ rows: [] as { thumb: string; slug: string; title: string }[] })),
 
   // 1.3.3 修正：首页“活动相册”在没有公开照片时，进最近一场已结束活动的相册（没有就由小程序显示提示，不再跳到缺参数页面）
-  const { rows: ended } = await db.query<{ slug: string; title: string }>(
+    db.query<{ slug: string; title: string }>(
     `SELECT slug, title FROM events
       WHERE is_listed AND event_status <> 'cancelled' AND coalesce(ends_at, starts_at + interval '3 hours') < now()
       ORDER BY starts_at DESC LIMIT 1`
-  ).catch(() => ({ rows: [] as { slug: string; title: string }[] }));
+  ).catch(() => ({ rows: [] as { slug: string; title: string }[] })),
 
   // ── 会员企业与合作伙伴（展示审核通过、会籍有效） ──
-  const { rows: partners } = await db.query<{ name: string; logo: string | null }>(
+    db.query<{ name: string; logo: string | null }>(
     `SELECT DISTINCT ON (coalesce(company_name, contact_name)) coalesce(company_name, contact_name) AS name, logo_url AS logo
        FROM applications
       WHERE display_status = 'published' AND is_approved_for_display AND application_status IN ('approved','paid','second_payment_due')
         AND (membership_end_date IS NULL OR membership_end_date >= current_date)
       ORDER BY coalesce(company_name, contact_name), is_leadership_member DESC, is_featured DESC LIMIT 8`
-  ).catch(() => ({ rows: [] as { name: string; logo: string | null }[] }));
+  ).catch(() => ({ rows: [] as { name: string; logo: string | null }[] })),
 
-  // ── 知识与工具 ──
-  const { contentResearchList } = await import('@/lib/mpContent');
-  const briefs = contentResearchList().items.slice(0, 4).map((c) => ({ title: c.title, sub: (c as { summary?: string }).summary ?? '', image: (c as { image?: string }).image ?? null, page: `/pages/article/article?slug=${encodeURIComponent((c as { slug: string }).slug)}` }));
   // 讲座回顾：有公开照片的活动（不放自动生成的回顾文字，小程序里不出现 AI 生成内容）
-  const { rows: lectures } = await db.query<{ slug: string; title: string; starts_at: Date; timezone: string; n: number; thumb: string | null }>(
+    db.query<{ slug: string; title: string; starts_at: Date; timezone: string; n: number; thumb: string | null }>(
     `SELECT e.slug, e.title, e.starts_at, e.timezone,
             (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND p.variant_of IS NULL AND coalesce(p.review_status, 'ok') = 'ok') AS n,
             (SELECT p.thumb_url FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND coalesce(p.visibility, 'album') = 'album' AND coalesce(p.review_status, 'ok') = 'ok' ORDER BY p.sort_order LIMIT 1) AS thumb
        FROM events e WHERE e.is_listed AND EXISTS (SELECT 1 FROM event_photos p0 WHERE p0.event_id = e.id AND NOT p0.is_hidden AND coalesce(p0.visibility, 'album') = 'album' AND p0.variant_of IS NULL AND coalesce(p0.review_status, 'ok') = 'ok') ORDER BY e.starts_at DESC LIMIT 4`
-  ).catch(() => ({ rows: [] as never[] }));
-  const toolsLive = !!(await getSetting<boolean>(db, 'web_tools_live', false));
+  ).catch(() => ({ rows: [] as never[] })),
+    getSetting<boolean>(db, 'web_tools_live', false).then((v) => !!v)
+  ]);
+
+  // ── 知识与工具 ──
+  const { contentResearchList } = await import('@/lib/mpContent');
+  const briefs = contentResearchList().items.slice(0, 4).map((c) => ({ title: c.title, sub: (c as { summary?: string }).summary ?? '', image: (c as { image?: string }).image ?? null, page: `/pages/article/article?slug=${encodeURIComponent((c as { slug: string }).slug)}` }));
   const tools = toolsLive
     ? [
         // 小程序里显示：不写房价、利率、贷款、金额这类字样
