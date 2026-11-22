@@ -94,7 +94,7 @@ export async function listClubs(contactId: string | null) {
   // 1.5.0 体验1：首页「专委会与俱乐部」方块要的——顺序（后台「俱乐部」页的排序，数字小的在前）、图标、封面、是不是已成立
   const statusOf = await committeeStatusMap();
   return rows.map((c, i) => ({
-    key: c.key, name: c.name, intro: c.intro, membersOnly: c.members_only, members: c.members, joined: c.mine,
+    key: c.key, name: c.name, intro: c.intro, membersOnly: c.members_only, members: c.members, memberCount: c.members, joined: c.mine,
     sortOrder: c.sort_order, position: i + 1,
     icon: (c as Club & { icon?: string | null }).icon ?? null, coverUrl: (c as Club & { cover_url?: string | null }).cover_url ?? null,
     active: true, status: statusOf.get(c.key) ?? 'active', statusLabel: (statusOf.get(c.key) ?? 'active') === 'preparing' ? '筹备中' : '已成立',
@@ -344,6 +344,7 @@ export async function staffClubAction(s: Staff, b: Record<string, unknown>) {
       ? (await pool.query<{ id: string }>(`SELECT id FROM contacts WHERE member_no = $1`, [Number(b.leaderMemberNo)])).rows[0]?.id ?? null
       : undefined;
     if (b.leaderMemberNo && !leader) throw new CrmError('bad_request', '没找到这个会员号');
+    const { rows: was } = await pool.query<{ sort_order: number }>(`SELECT sort_order FROM clubs WHERE key = $1`, [key]);
     await pool.query(
       `INSERT INTO clubs (key, name, intro, members_only, sort_order, leader_contact_id) VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name, intro = EXCLUDED.intro, members_only = EXCLUDED.members_only, sort_order = EXCLUDED.sort_order,
@@ -357,6 +358,9 @@ export async function staffClubAction(s: Staff, b: Record<string, unknown>) {
     }
     if (b.clearCover === true) await pool.query(`UPDATE clubs SET cover_url = NULL WHERE key = $1`, [key]);
     await log(actor, 'club', key, 'save', name);
+    // 人工调过顺序单独记一条（迁移 0044 看到有人调过就不再动默认顺序）
+    const newSort = Math.floor(Number(b.sortOrder) || 0);
+    if (!was[0] || was[0].sort_order !== newSort) await log(actor, 'club', key, 'reorder', `排序 ${was[0]?.sort_order ?? '新建'} → ${newSort}`);
     return { message: `已保存「${name}」` };
   }
   if (act === 'close_club' || act === 'reopen_club') {

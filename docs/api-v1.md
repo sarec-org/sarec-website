@@ -434,4 +434,6 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 ### 首页「专委会与俱乐部」方块（迁移 0043）
 - `GET /api/v1/clubs` 每项：`key, name, intro, sortOrder, position（1 起，已排好）, icon, coverUrl, active（开着的才在列表里，恒 true）, status: 'active'|'preparing', statusLabel, membersOnly, members, joined, hint`；顺序按后台「俱乐部」页的「排序」（数字小的在前），名字不写死。
 - `GET /api/v1/me/committees` 每项：`key, name, status, statusLabel, active, sortOrder, icon, coverUrl, hasClub, interested, needsFill`；同 key 的俱乐部用它的排序 / 图标 / 封面，没有俱乐部的排在后面（按设置里的顺序）。
+- `GET /api/v1/clubs` 另带 `memberCount`（= `members`，大方块写“N 位成员”用）。
+- **掼蛋默认第一（迁移 0044，只改数据）**：key = 'guandan' 不是第一个、且后台没人保存过俱乐部（`ugc_actions` 没有 kind='club' 的 save / reorder）时，排序改成其他俱乐部最小值减 1，没图标给 🃏；之后后台照样能调（保存时排序变了记 `reorder`，再跑 0044 不会改回去）。
 - 后台「俱乐部」页：编辑里加「方块图标」（一个表情或 1–2 个字），每个俱乐部加「上传封面」（`POST /api/v1/staff/clubs/cover` multipart file + key）。掼蛋俱乐部排第一：在后台把它的排序改成最小即可。

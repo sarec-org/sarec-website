@@ -397,6 +397,7 @@ async function main() {
   assert.equal(mineClubs[0].key, `v150g${sfx}`, '按后台排序，数字小的在前');
   assert.equal(mineClubs[0].icon, '🃏扑', '图标最多两个字');
   assert.ok(mineClubs.every((c) => typeof c.sortOrder === 'number' && typeof c.position === 'number' && c.active === true && 'coverUrl' in c && c.status));
+  assert.ok((h.j.clubs as { memberCount?: number }[]).every((c) => typeof c.memberCount === 'number'), '大方块要的成员数 memberCount');
   const all = h.j.clubs as { position: number }[];
   assert.deepEqual(all.map((c) => c.position), all.map((_, i) => i + 1));
   h = await http('/api/v1/me/committees', null);
