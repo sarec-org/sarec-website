@@ -34,7 +34,7 @@ export async function recordPerf(b: Record<string, unknown>): Promise<number> {
     const raw = String(m.name ?? '');
     const name = kind === 'req' ? normalizeApi(raw) : kind === 'page' ? normalizePage(raw) : stage(raw);
     if (!name) continue;
-    rows.push([kind, name, int(m.t, 0, 3600000), ms, m.status == null ? null : int(m.status, 0, 999), clip(m.extra, 60)]);
+    rows.push([kind, name, int(m.t, 0, 3600000), ms, m.status == null ? null : int(m.status, 0, 999), typeof m.extra === 'string' ? m.extra.slice(0, 60).replace(/[^\w.,:/=-]/g, '') : '']);
   }
   const pool = getPool();
   await pool.query(
