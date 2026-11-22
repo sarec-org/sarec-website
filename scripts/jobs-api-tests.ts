@@ -101,7 +101,9 @@ async function main() {
   let r = await call('GET', '/jobs/meta');
   assert.equal(r.status, 200);
   assert.equal(r.j.switches.find, false);
-  assert.equal(r.j.homeEntries.length, 7);
+  // 指令 29：homeEntries = 找工人一侧（家政保洁只在接活儿一侧），6 个；workEntries = 接活儿一侧，7 个
+  assert.equal(r.j.homeEntries.length, 6);
+  assert.equal(r.j.workEntries.length, 7);
   assert.ok(r.j.trades.length >= 40);
   assert.equal(r.j.staffPreview, false);
   assert.ok(r.j.disclaimer.includes('不参与合同与付款'));
@@ -109,7 +111,7 @@ async function main() {
   assert.equal(r.j.recruitingText, '正在招募各工种的接活人，可先发布活儿等人联系');
   assert.equal(r.j.tradeRecruitingText, '这个工种正在招募接活人');
   assert.ok(r.j.trades.some((t: { open: boolean; hasPros: boolean }) => t.open && !t.hasPros), 'D11：没人的开放工种也给（hasPros=false）');
-  ok('meta：开关关、7 个首页入口、资质表、统一声明；D11 冷启动字段（anyPros、招募中文字、没人的工种也给）');
+  ok('meta：开关关、找工人一侧 6 个 + 接活儿一侧 7 个首页入口、资质表、统一声明；D11 冷启动字段（anyPros、招募中文字、没人的工种也给）');
   r = await call('GET', `/jobs/entry?t=${Date.now()}`);
   assert.equal(r.j.show, false);
   ok('D12：两个开关都关，网站菜单 / 首页入口不出（/jobs/entry show=false）');
@@ -125,26 +127,30 @@ async function main() {
     assert.equal(m.trades.find((t: { key: string }) => t.key === 'cleaning').scope, '日常保洁、退租清洁、装修后清洁');
     const ar = m.trades.find((t: { key: string }) => t.key === 'appliance_repair');
     assert.ok(ar && ar.name === '家电维修' && ar.group === 'clean' && ar.licType === 'B' && ar.open === true);
-    assert.deepEqual({ ...m.homeEntries[0], hasPros: undefined }, { label: '家政保洁', icon: 'sparkles', target: { type: 'group', key: 'clean' }, pinned: true, hasPros: undefined });
-    assert.equal(typeof m.homeEntries[0].hasPros, 'boolean');
-    assert.ok(m.homeEntries.slice(1).every((e: { pinned: boolean }) => e.pinned === false), 'D29：种子里只有家政保洁常显');
-    assert.deepEqual(m.homeEntries.map((e: { label: string }) => e.label), ['家政保洁', '水管', '电工', '空调暖气', '房屋维修', '装修', '设计']);
+    assert.deepEqual({ ...m.workEntries[0], hasPros: undefined }, { label: '家政保洁', icon: 'sparkles', target: { type: 'group', key: 'clean' }, pinned: true, showOn: ['work'], hasPros: undefined });
+    assert.equal(typeof m.workEntries[0].hasPros, 'boolean');
+    assert.ok(m.homeEntries.every((e: { pinned: boolean }) => e.pinned === false), 'D29：种子里只有家政保洁常显（指令 29 起它不在找工人一侧）');
+    assert.deepEqual(m.homeEntries.map((e: { label: string }) => e.label), ['水管', '电工', '空调暖气', '房屋维修', '装修', '设计']);
+    assert.deepEqual(m.workEntries.map((e: { label: string }) => e.label), ['家政保洁', '水管', '电工', '空调暖气', '房屋维修', '装修', '设计']);
     assert.ok(m.trades.some((t: { key: string; open: boolean }) => t.key === 'roofing' && t.open), '屋顶仍在全部工种里');
     const wt = (await call('GET', '/workbench/jobs/trades', staff)).j;
     const ar2 = wt.trades.find((t: { key: string }) => t.key === 'appliance_repair');
     assert.ok(ar2.lookupUrl.startsWith('https://search.dca.ca.gov') && String(ar2.issuer).includes('BHGS') && String(ar2.note).includes('9800'));
     // D29：后台保存入口时能勾常显；不传 pinned 的旧调用方沿用原值
-    const saveBody = m.homeEntries.map((e: { label: string; target: unknown; pinned: boolean }) => ({ label: e.label, target: e.target }));
+    // 后台保存用后台的完整名单（含只在接活儿一侧的家政保洁）；不传 showOn 沿用原值
+    const allEntries = wt.homeEntries as { label: string; target: unknown; pinned: boolean }[];
+    const saveBody = allEntries.map((e) => ({ label: e.label, target: e.target }));
     let w = await call('PUT', '/workbench/jobs/home-entries', staff, { entries: saveBody });
     assert.equal(w.status, 200, JSON.stringify(w.j));
     assert.equal(w.j.homeEntries[0].pinned, true, '不传 pinned 沿用原值');
-    w = await call('PUT', '/workbench/jobs/home-entries', staff, { entries: m.homeEntries.map((e: { label: string; target: unknown }, i: number) => ({ label: e.label, target: e.target, pinned: i === 1 })) });
+    w = await call('PUT', '/workbench/jobs/home-entries', staff, { entries: allEntries.map((e, i) => ({ label: e.label, target: e.target, pinned: i === 1 })) });
     assert.equal(w.j.homeEntries[0].pinned, false);
     assert.equal(w.j.homeEntries[1].pinned, true);
-    w = await call('PUT', '/workbench/jobs/home-entries', staff, { entries: m.homeEntries.map((e: { label: string; target: unknown; pinned: boolean }) => ({ label: e.label, target: e.target, pinned: e.pinned })) });
+    w = await call('PUT', '/workbench/jobs/home-entries', staff, { entries: allEntries.map((e) => ({ label: e.label, target: e.target, pinned: e.pinned })) });
     assert.equal(w.j.homeEntries[0].pinned, true);
+    assert.deepEqual(w.j.homeEntries[0].showOn, ['work'], '不传 showOn 沿用原值（家政保洁仍只在接活儿一侧）');
     ok('D29：首页入口 pinned（常显）+ hasPros；后台能勾、能取消，不传沿用原值');
-    ok('指令 10：「家政保洁」一组排第一（清洁保洁、家电维修、垃圾清运、园艺养护），首页第 1 个入口；屋顶仍在全部工种；家电维修 = BHGS 登记（B 类，一键打开 DCA 查询）');
+    ok('指令 10：「家政保洁」一组排第一（清洁保洁、家电维修、垃圾清运、园艺养护），接活儿一侧第 1 个入口（找工人一侧没有，指令 29）；屋顶仍在全部工种；家电维修 = BHGS 登记（B 类，一键打开 DCA 查询）');
   }
   r = await call('GET', '/jobs/pros?trade=plumbing');
   assert.equal(r.status, 403);

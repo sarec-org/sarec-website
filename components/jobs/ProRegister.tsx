@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, useDraft } from '@/components/crm/client';
 import s from '@/components/crm/crm.module.css';
+import { ROLE_SUB, roleForTrade } from './JobsHome';
 import j from './jobs.module.css';
 import { BottomBar, JobsShell, NeedLogin, PhoneCheck, Pick } from './shared';
 import { PRO_ROLE_HINT, TEAM_SIZES, YEARS } from './labels';
@@ -67,6 +68,8 @@ export function ProRegister() {
 function Loader({ meta }: { meta: Meta }) {
   const sp = useSearchParams();
   const urlRole = sp.get('role');
+  // 指令 29：从接活儿一侧的工种方块点进来（?trade=）→ 这个工种已选好，身份按工种给默认（?role= 优先）
+  const urlTrade = sp.get('trade');
   const [res, setRes] = useState<MeProRes | null>(null);
   const [needLogin, setNeedLogin] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -88,16 +91,19 @@ function Loader({ meta }: { meta: Meta }) {
       </div>
     );
   }
-  return <ProFormView meta={meta} res={res} initialRole={isProRole(urlRole) ? urlRole : null} />;
+  const trade = urlTrade && meta.trades.some((t) => t.key === urlTrade && (t.open || meta.staffPreview)) ? urlTrade : null;
+  const tradeRole = trade ? roleForTrade(meta, trade) : '';
+  const role = isProRole(urlRole) ? urlRole : isProRole(tradeRole) ? tradeRole : null;
+  return <ProFormView meta={meta} res={res} initialRole={role} initialTrade={trade} />;
 }
 
-export function ProFormView({ meta, res, editing, onSaved, initialRole }: { meta: Meta; res: MeProRes; editing?: boolean; onSaved?: (p: ProSelf) => void; initialRole?: ProRole | null }) {
+export function ProFormView({ meta, res, editing, onSaved, initialRole, initialTrade }: { meta: Meta; res: MeProRes; editing?: boolean; onSaved?: (p: ProSelf) => void; initialRole?: ProRole | null; initialTrade?: string | null }) {
   const [f, setF, clear] = useDraft<ProForm>(editing ? 'jobs-pro-edit' : 'jobs-pro', startFrom(res));
   // D27：从身份方块点进来（?role=）→ 身份已选好；草稿里是别的身份也以点的为准。没有身份时默认施工队或公司。
   useEffect(() => {
-    if (initialRole && !editing) setF((x) => (x.role === initialRole ? x : { ...x, role: initialRole, trades: [] }));
+    if (initialRole && !editing) setF((x) => (x.role === initialRole ? (initialTrade && !x.trades.includes(initialTrade) ? { ...x, trades: [...x.trades, initialTrade] } : x) : { ...x, role: initialRole, trades: initialTrade ? [initialTrade] : [] }));
     else setF((x) => (x.role ? x : { ...x, role: 'company' }));
-  }, [initialRole, editing, setF]);
+  }, [initialRole, initialTrade, editing, setF]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [done, setDone] = useState<{ pro: ProSelf; autoCheck: { message?: string } | null } | null>(null);
@@ -167,9 +173,10 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole }: { meta
       {/* D27：四个身份切换条（点了下面的项当场变，不再有单独的选身份页） */}
       <div className={s.field}>
         <span className={s.label}>我是<span className={s.required}>*</span></span>
-        <div className={j.roleBar} role="tablist" aria-label="身份">
+        {/* 指令 29：四个身份方块从「我要接活儿」首页挪到这里（选中的金底） */}
+        <div className={j.roleTiles} role="tablist" aria-label="身份" style={{ marginTop: '0.3rem' }}>
           {meta.options.proRoles.map((r) => (
-            <button key={r.key} type="button" role="tab" aria-selected={f.role === r.key} className={`${j.roleTab} ${f.role === r.key ? j.roleTabOn : ''}`}
+            <button key={r.key} type="button" role="tab" aria-selected={f.role === r.key} className={`${j.roleTile} ${f.role === r.key ? j.roleTabOn : ''}`}
               onClick={() => {
                 if (f.role === r.key) return;
                 set({ role: r.key, trades: [] });
@@ -180,6 +187,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole }: { meta
                 }
               }}>
               {r.label}
+              <small style={f.role === r.key ? { color: 'inherit' } : undefined}>{ROLE_SUB[r.key] ?? ''}</small>
             </button>
           ))}
         </div>

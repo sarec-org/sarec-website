@@ -9,7 +9,7 @@ export type Trade = {
 };
 export type Group = { key: string; name: string; order: number };
 /** pinned（D29）：常显——不管有没有核验通过的人都在首页显示（没人时标“招募中”） */
-export type HomeEntry = { slot: number; label: string; icon: string | null; target: { type: 'trade' | 'group'; key: string }; pinned: boolean };
+export type HomeEntry = { slot: number; label: string; icon: string | null; target: { type: 'trade' | 'group'; key: string }; pinned: boolean; showOn?: ('find' | 'work')[]; workSort?: number | null };
 
 type TradeRow = {
   key: string; name: string; group_key: string; lic_type: 'A' | 'B' | 'C'; issuer: string | null; license_class: string | null; lookup_url: string | null;
@@ -33,11 +33,34 @@ export async function loadGroups(db: Db = getPool()): Promise<Group[]> {
   const { rows } = await db.query<{ key: string; name: string; sort: number }>(`SELECT key, name, sort FROM jobs_trade_groups ORDER BY sort, key`);
   return rows.map((r) => ({ key: r.key, name: r.name, order: r.sort }));
 }
+export type Side = 'find' | 'work';
+/**
+ * 首页入口（找工人一侧的顺序 = sort）。指令 29：每个入口带 showOn（在哪一侧显示）、workSort（接活儿一侧的顺序，空 = 跟 sort 一样）。
+ * 迁移 0046 还没跑的库（没有 show_on 列）：照旧读，showOn 当作两侧都有。
+ */
 export async function loadHomeEntries(db: Db = getPool()): Promise<HomeEntry[]> {
-  const { rows } = await db.query<{ slot: number; label: string; icon: string | null; target_type: 'trade' | 'group'; target_key: string; pinned: boolean }>(
-    `SELECT slot, label, icon, target_type, target_key, pinned FROM jobs_home_entries ORDER BY sort, slot`
-  );
-  return rows.map((r) => ({ slot: r.slot, label: r.label, icon: r.icon, target: { type: r.target_type, key: r.target_key }, pinned: r.pinned === true }));
+  type Row = { slot: number; label: string; icon: string | null; target_type: 'trade' | 'group'; target_key: string; pinned: boolean; sort: number; show_on?: string[] | null; work_sort?: number | null };
+  const { rows } = await db
+    .query<Row>(`SELECT slot, label, icon, target_type, target_key, pinned, sort, show_on, work_sort FROM jobs_home_entries ORDER BY sort, slot`)
+    .catch(() => db.query<Row>(`SELECT slot, label, icon, target_type, target_key, pinned, sort FROM jobs_home_entries ORDER BY sort, slot`));
+  return rows.map((r) => ({
+    slot: r.slot, label: r.label, icon: r.icon, target: { type: r.target_type, key: r.target_key }, pinned: r.pinned === true,
+    showOn: (Array.isArray(r.show_on) && r.show_on.length ? r.show_on : ['find', 'work']).filter((x): x is Side => x === 'find' || x === 'work'),
+    workSort: r.work_sort ?? null
+  }));
+}
+/** 找工人一侧（homeEntries）：show_on 有 find 的，按 sort */
+export function findSideEntries(all: HomeEntry[]): HomeEntry[] {
+  return all.filter((e) => (e.showOn ?? ['find', 'work']).includes('find'));
+}
+/** 接活儿一侧（workEntries）：show_on 有 work 的，按 work_sort（家政保洁 0 排第一），同序按 sort */
+export function workSideEntries(all: HomeEntry[]): HomeEntry[] {
+  return all
+    .map((e, i) => ({ e, i }))
+    .filter(({ e }) => (e.showOn ?? ['find', 'work']).includes('work'))
+    // 没单独排过的按找工人一侧的顺序（第几个，从 1 起）；家政保洁 work_sort = 0 排最前
+    .sort((a, b) => (a.e.workSort ?? a.i + 1) - (b.e.workSort ?? b.i + 1) || a.i - b.i)
+    .map(({ e }) => e);
 }
 
 /** 有核验通过、上了列表的人（不算工人）的工种 */
@@ -119,7 +142,8 @@ export async function upsertGroup(b: Record<string, unknown>, actor: string): Pr
 
 /** 首页 7 个入口整体保存（顺序按数组） */
 export async function saveHomeEntries(list: unknown, actor: string): Promise<HomeEntry[]> {
-  if (!Array.isArray(list) || list.length !== 7) throw new CrmError('bad_request', '首页入口必须正好 7 个');
+  // 指令 29：入口可以只在一侧显示，总数 1–7 个（原来必须正好 7 个）
+  if (!Array.isArray(list) || list.length < 1 || list.length > 7) throw new CrmError('bad_request', '首页入口要有 1–7 个');
   const pool = getPool();
   const trades = await tradeMap(pool);
   const groups = new Set((await loadGroups(pool)).map((g) => g.key));
@@ -135,15 +159,21 @@ export async function saveHomeEntries(list: unknown, actor: string): Promise<Hom
     const old = before.find((b) => b.target.type === type && b.target.key === key);
     const pinned = typeof o.pinned === 'boolean' ? o.pinned : old?.pinned ?? false;
     const icon = s(o.icon, 40) || old?.icon || null;
-    return { slot: i + 1, label, icon, type, key, pinned };
+    // 指令 29：在哪一侧显示（找工人 / 接活儿，至少一侧）；不传沿用原值。接活儿一侧的顺序沿用原值
+    const rawSide = (x as { showOn?: unknown }).showOn;
+    const showOn = Array.isArray(rawSide) ? Array.from(new Set(rawSide.filter((v): v is Side => v === 'find' || v === 'work'))) : old?.showOn ?? ['find', 'work'];
+    if (!showOn.length) throw new CrmError('bad_request', `第 ${i + 1} 个入口至少要在一侧显示（找工人一侧或接活儿一侧）`);
+    return { slot: i + 1, label, icon, type, key, pinned, showOn, workSort: old?.workSort ?? null };
   });
   for (const e of clean) {
     await pool.query(
-      `INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort, updated_by, pinned) VALUES ($1,$2,$3,$4,$5,$1,$6,$7)
-       ON CONFLICT (slot) DO UPDATE SET label=$2, icon=$3, target_type=$4, target_key=$5, sort=$1, updated_by=$6, pinned=$7, updated_at=now()`,
-      [e.slot, e.label, e.icon, e.type, e.key, actor, e.pinned]
+      `INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort, updated_by, pinned, show_on, work_sort) VALUES ($1,$2,$3,$4,$5,$1,$6,$7,$8,$9)
+       ON CONFLICT (slot) DO UPDATE SET label=$2, icon=$3, target_type=$4, target_key=$5, sort=$1, updated_by=$6, pinned=$7, show_on=$8, work_sort=$9, updated_at=now()`,
+      [e.slot, e.label, e.icon, e.type, e.key, actor, e.pinned, e.showOn, e.workSort]
     );
   }
-  await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, after_value) VALUES ($1, 'jobs_home_entries', 'jobs_home_entries', 'all', $2)`, [actor, JSON.stringify(clean)]);
+  // 少于 7 个时，多出来的位置删掉
+  await pool.query(`DELETE FROM jobs_home_entries WHERE slot > $1`, [clean.length]);
+  await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, before_value, after_value) VALUES ($1, 'jobs_home_entries', 'jobs_home_entries', 'all', $2, $3)`, [actor, JSON.stringify(before), JSON.stringify(clean)]);
   return loadHomeEntries(pool);
 }

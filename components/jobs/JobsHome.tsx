@@ -25,8 +25,11 @@ export function entryVisible(meta: Meta, e: HomeEntry) {
   return e.target.type === 'trade' ? meta.trades.some((t) => t.key === e.target.key && ok(t)) : meta.trades.some((t) => t.group === e.target.key && ok(t));
 }
 
+/** 指令 29：找工人一侧只放 showOn 里有 'find' 的（服务器 homeEntries 已经去掉家政保洁；这里再保一次） */
+const onSide = (e: HomeEntry, side: 'find' | 'work') => !e.showOn || e.showOn.includes(side);
+
 export function FindPanel({ meta }: { meta: Meta }) {
-  const entries = meta.homeEntries.slice(0, 7).filter((e) => entryVisible(meta, e));
+  const entries = meta.homeEntries.filter((e) => onSide(e, 'find')).slice(0, 7).filter((e) => entryVisible(meta, e));
   const pinnedOnly = entries.filter((e) => e.pinned);
   // D11 冷启动：一个核验通过的人都没有时，方块区换成一行招募说明 +「全部工种和服务」
   const coldStart = meta.anyPros === false;
@@ -60,7 +63,53 @@ export function FindPanel({ meta }: { meta: Meta }) {
   );
 }
 
-const ROLE_SUB: Record<string, string> = { company: '有承包商牌照', licensed: '自己持有执照', pro_service: '设计、测量、律师等', worker: '免费登记' };
+export const ROLE_SUB: Record<string, string> = { company: '有承包商牌照', licensed: '自己持有执照', pro_service: '设计、测量、律师等', worker: '免费登记' };
+
+/**
+ * 指令 28 / 29：接活儿一侧的工种方块（和小程序同一套规则）——
+ *   名单用服务器的 workEntries（家政保洁第一）；老服务器没有就用 homeEntries 并把家政保洁那一组挪到第一个。
+ *   不看有没有核验通过的人，只要入口指向的工种开放就出；最后一个「全部工种和服务」。
+ */
+export function workEntriesOf(meta: Meta): HomeEntry[] {
+  if (meta.workEntries?.length) return meta.workEntries.filter((e) => onSide(e, 'work'));
+  const isClean = (e: HomeEntry) => e.target.type === 'group' && e.target.key === 'clean';
+  return [...meta.homeEntries.filter(isClean), ...meta.homeEntries.filter((e) => !isClean(e))];
+}
+const openTradesOf = (meta: Meta, group: string) => meta.trades.filter((t) => t.group === group && t.open);
+/** 默认身份：设计与专业服务、房产服务、法律财税保险这几组 → 设计与专业服务；C 类（不需要州执照）→ 工人；其余 → 持牌师傅 */
+const PRO_GROUPS = ['design', 'property', 'legal'];
+export function roleForTrade(meta: Meta, key: string): string {
+  const t = meta.trades.find((x) => x.key === key);
+  if (!t) return '';
+  if (PRO_GROUPS.includes(t.group)) return 'pro_service';
+  if (t.licType === 'C') return 'worker';
+  return 'licensed';
+}
+/** 一组入口默认选哪个工种：组里名字带入口名的（装修 → 厨卫装修、设计 → 建筑设计），没有就选组里第一个开放的（家政保洁 → 清洁保洁） */
+export function groupFirstTrade(meta: Meta, group: string, label: string): string {
+  const list = openTradesOf(meta, group);
+  return (list.find((t) => label && t.name.includes(label)) ?? list[0])?.key ?? '';
+}
+function workTileHref(meta: Meta, e: HomeEntry): string {
+  if (meta.me?.pro) return '/zh/jobs/mine';
+  const trade = e.target.type === 'group' ? groupFirstTrade(meta, e.target.key, e.label) : e.target.key;
+  return trade ? `/zh/jobs/register?trade=${encodeURIComponent(trade)}` : '/zh/jobs/register';
+}
+function WorkTiles({ meta }: { meta: Meta }) {
+  const open = (e: HomeEntry) => (e.target.type === 'group' ? openTradesOf(meta, e.target.key).length > 0 : meta.trades.some((t) => t.key === e.target.key && t.open));
+  const list = workEntriesOf(meta).filter(open).slice(0, 7);
+  return (
+    <div className={j.tiles}>
+      {list.map((e) => (
+        <Link key={`${e.target.type}:${e.target.key}`} href={workTileHref(meta, e)} className={j.tile}>{e.label}</Link>
+      ))}
+      <Link href={meta.me?.pro ? '/zh/jobs/mine' : '/zh/jobs/register'} className={`${j.tile} ${j.tileAll}`}>
+        <span>全部工种和服务</span>
+        <small className={j.tileAllCount}>{meta.allTradesText ?? (meta.openTradeCount ? `全部 ${meta.openTradeCount} 项 ›` : '›')}</small>
+      </Link>
+    </div>
+  );
+}
 
 export function WorkPanel({ meta }: { meta: Meta }) {
   const registered = !!meta.me?.pro;
@@ -73,19 +122,13 @@ export function WorkPanel({ meta }: { meta: Meta }) {
           <small>{meta.me.pro?.freeLeft != null ? (meta.me.pro.freeLeft > 0 ? `还可以免费联系 ${meta.me.pro.freeLeft} 位 · ` : '免费次数用完了 · ') : ''}改资料、看通知给我的活儿、看核验状态</small>
         </Link>
       ) : (
-        <>
-          {/* 指令 9 · D27：四个身份方块直接摆出来，点了进登记表单、身份已选好 */}
-          <p className={s.small} style={{ margin: 0 }}>登记接活儿：选你的身份，登记一次，有活儿通知你。</p>
-          <div className={j.roleTiles}>
-            {meta.options.proRoles.map((r) => (
-              <Link key={r.key} href={`/zh/jobs/register?role=${r.key}`} className={j.roleTile}>
-                {r.label}
-                <small>{ROLE_SUB[r.key] ?? ''}</small>
-              </Link>
-            ))}
-          </div>
-        </>
+        // 指令 29：「登记接活儿」一条大按钮 + 下面工种方块（四个身份挪到登记页最上面）
+        <Link href="/zh/jobs/register" className={`${j.bigBtn} ${j.bigBtnWork}`}>
+          登记接活儿
+          <small>点下面你做的那一行，登记一次，有活儿通知你</small>
+        </Link>
       )}
+      <WorkTiles meta={meta} />
       <div style={{ marginTop: '1rem' }}>
         {meta.latest.length === 0 ? (
           <p className={s.muted}>暂时没有新活儿，先登记，有活儿第一时间通知你。</p>

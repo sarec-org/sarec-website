@@ -10,7 +10,7 @@ import { api } from '@/components/crm/client';
 
 type G = { key: string; name: string; order: number };
 type T = { key: string; name: string; group: string; licType: 'A' | 'B' | 'C'; issuer: string | null; licenseClass: string | null; lookupUrl: string | null; verifyPoints: string | null; open: boolean; noPost: boolean; noNotify: boolean; sort: number; verified: boolean; note: string | null };
-type E = { label: string; icon?: string | null; pinned?: boolean; target: { type: 'trade' | 'group'; key: string } };
+type E = { label: string; icon?: string | null; pinned?: boolean; showOn?: ('find' | 'work')[]; target: { type: 'trade' | 'group'; key: string } };
 type Res = { groups: G[]; trades: T[]; homeEntries: E[] };
 const LIC: Record<string, string> = { A: 'A 加州承包商牌照', B: 'B 其他州执照', C: 'C 无州执照要求（营业登记 + 责任保险）' };
 const BLANK: T = { key: '', name: '', group: '', licType: 'A', issuer: '', licenseClass: '', lookupUrl: '', verifyPoints: '', open: false, noPost: false, noNotify: false, sort: 999, verified: false, note: '' };
@@ -206,6 +206,7 @@ function HomeEntries({ d, save }: { d: Res; save: (e: E[]) => Promise<boolean> }
   return (
     <section className={styles.card}>
       <p className={styles.cardTitle}>首页 7 个入口</p>
+      <p className={styles.small}>每个入口勾在哪一侧显示：「找工人一侧」「接活儿一侧」（例如家政保洁只勾接活儿一侧）。接活儿一侧里家政保洁排第一，其余按这里的顺序。每一侧最后都固定有“全部工种和服务”。</p>
       <p className={styles.small}>第 8 个固定是“全部工种和服务”。入口可以指向一个工种，也可以指向一组工种（点进去先出这一组的方块）。还没有核验通过的人的工种，首页不显示；勾了“常显”的入口不管有没有人都显示（没人时标“招募中”）。</p>
       {list.map((e, i) => (
         <div key={i} className={styles.inputRow} style={{ marginBottom: '0.5rem' }}>
@@ -217,12 +218,24 @@ function HomeEntries({ d, save }: { d: Res; save: (e: E[]) => Promise<boolean> }
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minHeight: 44, whiteSpace: 'nowrap' }}>
             <input type="checkbox" checked={!!e.pinned} onChange={(ev) => upd(i, { ...e, pinned: ev.target.checked })} />常显
           </label>
+          {(['find', 'work'] as const).map((side) => {
+            const on = (e.showOn ?? ['find', 'work']).includes(side);
+            return (
+              <label key={side} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', minHeight: 44, whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={on} onChange={(ev) => {
+                  const cur = e.showOn ?? ['find', 'work'];
+                  const next = ev.target.checked ? Array.from(new Set([...cur, side])) : cur.filter((x) => x !== side);
+                  upd(i, { ...e, showOn: next });
+                }} />{side === 'find' ? '找工人一侧' : '接活儿一侧'}
+              </label>
+            );
+          })}
           <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} disabled={i === 0} onClick={() => swap(i, i - 1)}>↑</button>
           <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} disabled={i === list.length - 1} onClick={() => swap(i, i + 1)}>↓</button>
         </div>
       ))}
       <div className={styles.btnRow}>
-        <button className={styles.btn} disabled={!dirty || list.length !== 7 || list.some((x) => !x.label.trim())} onClick={() => save(list)}>保存首页入口</button>
+        <button className={styles.btn} disabled={!dirty || list.length < 1 || list.length > 7 || list.some((x) => !x.label.trim() || (x.showOn ?? ['find', 'work']).length === 0)} onClick={() => save(list)}>保存首页入口</button>
         {dirty && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setList(d.homeEntries); setDirty(false); }}>不改了</button>}
       </div>
     </section>

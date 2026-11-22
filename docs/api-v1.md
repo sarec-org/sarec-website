@@ -442,3 +442,10 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 - 存在 `crm_settings.committees`（`[{ key, name, status: 'active'|'preparing' }]`）。后台两处能改、写同一份、都记 `crm_audit_log`（action `update_setting`）：「设置与团队 › 设置 › 专委会与俱乐部状态」，和「客户 › 俱乐部」编辑里的「状态」。
 - `GET /api/v1/clubs` 每项 `status`、`statusLabel`、`active`（= 已成立）。设置里没有的俱乐部算筹备中。小程序首页只放 `active` 的，筹备中的只在「全部」里标“筹备中”。
 - 0045 默认值（只改数据）：guandan 已成立，investment、design 筹备中，golf 不动；只有没人工改过这一项状态的才设。
+
+### 找工人 / 接活儿首页入口分两侧（指令 29；迁移 0046）
+- `jobs_home_entries.show_on text[]`（`find` 找工人一侧、`work` 接活儿一侧，默认两侧）、`work_sort`（接活儿一侧顺序，空 = 跟 sort）。
+- `GET /api/v1/jobs/meta`：`homeEntries` = 找工人一侧（show_on 有 find，按 sort）——家政保洁不在里面，老版本小程序（1.4.3）也自动看不到；新增 `workEntries` = 接活儿一侧（家政保洁第一，其余按原顺序）。每条带 `showOn`。家政保洁不在找工人一侧，"招募中"角标也就没有了。「全部工种和服务」和家政保洁那一组不变。
+- 后台「找工人 · 接活儿 › 工种与资质表 › 首页入口」：每个入口勾「找工人一侧 / 接活儿一侧」（至少一侧），入口 1–7 个；`PUT /api/v1/workbench/jobs/home-entries` 每条可带 `showOn`，不传沿用原值；记 `crm_audit_log`（action `jobs_home_entries`，带前后值）。后台按侧保存过以后，重跑 0046 不再改家政保洁。
+- 0046：家政保洁改成只在接活儿一侧、排第一；这一行不在了（线上临时删过）就补回来（接活儿一侧、第一）。
+- 线上 1.4.3 临时处理（只删找工人一侧的家政保洁那一行，先备份、可撤销）：`db/hotfix/2026-11-21_find_side_remove_clean.sql`、`…_undo.sql`。

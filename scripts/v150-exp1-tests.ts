@@ -421,6 +421,53 @@ async function main() {
   assert.ok(cms.every((c) => 'icon' in c && 'coverUrl' in c && typeof c.sortOrder === 'number'));
   ok('GET /clubs 带 key、名字、sortOrder、position、icon、coverUrl、active（=已成立）、status；后台俱乐部页能改已成立 / 筹备中；专委会接口带 active、sortOrder、icon、coverUrl、hasClub，按后台排序（没写死名字）');
 
+  console.log('十四、找工人 / 接活儿首页入口分两侧（指令 29：家政保洁只在接活儿一侧）');
+  const { readFileSync } = await import('node:fs');
+  const { rows: entBefore } = await pool.query(`SELECT * FROM jobs_home_entries ORDER BY slot`);
+  try {
+    await pool.query(readFileSync('db/migrations/0046_jobs_entries_per_side.sql', 'utf8'));
+    const findOf = (m: Record<string, any>) => (m.homeEntries as { target: { type: string; key: string } }[]).map((e) => `${e.target.type}:${e.target.key}`);
+    let meta = (await http('/api/v1/jobs/meta', null, undefined, MP)).j;
+    assert.ok(!findOf(meta).includes('group:clean'), '找工人一侧没有家政保洁');
+    assert.equal(findOf(meta).length, 6, '其余 6 个按原顺序往前补，不另外凑');
+    const work = meta.workEntries as { target: { key: string }; showOn: string[] }[];
+    assert.equal(work[0].target.key, 'clean', '接活儿一侧家政保洁第一');
+    assert.deepEqual(work[0].showOn, ['work']);
+    assert.equal(work.length, 7);
+    assert.ok((meta.homeEntries as { showOn: string[] }[]).every((e) => e.showOn.includes('find')));
+    const old143 = (await http('/api/v1/jobs/meta', null, undefined, { 'x-sarec-client': 'mp-1.4.3' })).j;
+    assert.ok(!findOf(old143).includes('group:clean'), '1.4.3 拿到的 homeEntries 也没有家政保洁');
+    const web = (await http('/api/v1/jobs/meta', null)).j;
+    assert.deepEqual(findOf(web), findOf(meta), '网站和小程序同一份');
+    ok('homeEntries = 找工人一侧（没有家政保洁，6 个）；workEntries 家政保洁第一；1.4.3 和网站同样拿不到家政保洁');
+    // 后台：按侧保存（勾选），记操作记录；之后再跑 0046 不改回去
+    const all = (await http('/api/v1/workbench/jobs/trades', adm.token)).j.homeEntries as { label: string; target: { type: string; key: string }; showOn: string[] }[];
+    assert.equal(all.length, 7, '后台看得到全部 7 个（含只在接活儿一侧的）');
+    const edited = all.map((e) => (e.target.key === 'clean' ? { ...e, showOn: ['find', 'work'] } : e));
+    const put = await fetch(BASE + '/api/v1/workbench/jobs/home-entries', { method: 'PUT', headers: { authorization: `Bearer ${adm.token}`, 'content-type': 'application/json' }, body: JSON.stringify({ entries: edited }) });
+    assert.equal(put.status, 200, await put.text());
+    await pool.query(readFileSync('db/migrations/0046_jobs_entries_per_side.sql', 'utf8'));
+    meta = (await http('/api/v1/jobs/meta', null)).j;
+    assert.ok(findOf(meta).includes('group:clean'), '后台勾回两侧以后，重跑 0046 不改回去');
+    const put2 = await fetch(BASE + '/api/v1/workbench/jobs/home-entries', { method: 'PUT', headers: { authorization: `Bearer ${adm.token}`, 'content-type': 'application/json' }, body: JSON.stringify({ entries: edited.map((e) => ({ ...e, showOn: [] })) }) });
+    assert.equal(put2.status, 400, '每个入口至少一侧');
+    const six = await fetch(BASE + '/api/v1/workbench/jobs/home-entries', { method: 'PUT', headers: { authorization: `Bearer ${adm.token}`, 'content-type': 'application/json' }, body: JSON.stringify({ entries: edited.slice(0, 6) }) });
+    assert.equal(six.status, 200, '入口可以少于 7 个');
+    const { rows: cnt } = await pool.query(`SELECT count(*)::int AS n FROM jobs_home_entries`);
+    assert.equal(cnt[0].n, 6);
+    ok('后台每个入口勾「找工人一侧 / 接活儿一侧」，有操作记录，重跑迁移不覆盖；至少一侧；可以 1–7 个');
+  } finally {
+    // 还原首页入口（这个库上本来的样子）
+    await pool.query(`DELETE FROM jobs_home_entries`);
+    for (const r of entBefore) {
+      await pool.query(
+        `INSERT INTO jobs_home_entries (slot, label, icon, target_type, target_key, sort, updated_by, updated_at, pinned, show_on, work_sort) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        [r.slot, r.label, r.icon, r.target_type, r.target_key, r.sort, r.updated_by, r.updated_at, r.pinned, r.show_on ?? ['find', 'work'], r.work_sort ?? null]
+      );
+    }
+    await pool.query(`DELETE FROM crm_audit_log WHERE action = 'jobs_home_entries' AND actor LIKE $1`, [`staff:${P}%`]);
+  }
+
   console.log(`\n全部通过：${passed} 项`);
 }
 
