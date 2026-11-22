@@ -325,7 +325,7 @@ export function ProFormView({ meta, res, editing, onSaved, initialRole, initialT
               )}
               {needLic && !licensed && docUpload('执照照片（选填）', 'license', f.licenseDocUrl, 'licenseDocUrl')}
               {proService && picked.some((t) => t.licType === 'C') && docUpload('营业登记（Business License）', 'bizreg', f.businessRegUrl, 'businessRegUrl', needBizReg)}
-              {fc && proService && cNames && <p className={s.small} style={{ marginTop: '-0.4rem' }}>{cNames}不需要州执照，交一张营业登记就行：公司交州里的登记，个人交市或县的营业执照、DBA 都可以。</p>}
+              {fc && proService && cNames && <p className={s.small} style={{ marginTop: '-0.4rem' }}>{fc.kind === 'nolic' ? '交一张营业登记就行：公司交州里的登记，个人交市或县的营业登记、DBA 都可以。' : `${cNames}不需要州执照，交一张营业登记就行：公司交州里的登记，个人交市或县的营业执照、DBA 都可以。`}</p>}
               {proService && docUpload('责任保险（选填）', 'insurance', f.insuranceUrl, 'insuranceUrl')}
               {showStampNote && (
                 <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', minHeight: 44 }}>

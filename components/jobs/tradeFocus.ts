@@ -62,7 +62,7 @@ export function tradeFocus(meta: Meta, tradeKey: string, groupKey?: string | nul
   if (kind === 'nolic') {
     choices = pro
       ? [
-          { key: 'solo', role: 'pro_service', label: '我一个人做', sub: '交市或县的营业执照或 DBA', firm: false },
+          { key: 'solo', role: 'pro_service', label: '我一个人做', sub: '交市或县的营业登记或 DBA', firm: false },
           { key: 'team', role: 'pro_service', label: '我有团队或公司', sub: '交公司的营业登记', firm: true }
         ]
       : [
@@ -99,8 +99,8 @@ export const focusChoice = (fc: TradeFocus, key: string) => allChoices(fc).find(
 export function focusIntro(fc: TradeFocus, role: ProRole | ''): string {
   if (fc.kind === 'nolic') {
     return role === 'worker'
-      ? `${fc.label}不需要州执照。一个人做的免费登记，不用交资料；有人在商会网站招${fc.label}帮手时，对口的会通知你。`
-      : `${fc.label}不需要州执照。交一张营业登记，工作人员核对后，找${fc.label}的人就能看到你。`;
+      ? `一个人做${fc.label}的，免费登记，不用交资料；有人在商会网站招${fc.label}帮手时，对口的会通知你。`
+      : `有团队或公司的，交一张营业登记，工作人员核对后，找${fc.label}的人就能看到你。`;
   }
   return role === 'worker'
     ? '没有执照的，可以免费登记，跟着有执照的师傅或施工队干活；房主直接发的活儿要有执照的人才能接。'
