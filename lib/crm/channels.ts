@@ -7,12 +7,14 @@
  * - 报名 / 到场：registrations.channel_code 命中（或同行人 source = 'companion'），不含已取消。
  * - 入会：这些报名的人里，报名之后开始会籍的人数。
  * - 有效咨询：inquiries.channel_code 命中，或这些人报名之后提交的咨询（对应的待跟进没有标“暂不跟进”）。
+ * - 内部账号、审核演示账号、测试账号（contacts.account_kind 有值）的访问、报名、到场、入会、咨询、首次来源都不算（八.1，和「数据」页新人 / 到场 / 入会同一条规则）；没登录的匿名访问照算。
  */
 import QRCode from 'qrcode';
 import { getPool, withTransaction } from '@/lib/db/client';
 import { CrmError } from './events';
 import type { Db } from './profile';
 import { wxConfigured } from './wechat';
+import { realContact, realContactId } from './accountKind';
 
 export const CHANNEL_RE = /^c-[a-z0-9]{3,16}$/;
 export const CHANNEL_KIND: Record<string, string> = { merchant: '合作商家', org: '合作机构', vp_unit: '副会长单位', partner: '战略伙伴', other: '其他' };
@@ -32,10 +34,11 @@ export async function funnel(db: Db, match: { channels?: string[]; companion?: b
           AND (r.channel_code = ANY($1::text[]) OR ($2::boolean AND r.source = 'companion'))
           AND ($3::int IS NULL OR r.created_at > now() - make_interval(days => $3))
           AND ($4::uuid IS NULL OR r.event_id = $4)
+          AND ${realContactId('r.contact_id')}
      ), people AS (SELECT contact_id, min(created_at) AS first_at FROM regs GROUP BY contact_id)
      SELECT
        (SELECT count(*)::int FROM track_events t
-         WHERE t.name = 'visit' AND t.channel = ANY($1::text[])
+         WHERE t.name = 'visit' AND t.channel = ANY($1::text[]) AND ${realContactId('t.contact_id')}
            AND ($3::int IS NULL OR t.created_at > now() - make_interval(days => $3))
            AND ($4::uuid IS NULL OR t.target = (SELECT slug FROM events WHERE id = $4))) AS visits,
        (SELECT count(DISTINCT contact_id)::int FROM regs) AS registered,
@@ -45,8 +48,9 @@ export async function funnel(db: Db, match: { channels?: string[]; companion?: b
        (SELECT count(*)::int FROM inquiries i
          WHERE (i.channel_code = ANY($1::text[]) OR EXISTS (SELECT 1 FROM people p WHERE p.contact_id = i.contact_id AND i.created_at >= p.first_at))
            AND ($3::int IS NULL OR i.created_at > now() - make_interval(days => $3))
-           AND NOT EXISTS (SELECT 1 FROM followups f WHERE f.inquiry_id = i.id AND f.status = 'dropped')) AS inquiries,
-       (SELECT count(*)::int FROM contacts c WHERE c.first_channel = ANY($1::text[])
+           AND NOT EXISTS (SELECT 1 FROM followups f WHERE f.inquiry_id = i.id AND f.status = 'dropped')
+           AND ${realContactId('i.contact_id')}) AS inquiries,
+       (SELECT count(*)::int FROM contacts c WHERE c.first_channel = ANY($1::text[]) AND ${realContact('c')}
            AND ($3::int IS NULL OR c.created_at > now() - make_interval(days => $3))) AS "firstTouch"`,
     [chans, !!match.companion, days, ev]
   );

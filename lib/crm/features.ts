@@ -6,10 +6,12 @@
  * - 首页 8 个入口的顺序在后台调整，小程序立即生效；不做按数据自动重排。
  * - 每月 1 号发“功能月报”：最常用 3 个、带来报名和入会最多 3 个、几乎没人用 3 个 + 调整建议（规则生成，不调 AI）。
  * - 活动少于 2 场时注明“样本太少，仅供参考”。
+ * - 内部账号、审核演示账号、测试账号的打点和带来的报名、到场、入会都不算（八.1，lib/crm/accountKind.ts）；没登录的匿名访客照算。
  */
 import { getPool } from '@/lib/db/client';
 import { funnel, type Funnel, type Window } from './channels';
 import { getSetting, setSetting } from './orders';
+import { realContactId } from './accountKind';
 import type { Db } from './profile';
 
 export const HOME_ENTRIES: { key: string; label: string }[] = [
@@ -55,11 +57,12 @@ export async function featureRanking(w: Window = {}): Promise<{ rows: FeatureRow
     for (const u of f.uses) {
       const isChannelVisit = f.key === 'channels';
       const { rows: r } = await pool.query<{ n: number; p: number }>(
-        `SELECT count(*)::int AS n, count(DISTINCT coalesce(contact_id::text, visitor))::int AS p FROM track_events
+        `SELECT count(*)::int AS n, count(DISTINCT coalesce(contact_id::text, visitor))::int AS p FROM track_events t
           WHERE name = $1 AND ($2::text IS NULL OR target = $2)
             AND ($3::int IS NULL OR created_at > now() - make_interval(days => $3))
             AND ($4::text IS NULL OR target = $4 OR meta->>'slug' = $4)
-            AND (NOT $5::boolean OR channel LIKE 'c-%')`,
+            AND (NOT $5::boolean OR channel LIKE 'c-%')
+            AND ${realContactId('t.contact_id')}`,
         [u.name, u.target ?? null, days, f.group === '首页入口' ? null : evSlug, isChannelVisit]
       );
       times += r[0].n;
