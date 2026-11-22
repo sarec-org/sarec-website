@@ -38,6 +38,19 @@ async function run(req: Request) {
     await recordException('join_scan', `join_scan:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     return 'error';
   });
+  // 后台综合优化 七.2：手机号相同且两边已验证的重复档案自动合并（可撤销）。开关 dup_auto_merge 默认关：
+  // 正式库第一次批量要东哥点头后用 scripts/admin-oneoff-merge-dups.ts 跑，跑完脚本把开关打开，之后每天自动。
+  try {
+    const { getSetting } = await import('@/lib/crm/orders');
+    const { getPool } = await import('@/lib/db/client');
+    if ((await getSetting<boolean>(getPool(), 'dup_auto_merge', false)) === true) {
+      const { autoMergeVerified } = await import('@/lib/crm/autoMerge');
+      out.autoMerge = (await autoMergeVerified({ apply: true, limit: 50 })).count;
+    } else out.autoMerge = 'off';
+  } catch (e) {
+    await recordException('flow_cron', `auto_merge:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.autoMerge = 'error';
+  }
   // 1.3.1 E：没填常驻地区的人按报名过的活动地区推断（参加一次外地活动不改）
   out.regions = await inferRegions().catch(() => 'error');
   try {
@@ -51,6 +64,14 @@ async function run(req: Request) {
   } catch (e) {
     await recordException('agent_digest', `agent_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
     out.agentDigest = 'error';
+  }
+  // 后台综合优化 四.3：推销和垃圾咨询每天汇总一封（带一键全部不跟进；过 notify_live 总闸）
+  try {
+    const { runJunkDigest } = await import('@/lib/crm/followupMail');
+    out.junkDigest = await runJunkDigest(new Date());
+  } catch (e) {
+    await recordException('junk_digest', `junk_digest:${laToday()}`, null, e instanceof Error ? e.message : 'error');
+    out.junkDigest = 'error';
   }
   // 1.3 M：筹备清单提醒（截止前一天给负责人；活动前 2 天给东哥汇总）、收费活动未付提醒（活动前 5 天）——按规则发，不调 AI
   try {

@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate, can } from '@/components/crm/staff/StaffGate';
+import { EventHub } from '@/components/crm/staff/EventHub';
 import { api } from '@/components/crm/client';
 
 type Item = { id: number; when_label: string; title: string; role: string; due_at: string; done_at: string | null; done_by: string | null; note: string | null; photo_url: string | null };
@@ -58,6 +59,7 @@ export default function PrepPage({ params }: { params: { eventId: string } }) {
     <StaffGate title={p ? `筹备清单 · ${p.title}` : '筹备清单'} role={['ops', 'checkin']}>
       {(s) => (
         <>
+          <EventHub eventId={params.eventId} current="prep" />
           <Msg m={msg} />
           {!p && (
             <p className={styles.muted}>

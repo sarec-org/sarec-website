@@ -20,6 +20,7 @@ type Pro = {
   licenseExpiresOn: string | null; businessRegUrl: string | null; insuranceUrl: string | null; licenseDocUrl: string | null; intro: string | null; photos: string[];
   returnReason: string | null; removedReason: string | null; listed: boolean; isPaidMember?: boolean; verifiedAt: string | null; nextReviewAt: string | null; createdAt: string;
   officialUrls: { agency: string; url: string }[]; checklist: string[]; cslbDetailUrl: string | null;
+  proxy?: boolean; proxyBy?: string | null; selfConfirmed?: boolean; businessRegNo?: string | null;
 };
 const TABS = [['pending', '待核验'], ['verified', '已通过'], ['returned', '退回'], ['removed', '下架']] as const;
 const RETURN_REASONS = ['牌照号查不到', '牌照已过期或被停', '牌照类别和所选工种对不上', '名字和牌照登记的不一致', '缺营业登记或责任保险', '照片看不清，请重拍'];
@@ -33,8 +34,18 @@ export default function StaffJobsPros() {
   );
 }
 
+/** 「今天」里的链接带 ?status=&id=<接活人 id>：直接定位到这一个人（不在这一栏就到别的栏找一次） */
+function linkParams(): { status: string | null; id: string | null } {
+  if (typeof window === 'undefined') return { status: null, id: null };
+  const sp = new URLSearchParams(window.location.search);
+  const st = sp.get('status');
+  return { status: st && TABS.some(([k]) => k === st) ? st : null, id: sp.get('id') };
+}
+
 function List() {
-  const [tab, setTab] = useState<string>('pending');
+  const [tab, setTab] = useState<string>(() => linkParams().status ?? 'pending');
+  const [focus] = useState<string | null>(() => linkParams().id);
+  const [looked, setLooked] = useState(false);
   const [rows, setRows] = useState<Pro[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const load = useCallback(async () => {
@@ -42,6 +53,22 @@ function List() {
     if (r.ok) setRows(r.data.items); else setMsg({ ok: false, text: r.message });
   }, [tab]);
   useEffect(() => { setRows(null); load(); }, [load]);
+  useEffect(() => {
+    if (!focus || !rows) return;
+    if (rows.some((p) => p.id === focus)) {
+      document.getElementById(`pro-${focus}`)?.scrollIntoView({ block: 'start' });
+      return;
+    }
+    if (looked) return;
+    setLooked(true);
+    (async () => {
+      for (const [k] of TABS) {
+        if (k === tab) continue;
+        const r = await api<{ items: Pro[] }>(`/api/v1/workbench/jobs/pros?status=${k}`);
+        if (r.ok && r.data.items.some((p) => p.id === focus)) return setTab(k);
+      }
+    })();
+  }, [rows, focus]); // eslint-disable-line react-hooks/exhaustive-deps
   async function verify(id: string, body: Record<string, unknown>, okText: string) {
     const r = await api(`/api/v1/workbench/jobs/pros/${id}/verify`, { body });
     if (!r.ok) { setMsg({ ok: false, text: r.message }); return; }
@@ -57,7 +84,11 @@ function List() {
       <Msg m={msg} />
       {!rows && <p className={styles.muted}>正在加载…</p>}
       {rows && rows.length === 0 && <p className={styles.muted}>{tab === 'pending' ? '没有等着核验的人。' : '这一栏还没有人。'}</p>}
-      {rows?.map((p) => <ProRow key={p.id} p={p} verify={verify} />)}
+      {rows?.map((p) => (
+        <div key={p.id} id={`pro-${p.id}`} style={focus === p.id ? { outline: '2px solid var(--gold)', borderRadius: 8 } : undefined}>
+          <ProRow p={p} verify={verify} />
+        </div>
+      ))}
     </>
   );
 }
@@ -98,9 +129,11 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
         {p.needsReview && <span className={`${styles.badge} ${styles.badgeRed}`}>改了资料，待再看</span>}
         {p.isPaidMember && <span className={`${styles.badge} ${styles.badgeGreen}`}>缴费会员</span>}
         {p.listed && <span className={`${styles.badge} ${styles.badgeGreen}`}>在列表上</span>}
+        {p.proxy && <span className={`${styles.badge} ${styles.badgeMuted}`}>商会代登记{p.selfConfirmed ? ' · 本人已确认' : ' · 本人未确认'}</span>}
       </div>
       <div className={styles.small}>{p.contactName && p.contactName !== p.name ? `${p.contactName} · ` : ''}{p.phone ?? '没有手机号'} · 城市：{p.cities.join('、') || '—'} · 登记 {fmtDateTime(p.createdAt)}{p.verifiedAt ? ` · 通过 ${fmtDate(p.verifiedAt)}` : ''}{p.nextReviewAt ? ` · 下次复核 ${fmtDate(p.nextReviewAt)}` : ''}</div>
       {p.licenseNo && <div className={styles.small}>牌照 / 执照号 <span className={styles.mono}>{p.licenseNo}</span>{p.licenseExpiresOn ? ` · 到期 ${p.licenseExpiresOn}` : ''}</div>}
+      {p.businessRegNo && <div className={styles.small}>营业登记号 <span className={styles.mono}>{p.businessRegNo}</span>（代登记填的号码，照号码到官方查询页核对）</div>}
       {p.intro && <div className={styles.small}>介绍：{p.intro}</div>}
       <Cslb s={p.licenseState} />
       {p.returnReason && <div className={styles.small}>退回原因：{p.returnReason}</div>}

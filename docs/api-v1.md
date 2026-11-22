@@ -2,6 +2,19 @@
 
 所有接口只返回 JSON，`Cache-Control: no-store`。
 
+> **后台综合优化 C（11/21）新增 / 改动的接口**（详见各节；正文末尾第 13 节是 B 的「今天」页）
+> - 发送：所有新对外发送走 B 的 `lib/crm/notifyGate.ts`（`gateSend`）；C 的真正发送函数包在 `lib/crm/notifySend.ts`（`gatedSend`）。
+> - `GET/POST /api/v1/staff/notify`：手机通知设置（每人渠道、收哪几类、负责人、总闸开关〔管理员〕、最近通知、发送记录）。
+> - `POST /api/cron/staff-notify`（GitHub Actions 每 15 分钟）：夜里攒的通知早 8 点合成一条、8:30 每日汇总、活动自动“已结束”、测试 / 审核演示账号打标记。
+> - `GET /api/v1/me/committees` 另带 `profile { hasName, hasPhone, needsFill }`；`POST` 可带 `name`、`phone`；缺姓名或手机号返回 400 `need_name_phone`（1.4.3 及以前的小程序不带这两个字段时照常记下并标“待补填”）。
+> - `GET /api/v1/staff/committees`：意向名单（真实姓名、手机、邮箱、待补填）。
+> - `GET /api/v1/staff/events/:id/hub`：活动页分栏数字和状态。
+> - `POST /api/v1/staff/checkin { eventId, contactId }` 返回另带 `missingPhone`；`{ eventId, contactId, addPhone }` 补手机号；现场登记手机号必填（`need_phone`）。
+> - `POST /api/v1/staff/join-requests { id, action: 'nudged' }`；`GET ?id=` 只看一条。`submitJoin` 返回另带 `linkSent`。
+> - `GET /api/v1/staff/contacts?view=customers|opened|all` 返回另带 `counts`；`POST /api/v1/staff/contacts/:id { action: 'account_kind', kind }`（管理员）。
+> - `GET /api/v1/staff/orders?status=demo`：审核演示 / 内部 / 测试账号的订单（其余状态不再含这些）。
+> - 小程序扫码签到 `step.kind = 'new'` 另带 `prefillName`、`needPhoneOnly`（档案里没有手机号的人先补手机号）。
+
 - **成功**：`{ "ok": true, ...数据 }`
 - **失败**：`{ "ok": false, "error": { "code": "...", "message": "大白话提示" } }`
 - **登录身份**：网站用 httpOnly cookie `sarec_session`；小程序用请求头 `Authorization: Bearer <token>`。两者等价。
@@ -303,3 +316,31 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 
 ### 网站页面会用到的路径（通知里的链接）
 `/zh/jobs`（看全部活儿）、`/zh/jobs/post`（发布）、`/zh/jobs/posts/<id>`、`/zh/jobs/mine`（我的活儿 / 我的接活）、`/zh/jobs/register`（登记接活）、`/zh/jobs/renew/<id>?t=<token>`（一键续期：页面调 `PATCH /jobs/posts/:id {renew:true, token}`）、`/zh/jobs/followup/<token>`。
+
+### 代登记接活人（后台优化 D，指令 13 第 3 条；迁移 0041）
+
+后台页面 `/zh/staff/jobs/proxy`「代登记接活人」（建议挂在 客户 › 找工人·接活儿）。资质规则和本人登记共用 `lib/jobs/pros.ts` 的 `qualificationError` / `tradeOpenError`（完全一样；没开放的工种代登记也不放宽）。唯一不同：只要营业登记的工种（C 类），代登记可以只填营业登记号（`jobs_pros.business_reg_no`，工作人员照号码核验），也可以传照片。写入后照常核验：A 类牌照照常排队对 CSLB 总表，其他进「接活人核验」人工核验；工人登记即生效。`jobs_pros.proxy_by` = 商会代登记（只在后台显示；公开卡片、公开接口不出）。
+
+| 接口 | 权限 | 参数 | 返回 |
+|---|---|---|---|
+| `GET /workbench/jobs/proxy` | ops | — | `items[{id,name,roleLabel,phone,status,statusLabel,needsReview,listed,trades[名字],cities[名字],licenseNo,businessRegNo,proxyBy,proxyAt,sms:'none'\|'logged'\|'sent'\|'failed'\|'confirmed'\|'declined',smsLabel（未发 / 已记录待发 / 已发 / 发送失败 / 已确认 / 本人说不用登记）,smsAt,confirmedAt,confirmedVia}]`、`settings{notifyLive,testSite,listBeforeConfirm}`、`columns`（贴表列名）、`header`（Tab 隔开的表头）、`sample`（示例表）、`help[]`、`smsTemplate`（确认短信原文） |
+| `POST /workbench/jobs/proxy` | ops | `{mode:'preview'\|'save', row:{name, phone, role（key 或中文：施工队或公司 / 持牌师傅 / 设计与专业服务 / 工人）, trades[]（key 或名字）, cities[]（key 或名字）, years?, licenseNo?, businessRegNo?, regNo?（一格两用：按身份和工种认成牌照号或营业登记号）, businessRegUrl?, insuranceUrl?, licenseDocUrl?, intro?, wechat?}, sendSms?（默认 true）}` | `{row:{line,ok,action:'create'\|'link'\|'duplicate'\|'reject',errors[],notes[],existing,data,outcome（写入后会怎样，一句人话）}}`；save 另给 `saved, proId, error, sms{status,label,why,to,text}` |
+| `POST /workbench/jobs/proxy/batch` | ops | `{text（从 Excel / 微信表格复制的多行；Tab、｜、两个以上空格或逗号分列；第一行是列名就按列名认，没有就按默认顺序）, mode:'preview'\|'save', confirm:true（save 必须）, sendSms?}`；一次最多 200 行 | `{headerFound, columns[], rows[同上 row], summary{total,willSave,rejected,duplicate,linked}}`；save 另给 `results[{line,name,saved,proId,error,sms}]`、`saved`。只写能写的行；被拒的、同号已有接活人的不写 |
+| `POST /workbench/jobs/proxy/sms` | ops | `{ids:[接活人 id]}` 或 `{pending:true}`（所有没确认、没发成的） | `{total,sent,logged,failed,skipped,live}`。每次换新令牌（旧链接作废） |
+| `PATCH /workbench/jobs/proxy` | admin | `{listBeforeConfirm:boolean}` | 没本人确认前上不上公开列表（`crm_settings.jobs_proxy_list_before_confirm`，默认 true = 核验通过即上，和本人登记一致）；改了立即重算列表，记 crm_audit_log |
+| `GET /jobs/confirm/:token` | 🌐 不用登录 | — | `{pro{name,roleLabel,trades,cities,years,licenseNo,businessRegNo,intro,statusLabel}, phoneMasked, rules[], editUrl:'/zh/jobs/register', editHint}`；令牌签名不对 / 用过 / 重发作废 / 超过 30 天 → `404`「这个链接已经用过或已失效……」 |
+| `POST /jobs/confirm/:token` | 🌐 | `{action:'confirm'\|'decline'}` | confirm：标本人已确认（`self_confirmed_at`、`self_confirm_via='link'`、记同意规则 `agreed_at`）；decline：撤下（`status='removed'`，进待跟进）。令牌一次性 |
+
+- **电话去重**：同号已有接活人 → `action='duplicate'`，提示不重复建；同号已有档案没登记接活 → `action='link'`，挂到那份档案；都没有 → 新建档案（`acquisition_source='jobs_proxy'`，手机号未验证）。同一张表里重复的号码，后面那行被拒。
+- **本人修改**：确认页「我要修改」→ `/zh/jobs/register`，用登记的手机号收验证码登录（登录按手机号找到同一份档案），`GET /jobs/me/pro` 带回代登记的资料；`POST /jobs/me/pro` 提交即算本人已确认（`self_confirm_via='edit'`）。本人点过“不用登记”后又自己来登记，照常可以登记。
+- **确认短信**：`SAREC：商会帮你登记了「找工人·接活儿」的接活儿资料（名称）。请点链接确认或修改：<网站>/zh/jobs/confirm/<一次性令牌> 不是你本人或不想登记，也可以在链接里说一声。` 走发消息总闸 `lib/crm/notifyGate.ts`（和子任务 B 同一份 `gateSend`：正式站 `notify_live` 没开 → `held` 只记录；测试站 / 本机只发测试号码，其他 `blocked` 只记录）。`notify_log` 里收件人打码、正文里令牌打码（`kind='代登记确认短信'`，`ref='jobs_pro:<id>'`）。
+
+## 13. 后台「今天」页 `/zh/staff`（后台综合优化 B，迁移 0039）
+
+- `GET /api/v1/staff/today`（任何工作人员；每类待办按角色过滤）→ `{ today, live, items, failed, yesterday }`，类型见 `lib/crm/today/types.ts`（`TodayPayload`）。
+- **待办来源接口**：`lib/crm/today/types.ts` 的 `TodayProvider { kind, roles, list(ctx) → TodayItem[] }`；
+  `TodayItem { id, kind, priority, title, suggestion, actions[], href, tags?, at?, detail? }`；
+  按钮 `TodayAction`：`link` / `tel` / `sms`（带草稿）/ `mailto`（带草稿，只打开邮件程序）/ `copy` / `post`（直接生效，POST 到 `/api/v1/staff/*` 或 `/api/v1/workbench/*`）。
+- 排序：`PRIORITY` 档位 —— 置顶 0（活动回顾待发布）→ 钱 100 → 已过期跟进 200 → 新咨询 300 → 待审核待确认 400 → 其他 500；同档按 `at`。
+- 注册：B 的在 `lib/crm/today/providers/b.ts`，C 的在 `lib/crm/today/providers/c.ts`（`C_PROVIDERS`、`C_LIVE_PROVIDERS` 今天现场三按钮 `TodayLive`）。汇总与排序在 `lib/crm/today/registry.ts`。
+- 对外发送总闸：`lib/crm/notifyGate.ts` 的 `gateSend(msg, send)`，设置 `notify_live`（正式站默认关 = 只记 `notify_log` 不发；测试站 / 本机只发测试身份）。

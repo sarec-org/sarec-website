@@ -156,3 +156,29 @@
   .groupGrid { grid-template-columns: 1fr 1fr; }
   .item { font-size: 1rem; }
 }
+
+/* 后台综合优化 11/21：栏里的小组（找工人 · 接活儿）和页面上方的同栏小导航 */
+.subGroup { margin-top: 0.5rem; }
+.subTitle { margin: 0 0 0.35rem; font-size: 0.82rem; color: var(--ivory-mute); }
+.subWrap { max-width: 1080px; margin: 0 auto; padding: 0.6rem 1rem 0; }
+.where { margin: 0 0 0.4rem; font-size: 0.9rem; color: var(--ivory-mute); }
+.subBar { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.subTab {
+  min-height: 40px;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--line-3);
+  color: var(--ivory);
+  text-decoration: none;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.subTab:hover { border-color: var(--gold-dim); color: var(--gold-bright); }
+.subTabOn { border-color: var(--gold); background: var(--gold-faint); color: var(--gold-bright); font-weight: 600; }
+.subBox { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; padding: 0.25rem 0.4rem; border: 1px dashed var(--line-3); border-radius: 8px; }
+.subBoxTitle { font-size: 0.85rem; color: var(--ivory-mute); }
+@media (max-width: 760px) {
+  .subTab { font-size: 0.92rem; }
+}

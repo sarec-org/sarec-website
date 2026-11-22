@@ -9,7 +9,7 @@ type O = {
   provider: string; payer_name: string | null; payer_note: string | null; submitted_at: string | null; created_at: string; paid_at: string | null;
   verified_by: string | null; reject_reason: string | null; contact_id: string; name: string; email: string | null; phone_e164: string | null;
 };
-const FILTERS: [string, string][] = [['open', '待处理'], ['payment_submitted', '待核款'], ['pending_payment', '待付款'], ['paid', '已到账'], ['cancelled', '已取消']];
+const FILTERS: [string, string][] = [['open', '待处理'], ['payment_submitted', '待核款'], ['pending_payment', '待付款'], ['paid', '已到账'], ['cancelled', '已取消'], ['demo', '审核演示 / 测试订单']];
 
 export default function StaffPayments() {
   const [status, setStatus] = useState('open');
@@ -26,9 +26,40 @@ export default function StaffPayments() {
     if (r.ok) setRows(r.data.orders);
     else setMsg({ ok: false, text: r.message });
   }, [status, q]);
+  const [ready, setReady] = useState(false);
+  // 「今天」和通知里的链接带 ?id=<订单号>（旧的 ?order= 照样认）：直接定位到这一笔
+  const [focus, setFocus] = useState<string | null>(null);
+  const [looked, setLooked] = useState(false);
   useEffect(() => {
-    load();
-  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+    // 后台综合优化 五.5：通知里的链接带 ?order=<订单号>，直接打开这一笔
+    const sp = new URLSearchParams(location.search);
+    const o = sp.get('id') || sp.get('order');
+    if (o) {
+      setQ(o);
+      setFocus(o);
+    }
+    setReady(true);
+  }, []);
+  useEffect(() => {
+    if (ready) load();
+  }, [status, ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!focus || !rows) return;
+    if (rows.some((o) => o.order_no === focus)) {
+      document.getElementById(`order-${focus}`)?.scrollIntoView({ block: 'center' });
+      return;
+    }
+    if (looked) return;
+    setLooked(true);
+    // 不在当前这一栏（已到账、已取消、审核演示…）：到别的栏找一次
+    (async () => {
+      for (const [k] of FILTERS) {
+        if (k === status) continue;
+        const r = await api<{ orders: O[] }>(`/api/v1/staff/orders?status=${k}&q=${encodeURIComponent(focus)}`);
+        if (r.ok && r.data.orders.some((o) => o.order_no === focus)) return setStatus(k);
+      }
+    })();
+  }, [rows, focus]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function verify(no: string) {
     setBusy(no);
@@ -62,7 +93,7 @@ export default function StaffPayments() {
           </div>
           <Msg m={msg} />
           {rows?.map((o) => (
-            <div key={o.order_no} className={`${styles.card} ${o.status === 'payment_submitted' ? styles.cardGold : ''}`}>
+            <div key={o.order_no} id={`order-${o.order_no}`} className={`${styles.card} ${o.status === 'payment_submitted' ? styles.cardGold : ''}`} style={focus === o.order_no ? { outline: '2px solid var(--gold)' } : undefined}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span className={styles.mono} style={{ fontSize: '1.2rem' }}>{o.order_no}</span>
                 <span className={`${styles.badge} ${o.status === 'paid' ? styles.badgeGreen : o.status === 'cancelled' ? styles.badgeRed : ''}`}>{o.status_label}</span>

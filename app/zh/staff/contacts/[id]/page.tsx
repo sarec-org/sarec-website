@@ -5,8 +5,10 @@ import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate, can } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
+import { ContactButtons, MemberBadge } from '@/components/crm/staff/TodayActions';
 
 type Detail = {
+  member: { isMember: boolean; tierName: string | null; endDate: string | null } | null;
   contact: Record<string, string | number | null>;
   roleLabel: string | null;
   tags: { tag: string; source: string }[];
@@ -14,6 +16,8 @@ type Detail = {
   points: { balance: number; ledger: { id: string; category: string; points: number; reason: string | null; created_by: string; created_at: string; reverses_id: string | null }[] };
   applications: { id: string; selected_tier_slug: string; application_status: string; payment_status: string; membership_end_date: string | null; display_status: string }[];
   timeline: { at: string; kind: string; text: string }[];
+  /** 这个人还没办完的那条待跟进（有就能在联系按钮下一键记“联系上了 / 没接 / 已约时间”） */
+  openFollowupId: string | null;
   contactMethods: { kind: 'email' | 'phone'; value: string; status: string; status_text: string; is_current: boolean; source: string; created_at: string; replaced_at: string | null; invalid_reason: string | null }[];
 };
 const SOURCE: Record<string, string> = { self_select: '本人点选', self_text: '本人原文', ai_confirmed: 'AI 整理经本人确认', staff: '工作人员记录', behavior: '系统行为', ai_guess: 'AI 推测' };
@@ -63,6 +67,28 @@ function RegionEdit({ id, self, inferred, onDone }: { id: string; self: string |
   );
 }
 
+const KIND_LABEL: Record<string, string> = { internal: '内部账号', review_demo: '审核演示账号', test: '测试账号' };
+/** 后台综合优化 八：管理员可以把档案标成内部 / 审核演示 / 测试账号（不进待办、统计、推荐排行、跟进提醒） */
+function AccountKindEdit({ id, kind, onDone }: { id: string; kind: string | null; onDone: (m: { ok: boolean; text: string }) => void }) {
+  const [v, setV] = useState(kind ?? '');
+  useEffect(() => setV(kind ?? ''), [kind]);
+  return (
+    <div className={styles.row} style={{ flexWrap: 'wrap', alignItems: 'center', marginTop: '0.5rem' }}>
+      <span className={styles.rowLabel}>账号类型</span>
+      <span style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <select className={styles.select} style={{ width: 'auto' }} aria-label="账号类型" value={v} onChange={(e) => setV(e.target.value)}>
+          <option value="">真实客户</option>
+          {Object.entries(KIND_LABEL).map(([k, l]) => <option key={k} value={k}>{l}（不进待办和统计）</option>)}
+        </select>
+        <button className={`${styles.btn} ${styles.btnGhost}`} disabled={v === (kind ?? '')} onClick={async () => {
+          const r = await api('/api/v1/staff/contacts/' + id, { method: 'POST', body: { action: 'account_kind', kind: v || null } });
+          onDone(r.ok ? { ok: true, text: v ? `已标为${KIND_LABEL[v]}：不进待办、统计、推荐排行、跟进提醒` : '已改回真实客户' } : { ok: false, text: r.message });
+        }}>保存</button>
+      </span>
+    </div>
+  );
+}
+
 export default function StaffContactDetail({ params }: { params: { id: string } }) {
   const [d, setD] = useState<Detail | null>(null);
   const [tab, setTab] = useState<'timeline' | 'answers' | 'points' | 'methods'>('timeline');
@@ -99,6 +125,23 @@ export default function StaffContactDetail({ params }: { params: { id: string } 
         c && (
           <>
             <Msg m={msg} />
+            {/* 后台综合优化 七.4：档案页直接有联系按钮（和待跟进一致）；会员身份一眼可见 */}
+            <div className={styles.card}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <MemberBadge isMember={d.member?.isMember} tier={d.member?.tierName} kind={(c.account_kind as string | null) ?? null} />
+                {d.member?.isMember ? <span className={styles.small}>会员至 {d.member.endDate}</span> : !c.account_kind && <span className={styles.small}>注册用户（未缴费）</span>}
+              </div>
+              <ContactButtons
+                phone={(d.contactMethods.find((x) => x.kind === 'phone' && x.is_current)?.value ?? (c.phone_e164 as string | null)) || null}
+                email={(d.contactMethods.find((x) => x.kind === 'email' && x.is_current)?.value ?? (c.email as string | null)) || null}
+                wechat={(c.wechat_id as string | null) ?? null}
+                smsDraft={`${String(c.name ?? '')}您好，我是 SAREC 中美房地产商会的工作人员。`}
+                emailDraft={`${String(c.name ?? '')}您好，\n\n我是 SAREC 中美房地产商会的工作人员。\n\n`}
+                resultEndpoint={d.openFollowupId ? `/api/v1/staff/followups/${d.openFollowupId}/result` : null}
+                onResultDone={(m) => { if (m.ok) load(); }}
+              />
+              {can(s, 'admin') && <AccountKindEdit id={params.id} kind={(c.account_kind as string | null) ?? null} onDone={(m) => { setMsg(m); load(); }} />}
+            </div>
             <div className={styles.grid2}>
               <div className={styles.card}>
                 <div className={styles.row}><span className={styles.rowLabel}>会员编号</span><span className={styles.rowValue}>#{c.member_no}</span></div>

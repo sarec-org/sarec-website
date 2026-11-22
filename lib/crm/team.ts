@@ -106,19 +106,53 @@ const KEY_ACTIONS = [
   'checkin_questions_update', 'staff_checkin', 'onsite_register', 'newsletter_confirm', 'create_event', 'update_event', 'regenerate_checkin_code', 'upsert_staff'
 ];
 
-/** 操作记录（管理员）：谁、用哪个账号、什么时候、做了什么 */
+/**
+ * 操作记录（管理员）：谁、对谁、什么时候、做了什么。
+ * 后台综合优化 11/21（九.4）：对象一律换成人能看懂的名字（客户姓名、活动名、工作人员名、设置名……），
+ * 不返回任何内部编号（微信 openid、档案 id、mp:xxx 绑定账号）；做事的人按工作人员表换成名字。
+ */
 export async function teamLog(limit = 200) {
   const { rows } = await getPool().query(
-    `SELECT a.created_at, a.actor, a.action, a.target_type, a.target_id, a.reason,
+    `SELECT a.created_at,
+            CASE WHEN a.actor LIKE 'staff:%' THEN coalesce((SELECT name FROM staff_roles WHERE email = substr(a.actor, 7) LIMIT 1), substr(a.actor, 7))
+                 ELSE a.actor END AS actor,
+            a.action, a.target_type, a.reason,
+            CASE WHEN a.target_type = 'setting' THEN a.target_id END AS setting_key,
             CASE WHEN a.target_type = 'contact' THEN (SELECT NULLIF(name, '微信用户') FROM contacts WHERE id::text = a.target_id)
                  WHEN a.target_type = 'staff' THEN (SELECT name FROM staff_roles WHERE email = a.target_id)
                  WHEN a.target_type = 'event' THEN (SELECT title FROM events WHERE id::text = a.target_id)
-                 WHEN a.target_type = 'newsletter' THEN (SELECT subject FROM newsletter_issues WHERE id::text = a.target_id) END AS target_name,
+                 WHEN a.target_type = 'newsletter' THEN (SELECT subject FROM newsletter_issues WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'join_request' THEN (SELECT name FROM join_requests WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'application' THEN (SELECT NULLIF(c.name, '微信用户') FROM applications ap JOIN contacts c ON c.id = ap.contact_id WHERE ap.id::text = a.target_id)
+                 WHEN a.target_type = 'order' THEN (SELECT NULLIF(c.name, '微信用户') FROM orders o JOIN contacts c ON c.id = o.contact_id WHERE o.order_no = a.target_id)
+                 WHEN a.target_type = 'room' THEN (SELECT name FROM rooms WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'offer' THEN (SELECT merchant FROM merchant_offers WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'jobs_pro' THEN (SELECT name FROM jobs_pros WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'jobs_post' THEN (SELECT title FROM jobs_posts WHERE id::text = a.target_id)
+                 WHEN a.target_type = 'jobs_trade' THEN (SELECT name FROM jobs_trades WHERE key = a.target_id)
+                 WHEN a.target_type = 'jobs_city' THEN (SELECT name FROM jobs_cities WHERE key = a.target_id) END AS target_name,
             a.before_value, a.after_value
        FROM crm_audit_log a
       WHERE a.action = ANY($1::text[]) OR a.actor LIKE 'staff:%'
       ORDER BY a.created_at DESC LIMIT $2`,
     [KEY_ACTIONS, limit]
+  ).catch(async () =>
+    // 老库缺某张表（例如还没跑找工人·接活儿的迁移）：退回只认基本对象
+    getPool().query(
+      `SELECT a.created_at, CASE WHEN a.actor LIKE 'staff:%' THEN substr(a.actor, 7) ELSE a.actor END AS actor, a.action, a.target_type, a.reason,
+              CASE WHEN a.target_type = 'setting' THEN a.target_id END AS setting_key,
+              CASE WHEN a.target_type = 'contact' THEN (SELECT NULLIF(name, '微信用户') FROM contacts WHERE id::text = a.target_id)
+                   WHEN a.target_type = 'event' THEN (SELECT title FROM events WHERE id::text = a.target_id) END AS target_name,
+              a.before_value, a.after_value
+         FROM crm_audit_log a WHERE a.action = ANY($1::text[]) OR a.actor LIKE 'staff:%' ORDER BY a.created_at DESC LIMIT $2`,
+      [KEY_ACTIONS, limit]
+    )
   );
-  return rows;
+  // 名字里万一混进内部编号（微信 openid、档案编号、mp: 绑定账号），一律不显示
+  const internal = /^(mp:|o[A-Za-z0-9_-]{20,}$|[0-9a-f]{8}-[0-9a-f]{4}-)/;
+  return rows.map((r) => ({
+    ...r,
+    actor: typeof r.actor === 'string' && internal.test(r.actor) ? '一位工作人员' : r.actor,
+    target_name: typeof r.target_name === 'string' && internal.test(r.target_name) ? null : r.target_name
+  }));
 }

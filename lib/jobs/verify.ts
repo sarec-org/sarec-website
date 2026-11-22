@@ -283,7 +283,12 @@ export async function staffProList(status: string | null, opts: { mp: boolean; o
     const p = (await proById(pool, r.id))!;
     const { rows: c } = await pool.query<{ name: string; phone: string | null }>(`SELECT name, phone_e164 AS phone FROM contacts WHERE id = $1`, [p.contact_id]);
     const links = officialLinks(p, trades);
+    // 后台优化 D（0041）：商会代登记（只在后台显示）、营业登记号、本人确认没有；库里没跑 0041 时都当没有
+    const { rows: px } = await pool
+      .query<{ proxy_by: string | null; business_reg_no: string | null; self_confirmed_at: Date | null }>(`SELECT proxy_by, business_reg_no, self_confirmed_at FROM jobs_pros WHERE id = $1`, [p.id])
+      .catch(() => ({ rows: [] as { proxy_by: string | null; business_reg_no: string | null; self_confirmed_at: Date | null }[] }));
     items.push({
+      proxy: !!px[0]?.proxy_by, proxyBy: px[0]?.proxy_by?.replace(/^staff:/, '') ?? null, selfConfirmed: !!px[0]?.self_confirmed_at, businessRegNo: px[0]?.business_reg_no ?? null,
       id: p.id, contactId: p.contact_id, contactName: c[0]?.name ?? null, phone: c[0]?.phone ?? null,
       name: p.name, role: p.role, roleLabel: roleLabel(p.role), status: p.status, statusLabel: PRO_STATUS_LABEL[p.status], needsReview: p.needs_review,
       trades: p.trades.map((k) => ({ key: k, name: trades.get(k)?.name ?? k, licType: trades.get(k)?.licType ?? null, verified: p.verified_trades.includes(k) })),

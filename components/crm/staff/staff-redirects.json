@@ -1,0 +1,6 @@
+[
+  { "from": "/zh/staff/growth", "to": "/zh/staff/settings?from=growth", "was": "增长（统计挪到「数据」，配置挪到「设置与团队 → 设置」，文章显示范围挪到「内容」）" },
+  { "from": "/zh/staff/flow-stats", "to": "/zh/staff/data?from=flow-stats", "was": "流程数据（并进「数据」）" },
+  { "from": "/zh/staff/features", "to": "/zh/staff/data?from=features", "was": "功能排行（并进「数据」）" },
+  { "from": "/zh/staff/client-errors", "to": "/zh/staff/system?from=client-errors", "was": "线上报错（挪到「设置与团队 → 系统状态」）" }
+]
