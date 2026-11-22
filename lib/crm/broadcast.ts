@@ -24,7 +24,23 @@ export const AGE_RANGES = ['30 岁以下', '30–39 岁', '40–49 岁', '50–5
 export const GENDERS = ['男', '女'];
 
 export type Cond = { field: string; values: string[] };
-export type Filters = { conds: Cond[] };
+export type Filters = { conds: Cond[]; audience?: 'all' };
+
+/**
+ * 安全（测试窗口 11/21）：条件为空的群发 = 所有人。服务器只认“真有用的条件”（认识的字段 + 至少选了一个值）；
+ * 一个都没有时，必须明确 audience = 'all'（页面上勾「发给全体」并二次确认人数）才放行。
+ */
+const KNOWN_FIELDS = new Set(['region', 'industry', 'member', 'attended', 'attend_count', 'club', 'tag', 'channel', 'age_range', 'gender']);
+export function usefulConds(f: Filters | null | undefined): Cond[] {
+  return (f?.conds ?? []).filter(
+    (c) => c && (KNOWN_FIELDS.has(c.field) || /^q:[A-Z0-9:]+$/.test(String(c.field))) && (c.values ?? []).map(String).filter(Boolean).length > 0
+  );
+}
+export function assertAudience(f: Filters | null | undefined): void {
+  if (usefulConds(f).length) return;
+  if (f?.audience === 'all') return;
+  throw new CrmError('audience_required', '没有设任何条件，等于发给所有人。请至少选一个条件；真要发给全体，请勾选「发给全体」并确认人数。');
+}
 
 type FieldDef = { key: string; label: string; options: { value: string; label: string }[]; multi: boolean; hint?: string };
 
@@ -156,7 +172,11 @@ export async function listAudiences() {
 const CHANNELS = ['sms', 'email', 'wechat'];
 
 /** 第二步：写内容，存成草稿 */
-export async function createBroadcast(s: Staff, b: { filters: Filters; excluded?: string[]; channels: string[]; content: Record<string, string> }) {
+export async function createBroadcast(s: Staff, b: { filters: Filters; excluded?: string[]; channels: string[]; content: Record<string, string>; audience?: string }) {
+  // 只存有用的条件；没有条件时必须明确 audience = 'all'
+  const filters: Filters = { conds: usefulConds(b.filters), ...(b.audience === 'all' && !usefulConds(b.filters).length ? { audience: 'all' as const } : {}) };
+  assertAudience(filters);
+  b = { ...b, filters };
   const channels = (b.channels ?? []).filter((c) => CHANNELS.includes(c));
   if (!channels.length) throw new CrmError('bad_request', '至少选一个渠道');
   const content: Record<string, string> = {};
@@ -252,6 +272,8 @@ export async function confirmBroadcast(s: Staff, id: string) {
   const b = await getBroadcast(id);
   if (b.status === 'draft') throw new CrmError('bad_request', '先发一条预览给东哥本人看过，再确认群发');
   if (b.status === 'sent') throw new CrmError('bad_request', '这次已经确认过了');
+  // 以前存下的草稿也再查一遍：没条件又没明确“发给全体”的不发
+  assertAudience(b.filters as Filters);
   const mode = await broadcastMode();
   const params: unknown[] = [];
   const w = where(b.filters as Filters, params);

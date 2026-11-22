@@ -426,3 +426,12 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 ### 群发也过通知总闸（1.5.0 合并后台综合优化）
 - `GET /api/v1/staff/broadcast` 多 `gateNote`（一句话：现在按了会怎样）。
 - 正式站：`crm_settings.broadcast_live` 没打开 = 演练（只记"本来会发给谁"）；打开后短信 / 邮件逐人走 `gatedSend`，总闸 `notify_live` 关着只记 `held`。测试站 / 本机：走总闸，只真发测试身份，其他 `blocked`。微信服务通知这一版只记录。每人结果记在 `broadcast_recipients.result`（`sent|held|blocked|failed|duplicate|dry_run|unreachable`）。正式站选人排除审核演示 / 测试账号。
+
+### 群发：条件为空不许发（测试窗口 11/21 安全修正）
+- `POST /api/v1/staff/broadcast { action: 'create', filters, audience? }`：服务器只认"有用的条件"（认识的字段 + 至少选了一个值）。一个都没有时必须带 `audience: 'all'`，否则 400 `audience_required`。确认（`confirm`）时对旧草稿再查一遍。
+- 页面：没设条件时出「发给全体」勾选框；勾了以后，发预览前还会弹一次确认，写明人数。
+
+### 首页「专委会与俱乐部」方块（迁移 0043）
+- `GET /api/v1/clubs` 每项：`key, name, intro, sortOrder, position（1 起，已排好）, icon, coverUrl, active（开着的才在列表里，恒 true）, status: 'active'|'preparing', statusLabel, membersOnly, members, joined, hint`；顺序按后台「俱乐部」页的「排序」（数字小的在前），名字不写死。
+- `GET /api/v1/me/committees` 每项：`key, name, status, statusLabel, active, sortOrder, icon, coverUrl, hasClub, interested, needsFill`；同 key 的俱乐部用它的排序 / 图标 / 封面，没有俱乐部的排在后面（按设置里的顺序）。
+- 后台「俱乐部」页：编辑里加「方块图标」（一个表情或 1–2 个字），每个俱乐部加「上传封面」（`POST /api/v1/staff/clubs/cover` multipart file + key）。掼蛋俱乐部排第一：在后台把它的排序改成最小即可。

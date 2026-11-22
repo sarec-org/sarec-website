@@ -25,6 +25,7 @@ const P = `验收五-${sfx}`;
 const BASE = (process.env.BASE || 'http://localhost:3450').replace(/\/$/, '');
 const MP = { 'x-sarec-client': 'mp-1.5.0' };
 let passed = 0;
+let prevCommittees: string | null = null;
 const ok = (n: string) => {
   passed++;
   console.log(`  ✓ ${n}`);
@@ -357,6 +358,58 @@ async function main() {
   assert.equal(h.status, 400, '不能确认两次');
   ok('群发：测试站规则下逐人过总闸（非测试身份 blocked、测试号放行），每人结果记在名单和 notify_log；运营不能确认、不能重复确认');
 
+  console.log('十二、群发：条件为空不许发（除非明确“发给全体”）');
+  const content = { sms: '测试短信', emailSubject: '测试', emailBody: '测试正文' };
+  h = await http('/api/v1/staff/broadcast', adm.token, { action: 'create', filters: { conds: [] }, channels: ['sms'], content });
+  assert.equal(h.status, 400, JSON.stringify(h.raw));
+  assert.equal(h.raw.error?.code, 'audience_required');
+  h = await http('/api/v1/staff/broadcast', adm.token, { action: 'create', filters: { conds: [{ field: 'tag', values: [] }, { field: 'nonsense', values: ['x'] }] }, channels: ['sms'], content });
+  assert.equal(h.raw.error?.code, 'audience_required', '空值条件、不认识的字段都不算条件');
+  h = await http('/api/v1/staff/broadcast', adm.token, { action: 'create', channels: ['sms'], content });
+  assert.equal(h.raw.error?.code, 'audience_required', '不带 filters 也拦');
+  h = await http('/api/v1/staff/broadcast', adm.token, { action: 'create', filters: { conds: [] }, audience: 'all', channels: ['sms'], content });
+  assert.equal(h.status, 200, JSON.stringify(h.raw));
+  made.broadcasts.push(h.j.id as string);
+  const { rows: fa } = await pool.query<{ filters: { audience?: string } }>(`SELECT filters FROM broadcasts WHERE id = $1`, [h.j.id]);
+  assert.equal(fa[0].filters.audience, 'all', '明确发给全体的记在这次群发上');
+  // 以前存下的、没条件又没写“发给全体”的草稿：确认时也拦
+  const { rows: old } = await pool.query<{ id: string }>(
+    `INSERT INTO broadcasts (filters, channels, content, created_by, status) VALUES ('{"conds":[]}'::jsonb, '{sms}', '{"sms":"x"}'::jsonb, 'v150-test', 'previewed') RETURNING id`
+  );
+  made.broadcasts.push(old[0].id);
+  h = await http('/api/v1/staff/broadcast', adm.token, { action: 'confirm', id: old[0].id });
+  assert.equal(h.raw.error?.code, 'audience_required');
+  const { rows: oldR } = await pool.query(`SELECT 1 FROM broadcast_recipients WHERE broadcast_id = $1`, [old[0].id]);
+  assert.equal(oldR.length, 0, '一个人都没记、没发');
+  ok('空条件 / 空值条件 / 不认识的字段 → 400 audience_required；明确 audience=all 才放行；旧草稿确认时也拦');
+
+  console.log('十三、首页「专委会与俱乐部」方块要的字段');
+  const { rows: prevC } = await pool.query<{ value: unknown }>(`SELECT value FROM crm_settings WHERE key = 'committees'`);
+  prevCommittees = prevC[0] ? JSON.stringify(prevC[0].value) : null;
+  await setSetting(pool, 'committees', [{ key: `${ck}`, name: `${P}俱乐部`, status: 'active' }, { key: `v150p${sfx}`, name: `${P}筹备中`, status: 'preparing' }], 'v150-test');
+  made.settings.push('committees');
+  const { rows: cl2 } = await pool.query<{ id: string }>(`INSERT INTO clubs (key, name, sort_order) VALUES ($1, $2, -5) RETURNING id`, [`v150g${sfx}`, `${P}排第一`]);
+  made.clubs.push(cl2[0].id);
+  h = await http('/api/v1/staff/clubs', adm.token, { action: 'save_club', key: `v150g${sfx}`, name: `${P}排第一`, sortOrder: -5, icon: '🃏扑克牌' });
+  assert.equal(h.status, 200, JSON.stringify(h.raw));
+  h = await http('/api/v1/clubs', null);
+  const mineClubs = (h.j.clubs as { key: string; name: string; sortOrder: number; position: number; icon: string | null; coverUrl: string | null; active: boolean; status: string }[]).filter((c) => c.name.startsWith(P));
+  assert.equal(mineClubs[0].key, `v150g${sfx}`, '按后台排序，数字小的在前');
+  assert.equal(mineClubs[0].icon, '🃏扑', '图标最多两个字');
+  assert.ok(mineClubs.every((c) => typeof c.sortOrder === 'number' && typeof c.position === 'number' && c.active === true && 'coverUrl' in c && c.status));
+  const all = h.j.clubs as { position: number }[];
+  assert.deepEqual(all.map((c) => c.position), all.map((_, i) => i + 1));
+  h = await http('/api/v1/me/committees', null);
+  const cms = h.j.committees as { key: string; name: string; active: boolean; sortOrder: number; icon: string | null; coverUrl: string | null; hasClub: boolean; statusLabel: string }[];
+  assert.equal(cms.length, 2);
+  assert.equal(cms[0].key, ck, '有俱乐部的按俱乐部排序排前面');
+  assert.equal(cms[0].active, true);
+  assert.equal(cms[0].hasClub, true);
+  assert.equal(cms[1].active, false);
+  assert.equal(cms[1].statusLabel, '筹备中');
+  assert.ok(cms.every((c) => 'icon' in c && 'coverUrl' in c && typeof c.sortOrder === 'number'));
+  ok('GET /clubs 带 key、名字、sortOrder、position、icon、coverUrl、active、status；专委会接口带 active、sortOrder、icon、coverUrl、hasClub，按后台排序（没写死名字）');
+
   console.log(`\n全部通过：${passed} 项`);
 }
 
@@ -371,6 +424,11 @@ async function cleanup() {
   await pool.query(`DELETE FROM events WHERE slug = $1`, [`v150-${sfx}`]).catch(() => undefined);
   await pool.query(`DELETE FROM ugc_actions WHERE target_id IN (SELECT id::text FROM club_meetups WHERE club_id = ANY($1::uuid[])) OR target_id = ANY($2::text[])`, [made.clubs, ids]).catch(() => undefined);
   await pool.query(`DELETE FROM ugc_reports WHERE target_id IN (SELECT id::text FROM club_meetups WHERE club_id = ANY($1::uuid[]))`, [made.clubs]).catch(() => undefined);
+  if (made.settings.includes('committees')) {
+    // 测完把专委会设置还原成测前的样子
+    if (prevCommittees === null) await pool.query(`DELETE FROM crm_settings WHERE key = 'committees'`).catch(() => undefined);
+    else await pool.query(`UPDATE crm_settings SET value = $1::jsonb WHERE key = 'committees'`, [prevCommittees]).catch(() => undefined);
+  }
   await pool.query(`DELETE FROM clubs WHERE id = ANY($1::uuid[])`, [made.clubs]).catch((e) => console.error('clean clubs', e.message));
   for (const id of ids) {
     await pool.query(`DELETE FROM contacts WHERE id = $1`, [id]).catch(() => pool.query(`UPDATE contacts SET name = $2 WHERE id = $1`, [id, `${P}待删`]).catch(() => undefined));

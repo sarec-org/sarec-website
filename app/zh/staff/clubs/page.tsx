@@ -15,7 +15,7 @@ import { findContactByNo, Lightbox, uploadForm, Toast } from '@/components/crm/s
 
 type Club = {
   id: string; key: string; name: string; intro: string | null; members_only: boolean; leader_contact_id: string | null; leader_name: string | null;
-  group_qr_url: string | null; group_qr_expires: string | null; sort_order: number; closed_at: string | null; members: number; open_meetups: number;
+  group_qr_url: string | null; group_qr_expires: string | null; sort_order: number; icon?: string | null; cover_url?: string | null; closed_at: string | null; members: number; open_meetups: number;
 };
 type Meetup = {
   id: string; title: string; starts_at: string; location: string | null; capacity: number; note: string | null; status: string; sec_status: string;
@@ -24,7 +24,7 @@ type Meetup = {
 type Ban = { contact_id: string; name: string | null; reason: string | null; banned_by: string; banned_at: string };
 type Action = { kind: string; target_id: string | null; action: string; actor: string; note: string | null; created_at: string };
 type Data = { clubs: Club[]; meetups: Meetup[]; bans: Ban[]; actions: Action[] };
-type Form = { editing: boolean; key: string; name: string; intro: string; membersOnly: boolean; sortOrder: string; leaderNo: string; dropLeader: boolean; leaderName: string | null };
+type Form = { editing: boolean; key: string; name: string; intro: string; membersOnly: boolean; sortOrder: string; icon: string; leaderNo: string; dropLeader: boolean; leaderName: string | null };
 
 const ACTION_TEXT: Record<string, string> = {
   save: '保存了俱乐部', close_club: '关闭了俱乐部', reopen_club: '重新打开了俱乐部', set_qr: '换了群二维码', take_down: '下架了组局', restore: '恢复了组局',
@@ -42,7 +42,7 @@ function qrState(c: Club): { text: string; bad: boolean } {
   if (days <= 3) return { text: `快过期了：${d}（还剩 ${days} 天），请换新的`, bad: true };
   return { text: `${d} 过期`, bad: false };
 }
-const blankForm = (): Form => ({ editing: false, key: '', name: '', intro: '', membersOnly: false, sortOrder: '0', leaderNo: '', dropLeader: false, leaderName: null });
+const blankForm = (): Form => ({ editing: false, key: '', name: '', intro: '', membersOnly: false, sortOrder: '0', icon: '', leaderNo: '', dropLeader: false, leaderName: null });
 const plus7 = () => new Date(Date.now() + 7 * 86400e3).toLocaleDateString('en-CA');
 
 function Clubs() {
@@ -77,7 +77,7 @@ function Clubs() {
   async function saveClub() {
     if (!f) return;
     if (!f.key.trim() || !f.name.trim()) return setMsg({ ok: false, text: '请填英文短名和名字' });
-    const body: Record<string, unknown> = { action: 'save_club', key: f.key, name: f.name, intro: f.intro, membersOnly: f.membersOnly, sortOrder: Number(f.sortOrder) || 0 };
+    const body: Record<string, unknown> = { action: 'save_club', key: f.key, name: f.name, intro: f.intro, membersOnly: f.membersOnly, sortOrder: Number(f.sortOrder) || 0, icon: f.icon };
     // 负责人：填了会员号就换；勾了「去掉负责人」就清空；都没有就不动
     if (f.leaderNo) body.leaderMemberNo = f.leaderNo;
     else if (f.dropLeader) body.leaderMemberNo = '';
@@ -90,6 +90,17 @@ function Clubs() {
     fd.append('key', c.key);
     fd.append('expires', qrExp[c.key] || plus7());
     const r = await uploadForm<{ message: string }>('/api/v1/staff/clubs/qr', fd);
+    setBusy('');
+    setMsg(r.ok ? { ok: true, text: `「${c.name}」${r.data.message}` } : { ok: false, text: r.message });
+    if (r.ok) load();
+  }
+  // 1.5.0 体验1：首页「专委会与俱乐部」方块的封面
+  async function uploadCover(c: Club, file: File) {
+    setBusy('cover' + c.key);
+    const fd = new FormData();
+    fd.append('file', await shrink(file, 1600), 'cover.jpg');
+    fd.append('key', c.key);
+    const r = await uploadForm<{ message: string }>('/api/v1/staff/clubs/cover', fd);
     setBusy('');
     setMsg(r.ok ? { ok: true, text: `「${c.name}」${r.data.message}` } : { ok: false, text: r.message });
     if (r.ok) load();
@@ -140,7 +151,7 @@ function Clubs() {
               {c.members_only && <span className={styles.badge}>仅会员</span>}
               {c.closed_at && <span className={`${styles.badge} ${styles.badgeMuted}`}>已关闭</span>}
             </p>
-            <p className={styles.small} style={{ margin: 0 }}>英文短名 {c.key} · 排序 {c.sort_order} · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
+            <p className={styles.small} style={{ margin: 0 }}>{c.icon ? `${c.icon} · ` : ''}英文短名 {c.key} · 排序 {c.sort_order}（小程序首页方块按这个排，数字小的在前） · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
             {c.intro && <p style={{ margin: '0.3rem 0' }}>{c.intro}</p>}
             {!c.closed_at && (
               <div style={{ borderTop: '1px solid var(--line-2)', marginTop: 8, paddingTop: 8 }}>
@@ -162,8 +173,18 @@ function Clubs() {
                 <p className={styles.small} style={{ margin: '4px 0 0' }}>微信群二维码一般 7 天过期；到期前 3 天这里会标红，成员页也会提示“已提醒负责人更换”。</p>
               </div>
             )}
+            <div className={styles.inputRow} style={{ alignItems: 'center', marginTop: 8 }}>
+              {c.cover_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.cover_url} alt={`${c.name} 封面`} style={{ width: 120, height: 68, objectFit: 'cover', borderRadius: 4 }} />
+              )}
+              <label className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`}>
+                {busy === 'cover' + c.key ? '正在传…' : c.cover_url ? '换封面' : '上传封面（小程序首页方块用，可不传）'}
+                <input type="file" accept="image/*" hidden disabled={!!busy} onChange={(e) => { const x = e.target.files?.[0]; if (x) uploadCover(c, x); e.target.value = ''; }} />
+              </label>
+            </div>
             <div className={styles.btnRow} style={{ marginTop: 10 }}>
-              <button className={`${styles.btn} ${styles.btnSmall}`} onClick={() => { setMsg(null); setF({ editing: true, key: c.key, name: c.name, intro: c.intro ?? '', membersOnly: c.members_only, sortOrder: String(c.sort_order), leaderNo: '', dropLeader: false, leaderName: c.leader_name }); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>编辑</button>
+              <button className={`${styles.btn} ${styles.btnSmall}`} onClick={() => { setMsg(null); setF({ editing: true, key: c.key, name: c.name, intro: c.intro ?? '', membersOnly: c.members_only, sortOrder: String(c.sort_order), icon: c.icon ?? '', leaderNo: '', dropLeader: false, leaderName: c.leader_name }); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>编辑</button>
               {c.closed_at
                 ? <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'reopen_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>重新打开</button>
                 : <button className={`${styles.btn} ${styles.btnDanger} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'close_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>关闭俱乐部</button>}
@@ -193,8 +214,12 @@ function Clubs() {
             仅会员能加入（不勾 = 注册用户都能加入）
           </label>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="cl-sort">排序（数字小的排前面）</label>
+            <label className={styles.label} htmlFor="cl-sort">排序（数字小的排前面；小程序首页「专委会与俱乐部」方块也按这个排）</label>
             <input id="cl-sort" className={styles.input} inputMode="numeric" value={f.sortOrder} onChange={(e) => setF({ ...f, sortOrder: e.target.value.replace(/[^\d-]/g, '') })} />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="cl-icon">方块图标（一个表情或 1–2 个字，例如 🃏；不填 = 小程序用名字第一个字）</label>
+            <input id="cl-icon" className={styles.input} value={f.icon} maxLength={8} placeholder="🃏" onChange={(e) => setF({ ...f, icon: e.target.value })} />
           </div>
           <div className={styles.field}>
             <label className={styles.label} htmlFor="cl-leader">负责人会员号（负责人可以在小程序里换群二维码、下架组局、移出成员）</label>

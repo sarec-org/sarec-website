@@ -195,7 +195,18 @@ export async function committees(contactId: string | null) {
     ? (await pool.query<{ committee: string; needs_fill: boolean }>(`SELECT committee, needs_fill FROM committee_interests WHERE contact_id = $1`, [contactId])).rows
     : [];
   const mine = new Map(mineRows.map((r) => [r.committee, r.needs_fill]));
-  return list.map((c) => ({ ...c, statusLabel: c.status === 'active' ? '已成立' : '筹备中', interested: mine.has(c.key), needsFill: mine.get(c.key) === true }));
+  // 1.5.0 体验1：首页方块要的顺序、图标、封面——同 key 的俱乐部在后台「俱乐部」页设（排序数字小的在前）；没有对应俱乐部的排在后面、按设置里的顺序
+  const { clubTileMap } = await import('./clubs');
+  const tiles = await clubTileMap();
+  return list
+    .map((c, i) => {
+      const t = tiles.get(c.key);
+      return {
+        ...c, statusLabel: c.status === 'active' ? '已成立' : '筹备中', interested: mine.has(c.key), needsFill: mine.get(c.key) === true,
+        active: c.status === 'active', sortOrder: t ? t.sortOrder : 10000 + i, icon: t?.icon ?? null, coverUrl: t?.coverUrl ?? null, hasClub: !!t?.open
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 /** 本人档案里有没有真实姓名和手机号（表达意向要用） */

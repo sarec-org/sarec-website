@@ -44,6 +44,20 @@ export async function ensureClubsSeeded() {
   }
 }
 
+/** 专委会状态（后台设置「专委会状态」里的 已成立 / 筹备中），按 key */
+async function committeeStatusMap(): Promise<Map<string, string>> {
+  const list = await getSetting<{ key: string; status: string }[]>(getPool(), 'committees', []).catch(() => [] as { key: string; status: string }[]);
+  return new Map((Array.isArray(list) ? list : []).map((c) => [c.key, c.status === 'preparing' ? 'preparing' : 'active']));
+}
+
+/** 首页方块：每个俱乐部的排序、图标、封面（按 key），给专委会接口用 */
+export async function clubTileMap(): Promise<Map<string, { sortOrder: number; icon: string | null; coverUrl: string | null; open: boolean }>> {
+  const { rows } = await getPool()
+    .query<{ key: string; sort_order: number; icon: string | null; cover_url: string | null; closed_at: Date | null }>(`SELECT key, sort_order, icon, cover_url, closed_at FROM clubs`)
+    .catch(() => ({ rows: [] as { key: string; sort_order: number; icon: string | null; cover_url: string | null; closed_at: Date | null }[] }));
+  return new Map(rows.map((r) => [r.key, { sortOrder: r.sort_order, icon: r.icon, coverUrl: r.cover_url, open: !r.closed_at }]));
+}
+
 async function clubByKey(key: string): Promise<Club> {
   const { rows } = await getPool().query<Club>(`SELECT *, to_char(group_qr_expires, 'YYYY-MM-DD') AS group_qr_expires FROM clubs WHERE key = $1`, [key]);
   if (!rows[0] || rows[0].closed_at) throw new CrmError('not_found', '这个俱乐部不存在或已经关闭了');
@@ -77,8 +91,13 @@ export async function listClubs(contactId: string | null) {
        FROM clubs c WHERE c.closed_at IS NULL ORDER BY c.sort_order, c.created_at`,
     [contactId]
   );
-  return rows.map((c) => ({
+  // 1.5.0 体验1：首页「专委会与俱乐部」方块要的——顺序（后台「俱乐部」页的排序，数字小的在前）、图标、封面、是不是已成立
+  const statusOf = await committeeStatusMap();
+  return rows.map((c, i) => ({
     key: c.key, name: c.name, intro: c.intro, membersOnly: c.members_only, members: c.members, joined: c.mine,
+    sortOrder: c.sort_order, position: i + 1,
+    icon: (c as Club & { icon?: string | null }).icon ?? null, coverUrl: (c as Club & { cover_url?: string | null }).cover_url ?? null,
+    active: true, status: statusOf.get(c.key) ?? 'active', statusLabel: (statusOf.get(c.key) ?? 'active') === 'preparing' ? '筹备中' : '已成立',
     // 以前表达过意向、还没加入：提示“点一下加入”（不自动算加入）
     hint: !c.mine && c.interested ? '您之前表达过意向，点一下「加入」就行' : null
   }));
@@ -269,6 +288,14 @@ export async function leaderRemoveMember(contactId: string, key: string, memberI
 }
 
 /** 负责人上传群二维码（后台也能传） */
+/** 后台上传首页方块 / 详情页封面 */
+export async function setClubCover(actor: string, key: string, url: string) {
+  const { rowCount } = await getPool().query(`UPDATE clubs SET cover_url = $2, updated_at = now() WHERE key = $1`, [key, url]);
+  if (!rowCount) throw new CrmError('not_found', '找不到这个俱乐部');
+  await log(actor, 'club', key, 'set_cover', null);
+  return { message: '封面已换好', url };
+}
+
 export async function setGroupQr(actor: string, key: string, url: string, expires: string | null, contactId?: string) {
   const c = await clubByKey(key);
   if (contactId && c.leader_contact_id !== contactId) throw new CrmError('forbidden', '只有负责人能换群二维码');
@@ -323,6 +350,12 @@ export async function staffClubAction(s: Staff, b: Record<string, unknown>) {
          leader_contact_id = CASE WHEN $7 THEN EXCLUDED.leader_contact_id ELSE clubs.leader_contact_id END, updated_at = now()`,
       [key, name, String(b.intro ?? '').trim().slice(0, 200) || null, b.membersOnly === true, Math.floor(Number(b.sortOrder) || 0), leader ?? null, leader !== undefined]
     );
+    // 1.5.0 体验1：首页方块的图标（一个表情或 1–2 个字）；不传 = 不改，传空 = 清掉
+    if (typeof b.icon === 'string') {
+      const icon = Array.from(b.icon.trim()).slice(0, 2).join('') || null;
+      await pool.query(`UPDATE clubs SET icon = $2 WHERE key = $1`, [key, icon]);
+    }
+    if (b.clearCover === true) await pool.query(`UPDATE clubs SET cover_url = NULL WHERE key = $1`, [key]);
     await log(actor, 'club', key, 'save', name);
     return { message: `已保存「${name}」` };
   }

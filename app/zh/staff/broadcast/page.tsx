@@ -52,6 +52,8 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
 
   // 第一步
   const [conds, setConds] = useState<Cond[]>([]);
+  // 安全：一个条件都不加 = 所有人；必须勾「发给全体」并在发预览前再确认一次人数
+  const [sendAll, setSendAll] = useState(false);
   const [excluded, setExcluded] = useState<{ id: string; name: string }[]>([]);
   const [aud, setAud] = useState<Aud | null>(null);
   const [audBusy, setAudBusy] = useState(false);
@@ -105,10 +107,12 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
   }, [estKey]);
 
   const content = { sms, emailSubject: subject, emailBody, wechat };
-  const sig = JSON.stringify({ filters, exIds, channels: [...channels].sort(), content });
+  const noConds = filters.conds.length === 0;
+  const sig = JSON.stringify({ filters, exIds, channels: [...channels].sort(), content, all: noConds && sendAll });
   const previewed = !!bid && bid.sig === sig && !!previewMsg;
 
   const missing: string[] = [];
+  if (noConds && !sendAll) missing.push('第一步至少选一个条件（真要发给全体，勾选「发给全体」）');
   if (!aud || aud.total === 0) missing.push('第一步还没选到人');
   if (!channels.length) missing.push('第二步至少选一个渠道');
   if (smsOn && !sms.trim()) missing.push('短信内容没写');
@@ -149,7 +153,11 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
       if (smsOn) c.sms = sms;
       if (channels.includes('email')) { c.emailSubject = subject; c.emailBody = emailBody; }
       if (channels.includes('wechat')) c.wechat = wechat;
-      const r = await api<{ id: string; total: number }>('/api/v1/staff/broadcast', { body: { action: 'create', filters, excluded: exIds, channels, content: c } });
+      if (noConds) {
+        if (!sendAll) { setBusy(''); return setMsg({ ok: false, text: '至少选一个条件；真要发给全体，请勾选「发给全体」' }); }
+        if (!window.confirm(`没有设任何条件，这次会发给全体 ${aud ? aud.total : '?'} 人。确定发给全体吗？`)) { setBusy(''); return; }
+      }
+      const r = await api<{ id: string; total: number }>('/api/v1/staff/broadcast', { body: { action: 'create', filters, excluded: exIds, channels, content: c, ...(noConds ? { audience: 'all' } : {}) } });
       if (!r.ok) { setBusy(''); return setMsg({ ok: false, text: r.message }); }
       id = r.data.id;
     }
@@ -201,7 +209,7 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
       {/* 第一步 */}
       <section className={`${styles.card} ${styles.cardGold}`}>
         <p className={styles.cardTitle}>第一步 · 选人</p>
-        <p className={styles.small} style={{ marginTop: 0 }}><strong>条件之间是“并且”</strong>（都要满足），<strong>同一条件里多选是“或者”</strong>（满足其一）。一个条件都不加 = 所有人。</p>
+        <p className={styles.small} style={{ marginTop: 0 }}><strong>条件之间是“并且”</strong>（都要满足），<strong>同一条件里多选是“或者”</strong>（满足其一）。一个条件都不加 = 所有人，要勾下面的「发给全体」才能发。</p>
 
         <div style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--ink-deepest, #020610)', padding: '0.6rem 0', borderBottom: '1px solid var(--line-2)', marginBottom: '0.8rem' }} aria-live="polite">
           <div style={{ fontSize: '1.35rem', fontFamily: 'var(--serif-zh)' }}>
@@ -255,6 +263,12 @@ function BroadcastDesk({ staff }: { staff: StaffInfo }) {
           );
         })}
         <button className={`${styles.btn} ${styles.btnGhost}`} disabled={used.size >= catalog.length} onClick={() => setConds([...conds, { field: '', values: [] }])}>＋ 加一个条件</button>
+        {noConds && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: '0.8rem', minHeight: 44 }}>
+            <input type="checkbox" checked={sendAll} onChange={(e) => setSendAll(e.target.checked)} style={{ width: 22, height: 22 }} />
+            <span>发给全体（没有设条件，选中的 {aud ? aud.total : '…'} 人都会收到；发预览前还会再确认一次）</span>
+          </label>
+        )}
 
         <div style={{ marginTop: '1rem' }}>
           <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setShowList(!showList)} aria-expanded={showList}>{showList ? '收起名单' : `展开名单（${aud ? Math.min(aud.list.length, aud.total) : 0} 人${aud && aud.total > aud.list.length ? `，只列前 ${aud.list.length}` : ''}）`}</button>
