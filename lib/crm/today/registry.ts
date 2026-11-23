@@ -5,6 +5,7 @@ import { staffCan, type Staff } from '@/lib/crm/auth';
 import { laToday } from '@/lib/laDate';
 import { B_PROVIDERS } from './providers/b';
 import { C_LIVE_PROVIDERS, C_PROVIDERS } from './providers/c';
+import { V150_PROVIDERS } from './providers/v150';
 import type { TodayContext, TodayItem, TodayKind, TodayLive, TodayLiveProvider, TodayProvider } from './types';
 
 export const KIND_NAME: Record<TodayKind, string> = {
@@ -18,11 +19,14 @@ export const KIND_NAME: Record<TodayKind, string> = {
   media_review: '照片和名片待审',
   dup_confirm: '重复档案待确认',
   complaint: '投诉',
-  exception: '失败和异常'
+  exception: '失败和异常',
+  ugc_report: '被举报的内容',
+  ugc_machine: '机器拦下的内容',
+  profile_review: '个人主页待看一眼'
 };
 
 export function allProviders(): TodayProvider[] {
-  return [...B_PROVIDERS, ...C_PROVIDERS];
+  return [...B_PROVIDERS, ...C_PROVIDERS, ...V150_PROVIDERS];
 }
 export function allLiveProviders(): TodayLiveProvider[] {
   return [...C_LIVE_PROVIDERS];

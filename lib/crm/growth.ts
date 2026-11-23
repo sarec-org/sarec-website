@@ -161,17 +161,41 @@ function evCard(e: EvRow) {
 export async function homeData(contactId: string | null, opts: { base: string; withQr?: boolean }) {
   const pool = getPool();
   const now = new Date();
-  const { rows: upcoming } = await pool.query<EvRow>(
+  // 指令 25 性能：下面这些互不依赖，同时查（以前一句等一句；返回内容完全一样）
+  type Mine = EvRow & { reg_id: string; reg_status: string; arrival_status: string };
+  const [{ rows: upcoming }, { rows: past }, c, ms, mine, albums0, recapDays, wechatQr, channelsId] = await Promise.all([
+    pool.query<EvRow>(
     `SELECT e.*, (SELECT count(*)::int FROM registrations r WHERE r.event_id = e.id AND r.status = 'registered') AS registered
        FROM events e WHERE e.is_listed AND e.event_status = 'scheduled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now()
       ORDER BY e.starts_at ASC LIMIT 6`
-  );
-  const { rows: past } = await pool.query<EvRow & { photo_count: number }>(
+    ),
+    pool.query<EvRow & { photo_count: number }>(
     `SELECT e.*, 0 AS registered,
             (SELECT count(*)::int FROM event_photos p WHERE p.event_id = e.id AND NOT p.is_hidden AND p.visibility = 'album' AND p.review_status = 'ok' AND p.variant_of IS NULL) AS photo_count
        FROM events e WHERE e.is_listed AND e.event_status <> 'cancelled' AND coalesce(e.ends_at, e.starts_at + interval '3 hours') <= now()
       ORDER BY e.starts_at DESC LIMIT 1`
-  );
+    ),
+    contactId
+      ? pool.query<{ name: string; member_no: number; avatar_url: string | null }>(`SELECT name, member_no::int AS member_no, avatar_url FROM contacts WHERE id = $1`, [contactId]).then((r) => r.rows)
+      : Promise.resolve([] as { name: string; member_no: number; avatar_url: string | null }[]),
+    contactId ? memberStatus(pool, contactId) : Promise.resolve(null),
+    // 我的报名（未取消）：最近一场还没结束的；没有的话看最近 7 天内结束的
+    contactId
+      ? pool.query<Mine>(
+      `SELECT e.*, r.id AS reg_id, r.status AS reg_status, r.arrival_status,
+              (SELECT count(*)::int FROM registrations x WHERE x.event_id = e.id AND x.status = 'registered') AS registered
+         FROM registrations r JOIN events e ON e.id = r.event_id
+        WHERE r.contact_id = $1 AND r.status <> 'cancelled' AND e.event_status <> 'cancelled'
+          AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() - interval '7 days'
+        ORDER BY (coalesce(e.ends_at, e.starts_at + interval '3 hours') > now()) DESC, e.starts_at ASC LIMIT 1`,
+      [contactId]
+        ).then((r) => r.rows)
+      : Promise.resolve([] as Mine[]),
+    contactId ? unseenAlbums(contactId) : Promise.resolve([] as unknown[]),
+    getSetting<number>(pool, 'home_recap_days', 7).then((v) => Number(v)),
+    import('@/lib/wecom').then((w) => w.wechatQrFor('home', contactId)).then((q) => q?.url ?? null),
+    getSetting<string>(pool, 'channels_finder_id', '').then((v) => v || null)
+  ]);
   let lastEvent = null as null | Record<string, unknown>;
   if (past[0]) {
     const { rows: photos } = await pool.query<{ thumb_url: string; url: string }>(
@@ -193,12 +217,7 @@ export async function homeData(contactId: string | null, opts: { base: string; w
   let me = null as null | Record<string, unknown>;
   let status: Record<string, unknown> = { phase: 'none' as HomePhase, event: upcoming[0] ? evCard(upcoming[0]) : null };
   let albums: unknown[] = [];
-  if (contactId) {
-    const { rows: c } = await pool.query<{ name: string; member_no: number; avatar_url: string | null }>(
-      `SELECT name, member_no::int AS member_no, avatar_url FROM contacts WHERE id = $1`,
-      [contactId]
-    );
-    const ms = await memberStatus(pool, contactId);
+  if (contactId && ms) {
     me = {
       name: c[0]?.name && c[0].name !== '微信用户' ? c[0].name : null,
       memberNo: c[0]?.member_no ?? null,
@@ -206,16 +225,6 @@ export async function homeData(contactId: string | null, opts: { base: string; w
       isMember: ms.isMember,
       tierName: ms.isMember ? ms.tierName : null
     };
-    // 我的报名（未取消）：最近一场还没结束的；没有的话看最近 7 天内结束的
-    const { rows: mine } = await pool.query<EvRow & { reg_id: string; reg_status: string; arrival_status: string }>(
-      `SELECT e.*, r.id AS reg_id, r.status AS reg_status, r.arrival_status,
-              (SELECT count(*)::int FROM registrations x WHERE x.event_id = e.id AND x.status = 'registered') AS registered
-         FROM registrations r JOIN events e ON e.id = r.event_id
-        WHERE r.contact_id = $1 AND r.status <> 'cancelled' AND e.event_status <> 'cancelled'
-          AND coalesce(e.ends_at, e.starts_at + interval '3 hours') > now() - interval '7 days'
-        ORDER BY (coalesce(e.ends_at, e.starts_at + interval '3 hours') > now()) DESC, e.starts_at ASC LIMIT 1`,
-      [contactId]
-    );
     const m0 = mine[0];
     // 1.2 线上问题 P-2/P-4：我报的那场已结束、但有未结束的活动时，首页大卡片和“邀请好友”都指向最近一场未结束的活动
     const m0Over = m0 ? (m0.ends_at ?? new Date(new Date(m0.starts_at).getTime() + 3 * 3600_000)).getTime() <= now.getTime() || m0.event_status === 'completed' : false;
@@ -233,11 +242,10 @@ export async function homeData(contactId: string | null, opts: { base: string; w
         albumPublished: !!m.album_published_at
       };
     }
-    albums = await unseenAlbums(contactId);
+    albums = albums0;
   }
 
   // 1.3 P-4：首页最上面的大卡片——有未结束的活动 → 最近一场；没有、上一场结束不到 N 天 → 上一场回顾；都没有 → 品牌大图
-  const recapDays = Number(await getSetting<number>(pool, 'home_recap_days', 7));
   const lastEnd = past[0] ? (past[0].ends_at ?? new Date(new Date(past[0].starts_at).getTime() + 3 * 3600_000)) : null;
   const st0 = status as { phase?: string; event?: unknown };
   const homeCard = upcoming.length || (st0.phase && st0.phase !== 'none' && st0.phase !== 'ended')
@@ -255,7 +263,7 @@ export async function homeData(contactId: string | null, opts: { base: string; w
     upcoming: upcoming.map(evCard),
     lastEvent: recapFresh ? lastEvent : null,
     albums,
-    wechatQr: (await (await import('@/lib/wecom')).wechatQrFor('home', contactId))?.url ?? null,
-    channelsId: (await getSetting<string>(pool, 'channels_finder_id', '')) || null
+    wechatQr,
+    channelsId
   };
 }

@@ -459,8 +459,8 @@ export async function contactPro(id: string, v: Viewer, ipHash: string | null, l
 }
 
 export async function addSubscription(contactId: string, accepted: unknown): Promise<{ saved: boolean; quota: number }> {
-  const { jobsTemplate } = await import('./notify');
-  const t = jobsTemplate();
+  const { loadJobsTemplate } = await import('./notify');
+  const t = await loadJobsTemplate();
   const list = Array.isArray(accepted) ? accepted.filter((x): x is string => typeof x === 'string') : [];
   if (!t || !(list.includes('jobs') || list.includes(t.id))) return { saved: false, quota: 0 };
   const { rows } = await getPool().query<{ wx_quota: number }>(

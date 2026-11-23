@@ -195,7 +195,18 @@ export async function committees(contactId: string | null) {
     ? (await pool.query<{ committee: string; needs_fill: boolean }>(`SELECT committee, needs_fill FROM committee_interests WHERE contact_id = $1`, [contactId])).rows
     : [];
   const mine = new Map(mineRows.map((r) => [r.committee, r.needs_fill]));
-  return list.map((c) => ({ ...c, statusLabel: c.status === 'active' ? '已成立' : '筹备中', interested: mine.has(c.key), needsFill: mine.get(c.key) === true }));
+  // 1.5.0 体验1：首页方块要的顺序、图标、封面——同 key 的俱乐部在后台「俱乐部」页设（排序数字小的在前）；没有对应俱乐部的排在后面、按设置里的顺序
+  const { clubTileMap } = await import('./clubs');
+  const tiles = await clubTileMap();
+  return list
+    .map((c, i) => {
+      const t = tiles.get(c.key);
+      return {
+        ...c, statusLabel: c.status === 'active' ? '已成立' : '筹备中', interested: mine.has(c.key), needsFill: mine.get(c.key) === true,
+        active: c.status === 'active', sortOrder: t ? t.sortOrder : 10000 + i, icon: t?.icon ?? null, coverUrl: t?.coverUrl ?? null, hasClub: !!t?.open
+      };
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
 /** 本人档案里有没有真实姓名和手机号（表达意向要用） */
@@ -211,6 +222,33 @@ export async function committeeProfile(contactId: string | null): Promise<{ name
   );
   const r = rows[0];
   return { name: r?.name ?? null, phone: r?.phone ?? null, needsFill: !!r?.pending };
+}
+
+/**
+ * 1.5.0 体验1（第三部分 5）：俱乐部"加入"和专委会意向同一条规矩——必须已有姓名和手机号。
+ * 档案里没有的，请求里带 name / phone 补上（补进档案：还是“微信用户”的改成真实姓名；手机号记成当前联系方式，未验证）；
+ * 还是缺 → 错误码 need_name_phone，message 说缺什么（what = "加入俱乐部"）。
+ */
+export async function requireNamePhone(contactId: string, fill: { name?: unknown; phone?: unknown }, what: string): Promise<{ name: string; phone: string }> {
+  const pool = getPool();
+  const prof = await committeeProfile(contactId);
+  const inName = typeof fill.name === 'string' ? fill.name.trim().slice(0, 60) : '';
+  const rawPhone = typeof fill.phone === 'string' ? fill.phone.trim() : '';
+  const { normalizePhone } = await import('./events');
+  const inPhone = rawPhone ? normalizePhone(rawPhone) ?? normalizePhone(rawPhone, '+86') : null;
+  if (rawPhone && !inPhone) throw new CrmError('bad_phone', '手机号格式不对：美国号码 10 位，中国号码 11 位');
+  const name = inName && inName !== '微信用户' ? inName : prof.name;
+  const phone = inPhone ?? prof.phone;
+  if (!name || !phone) {
+    const miss = [name ? '' : '姓名', phone ? '' : '手机号'].filter(Boolean).join('和');
+    throw new CrmError('need_name_phone', `${what}需要留${miss}，方便负责人联系您`);
+  }
+  if (inName && !prof.name) await pool.query(`UPDATE contacts SET name = $2, updated_at = now() WHERE id = $1 AND (name IS NULL OR trim(name) = '' OR name = '微信用户')`, [contactId, inName]);
+  if (inPhone && !prof.phone) {
+    const { setMethod } = await import('./contactInfo');
+    await setMethod(pool, contactId, 'phone', inPhone, 'committee');
+  }
+  return { name, phone };
 }
 
 /**

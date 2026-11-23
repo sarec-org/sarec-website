@@ -327,5 +327,7 @@ export async function recentNotices(viewerKey: string, isAdmin: boolean, limit =
       WHERE ($2::boolean OR n.staff_key = $1) ORDER BY n.created_at DESC LIMIT $3`,
     [viewerKey, isAdmin, limit]
   );
-  return rows.map((r) => ({ ...r, category_label: CATEGORY_LABEL[r.category as NotifyCategory] ?? '合并提示' }));
+  const { mpPathForHref } = await import('./today/mp');
+  // 1.5.0 体验1（第三部分 8）：mpPath = 小程序工作台里对应那一条（收款相关的为 null，只在网站办）
+  return rows.map((r) => ({ ...r, category_label: CATEGORY_LABEL[r.category as NotifyCategory] ?? '合并提示', mpPath: mpPathForHref(r.href, r.category) }));
 }

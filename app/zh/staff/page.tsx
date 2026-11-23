@@ -56,7 +56,12 @@ const DESC: Record<string, string> = {
   '/zh/staff/jobs/invite': '按行业标签筛现有会员，先预览再确认，发"来登记接活"的邀请（默认演练）',
   '/zh/staff/jobs/proxy': '替师傅代登记接活儿资料：一个一个填，或从 Excel / 微信表格整张贴进来，先预览再写入；本人收到确认链接（总闸关着时只记录不发）',
   '/zh/staff/committees': '专委会和俱乐部的意向名单：真实姓名、手机、邮箱；没留姓名手机号的标“待补填”',
-  '/zh/staff/notify': '每人选自己收哪几类通知、走短信 / 企业微信 / 邮件；最近的通知和“本该发什么”的记录'
+  '/zh/staff/notify': '每人选自己收哪几类通知、走短信 / 企业微信 / 邮件；最近的通知和“本该发什么”的记录',
+  // 1.5.0 新页面
+  '/zh/staff/clubs': '俱乐部：新建 / 编辑 / 关闭、指定负责人、上传群二维码（快过期标红）；组局放行 / 下架 / 恢复；禁止名单；操作记录',
+  '/zh/staff/broadcast': '按条件选人（实时人数、各渠道能发到几个）→ 写内容（短信 / 邮件 / 微信服务通知）→ 先发东哥预览 → 管理员确认（受「手机通知」总闸管，关着只记录不发）；页面下面也能按期发「邮件通讯」',
+  '/zh/staff/content': '用户发的组局、个人主页、项目、名片、照片发了就公开：这里看被举报的、机器拦下的、已下架的，可下架、恢复、禁止此人',
+  '/zh/staff/showcase': '副会长单位、战略合作方：标志、简介、项目图文、联系人、排序、下架；小程序首页入口开关'
 };
 /** 不是单独页面、但常用的卡片（挪进「设置」后仍留一张直达卡） */
 const EXTRA: { href: string; title: string; desc: string; role: string; group: NavGroup; after: string }[] = [
@@ -115,6 +120,13 @@ function Today({ ops }: { ops: boolean }) {
   const y = d.yesterday;
   return (
     <>
+      {d.mpBind && !d.mpBind.bound && (
+        // 1.5.0 体验1（第三部分 2）：还没绑定手机工作台的，顶上提示去绑（出码 → 用自己的微信扫一下就好）
+        <div className={styles.notice} role="note" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+          <span>您还没绑定手机工作台。绑好后在小程序「我的 → 工作台」随时能看这一列待办，不用等短信。</span>
+          <Link href={d.mpBind.bindHref} className={styles.btn}>去绑定（扫一下就好）</Link>
+        </div>
+      )}
       {d.live.map((l) => (
         <section key={l.eventId} className={styles.card} style={{ borderColor: 'var(--gold)' }} aria-label="今天现场">
           <p className={styles.cardTitle}>今天现场：{l.title}</p>

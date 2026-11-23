@@ -3,7 +3,7 @@ export type Side = 'find' | 'work' | 'none';
 
 export type Group = { key: string; name: string; order: number; tradeKeys?: string[]; hasPros?: boolean };
 export type Trade = { key: string; name: string; group: string; licType: 'A' | 'B' | 'C'; open: boolean; hasPros: boolean; noPost: boolean; noNotify: boolean; icon?: string | null; scope?: string | null };
-export type HomeEntry = { label: string; icon?: string | null; target: { type: 'trade' | 'group'; key: string }; pinned?: boolean; hasPros?: boolean };
+export type HomeEntry = { label: string; icon?: string | null; target: { type: 'trade' | 'group'; key: string }; pinned?: boolean; hasPros?: boolean; showOn?: ('find' | 'work')[] };
 export type ProRole = 'company' | 'licensed' | 'pro_service' | 'worker';
 export type PosterRole = 'owner' | 'landlord' | 'property' | 'developer' | 'crew';
 export type Timing = 'asap' | 'week' | 'month' | 'flexible';
@@ -22,7 +22,10 @@ export type Meta = {
   staffPreviewText: string | null;
   groups: Group[];
   trades: Trade[];
+  /** 找工人一侧的首页入口（指令 29：家政保洁不在这里） */
   homeEntries: HomeEntry[];
+  /** 接活儿一侧的首页入口（指令 29：家政保洁第一）；老服务器没有 */
+  workEntries?: HomeEntry[];
   /** D11 冷启动：有没有任何开放工种已经有核验通过的人；没有时首页换成招募说明 */
   anyPros?: boolean;
   recruitingText?: string;

@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { api } from '@/components/crm/client';
 
@@ -10,12 +10,34 @@ import { api } from '@/components/crm/client';
  * 放在问候语下面；给同事开通去「团队」页每人一行「出码」。
  */
 export function MpBind({ admin }: { admin: boolean }) {
-  const [b, setB] = useState<{ code: string; qr: string | null; expiresAt: string } | null>(null);
+  const [b, setB] = useState<{ code: string; qr: string | null; qrPlain?: string | null; expiresAt: string } | null>(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  // 1.5.0 体验1（第三部分 2）：现在绑没绑；出码后每 3 秒问一次，扫完自动显示"已绑定好"
+  const [bound, setBound] = useState<{ bound: boolean; boundAt: string | null } | null>(null);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    api<{ bound: boolean; boundAt: string | null }>('/api/v1/staff/mp-bind').then((r) => { if (r.ok) setBound(r.data); });
+  }, []);
+  useEffect(() => {
+    if (!b || done) return;
+    const until = new Date(b.expiresAt).getTime();
+    const t = setInterval(async () => {
+      if (Date.now() > until) { clearInterval(t); return; }
+      const r = await api<{ bound: boolean; boundAt: string | null; used?: boolean }>(`/api/v1/staff/mp-bind?code=${encodeURIComponent(b.code)}`);
+      if (r.ok && r.data.used) { setDone(true); setBound({ bound: true, boundAt: r.data.boundAt }); clearInterval(t); }
+    }, 3000);
+    return () => clearInterval(t);
+  }, [b, done]);
   return (
     <div className={styles.card}>
       <p className={styles.cardTitle}>在手机上管：小程序工作台</p>
+      {bound && (
+        <p className={bound.bound ? styles.success : styles.notice} style={{ marginTop: 0 }}>
+          {bound.bound ? `已绑定${bound.boundAt ? `（${new Date(bound.boundAt).toLocaleDateString('zh-CN')}）` : ''}：在小程序「我的 → 工作台」就能打开。换手机或换微信再出一次码扫一下就行。` : '您还没绑定。点下面「生成我的绑定码」，用自己的微信扫一下就好。'}
+        </p>
+      )}
+      {done && <p className={styles.success}>已绑定好了。打开小程序「我的 → 工作台」就能看到「今天」要办的事。</p>}
       <p className={styles.small} style={{ marginTop: 0 }}>
         用您自己的微信扫一下下面的码，就能在商会小程序「我的」里打开工作台：拍照传相册、看实时报名签到、现场代签到、待办和筹备清单。收款和会费只在这个网站后台看。
       </p>
@@ -43,12 +65,19 @@ export function MpBind({ admin }: { admin: boolean }) {
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {b.qr ? <img src={b.qr} alt="我的工作台绑定码" className={styles.qrImg} style={{ width: 200 }} /> : null}
+          {!b.qr && b.qrPlain ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={b.qrPlain} alt="我的工作台绑定码（在小程序里扫）" className={styles.qrImg} style={{ width: 200 }} />
+              <p className={styles.small}>打开小程序「我的」→「工作人员绑定码」→ 点「扫码绑定」扫上面这个码。</p>
+            </>
+          ) : null}
           <p className={b.qr ? styles.small : styles.notice}>
-            {b.qr ? '扫不了的：' : '小程序码这会儿生成不了。请'}打开小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里），输入 8 位码：
+            {b.qr ? '扫不了的：' : '也可以'}打开小程序「我的」→「工作人员绑定码」（旧版小程序在「我的 → 设置」里），输入 8 位码：
             <b className={styles.mono} style={{ fontSize: '1.3rem', letterSpacing: 3, marginLeft: 6 }}>{b.code}</b>
           </p>
           <p className={styles.small}>10 分钟内有效，只能用一次。过期了再点一次生成。</p>
-          <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setB(null)}>重新生成</button>
+          <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setB(null); setDone(false); }}>重新生成</button>
         </>
       )}
     </div>

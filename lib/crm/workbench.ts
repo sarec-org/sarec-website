@@ -18,6 +18,16 @@ export async function createBindCode(s: Staff): Promise<{ code: string; expiresA
   return { code, expiresAt };
 }
 
+/** 1.5.0 体验1：普通二维码的内容前缀（小程序里「扫码绑定」扫到 "sarec-bind:XXXXXXXX"） */
+export const BIND_QR_PREFIX = 'sarec-bind:';
+/** 8 位码 / 小程序码 scene "sb=XXXXXXXX" / 普通二维码 "sarec-bind:XXXXXXXX" / 带空格小写的，都认成 8 位码 */
+export function normalizeBindCode(raw: string): string {
+  let c = String(raw || '').trim();
+  try { c = decodeURIComponent(c); } catch { /* 原样 */ }
+  const m = /(?:sb=|sarec-bind:)\s*([A-Za-z0-9]{8})/i.exec(c);
+  return (m ? m[1] : c.replace(/\s+/g, '')).toUpperCase();
+}
+
 /** 小程序：用绑定码把当前微信账号绑到工作人员 */
 export async function claimBindCode(contactId: string, rawCode: string) {
   const code = String(rawCode || '').trim().toUpperCase();
@@ -34,7 +44,8 @@ export async function claimBindCode(contactId: string, rawCode: string) {
     await db.query(`UPDATE staff_roles SET mp_contact_id = NULL, mp_bound_at = NULL WHERE mp_contact_id = $1`, [contactId]);
     await db.query(`UPDATE staff_roles SET mp_contact_id = $2, mp_bound_at = now(), updated_at = now() WHERE email = $1`, [r.staff_email, contactId]);
     await db.query(`UPDATE staff_bind_codes SET used_at = now(), used_by = $2 WHERE code = $1`, [code, contactId]);
-    return { name: st[0].name };
+    const { rows: rr } = await db.query<{ roles: string[] }>(`SELECT roles FROM staff_roles WHERE email = $1`, [r.staff_email]);
+    return { name: st[0].name, roles: rr[0]?.roles ?? [] };
   });
 }
 

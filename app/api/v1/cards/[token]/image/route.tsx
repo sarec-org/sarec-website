@@ -63,8 +63,11 @@ export const GET = handler(async (req: Request, ctx: { params: { token: string }
   const sp = new URL(req.url).searchParams;
   try {
     const r = await cardImage(token, { tpl: sp.get('tpl'), own: sp.get('own') === '1', share: sp.get('fmt') === 'share', thumb: sp.get('thumb') === '1' });
+    // 指令 25 性能：1.5.0「我的名片」页的地址带按名片内容算的版本号（v=h…，内容一改就变），这种地址允许手机和 CDN 缓存一天
+    // （每次部署 CDN 会清空）；其它地址（旧版本、v=时间戳、v=0）照旧不缓存。
+    const cacheable = /^h[0-9a-z]{4,24}$/.test(sp.get('v') ?? '');
     return new Response(new Uint8Array(r.buf), {
-      headers: { 'Content-Type': r.type, 'Cache-Control': 'no-store', 'X-Card-Tpl': String(r.tpl), 'X-Card-Cache': r.cached ? 'hit' : 'miss', ...(r.fit && !r.fit.ok ? { 'X-Card-Fit': 'overflow' } : {}) }
+      headers: { 'Content-Type': r.type, 'Cache-Control': cacheable ? 'public, max-age=86400, s-maxage=86400' : 'no-store', 'X-Card-Tpl': String(r.tpl), 'X-Card-Cache': r.cached ? 'hit' : 'miss', ...(r.fit && !r.fit.ok ? { 'X-Card-Fit': 'overflow' } : {}) }
     });
   } catch (e) {
     if (e instanceof CrmError) throw e;

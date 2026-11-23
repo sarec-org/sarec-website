@@ -9,16 +9,20 @@ import {
   DISCLAIMER, LANGUAGES, POSTER_ROLES, PRO_ROLES, PROPERTY_TYPES, RULES, SITE_VISIT_TRADES, STAFF_PREVIEW_TEXT, STATUS_LABEL, TIMINGS,
   TURNOVER_TRADES, TRADE_SCOPE, RECRUITING_TEXT, TRADE_RECRUITING_TEXT, RECRUITING_LABEL, posterLabel, webBase, WEB_JOBS_PATH, type PostStatus
 } from './constants';
-import { deliver, isProduction, jobsTemplate } from './notify';
+import { deliver, isProduction, loadJobsTemplate } from './notify';
 import { getSwitches } from './settings';
 import { latestPosts } from './posts';
 import { proBrief } from './pros';
 import { groupCities, loadCities } from './cities';
-import { loadGroups, loadHomeEntries, loadTrades, tradeMap, tradesWithPros } from './trades';
+import { findSideEntries, loadGroups, loadHomeEntries, loadTrades, tradeMap, tradesWithPros, workSideEntries } from './trades';
 
 export async function buildMeta(v: Viewer) {
   const pool = getPool();
   const [groups, trades, entries, withPros, cityList] = await Promise.all([loadGroups(pool), loadTrades(pool), loadHomeEntries(pool), tradesWithPros(pool), loadCities(pool)]);
+  const entryOut = (e: (typeof entries)[number]) => ({
+    label: e.label, icon: e.icon, target: e.target, pinned: e.pinned, showOn: e.showOn ?? ['find', 'work'],
+    hasPros: e.target.type === 'trade' ? withPros.has(e.target.key) : trades.some((t) => t.open && t.group === e.target.key && withPros.has(t.key))
+  });
   const cities = groupCities(cityList);
   const s = v.switches;
   const staffPreview = v.staff && (!s.find || !s.work);
@@ -42,10 +46,10 @@ export async function buildMeta(v: Viewer) {
       key: t.key, name: t.name, group: t.group, licType: t.licType, open: t.open, hasPros: withPros.has(t.key), noPost: t.noPost, noNotify: t.noNotify, icon: t.icon, scope: TRADE_SCOPE[t.key] ?? null
     })),
     // D29：pinned = 常显（不管有没有人都出，没人时标“招募中”）；hasPros = 这个入口指向的工种 / 这一组里有没有核验通过的人
-    homeEntries: entries.map((e) => ({
-      label: e.label, icon: e.icon, target: e.target, pinned: e.pinned,
-      hasPros: e.target.type === 'trade' ? withPros.has(e.target.key) : trades.some((t) => t.open && t.group === e.target.key && withPros.has(t.key))
-    })),
+    // 指令 29：homeEntries = 找工人一侧（家政保洁只在接活儿一侧，这里不出现；线上 1.4.3 等老版本也自动看不到它）；
+    // workEntries = 接活儿一侧（家政保洁第一，其余按原顺序）。每条带 showOn。
+    homeEntries: findSideEntries(entries).map((e) => entryOut(e)),
+    workEntries: workSideEntries(entries).map((e) => entryOut(e)),
     // D11 冷启动：一个核验通过的人都没有时，首页方块区换成一行招募说明 +「全部工种和服务」；没人的工种标“招募中”
     anyPros: trades.some((t) => t.open && withPros.has(t.key)),
     recruitingText: RECRUITING_TEXT,
@@ -62,7 +66,7 @@ export async function buildMeta(v: Viewer) {
     },
     rules: RULES,
     disclaimer: DISCLAIMER,
-    subscribeTemplate: jobsTemplate()?.id ?? null,
+    subscribeTemplate: (await loadJobsTemplate(pool))?.id ?? null,
     webUrl: `${webBase()}${WEB_JOBS_PATH}`,
     postUrl: `${webBase()}${WEB_JOBS_PATH}/post`
   };

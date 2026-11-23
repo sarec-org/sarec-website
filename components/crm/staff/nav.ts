@@ -60,6 +60,8 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/channels', label: '渠道码', role: 'ops', words: ['渠道', '合作商家', '专属码', '推广码'] },
     // 子任务 C（第二部分 一.4）：专委会和俱乐部意向名单（真实姓名、联系方式、待补填）
     { href: '/zh/staff/committees', label: '专委会意向', role: 'ops', words: ['专委会', '俱乐部', '意向', '专委会意向', '专委会名单', '俱乐部意向', '待补填'] },
+    // 1.5.0：俱乐部（名字东哥 11/14 已点头）——会员自己加入、组局，归「客户」，挨着专委会意向
+    { href: '/zh/staff/clubs', label: '俱乐部', role: 'ops', words: ['俱乐部', '专委会', '组局', '掼蛋', '牌局', '群二维码', '负责人', '禁止名单'] },
     // 找工人 · 接活儿（1.4.3 新加的 8 个后台页，归到「客户」下面一个小组）
     { href: '/zh/staff/jobs', label: '活儿', role: 'ops', sub: JOBS, words: ['找工人', '接活', '接活儿', '找工人接活', '找工人接活儿', '发布的活儿', '下架活儿', '备注', '到期'] },
     { href: '/zh/staff/jobs/pros', label: '接活人核验', role: 'ops', sub: JOBS, words: ['核验', '牌照', '执照', 'CSLB', '施工队', '师傅', '退回', '下架接活人'] },
@@ -82,6 +84,10 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/newsletter', label: '邮件通讯', role: 'ops', words: ['邮件', '群发', '通讯', '发邮件', 'newsletter'] },
     { href: '/zh/staff/content-visibility', label: '文章显示范围', role: 'ops', words: ['内容显示范围', '显示范围', '文章', '全文', '简介', '隐藏文章'] },
     { href: '/zh/staff/cards', label: '内容审核', role: 'ops', words: ['审核', '名片', '电子名片', '客户照片', '下架'] },
+    // 1.5.0 新页面（名字东哥 11/14 已点头）：群发、内容管理（举报 + 主页审核 + 机器拦下的内容）、商会风采
+    { href: '/zh/staff/broadcast', label: '群发', role: 'ops', words: ['群发', '发短信', '发通知', '服务通知', '选人', '按条件选人', '常用人群', '短信', '邮件通讯', '发邮件', '退订', '打开率'] },
+    { href: '/zh/staff/content', label: '内容管理', role: 'ops', words: ['内容管理', '举报', '投诉', '违规', '恢复', '禁止', '个人主页', '主页审核', '项目', '案例', '机器拦下', '组局'] },
+    { href: '/zh/staff/showcase', label: '商会风采', role: 'ops', words: ['商会风采', '风采', '副会长单位', '合作方', '战略合作方', '标志', 'logo'] },
     { href: '/zh/staff/agent', label: 'AI 助手', role: 'ops', words: ['AI', '人工智能', '机器人', '常见问题', 'FAQ', '对话'] }
   ],
   数据: [
@@ -92,7 +98,9 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/team', label: '团队', role: 'admin', words: ['工作人员', '同事', '权限', '绑定', '工作台', '出码', '加人', '角色'] },
     // 子任务 C（第二部分 五）：每人选收哪几类通知、走哪个渠道；通知总闸、发送记录
     { href: '/zh/staff/notify', label: '手机通知', role: 'ops|checkin|finance', words: ['通知', '手机通知', '短信通知', '企业微信', '每日汇总', '通知渠道', '通知设置', '总闸', '发送记录'] },
-    { href: '/zh/staff/system', label: '系统状态', role: 'ops', words: ['线上巡检', '巡检', '线上报错', '报错', '错误', 'bug', '出错'] }
+    { href: '/zh/staff/system', label: '系统状态', role: 'ops', words: ['线上巡检', '巡检', '线上报错', '报错', '错误', 'bug', '出错'] },
+    // 指令 31：体验版小程序真机计时（只在测试站有数据）
+    { href: '/zh/staff/system/speed', label: '真机速度', role: 'ops', words: ['速度', '打开慢', '卡', '真机', '计时', '性能', '慢请求', '机型'] }
   ]
 };
 
