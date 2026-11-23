@@ -36,6 +36,14 @@ export async function msgSecCheck(content: string, openid: string | null, scene:
  * 不通过的自动撤下并告诉本人。没配 AppSecret / 没有 openid 时返回 null（就是纯事后管理）。
  * 需要东哥在小程序后台「开发管理 → 开发设置 → 消息推送」配好服务器地址和 Token（见《待东哥过目》）。
  */
+function hostOf(u: string): string {
+  try {
+    return new URL(u).host;
+  } catch {
+    return 'bad-url';
+  }
+}
+
 export async function mediaCheckAsync(mediaUrl: string, openid: string | null, scene: 1 | 2 | 3 | 4 = 1): Promise<string | null> {
   if (!openid || !wxConfigured() || !/^https:\/\//.test(mediaUrl)) return null;
   try {
@@ -46,10 +54,13 @@ export async function mediaCheckAsync(mediaUrl: string, openid: string | null, s
         body: JSON.stringify({ media_url: mediaUrl, media_type: 2, version: 2, scene, openid }),
         cache: 'no-store'
       });
-      return (await res.json()) as { errcode?: number; trace_id?: string };
+      return (await res.json()) as { errcode?: number; errmsg?: string; trace_id?: string };
     }, (r) => r.errcode);
+    // 指令 52：每次交给微信都留一条日志（不含个人信息：只记错误码、有没有拿到任务号、图片地址的域名）
+    console.info(`[wx-media] submit errcode=${d.errcode ?? 0} errmsg=${(d.errmsg ?? '').slice(0, 60)} trace=${d.trace_id ? d.trace_id.slice(0, 12) : 'none'} host=${hostOf(mediaUrl)}`);
     return d.errcode ? null : d.trace_id ?? null;
-  } catch {
+  } catch (e) {
+    console.info(`[wx-media] submit threw ${(e as Error)?.message?.slice(0, 80) ?? 'error'} host=${hostOf(mediaUrl)}`);
     return null;
   }
 }
