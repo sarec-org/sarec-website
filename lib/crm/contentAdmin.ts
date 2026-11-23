@@ -6,9 +6,10 @@
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
 import type { Staff } from './auth';
+import { applyPass, gateReady, passTarget, rejectTarget, SLOT_LABEL, type SlotKind } from './imageGate';
 
 export type Item = {
-  kind: 'meetup' | 'profile' | 'project' | 'photo' | 'card';
+  kind: 'meetup' | 'profile' | 'project' | 'photo' | 'card' | 'image';
   id: string;
   ownerId: string | null;
   owner: string | null;
@@ -18,10 +19,12 @@ export type Item = {
   state: 'live' | 'machine' | 'down';
   note: string | null;
   at: Date;
+  /** 指令 36：图片检测中（还没对别人显示，等微信结果或工作人员放行） */
+  checking?: boolean;
   reports?: { id: string; reason: string; detail: string | null; reporter: string | null; at: Date }[];
 };
 
-const KIND_LABEL: Record<Item['kind'], string> = { meetup: '组局', profile: '个人主页', project: '项目 / 案例', photo: '相册照片', card: '电子名片' };
+const KIND_LABEL: Record<Item['kind'], string> = { meetup: '组局', profile: '个人主页', project: '项目 / 案例', photo: '相册照片', card: '电子名片', image: '图片' };
 export { KIND_LABEL };
 
 async function log(actor: string, kind: string, targetId: string, action: string, note?: string | null) {
@@ -50,14 +53,30 @@ async function loadItem(kind: string, id: string): Promise<Item | null> {
   if (kind === 'project') {
     const { rows } = await pool.query(`SELECT p.*, NULLIF(c.name, '微信用户') AS owner FROM profile_projects p JOIN contacts c ON c.id = p.contact_id WHERE p.id::text = $1`, [id]);
     const r = rows[0];
-    return r ? { kind: 'project', id: r.id, ownerId: r.contact_id, owner: r.owner, title: `项目「${r.title}」`, text: r.body, images: r.images ?? [], state: r.status === 'taken_down' ? 'down' : r.status === 'rejected' ? 'machine' : 'live', note: null, at: r.updated_at } : null;
+    return r ? { kind: 'project', id: r.id, ownerId: r.contact_id, owner: r.owner, title: `项目「${r.title}」`, text: r.body, images: r.images ?? [], state: r.status === 'taken_down' ? 'down' : r.status === 'rejected' || r.status === 'checking' ? 'machine' : 'live', note: null, at: r.updated_at, ...(r.status === 'checking' ? { checking: true } : {}) } : null;
   }
   if (kind === 'photo') {
     const { rows } = await pool.query(
       `SELECT p.id, p.uploader_contact_id, NULLIF(c.name, '微信用户') AS owner, p.thumb_url, p.url, p.is_hidden, p.review_status, p.created_at, e.title AS ev
          FROM event_photos p JOIN events e ON e.id = p.event_id LEFT JOIN contacts c ON c.id = p.uploader_contact_id WHERE p.id::text = $1`, [id]);
     const r = rows[0];
-    return r ? { kind: 'photo', id: r.id, ownerId: r.uploader_contact_id, owner: r.owner ?? '工作人员', title: `「${r.ev}」相册里的照片`, text: null, images: [r.url], state: r.review_status === 'rejected' ? 'machine' : r.is_hidden ? 'down' : 'live', note: null, at: r.created_at } : null;
+    return r ? { kind: 'photo', id: r.id, ownerId: r.uploader_contact_id, owner: r.owner ?? '工作人员', title: `「${r.ev}」相册里的照片`, text: null, images: [r.url], state: r.review_status === 'rejected' || (r.review_status === 'checking' && !r.is_hidden) ? 'machine' : r.is_hidden ? 'down' : 'live', note: null, at: r.created_at, ...(r.review_status === 'checking' && !r.is_hidden ? { checking: true } : {}) } : null;
+  }
+  if (kind === 'image') {
+    // 指令 36：头像 / 名片 logo / 名片项目照片 / 俱乐部群二维码 换的新图（检测通过前别人看到的还是旧图）
+    if (!(await gateReady())) return null;
+    const { rows } = await pool.query(
+      `SELECT i.id, i.url, i.target, i.contact_id, i.status, i.note, i.created_at, NULLIF(c.name, '微信用户') AS owner
+         FROM image_checks i LEFT JOIN contacts c ON c.id = i.contact_id WHERE i.id::text = $1`, [id]);
+    const r = rows[0];
+    if (!r) return null;
+    const slot = String(r.target).split(':')[0] as SlotKind;
+    const club = slot === 'club_qr' ? String(r.target).slice(8) : '';
+    const what = SLOT_LABEL[slot] ?? '图片';
+    return {
+      kind: 'image', id: r.id, ownerId: r.contact_id, owner: r.owner, title: club ? `${r.owner ?? 'SAREC 用户'} 给俱乐部「${club}」换的群二维码` : `${r.owner ?? 'SAREC 用户'} 换的新${what}`,
+      text: null, images: [r.url], state: r.status === 'pending' ? 'machine' : r.status === 'pass' ? 'live' : 'down', note: r.note, at: r.created_at, ...(r.status === 'pending' ? { checking: true } : {})
+    };
   }
   return null;
 }
@@ -95,6 +114,21 @@ async function machine(): Promise<Item[]> {
   for (const r of pj) { const it = await loadItem('project', r.id); if (it) out.push({ ...it, note: '微信图片检测不通过，已自动撤下' }); }
   const { rows: ph } = await pool.query<{ id: string }>(`SELECT id FROM event_photos WHERE review_status = 'rejected' AND is_hidden ORDER BY created_at DESC LIMIT 100`);
   for (const r of ph) { const it = await loadItem('photo', r.id); if (it) out.push({ ...it, note: '微信图片检测不通过，已自动撤下' }); }
+  // 指令 36：图片检测中（还没对别人显示）——项目、相册照片、换的头像 / logo / 名片项目照片 / 群二维码
+  if (await gateReady()) {
+    const why = async (target: string) => {
+      const { rows } = await pool.query<{ note: string | null }>(`SELECT note FROM image_checks WHERE target = $1 AND status = 'pending' ORDER BY created_at DESC LIMIT 1`, [target]);
+      return `图片检测中，还没对别人显示${rows[0]?.note ? '（' + rows[0].note + '）' : '（等微信检测结果）'}`;
+    };
+    const { rows: cp } = await pool.query<{ id: string }>(`SELECT id FROM profile_projects WHERE status = 'checking' ORDER BY updated_at DESC LIMIT 100`);
+    for (const r of cp) { const it = await loadItem('project', r.id); if (it) out.push({ ...it, note: await why('project:' + r.id) }); }
+    const { rows: cph } = await pool.query<{ id: string }>(`SELECT id FROM event_photos WHERE review_status = 'checking' AND NOT is_hidden ORDER BY created_at DESC LIMIT 100`);
+    for (const r of cph) { const it = await loadItem('photo', r.id); if (it) out.push({ ...it, note: await why('photo:' + r.id) }); }
+    const { rows: im } = await pool.query<{ id: string }>(
+      `SELECT id FROM image_checks WHERE status = 'pending' AND split_part(target, ':', 1) IN ('avatar', 'logo', 'card_photo', 'club_qr') ORDER BY created_at DESC LIMIT 100`
+    );
+    for (const r of im) { const it = await loadItem('image', r.id); if (it) out.push({ ...it, note: `图片检测中，别人看到的还是原来那张（${it.note ?? '等微信检测结果'}）` }); }
+  }
   const { rows: rv } = await pool.query<{ kind: string; target_id: string; note: string | null }>(
     `SELECT DISTINCT ON (kind, target_id) kind, target_id, note FROM ugc_actions WHERE action = 'machine_review' AND created_at > now() - interval '30 days' ORDER BY kind, target_id, created_at DESC LIMIT 100`
   );
@@ -148,8 +182,17 @@ export async function contentAction(s: Staff, b: { kind?: string; id?: string; a
       [kind, actor, status, targets]
     );
   };
+  if (kind === 'image' && (act === 'take_down' || act === 'restore')) {
+    // 换的新图：放行 = 写进那一格（头像 / logo / 项目照片 / 群二维码），大家看到新图；不放行 = 作废，原来那张不变
+    if (act === 'restore') await applyPass(id, actor);
+    else await pool.query(`UPDATE image_checks SET status = 'rejected', decided_at = now(), decided_by = $2 WHERE id = $1 AND status = 'pending'`, [id, actor]);
+    await log(actor, 'image', id, act, reason);
+    return { message: act === 'restore' ? '已放行，大家能看到新图了' : '已不放行：新图作废，别人看到的还是原来那张' };
+  }
   if (act === 'take_down' || act === 'restore') {
     const on = act === 'take_down';
+    // 指令 36：项目 / 照片上还在检测的图跟着一起放行或作废
+    if (kind === 'project' || kind === 'photo') await (on ? rejectTarget(`${kind}:${id}`, actor) : passTarget(`${kind}:${id}`, actor));
     if (kind === 'meetup') await pool.query(on ? `UPDATE club_meetups SET status = 'taken_down', taken_down_by = $2, taken_down_reason = $3, updated_at = now() WHERE id = $1` : `UPDATE club_meetups SET status = 'open', sec_status = 'ok', taken_down_by = NULL, taken_down_reason = NULL, updated_at = now() WHERE id = $1`, on ? [id, actor, reason] : [id]);
     if (kind === 'profile') await pool.query(`UPDATE member_cards SET profile_status = $2 WHERE contact_id = $1`, [id, on ? 'taken_down' : 'ok']);
     if (kind === 'project') await pool.query(`UPDATE profile_projects SET status = $2, reviewed_by = $3, reviewed_at = now() WHERE id = $1`, [id, on ? 'taken_down' : 'ok', actor]);

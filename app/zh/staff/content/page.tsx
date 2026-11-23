@@ -13,7 +13,7 @@ import { Lightbox, Toast } from '@/components/crm/staff/ugcShared';
 
 type Item = {
   kind: string; kindLabel: string; id: string; ownerId: string | null; owner: string | null; title: string; text: string | null; images: string[];
-  state: 'live' | 'machine' | 'down'; note: string | null; at: string;
+  state: 'live' | 'machine' | 'down'; note: string | null; at: string; checking?: boolean;
   reports?: { id: string; reason: string; detail: string | null; reporter: string | null; at: string }[];
 };
 type Ban = { what: string; contact_id: string; name: string | null; reason: string | null; banned_by: string; banned_at: string };
@@ -21,10 +21,11 @@ type Tab = 'reported' | 'machine' | 'down';
 
 const TABS: { key: Tab; label: string; tip: string }[] = [
   { key: 'reported', label: '被举报的', tip: '用户在小程序里点「举报」的内容。看过以后：不合适就「下架」，没问题就「不用处理」。' },
-  { key: 'machine', label: '机器拦下的', tip: '微信内容检测拦下或提醒看一眼的：组局没过检测（还没显示）、图片没过检测（已自动撤下）、文字建议人工看一眼（照常显示）。' },
+  { key: 'machine', label: '机器拦下的', tip: '微信内容检测拦下或提醒看一眼的：组局没过检测（还没显示）、图片在检测中（还没对别人显示，没问题就点「放行」）、图片没过检测（已自动撤下）、文字建议人工看一眼（照常显示）。' },
   { key: 'down', label: '已下架的', tip: '工作人员下架的内容，别人看不到。点「恢复」又能看到。' }
 ];
 const STATE: Record<string, string> = { live: '正在显示', machine: '机器拦下', down: '已下架' };
+const stateText = (it: Item) => (it.checking ? '图片检测中（只有本人看得到）' : STATE[it.state]);
 
 function Content() {
   const [tab, setTab] = useState<Tab>('reported');
@@ -71,7 +72,7 @@ function Content() {
   const cur = TABS.find((t) => t.key === tab)!;
   return (
     <>
-      <div className={styles.notice}>用户发的内容发了就公开（东哥 11/14 定：先发后管）。这里集中做事后管理：下架、恢复、禁止此人，都有记录。</div>
+      <div className={styles.notice}>用户发的文字发了就公开（东哥 11/14 定：先发后管）；用户新传的图片要等微信检测通过或工作人员在「机器拦下的」里放行才对别人显示（指令 36）。这里集中管理：放行、下架、恢复、禁止此人，都有记录。</div>
       <div className={styles.tabs} role="tablist" style={{ margin: '12px 0' }}>
         {TABS.map((t) => (
           <button key={t.key} role="tab" aria-selected={tab === t.key} className={`${styles.tab} ${tab === t.key ? styles.tabOn : ''}`} onClick={() => setTab(t.key)}>
@@ -84,7 +85,7 @@ function Content() {
       {d?.items.map((it) => (
         <div key={it.kind + it.id} id={'c-' + it.id} className={styles.card} style={focus === it.id ? { outline: '2px solid var(--gold)' } : undefined}>
           <p className={styles.cardTitle}>{it.title}</p>
-          <p className={styles.small}>发的人：{it.owner ?? '（没留名字）'} · {fmtDateTime(it.at)} · 现在：{STATE[it.state]}{it.note ? ` · ${it.note}` : ''}</p>
+          <p className={styles.small}>发的人：{it.owner ?? '（没留名字）'} · {fmtDateTime(it.at)} · 现在：{stateText(it)}{it.note ? ` · ${it.note}` : ''}</p>
           {it.text && <p style={{ whiteSpace: 'pre-wrap', margin: '6px 0' }}>{it.text}</p>}
           {it.images.length > 0 && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '6px 0' }}>
@@ -101,7 +102,8 @@ function Content() {
           )}
           <div className={styles.btnRow} style={{ flexWrap: 'wrap' }}>
             {it.state === 'live' && <button className={`${styles.btn} ${styles.btnDanger}`} disabled={!!busy} onClick={() => act(it, 'take_down')}>下架</button>}
-            {it.state !== 'live' && <button className={styles.btn} disabled={!!busy} onClick={() => act(it, 'restore')}>{it.state === 'machine' ? '放行（恢复显示）' : '恢复'}</button>}
+            {it.state !== 'live' && <button className={styles.btn} disabled={!!busy} onClick={() => act(it, 'restore')}>{it.checking ? '放行（大家能看到）' : it.state === 'machine' ? '放行（恢复显示）' : '恢复'}</button>}
+            {it.checking && <button className={`${styles.btn} ${styles.btnDanger}`} disabled={!!busy} onClick={() => act(it, 'take_down')}>{it.kind === 'image' ? '不放行（新图作废）' : '下架'}</button>}
             {tab === 'reported' && it.state === 'live' && <button className={`${styles.btn} ${styles.btnGhost}`} disabled={!!busy} onClick={() => act(it, 'dismiss')}>不用处理</button>}
             {it.ownerId && <button className={`${styles.btn} ${styles.btnGhost}`} disabled={!!busy} onClick={() => act(it, 'ban')}>禁止此人</button>}
           </div>
