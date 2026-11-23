@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     return new Response('bad signature', { status: 403 });
   }
   const raw = await req.text().catch(() => '');
-  let b: { Event?: string; MsgType?: string; trace_id?: string; errcode?: number; result?: { suggest?: string; label?: number } } | null = null;
+  let b: { Event?: string; event?: string; MsgType?: string; trace_id?: string; TraceId?: string; errcode?: number; errmsg?: string; result?: { suggest?: string; label?: number } } | null = null;
   try {
     b = JSON.parse(raw);
   } catch {
@@ -42,10 +42,14 @@ export async function POST(req: Request) {
     return new Response('success', { headers: { 'Content-Type': 'text/plain' } });
   }
   let handled = 'ignored';
-  if (b.Event === 'wxa_media_check' && b.trace_id) {
-    const r = await handleMediaCheckResult(b.trace_id, b.result?.suggest ?? 'pass', b.result?.label ?? null);
+  const event = b.Event ?? b.event;
+  const trace = b.trace_id ?? b.TraceId;
+  if (event === 'wxa_media_check' && trace) {
+    // 指令 53：微信没能检测（errcode 不是 0 / 没给结果，比如图片取不到）→ 不当成"通过"，留着等工作人员，并写清原因
+    const suggest = b.result?.suggest ?? (b.errcode ? 'review' : 'pass');
+    const r = await handleMediaCheckResult(trace, suggest, b.result?.label ?? (b.errcode ? `微信没能检测 ${b.errcode}` : null));
     handled = r.ok ? (r.takenDown ? 'found-takendown' : 'found') : 'trace-not-found';
   }
-  console.info(`[wx-push] event=${b.Event ?? b.MsgType ?? '?'} trace=${b.trace_id ? b.trace_id.slice(0, 12) : 'none'} errcode=${b.errcode ?? 0} suggest=${b.result?.suggest ?? '-'} handled=${handled}`);
+  console.info(`[wx-push] event=${event ?? b.MsgType ?? '?'} trace=${trace ? trace.slice(0, 12) : 'none'} errcode=${b.errcode ?? 0} errmsg=${(b.errmsg ?? '').slice(0, 40)} suggest=${b.result?.suggest ?? '-'} handled=${handled}`);
   return new Response('success', { headers: { 'Content-Type': 'text/plain' } });
 }
