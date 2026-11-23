@@ -22,20 +22,44 @@ export const CHANNEL_KIND: Record<string, string> = { merchant: '合作商家', 
 export type Window = { days?: number | null; eventId?: string | null };
 export type Funnel = { visits: number; registered: number; arrived: number; joined: number; inquiries: number; firstTouch: number };
 
+/**
+ * 漏斗里“报名 / 到场 / 入会”用的同一段 SQL（指令 44：「数据」页点开名单也用这一段，数字和名单一定对得上）。
+ * 参数：$1 渠道值数组、$2 是否算同行人、$3 天数（可空）、$4 活动 id（可空）。
+ */
+export const FUNNEL_REGS_CTE = `regs AS (
+       SELECT r.contact_id, r.created_at, r.arrival_status, r.channel_code, r.source, r.event_id FROM registrations r
+        WHERE r.status <> 'cancelled'
+          AND (r.channel_code = ANY($1::text[]) OR ($2::boolean AND r.source = 'companion'))
+          AND ($3::int IS NULL OR r.created_at > now() - make_interval(days => $3))
+          AND ($4::uuid IS NULL OR r.event_id = $4)
+          AND ${realContactId('r.contact_id')}
+     ), people AS (SELECT contact_id, min(created_at) AS first_at FROM regs GROUP BY contact_id)`;
+/** 漏斗里“入会”的条件（p = people 行，a = applications） */
+export const FUNNEL_JOINED_SQL = `a.membership_start_date IS NOT NULL AND a.created_at >= p.first_at`;
+
+/** 指令 44：漏斗带来的人（名单），口径和 funnel() 的 registered / arrived / joined 完全一样 */
+export async function funnelPeople(db: Db, match: { channels?: string[]; companion?: boolean }, w: Window = {}) {
+  const chans = (match.channels ?? []).filter(Boolean);
+  const days = w.days && w.days > 0 ? Math.floor(w.days) : null;
+  const { rows } = await db.query<{ contact_id: string; first_at: Date; arrived: boolean; joined: boolean; codes: string[] }>(
+    `WITH ${FUNNEL_REGS_CTE}
+     SELECT p.contact_id, p.first_at,
+            EXISTS (SELECT 1 FROM regs x WHERE x.contact_id = p.contact_id AND x.arrival_status = 'checked_in') AS arrived,
+            EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = p.contact_id AND ${FUNNEL_JOINED_SQL}) AS joined,
+            (SELECT array_agg(DISTINCT coalesce(x.channel_code, CASE WHEN x.source = 'companion' THEN 'companion' END)) FROM regs x WHERE x.contact_id = p.contact_id) AS codes
+       FROM people p ORDER BY p.first_at DESC`,
+    [chans, !!match.companion, days, w.eventId ?? null]
+  );
+  return rows;
+}
+
 /** 某一组渠道值 / 同行人带来的漏斗数字 */
 export async function funnel(db: Db, match: { channels?: string[]; companion?: boolean }, w: Window = {}): Promise<Funnel> {
   const chans = (match.channels ?? []).filter(Boolean);
   const days = w.days && w.days > 0 ? Math.floor(w.days) : null;
   const ev = w.eventId ?? null;
   const { rows } = await db.query<Funnel>(
-    `WITH regs AS (
-       SELECT r.contact_id, r.created_at, r.arrival_status FROM registrations r
-        WHERE r.status <> 'cancelled'
-          AND (r.channel_code = ANY($1::text[]) OR ($2::boolean AND r.source = 'companion'))
-          AND ($3::int IS NULL OR r.created_at > now() - make_interval(days => $3))
-          AND ($4::uuid IS NULL OR r.event_id = $4)
-          AND ${realContactId('r.contact_id')}
-     ), people AS (SELECT contact_id, min(created_at) AS first_at FROM regs GROUP BY contact_id)
+    `WITH ${FUNNEL_REGS_CTE}
      SELECT
        (SELECT count(*)::int FROM track_events t
          WHERE t.name = 'visit' AND t.channel = ANY($1::text[]) AND ${realContactId('t.contact_id')}
@@ -44,7 +68,7 @@ export async function funnel(db: Db, match: { channels?: string[]; companion?: b
        (SELECT count(DISTINCT contact_id)::int FROM regs) AS registered,
        (SELECT count(DISTINCT contact_id)::int FROM regs WHERE arrival_status = 'checked_in') AS arrived,
        (SELECT count(DISTINCT a.contact_id)::int FROM applications a JOIN people p ON p.contact_id = a.contact_id
-         WHERE a.membership_start_date IS NOT NULL AND a.created_at >= p.first_at) AS joined,
+         WHERE ${FUNNEL_JOINED_SQL}) AS joined,
        (SELECT count(*)::int FROM inquiries i
          WHERE (i.channel_code = ANY($1::text[]) OR EXISTS (SELECT 1 FROM people p WHERE p.contact_id = i.contact_id AND i.created_at >= p.first_at))
            AND ($3::int IS NULL OR i.created_at > now() - make_interval(days => $3))

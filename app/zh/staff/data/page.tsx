@@ -5,6 +5,7 @@
  * - 明细收在下面，点开才看：每场活动、每个功能、点击统计、推荐排行、功能月报预览、操作记录（管理员）。
  * - 全部用人话：功能叫小程序里的名字，不出现英文代号、模板编号、内部编号。
  * 旧网址 /zh/staff/flow-stats、/zh/staff/features、/zh/staff/growth 自动跳到这里（或「设置」）。
+ * 指令 44（11/22）：四个数字每个都能点开看“是谁”（就在这页里展开名单，components/crm/staff/DataPeople.tsx），并加第 5 块「这段时间谁来过」。
  * 读的还是原来的接口：/api/v1/staff/flow-stats、/api/v1/staff/features、/api/v1/staff/growth?only=stats、/api/v1/staff/team（操作记录，管理员）。
  */
 import Link from 'next/link';
@@ -13,8 +14,12 @@ import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate, can, type StaffInfo } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
 import { AuditLog, type LogRow } from '@/components/crm/staff/AuditLog';
+import { DataPeople, type Open } from '@/components/crm/staff/DataPeople';
+import { HOME_ENTRY_LABEL as HOME, TRACK_LABEL as TRACK } from '@/lib/crm/trackLabels';
 
-type Sum = { days: number; new_people: number; shells: number; arrived: number; arrived_first: number; joined: number; top: { label: string; kind: string; arrived: number; joined: number; registered: number }[]; eventsInWindow: number; sampleTooSmall: boolean };
+type Bringer = { key: string; label: string; kind: string; arrived: number; joined: number; registered: number };
+type Sum = { days: number; new_people: number; shells: number; arrived: number; arrived_first: number; joined: number; top: Bringer[]; others: Bringer[]; eventsInWindow: number; sampleTooSmall: boolean };
+type Visitors = { registered: unknown[]; unregistered: unknown[]; anonymousWeb: number };
 type Ev = { slug: string; title: string; startsAt: string; scans: number; scanDone: number; scanRate: number | null; regs: number; arrived: number; arriveRate: number | null; sharedRegs: number; sharedArrived: number; manual: number; backfill: number };
 type Flow = { events: Ev[]; repeaters: number; attendees: number; join: { total: number; paid: number; link_sent: number; rate: number | null } };
 type F = { visits: number; registered: number; arrived: number; joined: number; inquiries: number; firstTouch: number };
@@ -25,13 +30,6 @@ type Ref = { id: string; member_no: number; name: string; visits: number; regist
 type EvOpt = { id: string; title: string };
 
 const pct = (n: number | null) => (n == null ? '—' : `${n}%`);
-/** 打点名 → 小程序里的叫法 */
-const TRACK: Record<string, string> = {
-  home_entry: '点首页入口', share: '分享给朋友 / 群', share_timeline: '分享到朋友圈', poster: '生成邀请海报', poster_save: '保存邀请海报', card_open: '打开电子名片', card_share: '分享电子名片',
-  visit: '从分享 / 渠道码进来', status_action: '点状态卡上的按钮', wechat_qr: '看商会微信', channels: '点视频号', album_open: '打开活动相册', agent_open: '打开 AI 助手',
-  companion_add: '带一位朋友', group_signup: '群报名', photo_upload: '上传我拍的照片', beauty_apply: '用美颜', photo_share: '分享照片', jobs_trade: '点找工人的工种'
-};
-const HOME: Record<string, string> = { events: '活动报名', mine: '我的报名', checkin: '现场签到', invite: '邀请好友', card: '我的名片', benefits: '会员权益', rooms: '会议室', contact: '联系商会' };
 /** 目标只显示人能看懂的（首页入口名、中文）；英文代号、活动编号一律不显示 */
 const targetText = (s: Stat) => (s.target && HOME[s.target]) || (s.target && /[一-龥]/.test(s.target) ? s.target : '');
 
@@ -46,13 +44,22 @@ function Fold({ id, title, sub, open, children }: { id: string; title: string; s
     </details>
   );
 }
-function Big({ q, n, unit, note }: { q: string; n: ReactNode; unit: string; note?: ReactNode }) {
+function Big({ q, n, unit, note, children }: { q: string; n: ReactNode; unit: string; note?: ReactNode; children?: ReactNode }) {
   return (
     <div className={styles.card} style={{ margin: 0 }}>
       <p className={styles.small} style={{ margin: 0 }}>{q}</p>
       <p style={{ fontSize: 30, margin: '0.2rem 0', color: 'var(--gold-bright)' }}>{n}<span style={{ fontSize: 16, marginLeft: 4 }}>{unit}</span></p>
       {note && <p className={styles.small} style={{ margin: 0 }}>{note}</p>}
+      {children && <div className={styles.btnRow} style={{ marginTop: '0.5rem' }}>{children}</div>}
     </div>
+  );
+}
+/** 指令 44：点开看名单的按钮（字是主角，带箭头，一看就能点） */
+function See({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" className={`${styles.btn} ${on ? '' : styles.btnGhost} ${styles.btnSmall}`} onClick={onClick} aria-expanded={on}>
+      {children} ›
+    </button>
   );
 }
 
@@ -70,6 +77,10 @@ function Data({ s }: { s: StaffInfo }) {
   const [report, setReport] = useState<string | null>(null);
   const [log, setLog] = useState<LogRow[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [open, setOpen] = useState<Open | null>(null);
+  const [vis, setVis] = useState<Visitors | null>(null);
+  const toggle = (o: Open) => setOpen((x) => (x && x.list === o.list && x.key === o.key ? null : o));
+  const isOn = (list: Open['list'], key?: string) => !!open && open.list === list && open.key === key;
 
   useEffect(() => {
     setFrom(new URLSearchParams(location.search).get('from') ?? '');
@@ -79,9 +90,11 @@ function Data({ s }: { s: StaffInfo }) {
   }, [admin]);
   const load = useCallback(async () => {
     setSum(null);
+    setVis(null);
     const r = await api<Sum>(`/api/v1/staff/data-summary?days=${days}`);
     if (r.ok) setSum(r.data);
     else setMsg({ ok: false, text: r.message });
+    api<Visitors>(`/api/v1/staff/data-people?list=visitors&days=${days}`).then((v) => v.ok && setVis(v.data));
     const g = await api<{ track: { byName: Stat[] }; referrals: Ref[] }>(`/api/v1/staff/growth?only=stats&days=${days}`);
     if (g.ok) {
       setTrack(g.data.track.byName);
@@ -123,9 +136,16 @@ function Data({ s }: { s: StaffInfo }) {
       </div>
 
       <div className={styles.grid2} style={{ marginBottom: '1rem' }}>
-        <Big q="1. 这段时间来了多少新人？" n={sum ? sum.new_people : '…'} unit="人" note={sum ? `新登记了姓名或手机号的人。另有 ${sum.shells} 位只打开过小程序、没登记，不算在内。` : null} />
-        <Big q="2. 多少人到场？" n={sum ? sum.arrived : '…'} unit="人" note={sum ? `其中第一次来的 ${sum.arrived_first} 人。` : null} />
-        <Big q="3. 多少人入会？" n={sum ? sum.joined : '…'} unit="人" note="已缴费、会籍在这段时间开始的。" />
+        <Big q="1. 这段时间来了多少新人？" n={sum ? sum.new_people : '…'} unit="人" note={sum ? `新登记了姓名或手机号的人。另有 ${sum.shells} 位只打开过小程序、没登记，不算在内。` : null}>
+          {sum && <See on={isOn('new')} onClick={() => toggle({ list: 'new', title: '新人名单' })}>看这 {sum.new_people} 位是谁</See>}
+          {sum && <See on={isOn('shells')} onClick={() => toggle({ list: 'shells', title: '只打开过、没登记的人' })}>看只打开过的 {sum.shells} 位</See>}
+        </Big>
+        <Big q="2. 多少人到场？" n={sum ? sum.arrived : '…'} unit="人" note={sum ? `其中第一次来的 ${sum.arrived_first} 人。` : null}>
+          {sum && <See on={isOn('arrived')} onClick={() => toggle({ list: 'arrived', title: '到场名单（按活动）' })}>看每场谁到了</See>}
+        </Big>
+        <Big q="3. 多少人入会？" n={sum ? sum.joined : '…'} unit="人" note="已缴费、会籍在这段时间开始的。">
+          {sum && <See on={isOn('joined')} onClick={() => toggle({ list: 'joined', title: '入会名单' })}>看是谁入会</See>}
+        </Big>
         <div className={styles.card} style={{ margin: 0 }}>
           <p className={styles.small} style={{ margin: 0 }}>4. 哪几个功能和渠道带来的入会和到场最多？</p>
           {!sum ? (
@@ -133,17 +153,39 @@ function Data({ s }: { s: StaffInfo }) {
           ) : sum.top.length ? (
             <ol style={{ margin: '0.4rem 0 0', paddingLeft: '1.2rem' }}>
               {sum.top.map((t) => (
-                <li key={t.kind + t.label} style={{ marginBottom: 4 }}>
+                <li key={t.key} style={{ marginBottom: 6 }}>
                   {t.label}<span className={styles.small}>（{t.kind}）</span>：入会 <strong>{t.joined}</strong>、到场 <strong>{t.arrived}</strong>
+                  <div><See on={isOn('bringer', t.key)} onClick={() => toggle({ list: 'bringer', key: t.key, title: `${t.label} 带来的人` })}>看带来的 {t.registered} 人</See></div>
                 </li>
               ))}
             </ol>
           ) : (
             <p style={{ margin: '0.4rem 0 0' }}>这段时间还没有哪个功能或渠道带来到场、入会。</p>
           )}
+          {!!sum?.others.length && (
+            <details style={{ marginTop: '0.4rem' }}>
+              <summary className={styles.small} style={{ cursor: 'pointer', minHeight: 44, listStyle: 'revert' }}>还有 {sum.others.length} 个功能 / 渠道带来了报名（点开）</summary>
+              {sum.others.map((t) => (
+                <div key={t.key} style={{ margin: '0.3rem 0' }}>
+                  {t.label}<span className={styles.small}>（{t.kind}）</span>：报名 {t.registered}、到场 {t.arrived}、入会 {t.joined}
+                  <div><See on={isOn('bringer', t.key)} onClick={() => toggle({ list: 'bringer', key: t.key, title: `${t.label} 带来的人` })}>看是谁</See></div>
+                </div>
+              ))}
+            </details>
+          )}
           {sum?.sampleTooSmall && <p className={styles.small} style={{ margin: '0.4rem 0 0' }}>这段时间只有 {sum.eventsInWindow} 场活动，样本太少，仅供参考。</p>}
         </div>
+        <Big
+          q="5. 这段时间谁来过？"
+          n={vis ? vis.registered.length + vis.unregistered.length : '…'}
+          unit="人"
+          note={vis ? `打开过小程序或网站的人：登记过的 ${vis.registered.length} 位，未登记的 ${vis.unregistered.length} 位${vis.anonymousWeb ? `；另有网站上没登录的访客 ${vis.anonymousWeb} 个` : ''}。` : null}
+        >
+          {vis && <See on={isOn('visitors')} onClick={() => toggle({ list: 'visitors', title: '这段时间谁来过' })}>看谁来过</See>}
+        </Big>
       </div>
+
+      {open && <DataPeople key={`${open.list}|${open.key ?? ''}|${days}`} open={open} days={days} onClose={() => setOpen(null)} />}
 
       <h2 className={styles.h2}>明细（点开看）</h2>
 

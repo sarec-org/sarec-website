@@ -462,6 +462,8 @@ export type ContactFilter = {
   emailStatus?: 'confirmed' | 'unconfirmed' | 'invalid' | 'none' | null;
   /** 后台综合优化 七.1：customers（默认）= 有姓名或手机号的客户；opened = 只打开过、未登记的“微信用户”；all = 全部 */
   view?: 'customers' | 'opened' | 'all' | null;
+  /** 指令 44：只看最近 N 天新建的档案（「数据」页“新人”名单上方的直达链接用） */
+  newDays?: number | null;
 };
 
 /** “只打开过、未登记”：没有真实姓名、也没有手机号的“微信用户”（不算客户） */
@@ -518,8 +520,9 @@ export async function searchContacts(f: ContactFilter, limit = 200) {
         AND ($7::text IS NULL OR ($7 = 'member' AND m.contact_id IS NOT NULL) OR ($7 = 'registered' AND m.contact_id IS NULL))
         AND c.merged_into IS NULL
         AND ($10 = 'all' OR ($10 = 'opened' AND ${OPENED_ONLY_SQL}) OR ($10 = 'customers' AND NOT ${OPENED_ONLY_SQL}))
-      ORDER BY last_active_at DESC NULLS LAST LIMIT $8`,
-    [q, phone, f.region || null, f.roleCategory || null, f.topic || null, f.tag || null, f.member || null, limit, f.emailStatus || null, f.view || (q ? 'all' : 'customers')]
+        AND ($11::int IS NULL OR c.created_at > now() - make_interval(days => $11))
+      ORDER BY CASE WHEN $11::int IS NOT NULL THEN c.created_at END DESC NULLS LAST, last_active_at DESC NULLS LAST LIMIT $8`,
+    [q, phone, f.region || null, f.roleCategory || null, f.topic || null, f.tag || null, f.member || null, limit, f.emailStatus || null, f.view || (q ? 'all' : 'customers'), f.newDays || null]
   );
   return rows.map((r) => ({
     ...r,
