@@ -7,5 +7,7 @@ export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   const me = await requireContact(req);
   const mp = new URL(req.url).searchParams.get('view') === 'mp' || (await isMp12(req));
-  return ok(mp ? await myOverviewMp(me) : await myOverview(me));
+  // 1.6.0：开通的主办方（负责人 / 帮手）在「我的」里多一行「我办的活动」；不是主办方的人这里是 null，页面和以前一样
+  const [data, organizer] = await Promise.all([mp ? myOverviewMp(me) : myOverview(me), mp ? import('@/lib/org/service').then((m) => m.meEntry(me)).catch(() => null) : null]);
+  return ok(mp ? { ...data, organizer } : data);
 });

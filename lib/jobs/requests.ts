@@ -79,6 +79,7 @@ export async function createRequest(v: Viewer, contactId: string, b: Record<stri
     [randomUUID(), contactId, t.key, city.key, city.name, makeTitle(city.name, t.name, description, 'owner', null), description, phone, POST_DAYS]
   );
   await saveSec(pool, [rows[0].id], sec);
+  await import('@/lib/org/guest').then((m) => m.linkToChamber(pool, contactId, '请商会找师傅'));
   return { id: rows[0].id, message: RECEIVED_TEXT, sub: RECEIVED_SUB };
 }
 

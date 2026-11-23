@@ -185,3 +185,17 @@ export function checkinKeyOk(k: string | undefined, secret: string | undefined):
   if (k === secret) return true;
   return k.length >= CHECKIN_KEY_MIN && k.length < secret.length && secret.startsWith(k);
 }
+
+/**
+ * 1.6.0 主办方活动码：报名码 scene = "e=编号"；门口签到码 scene = "e=编号&k=签到密钥前 8 位"（扫了直接报名 + 签到）。
+ * 新页面（分包 pages/org）正式版发布前用体验版 / 开发版的码时不校验路径。
+ */
+export function orgEventCode(code: string, key: string | null, envVersion: 'release' | 'trial' | 'develop' = (process.env.WX_CODE_ENV_VERSION as 'release' | 'trial' | 'develop' | undefined) ?? 'release'): Promise<Buffer> {
+  const scene = key ? `e=${code}&k=${key}` : `e=${code}`;
+  return miniProgramCode({ page: 'pages/org/event', scene, tag: `org ${key ? 'door' : 'register'} ${code}`, envVersion, checkPath: false });
+}
+
+/** 1.6.0 主办方开通码 / 加帮手码：scene = "ob=10 位码"，扫了打开 pages/org/bind */
+export function orgBindCode(code: string, envVersion: 'release' | 'trial' | 'develop' = (process.env.WX_CODE_ENV_VERSION as 'release' | 'trial' | 'develop' | undefined) ?? 'release'): Promise<Buffer> {
+  return miniProgramCode({ page: 'pages/org/bind', scene: `ob=${code}`, tag: 'org_bind', envVersion, checkPath: false });
+}

@@ -50,7 +50,10 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/prep', label: '活动筹备清单', role: 'ops|checkin', words: ['筹备', '筹备清单', '清单', '模板', '分工'] },
     { href: '/zh/staff/album', label: '相册', role: 'ops', words: ['活动相册', '照片', '传照片', '上传照片', '封面'] },
     { href: '/zh/staff/recaps', label: '活动回顾', role: 'ops', words: ['回顾', '推文', '复盘'] },
-    { href: '/zh/staff/checkin-questions', label: '签到选择题', role: 'ops', words: ['选择题', '题库', '签到问题'] }
+    { href: '/zh/staff/checkin-questions', label: '签到选择题', role: 'ops', words: ['选择题', '题库', '签到问题'] },
+    // 1.6.0 活动工具开放给别的主办方（名字「主办方」「主办方试用看板」待东哥点头）
+    { href: '/zh/staff/organizers', label: '主办方', role: 'ops', words: ['主办方', '别的主办方', '开通主办方', '开通码', '活动工具', '接龙', '先审后发', '放行', '下架活动', '停用主办方', '我也要办活动', '数据承诺', '主办方的客人'] },
+    { href: '/zh/staff/organizers/trial', label: '主办方试用看板', role: 'ops', words: ['试用', '试用看板', '主办方统计', '第一次发布', '再办一场'] }
   ],
   客户: [
     { href: '/zh/staff/contacts', label: '客户', role: 'ops', words: ['客户查询', '会员', '档案', '客户档案', '导出', '找人', '查人'] },

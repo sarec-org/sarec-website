@@ -40,7 +40,7 @@ export async function fillPrompt(contactId: string | null): Promise<FillPrompt> 
   const base = { ...NO, missing, prefillName: p.name };
   if (!missing.length) return base;
   const { rows } = await getPool().query<{ kind: string | null; snoozed: Date | null; n: number; created_at: Date }>(
-    `SELECT account_kind AS kind, fill_prompt_snoozed_until AS snoozed, fill_prompt_dismissals AS n, created_at FROM contacts WHERE id = $1`,
+    `SELECT coalesce(account_kind, CASE WHEN org_guest_since IS NOT NULL THEN 'org_guest' END) AS kind, fill_prompt_snoozed_until AS snoozed, fill_prompt_dismissals AS n, created_at FROM contacts WHERE id = $1`,
     [contactId]
   );
   const c = rows[0];

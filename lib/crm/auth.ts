@@ -175,6 +175,8 @@ export async function verifyLoginCode(
         await db.query(`UPDATE contacts SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1`, [contactId]);
       }
     }
+    // 1.6.0：本人验证联系方式（登录网站 / 关联账号）= 主动和商会发生关系
+    await import('@/lib/org/guest').then((m) => m.linkToChamber(db, contactId, '验证联系方式'));
     // 联系方式记录同步为“已验证”（只有已验证的值才用于登录与合并）
     await noteVerified(db, contactId, channel === 'email' ? 'email' : 'phone', target);
     const token = await createSession(db, contactId, opts.sessionChannel ?? 'web');

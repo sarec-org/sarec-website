@@ -75,7 +75,8 @@ export async function conditionCatalog(): Promise<FieldDef[]> {
 
 /** 把条件变成 SQL（参数化，不拼用户输入） */
 function where(f: Filters, params: unknown[]): string {
-  const parts: string[] = [`c.merged_into IS NULL`, `NOT coalesce(c.is_placeholder, false)`];
+  // 1.6.0：「主办方的客人」（只通过别的主办方的活动来过的人）任何时候都不进商会群发（方案 11/23 修正 第 5 条）
+  const parts: string[] = [`c.merged_into IS NULL`, `NOT coalesce(c.is_placeholder, false)`, `c.org_guest_since IS NULL`];
   // 后台综合优化 八：正式站群发不发给审核演示账号、测试账号（内部账号照常能收）
   if (isProduction()) parts.push(`coalesce(c.account_kind, '') NOT IN ('review_demo', 'test')`);
   const p = (v: unknown) => { params.push(v); return `$${params.length}`; };

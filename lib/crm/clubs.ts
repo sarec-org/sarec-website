@@ -120,6 +120,7 @@ export async function joinClub(contactId: string, key: string, fill: { name?: un
      ON CONFLICT (club_id, contact_id) DO UPDATE SET left_at = NULL, removed_by = NULL, joined_at = now()`,
     [c.id, contactId]
   );
+  await import('@/lib/org/guest').then((m) => m.linkToChamber(getPool(), contactId, '加入俱乐部'));
   return { joined: true, message: `已加入「${c.name}」` };
 }
 
