@@ -194,7 +194,7 @@ export const jobsRequestProvider: TodayProvider = {
   async list() {
     const { rows } = await getPool()
       .query<{ id: string; description: string; phone: string | null; city: string; trade: string; name: string; created_at: Date; sec_status: string | null }>(
-        `SELECT p.id, p.description, p.phone, COALESCE(jc.name, p.city) AS city, COALESCE(t.name, p.trade_key) AS trade, c.name, p.created_at, p.sec_status
+        `SELECT p.id, p.description, p.phone, COALESCE(jc.name, p.city) AS city, COALESCE(t.name, p.trade_key) AS trade, COALESCE(NULLIF(c.name, ''), '一位客户') AS name, p.created_at, p.sec_status
            FROM jobs_posts p JOIN contacts c ON c.id = p.contact_id
            LEFT JOIN jobs_cities jc ON jc.key = p.city_key LEFT JOIN jobs_trades t ON t.key = p.trade_key
           WHERE p.status = 'pending' ORDER BY p.created_at LIMIT 30`

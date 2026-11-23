@@ -87,7 +87,7 @@ export async function staffPosts(q: { status?: string | null; mp: boolean }) {
     source: string; description: string; phone: string | null; sec_status: string | null;
   }>(
     `SELECT p.id, p.title, p.status, p.close_reason, p.staff_note, COALESCE(jc.name, p.city) AS city, p.trade_key, p.poster_role, p.created_at, p.expires_at, p.budget_range, p.first_contact_at,
-            c.name AS poster_name, ${hasSource ? 'p.source' : "'web'"} AS source, p.description, p.phone, p.sec_status,
+            COALESCE(NULLIF(c.name, ''), '（没填名字）') AS poster_name, ${hasSource ? 'p.source' : "'web'"} AS source, p.description, p.phone, p.sec_status,
             (SELECT count(*)::int FROM jobs_contacts jc WHERE jc.direction = 'post' AND jc.post_id = p.id) AS contact_count,
             (SELECT count(*)::int FROM jobs_notifications n WHERE n.kind = 'dispatch' AND n.post_id = p.id) AS notified,
             (SELECT count(*)::int FROM jobs_reports r WHERE r.target_type = 'post' AND r.target_id = p.id AND r.status = 'open') AS reports

@@ -96,7 +96,7 @@ function Switches({ admin }: { admin: boolean }) {
         <div key={it.k} className={styles.card}>
           <div className={styles.row}>
             <span><b>{it.name}</b></span>
-            <span className={`${styles.badge} ${sw[it.k] ? styles.badgeGreen : styles.badgeMuted}`}>{it.k === 'postInApp' ? (sw[it.k] ? '新方式' : '老方式') : sw[it.k] ? '开着' : '关着'}</span>
+            <span className={`${styles.badge} ${sw[it.k] ? styles.badgeGreen : styles.badgeMuted}`} style={{ whiteSpace: 'nowrap' }}>{it.k === 'postInApp' ? (sw[it.k] ? '新方式' : '老方式') : sw[it.k] ? '开着' : '关着'}</span>
           </div>
           <p className={styles.small}>{sw[it.k] ? it.on : it.off}</p>
           <p className={styles.small}>{changed(it.k) ? `上次改动：${changed(it.k)!.updatedBy?.replace(/^staff:/, '') ?? '—'}，${fmtDateTime(changed(it.k)!.updatedAt)}` : '还没人改过（默认值）'}</p>
