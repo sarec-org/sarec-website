@@ -191,6 +191,10 @@ export async function contentAction(s: Staff, b: { kind?: string; id?: string; a
   }
   if (act === 'take_down' || act === 'restore') {
     const on = act === 'take_down';
+    // V17-3：检测中第一次放出来，提示说"已放行"，不说"已恢复"
+    const wasChecking = !on && (kind === 'project' || kind === 'photo')
+      ? ((await pool.query<{ c: boolean }>(kind === 'project' ? `SELECT status = 'checking' AS c FROM profile_projects WHERE id = $1` : `SELECT review_status = 'checking' AS c FROM event_photos WHERE id = $1`, [id])).rows[0]?.c ?? false)
+      : false;
     // 指令 36：项目 / 照片上还在检测的图跟着一起放行或作废
     if (kind === 'project' || kind === 'photo') await (on ? rejectTarget(`${kind}:${id}`, actor) : passTarget(`${kind}:${id}`, actor));
     if (kind === 'meetup') await pool.query(on ? `UPDATE club_meetups SET status = 'taken_down', taken_down_by = $2, taken_down_reason = $3, updated_at = now() WHERE id = $1` : `UPDATE club_meetups SET status = 'open', sec_status = 'ok', taken_down_by = NULL, taken_down_reason = NULL, updated_at = now() WHERE id = $1`, on ? [id, actor, reason] : [id]);
@@ -200,7 +204,7 @@ export async function contentAction(s: Staff, b: { kind?: string; id?: string; a
     if (kind === 'card') await pool.query(on ? `UPDATE member_cards SET hidden_at = now(), hidden_reason = $2, hidden_by = $3 WHERE contact_id = $1` : `UPDATE member_cards SET hidden_at = NULL, hidden_reason = NULL, hidden_by = NULL WHERE contact_id = $1`, on ? [id, reason ?? '内容不合适', actor] : [id]);
     await closeReports(on ? 'done' : 'dismissed');
     await log(actor, kind, id, act, reason);
-    return { message: on ? `已下架，别人看不到这条${KIND_LABEL[kind]}了（在“已下架的”里能恢复）` : '已恢复，大家又能看到了' };
+    return { message: on ? `已下架，别人看不到这条${KIND_LABEL[kind]}了（在“已下架的”里能恢复）` : wasChecking ? '已放行，大家能看到了' : '已恢复，大家又能看到了' };
   }
   if (act === 'dismiss') {
     await closeReports('dismissed');
