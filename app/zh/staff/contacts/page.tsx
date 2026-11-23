@@ -14,7 +14,7 @@ const REGIONS = ['洛杉矶市区', '圣盖博谷（阿罕布拉、圣盖博、�
 const TOPIC_TAGS = ['ADU 加建', '地块分割与小型开发', '新建开发项目', '买房出租', '翻新转卖', '商业地产', '贷款融资', '税务与资产配置', '保险与传承', '投资移民', '中国企业出海', 'AI 与房地产科技', '物业管理', '政策法规'];
 
 export default function StaffContacts() {
-  const [f, setF] = useState({ q: '', region: '', roleCategory: '', topic: '', tag: '', member: '', emailStatus: '', view: '' });
+  const [f, setF] = useState({ q: '', region: '', roleCategory: '', topic: '', tag: '', member: '', emailStatus: '', view: '', newDays: '' });
   const [counts, setCounts] = useState<Counts | null>(null);
   const [rows, setRows] = useState<C[] | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -27,10 +27,12 @@ export default function StaffContacts() {
   }
   useEffect(() => {
     api<Meta>('/api/v1/meta').then((r) => r.ok && setMeta(r.data));
-    // 网址带 ?q= 时（别的页面点“查看客户”过来）直接按它查
-    const q = new URLSearchParams(location.search).get('q') ?? '';
-    const first = { ...f, q };
-    if (q) setF(first);
+    // 网址带 ?q= 时（别的页面点“查看客户”过来）直接按它查；带 ?newDays=7 时（「数据」页“新人”直达）只看最近 N 天新增
+    const sp = new URLSearchParams(location.search);
+    const q = sp.get('q') ?? '';
+    const nd = sp.get('newDays') ?? '';
+    const first = { ...f, q, newDays: ['7', '30', '90'].includes(nd) ? nd : '' };
+    if (q || first.newDays) setF(first);
     load(first);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const sel = (k: keyof typeof f, label: string, opts: [string, string][]) => (
@@ -62,6 +64,7 @@ export default function StaffContacts() {
           </div>
           <div className={styles.grid2} style={{ marginBottom: '0.75rem' }}>
             {sel('view', '范围（默认：有姓名或手机号的客户）', [['customers', '客户'], ['opened', '只打开过、未登记的微信用户'], ['all', '全部档案']])}
+            {sel('newDays', '新增时间', [['7', '最近 7 天新增'], ['30', '最近 30 天新增'], ['90', '最近 90 天新增']])}
             {sel('member', '身份', [['member', '正式会员'], ['registered', '注册用户']])}
             {sel('emailStatus', '邮箱状态', [['confirmed', '已确认'], ['unconfirmed', '未确认'], ['invalid', '无效'], ['none', '没填']])}
             {sel('region', '关注区域', REGIONS.map((r) => [r, r]))}
@@ -76,7 +79,7 @@ export default function StaffContacts() {
             <button className={styles.btn} onClick={() => load()}>按条件筛选</button>
             <a className={`${styles.btn} ${styles.btnGhost}`} href={`/api/v1/staff/contacts?${qs()}&format=csv`}>导出 Excel（CSV）</a>
           </div>
-          <p className={styles.small}>{rows ? `共 ${rows.length} 人（最多显示 200，最近有动作的排在前面）` : '加载中…'}</p>
+          <p className={styles.small}>{rows ? `共 ${rows.length} 人（最多显示 200，${f.newDays ? '最近新建的' : '最近有动作的'}排在前面）` : '加载中…'}</p>
           {rows?.map((c) => (
             <div key={c.id} className={styles.card} style={{ padding: '0.7rem 0.9rem', margin: '0 0 0.5rem' }}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

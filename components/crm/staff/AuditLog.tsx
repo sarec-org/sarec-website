@@ -30,7 +30,7 @@ const ACTION: Record<string, string> = {
   regenerate_checkin_code: '重置签到码', upsert_staff: '改了网站后台登录（按邮箱）', update_setting: '改了设置', upsert_room: '改了会议室', update_room_info: '改了会议室说明',
   upsert_offer: '改了商家优惠', delete_offer: '删除商家优惠', staff_create_booking: '登记会议室预约', cancel_booking: '取消会议室预约', record_booking_payment: '登记会议室收款',
   set_display: '改了官网展示', schedule_screen_ad: '安排电子屏广告', approve_screen_ad: '通过电子屏广告', reject_screen_ad: '退回电子屏广告',
-  adjust_points: '调整积分', reverse_points: '撤销积分', export_contacts: '导出客户名单', event_cover: '换了活动封面', poster_official_on: '设为官方海报', poster_official_off: '取消官方海报',
+  adjust_points: '调整积分', reverse_points: '撤销积分', export_contacts: '导出客户名单', export_data_people: '导出「数据」页名单', event_cover: '换了活动封面', poster_official_on: '设为官方海报', poster_official_off: '取消官方海报',
   verify_payment: '确认到账', cancel_order: '取消订单', activate_membership: '开通会籍', merge_needed: '发现需要人工合并的档案', contact_merged: '自动合并档案',
   wechat_identity_linked: '把微信登录挂到已有档案', guest_checkin_name: '网页签到（姓名没写进档案）',
   card_approve: '名片审核通过', card_hide: '下架名片', card_restore: '恢复名片', card_clear_avatar: '清掉名片头像', card_return: '退回名片', card_delete: '删除名片',
@@ -43,7 +43,7 @@ const ACTION: Record<string, string> = {
 /** 对象类型 → 名词（认不出动作时用“改了 + 名词”） */
 const NOUN: Record<string, string> = {
   contact: '客户档案', contacts: '一批客户', staff: '工作人员', event: '活动', newsletter: '邮件通讯', setting: '设置', join_request: '入会申请', application: '入会记录',
-  order: '订单', room: '会议室', offer: '商家优惠', home_slide: '首页轮播', jobs_pro: '接活人', jobs_post: '活儿', jobs_trade: '工种', jobs_city: '城市', jobs_home_entries: '找工人首页入口'
+  data: '「数据」页名单', order: '订单', room: '会议室', offer: '商家优惠', home_slide: '首页轮播', jobs_pro: '接活人', jobs_post: '活儿', jobs_trade: '工种', jobs_city: '城市', jobs_home_entries: '找工人首页入口'
 };
 
 /** 设置项 → 名字（对象是设置时显示） */
@@ -84,6 +84,10 @@ function detail(l: LogRow) {
     if (a.active === false) parts.push('停用');
     if (a.active === true && b.is_active === false) parts.push('恢复');
     return parts.join('；');
+  }
+  if (l.action === 'export_data_people') {
+    const LIST: Record<string, string> = { new: '新人', shells: '只打开过没登记', arrived: '到场', joined: '入会', bringer: '功能 / 渠道带来的人', visitors: '这段时间谁来过' };
+    return `${LIST[String(a.list ?? '')] ?? '名单'} · 最近 ${String(a.days ?? '')} 天 · ${String(a.count ?? '')} 行`;
   }
   if (l.action === 'newsletter_confirm' && a.recipients) return `发给 ${String(a.recipients)} 人`;
   if (l.action === 'jobs_switch' || l.action === 'confirm_timeline') {
