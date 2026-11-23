@@ -103,7 +103,7 @@ function Page({ admin }: { admin: boolean }) {
 
       <div className={styles.card}>
         <h2 className={styles.h2}>等放行的活动（{pending.length}）</h2>
-        <p className={styles.small}>新主办方的前几场（默认 3 场，每个主办方可改）和机器检测说"建议复核"的，先在这里看一眼再公开。放行前报名页只有主办方自己看得到。</p>
+        <p className={styles.small}>新主办方的前几场（默认 3 场，每个主办方可改）和机器检测说「建议复核」的，先在这里看一眼再公开。放行前报名页只有主办方自己看得到。</p>
         {!pending.length && <p className={styles.muted}>没有等放行的活动</p>}
         {pending.map((e) => (
           <div key={e.id} className={styles.listItem}>
@@ -122,7 +122,7 @@ function Page({ admin }: { admin: boolean }) {
       <div className={styles.card}>
         <h2 className={styles.h2}>开通一个主办方</h2>
         <div className={styles.field}><label className={styles.label}>主办方名称（报名页、海报上显示）</label><input className={styles.input} value={form.name} maxLength={40} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="例如：尔湾华人商会" /></div>
-        <div className={styles.field}><label className={styles.label}>对外联系方式（报名页"联系主办方"显示，可不填）</label><input className={styles.input} value={form.publicContact} maxLength={60} onChange={(e) => setForm({ ...form, publicContact: e.target.value })} placeholder="例如：电话 949-xxx-xxxx / 微信号 xxx" /></div>
+        <div className={styles.field}><label className={styles.label}>对外联系方式（报名页「联系主办方」显示，可不填）</label><input className={styles.input} value={form.publicContact} maxLength={60} onChange={(e) => setForm({ ...form, publicContact: e.target.value })} placeholder="例如：电话 949-xxx-xxxx / 微信号 xxx" /></div>
         <div className={styles.field}><label className={styles.label}>后台备注（只有工作人员看）</label><input className={styles.input} value={form.staffNote} maxLength={200} onChange={(e) => setForm({ ...form, staffNote: e.target.value })} placeholder="谁介绍的、负责人是谁" /></div>
         <button className={styles.btn} disabled={busy || form.name.trim().length < 2} onClick={async () => {
           const r = await post<Code & { id: string }>({ action: 'create', ...form }, `已建好「${form.name.trim()}」，请负责人扫下面的码开通`);
