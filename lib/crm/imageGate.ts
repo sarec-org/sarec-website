@@ -46,11 +46,50 @@ export async function gateReady(): Promise<boolean> {
   return ready;
 }
 
-async function openidOf(contactId: string | null): Promise<string | null> {
+/**
+ * 指令 51（11/23）：这个人的小程序微信身份。先看本档案；本档案没有就看合并进来的旧档案（最多往下三层）——
+ * 老办法合并过的档案，微信身份还留在旧档案上，登录时顺着 merged_into 登到主档案，所以主档案这一格是空的。
+ */
+export async function wechatOpenidOf(contactId: string | null): Promise<string | null> {
   if (!contactId) return null;
-  const { rows } = await getPool().query<{ o: string | null }>(`SELECT wechat_openid AS o FROM contacts WHERE id = $1`, [contactId]);
-  const o = rows[0]?.o ?? null;
-  return o && !o.startsWith('dev-openid-') ? o : null;
+  const { rows } = await getPool().query<{ o: string | null }>(
+    `WITH RECURSIVE t(id, depth) AS (SELECT $1::uuid, 0 UNION ALL SELECT c.id, t.depth + 1 FROM contacts c JOIN t ON c.merged_into = t.id WHERE t.depth < 3)
+     SELECT c.wechat_openid AS o FROM t JOIN contacts c ON c.id = t.id
+      WHERE c.wechat_openid IS NOT NULL AND c.wechat_openid NOT LIKE 'dev-openid-%'
+      ORDER BY t.depth, c.updated_at DESC NULLS LAST LIMIT 1`,
+    [contactId]
+  );
+  return rows[0]?.o ?? null;
+}
+const openidOf = wechatOpenidOf;
+
+/**
+ * 指令 51：这个人卡在"没拿到微信身份 / 没提交上"的图，现在能拿到身份了就重新交给微信检测一次。
+ * 在本人每次登录小程序时调用（这时他刚访问过小程序，符合微信"近两小时访问过"的要求）。只处理最近 7 天的、最多 20 张。
+ */
+export async function retryPendingFor(contactId: string): Promise<number> {
+  if (!configured() || !(await gateReady())) return 0;
+  const openid = await openidOf(contactId);
+  if (!openid) return 0;
+  const pool = getPool();
+  const { rows } = await pool.query<{ id: string; url: string; target: string }>(
+    `SELECT id, url, target FROM image_checks WHERE contact_id = $1 AND status = 'pending' AND trace_id IS NULL AND created_at > now() - interval '7 days' ORDER BY created_at LIMIT 20`,
+    [contactId]
+  );
+  let n = 0;
+  for (const r of rows) {
+    let trace: string | null = null;
+    try {
+      trace = await submitter(r.url, openid);
+    } catch {
+      trace = null;
+    }
+    if (!trace) continue;
+    await pool.query(`UPDATE image_checks SET trace_id = $2, note = NULL WHERE id = $1 AND status = 'pending' AND trace_id IS NULL`, [r.id, trace]);
+    await log('media_check', r.target, 'submitted', 'machine', trace);
+    n++;
+  }
+  return n;
 }
 
 async function log(kind: string, targetId: string, action: string, actor: string, note?: string | null) {

@@ -59,7 +59,8 @@ async function machine(): Promise<TodayItem[]> {
   return items.slice(0, MAX).map((it) => ({
     id: `ugc_machine:${it.kind}:${it.id}`,
     kind: 'ugc_machine' as const,
-    priority: PRIORITY.review + 22,
+    // 指令 51：等图片检测的排到前面（醒目），别让照片一直卡着
+    priority: it.checking ? PRIORITY.inquiry + 5 : PRIORITY.review + 22,
     title: it.checking ? `${it.title}在等图片检测，还没对大家显示` : `${it.title}被机器拦下了，还没对大家显示`,
     suggestion: it.checking ? `${it.note ?? '图片检测中'}。看一眼图，没问题点“放行”，不合适点“${it.kind === 'image' ? '不放行' : '下架'}”。` : `${it.note ?? '内容检测没通过'}。看一眼，没问题点“放行”，不合适点“下架”。`,
     detail: short(it.text),
