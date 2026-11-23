@@ -60,15 +60,15 @@ async function machine(): Promise<TodayItem[]> {
     id: `ugc_machine:${it.kind}:${it.id}`,
     kind: 'ugc_machine' as const,
     priority: PRIORITY.review + 22,
-    title: `${it.title}被机器拦下了，还没对大家显示`,
-    suggestion: `${it.note ?? '内容检测没通过'}。看一眼，没问题点“放行”，不合适点“下架”。`,
+    title: it.checking ? `${it.title}在等图片检测，还没对大家显示` : `${it.title}被机器拦下了，还没对大家显示`,
+    suggestion: it.checking ? `${it.note ?? '图片检测中'}。看一眼图，没问题点“放行”，不合适点“${it.kind === 'image' ? '不放行' : '下架'}”。` : `${it.note ?? '内容检测没通过'}。看一眼，没问题点“放行”，不合适点“下架”。`,
     detail: short(it.text),
     href: `/zh/staff/content?tab=machine&id=${it.id}`,
     tags: ['待审核'],
     at: it.at?.toISOString?.(),
     actions: [
       { type: 'post', label: '放行', endpoint: ENDPOINT, body: { kind: it.kind, id: it.id, action: 'restore' }, done: '已放行，大家能看到了', primary: true },
-      { type: 'post', label: '下架', endpoint: ENDPOINT, body: { kind: it.kind, id: it.id, action: 'take_down', reason: '内容检测没通过' }, done: '已下架', danger: true },
+      { type: 'post', label: it.kind === 'image' ? '不放行' : '下架', endpoint: ENDPOINT, body: { kind: it.kind, id: it.id, action: 'take_down', reason: it.checking ? '工作人员看过图片，不放行' : '内容检测没通过' }, done: it.kind === 'image' ? '已不放行，别人看到的还是原来那张' : '已下架', danger: true },
       { type: 'link', label: '看一眼', href: `/zh/staff/content?tab=machine&id=${it.id}` }
     ]
   }));

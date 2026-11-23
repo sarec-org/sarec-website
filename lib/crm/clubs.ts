@@ -13,6 +13,7 @@ import { CrmError } from './events';
 import { getSetting } from './orders';
 import { memberStatus } from './membership';
 import { msgSecCheck } from './contentSec';
+import { gateSlot, pendingSlots } from './imageGate';
 import type { Staff } from './auth';
 
 export type Club = {
@@ -157,6 +158,17 @@ export async function clubDetail(contactId: string | null, key: string) {
     }
   }
   const qrExpiring = !!c.group_qr_expires && new Date(c.group_qr_expires).getTime() - Date.now() < 3 * 86400e3;
+  // 指令 36：负责人自己看到还在检测的新二维码和一句说明；成员看到的还是原来那张（或没有）
+  const pendingQr = leader ? (await pendingSlots([`club_qr:${c.key}`]).catch(() => new Map<string, string>())).get(`club_qr:${c.key}`) : undefined;
+  if (pendingQr) {
+    return {
+      club: { key: c.key, name: c.name, intro: c.intro, membersOnly: c.members_only, members: cnt[0].n },
+      joined, leader, members,
+      groupQr: pendingQr,
+      groupQrNote: '新的群二维码在检测中，检测通过后成员才能看到（您自己现在就能看到）',
+      meetups: await listMeetups(c, contactId, joined || leader)
+    };
+  }
   return {
     club: { key: c.key, name: c.name, intro: c.intro, membersOnly: c.members_only, members: cnt[0].n },
     joined, leader,
@@ -317,6 +329,15 @@ export async function setGroupQr(actor: string, key: string, url: string, expire
   if (contactId && c.leader_contact_id !== contactId) throw new CrmError('forbidden', '只有负责人能换群二维码');
   if (!/^https:\/\//.test(url)) throw new CrmError('bad_request', '请上传群二维码图片');
   const exp = expires && /^\d{4}-\d{2}-\d{2}$/.test(expires) ? expires : new Date(Date.now() + 7 * 86400e3).toISOString().slice(0, 10);
+  // 指令 36：负责人传的群二维码检测完才给成员看（原来那张先不换）；工作人员在后台换的不用等
+  if (contactId) {
+    const g = await gateSlot('club_qr', c.key, url, contactId, { expires: exp });
+    if (g.risky) throw new CrmError('bad_image', '这张图片没通过微信内容检测，请换一张');
+    if (g.checking) {
+      await log(actor, 'club', c.key, 'set_qr_checking', exp);
+      return { message: '群二维码已收到，图片检测通过后成员就能看到' };
+    }
+  }
   await getPool().query(`UPDATE clubs SET group_qr_url = $2, group_qr_expires = $3, updated_at = now() WHERE id = $1`, [c.id, url, exp]);
   await log(actor, 'club', c.key, 'set_qr', exp);
   return { message: `群二维码已更新，${exp} 前提醒更换` };

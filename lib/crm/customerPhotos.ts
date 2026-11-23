@@ -14,7 +14,7 @@ import sharp from 'sharp';
 import { getPool } from '@/lib/db/client';
 import { CrmError } from './events';
 import { BLOB_PREFIX, blobConfigured, isPhotoBanned, watermark } from './photos';
-import { submitImageChecks } from './mediaCheck';
+import { CHECKING_PHOTO_NOTE, gateReady, submitImage, urlStates } from './imageGate';
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
@@ -32,12 +32,14 @@ async function dHash(buf: Buffer): Promise<string> {
   return BigInt('0b' + bits).toString(16).padStart(16, '0');
 }
 
-export type MyPhoto = { id: string; url: string; thumb: string; visibility: string; review: string; hasOriginal: boolean; duplicate?: boolean; withdrawn?: string };
+export type MyPhoto = { id: string; url: string; thumb: string; visibility: string; review: string; hasOriginal: boolean; duplicate?: boolean; withdrawn?: string; checking?: string };
 
 const toMine = (r: { id: string; url: string; thumb_url: string; visibility: string; review_status: string; original_url: string | null; is_hidden?: boolean }, duplicate = false): MyPhoto => ({
   id: r.id, url: r.url, thumb: r.thumb_url, visibility: r.visibility, review: r.review_status, hasOriginal: !!r.original_url, ...(duplicate ? { duplicate: true } : {}),
   // 1.5.0 先发后管：微信图片检测不通过、自动撤下的（is_hidden + rejected），本人还看得到并知道原因
-  ...(r.is_hidden && r.review_status === 'rejected' ? { withdrawn: PHOTO_MACHINE_REASON } : {})
+  ...(r.is_hidden && r.review_status === 'rejected' ? { withdrawn: PHOTO_MACHINE_REASON } : {}),
+  // 指令 36：图片检测中（review = 'checking'），只有本人看得到；新字段，老小程序不认也不出错
+  ...(r.review_status === 'checking' ? { checking: CHECKING_PHOTO_NOTE } : {})
 });
 
 /**
@@ -68,6 +70,7 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
   );
   if (dup[0]) return toMine(dup[0], true);
   const [w, ph] = await Promise.all([watermark(data), dHash(data).catch(() => null)]);
+  const gate = !!opts.toAlbum && (await gateReady());
   const id = randomUUID();
   const dir = `${BLOB_PREFIX}/events/${ev.id}/u`;
   const [full, thumb] = await Promise.all([
@@ -76,14 +79,14 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
   ]);
   const { rows } = await pool.query(
     `INSERT INTO event_photos (id, event_id, url, thumb_url, width, height, sort_order, uploaded_by, uploader_contact_id, visibility, review_status, content_hash, phash)
-     VALUES ($1, $2, $3, $4, $5, $6, 100000, 'customer', $7, $10, 'ok', $8, $9)
+     VALUES ($1, $2, $3, $4, $5, $6, 100000, 'customer', $7, $10, $11, $8, $9)
      ON CONFLICT (event_id, content_hash) WHERE content_hash IS NOT NULL AND variant_of IS NULL DO NOTHING
      RETURNING id, url, thumb_url, visibility, review_status, original_url`,
-    [id, ev.id, full.url, thumb.url, w.width, w.height, contactId, hash, ph, opts.toAlbum ? 'album' : 'private']
+    [id, ev.id, full.url, thumb.url, w.width, w.height, contactId, hash, ph, opts.toAlbum ? 'album' : 'private', gate ? 'checking' : 'ok']
   );
   if (rows[0]) {
-    // 1.5.0：进了相册的照片提交微信图片自动检测，不通过的自动撤下（配好消息推送前不起作用）
-    if (opts.toAlbum) await submitImageChecks('photo:' + rows[0].id, contactId, [full.url]).catch(() => undefined);
+    // 指令 36：进相册的照片检测完才公开（checking：只有本人看得到）；微信推回通过或工作人员放行后对大家显示
+    if (gate) await submitImage(full.url, 'photo:' + rows[0].id, contactId).catch(() => undefined);
     return toMine(rows[0]);
   }
   // 并发上传同一张：另一条请求先存进去了
@@ -137,6 +140,16 @@ export async function setMyPhotoVisibility(contactId: string, photoId: string, t
   if (toAlbum) {
     const { rows } = await pool.query(`SELECT 1 FROM registrations WHERE event_id = $1 AND contact_id = $2 AND status <> 'cancelled'`, [p.event_id, contactId]);
     review = rows[0] ? 'ok' : 'review';
+    // 指令 36：私人照片放进相册时也要检测完才公开（以前检测通过的不用再等）
+    if (review === 'ok' && (await gateReady())) {
+      const { rows: ph } = await pool.query<{ url: string }>(`SELECT url FROM event_photos WHERE id = $1`, [photoId]);
+      const u = ph[0]?.url;
+      const st = u ? (await urlStates([u])).get(u) : 'pass';
+      if (u && st !== 'pass') {
+        review = 'checking';
+        if (st !== 'pending') await submitImage(u, 'photo:' + photoId, contactId).catch(() => undefined);
+      }
+    }
   }
   const { rows } = await pool.query(
     `UPDATE event_photos SET visibility = $2, review_status = CASE WHEN $2 = 'album' THEN $3 ELSE review_status END

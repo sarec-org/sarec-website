@@ -4,6 +4,7 @@ import { CrmError } from '@/lib/crm/events';
 import { handler, ok, requireContact } from '@/lib/crm/http';
 import { uploadImage } from '@/lib/crm/photos';
 import { markCardContentChanged } from '@/lib/crm/cards';
+import { CHECKING_SLOT_NOTE, gateSlot } from '@/lib/crm/imageGate';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const POST = handler(async (req: Request) => {
@@ -13,7 +14,9 @@ export const POST = handler(async (req: Request) => {
   if (!f || typeof f === 'string') throw new CrmError('bad_request', '请选择头像图片');
   if (f.size > 4 * 1024 * 1024) throw new CrmError('bad_request', '图片太大了，请换一张');
   const url = await uploadImage('avatar', Buffer.from(await f.arrayBuffer()), { maxSide: 480 });
-  await getPool().query(`UPDATE contacts SET avatar_url = $2, updated_at = now() WHERE id = $1`, [me, url]);
+  // 指令 36：新头像检测完才对别人显示（原来的头像先不换）；本人看到新头像。老字段 avatarUrl 不变，新加 checking / message
+  const g = await gateSlot('avatar', me, url, me);
+  if (!g.checking) await getPool().query(`UPDATE contacts SET avatar_url = $2, updated_at = now() WHERE id = $1`, [me, url]);
   await markCardContentChanged(me); // 头像也是对外展示的内容，换了要重新审核
-  return ok({ avatarUrl: url });
+  return ok({ avatarUrl: url, ...(g.checking ? { checking: true, message: CHECKING_SLOT_NOTE } : {}) });
 });

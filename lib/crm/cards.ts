@@ -19,6 +19,7 @@ import { BLOB_PREFIX, blobConfigured } from './photos';
 import { getSetting } from './orders';
 import { cardCode, chamberInviteCode, inviteCode, wxConfigured } from './wechat';
 import { msgSecCheck } from './contentSec';
+import { CHECKING_SLOT_NOTE, gateSlot, ownerOverlay } from './imageGate';
 import { findTemplate } from '@/lib/cardtpl/registry';
 import type { Db } from './profile';
 
@@ -91,11 +92,15 @@ export async function myCard(contactId: string) {
   );
   const info = await getContactInfo(pool, contactId);
   const status = await statusOf(pool, contactId);
+  // 指令 36：还在检测的新头像 / logo / 项目照片，本人看新图（别人看到的还是原来那张）；imageChecking 是新字段，老小程序不认也不出错
+  const ov = await ownerOverlay(contactId).catch(() => ({} as Awaited<ReturnType<typeof ownerOverlay>>));
+  const checking = (['avatar', 'logo', 'card_photo'] as const).filter((k) => ov[k]);
   return {
+    imageChecking: checking.length ? { items: checking, note: CHECKING_SLOT_NOTE } : null,
     token: card.token,
     name: c[0]?.name && c[0].name !== '微信用户' ? c[0].name : '',
     memberNo: c[0]?.member_no ?? null,
-    avatarUrl: c[0]?.avatar_url ?? null,
+    avatarUrl: ov.avatar ?? c[0]?.avatar_url ?? null,
     roleLabel: findRoleSub(c[0]?.role_sub)?.label ?? null,
     company: card.company ?? (await profileCompany(pool, contactId)),
     title: card.title,
@@ -116,9 +121,9 @@ export async function myCard(contactId: string) {
     template: card.template,
     nameEn: card.name_en, companyEn: card.company_en, titleEn: card.title_en,
     industry: card.industry ?? (await profileIndustry(pool, contactId)),
-    projectPhotoUrl: card.project_photo_url,
+    projectPhotoUrl: ov.card_photo ?? card.project_photo_url,
     // 名片模板库：地址、公司 logo；会员等级（非会员为空，卡面不出现任何等级字样）
-    address: card.address, showAddress: card.show_address, logoUrl: card.logo_url,
+    address: card.address, showAddress: card.show_address, logoUrl: ov.logo ?? card.logo_url,
     tierName: status.isMember ? tierBadge(status) : null,
     // 1.4.1 找人：让商会里的人能搜到我（null = 还没问过）
     searchable: await cardSearchable(contactId)
@@ -195,6 +200,19 @@ export async function updateMyCard(contactId: string, b: Record<string, unknown>
   if (address) {
     const r1 = await msgSecCheck(address, before?.openid ?? null, 1);
     if (r1 === 'risky') throw new CrmError('content_risky', '名片内容未通过内容安全检查，请修改后再保存');
+  }
+  // 指令 36：名片保存时带来的 logo / 项目照片是新图 → 检测完才写进去（本人在 myCard 里看到新图）；以前没通过的直接不让存
+  const { rows: curImg } = await pool.query<{ logo_url: string | null; project_photo_url: string | null }>(`SELECT logo_url, project_photo_url FROM member_cards WHERE contact_id = $1`, [contactId]);
+  for (const [field, kind] of [['logoUrl', 'logo'], ['projectPhotoUrl', 'card_photo']] as const) {
+    const v = b[field];
+    const cur = field === 'logoUrl' ? curImg[0]?.logo_url : curImg[0]?.project_photo_url;
+    if (typeof v === 'string' && v && v !== cur && /^https:\/\/[a-z0-9.-]+\.(public\.blob\.vercel-storage\.com|vercel-storage\.com)\//i.test(v)) {
+      const g = await gateSlot(kind, contactId, v, contactId);
+      if (g.risky) throw new CrmError('content_risky', '这张图片没通过微信内容检测，请换一张');
+      if (g.checking) delete b[field];
+    } else if (v === null || v === '') {
+      await pool.query(`UPDATE image_checks SET status = 'superseded', decided_at = now(), decided_by = 'cleared' WHERE target = $1 AND status = 'pending'`, [`${kind}:${contactId}`]).catch(() => undefined);
+    }
   }
   if (b.address !== undefined || b.logoUrl !== undefined || typeof b.showAddress === 'boolean') {
     await pool.query(

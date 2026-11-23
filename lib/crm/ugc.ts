@@ -9,7 +9,8 @@ import { CrmError } from './events';
 import { memberStatus } from './membership';
 import { msgSecCheck } from './contentSec';
 import type { Staff } from './auth';
-import { MACHINE_REASON, submitImageChecks } from './mediaCheck';
+import { MACHINE_REASON } from './mediaCheck';
+import { CHECKING_PROJECT_REASON, gateProjectImages, gateReady, passTarget } from './imageGate';
 
 async function log(actor: string, kind: string, targetId: string | null, action: string, note?: string | null) {
   await getPool().query(`INSERT INTO ugc_actions (kind, target_id, action, actor, note) VALUES ($1, $2, $3, $4, $5)`, [kind, targetId, action, actor, note ?? null]);
@@ -105,8 +106,8 @@ export async function myProfile(contactId: string) {
     `SELECT bio, company_intro, offers, seeks, profile_status FROM member_cards WHERE contact_id = $1`, [contactId]
   );
   const { rows: projects } = await pool.query(
-    `SELECT id, title, body, images, status, CASE WHEN status = 'rejected' THEN $2 WHEN status = 'taken_down' THEN '已被工作人员下架，别人看不到；有疑问请联系商会' END AS reason
-       FROM profile_projects WHERE contact_id = $1 ORDER BY sort_order, created_at`, [contactId, MACHINE_REASON]
+    `SELECT id, title, body, images, status, CASE WHEN status = 'rejected' THEN $2 WHEN status = 'taken_down' THEN '已被工作人员下架，别人看不到；有疑问请联系商会' WHEN status = 'checking' THEN $3 END AS reason
+       FROM profile_projects WHERE contact_id = $1 ORDER BY sort_order, created_at`, [contactId, MACHINE_REASON, CHECKING_PROJECT_REASON]
   );
   return {
     hasCard: !!rows[0], bio: rows[0]?.bio ?? '', companyIntro: rows[0]?.company_intro ?? '', offers: rows[0]?.offers ?? [], seeks: rows[0]?.seeks ?? [],
@@ -159,24 +160,39 @@ export async function saveProject(contactId: string, b: Record<string, unknown>)
   if (!title) throw new CrmError('bad_request', '请写一个项目名称');
   const id = typeof b.id === 'string' && /^[0-9a-f-]{36}$/.test(b.id) ? b.id : null;
   if (!id) {
-    const { rows } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM profile_projects WHERE contact_id = $1 AND status = 'ok'`, [contactId]);
+    const { rows } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM profile_projects WHERE contact_id = $1 AND status IN ('ok', 'checking')`, [contactId]);
     if (rows[0].n >= lim.projects) throw new CrmError('limit', lim.projects >= 6 ? `最多展示 ${lim.projects} 个项目` : `注册用户最多展示 ${lim.projects} 个项目，会员可以展示 6 个`);
   }
   const sec = await msgSecCheck(`${title}\n${body}`, await openidOf(contactId), 1);
   if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再保存');
-  // 先发后管：保存就公开；图片提交微信自动检测，不通过的自动撤下（配好消息推送之前就是纯事后管理）
-  const status = 'ok';
+  // 文字先发后管；图片（指令 36）检测完才公开：有新图时项目先是 checking（只有本人看得到），图都通过 / 工作人员放行后公开。
+  // 原来就公开着的图（迁移前的老图）不用重新检测。迁移 0048 没跑时照旧：保存就公开。
+  let keepOk: string[] = [];
+  if (id) {
+    const { rows: cur } = await pool.query<{ images: string[]; status: string }>(`SELECT images, status FROM profile_projects WHERE id = $1 AND contact_id = $2`, [id, contactId]);
+    if (!cur[0] || cur[0].status === 'taken_down') throw new CrmError('not_found', '找不到这个项目');
+    keepOk = cur[0].status === 'ok' ? cur[0].images ?? [] : [];
+  }
+  const pid = id ?? (await pool.query<{ id: string }>(
+    `INSERT INTO profile_projects (contact_id, title, body, images, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [contactId, title, body || null, images, images.length && (await gateReady()) ? 'checking' : 'ok']
+  )).rows[0].id;
+  const g = await gateProjectImages(pid, contactId, images, keepOk);
+  if (g === 'risky') {
+    if (!id) await pool.query(`DELETE FROM profile_projects WHERE id = $1`, [pid]);
+    throw new CrmError('bad_image', '有一张图片没通过微信内容检测，换一张再保存');
+  }
+  const status = g === 'checking' ? 'checking' : 'ok';
   if (id) {
     const { rowCount } = await pool.query(
       `UPDATE profile_projects SET title = $3, body = $4, images = $5, status = $6, updated_at = now() WHERE id = $1 AND contact_id = $2 AND status <> 'taken_down'`,
       [id, contactId, title, body || null, images, status]
     );
     if (!rowCount) throw new CrmError('not_found', '找不到这个项目');
-  }
-  const pid = id ?? (await pool.query<{ id: string }>(`INSERT INTO profile_projects (contact_id, title, body, images, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`, [contactId, title, body || null, images, status])).rows[0].id;
+  } else if (status === 'ok') await pool.query(`UPDATE profile_projects SET status = 'ok' WHERE id = $1 AND status = 'checking'`, [pid]);
   if (sec === 'review') await log('machine', 'profile_project', pid, 'machine_review', '微信文本检测建议人工看一眼（照常显示）');
-  if (images.length) await submitImageChecks('project:' + pid, contactId, images);
-  return { message: '项目已保存，大家现在就能看到', status };
+  // 老字段不变：status 仍是 ok / checking 两种之一；1.5.0 小程序照写 message
+  return { message: status === 'checking' ? '项目已保存。图片在检测中，检测通过后别人才能看到（您自己现在就能看到）' : '项目已保存，大家现在就能看到', status };
 }
 
 export async function deleteProject(contactId: string, id: string) {
@@ -241,6 +257,7 @@ export async function staffProfileAction(s: Staff, b: Record<string, unknown>) {
   }
   if (act === 'approve_project' || act === 'take_down_project' || act === 'reject_project') {
     const st = { approve_project: 'ok', take_down_project: 'taken_down', reject_project: 'rejected' }[act];
+    if (act === 'approve_project') await passTarget('project:' + id, actor);
     await pool.query(`UPDATE profile_projects SET status = $2, reviewed_by = $3, reviewed_at = now() WHERE id = $1`, [id, st, actor]);
     await log(actor, 'profile_project', id, act, String(b.reason ?? '') || null);
     return { message: { approve_project: '已放行，别人能看到了', take_down_project: '已下架', reject_project: '已退回（只有本人看得到，可以改了再提交）' }[act] };
