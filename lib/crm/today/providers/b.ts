@@ -184,4 +184,40 @@ export const jobsProProvider: TodayProvider = {
   }
 };
 
-export const B_PROVIDERS: TodayProvider[] = [recapProvider, paymentProvider, followupProvider, inquiryProvider, jobsProProvider];
+/**
+ * 1.5.1 指令 46：小程序里交来的「发布活儿」（请商会帮忙找师傅）——先进这里，工作人员看一眼原话再派。
+ * 「派给师傅」= 转成找人中并通知对口、核验过的接活人；「不派」= 下架（客户在小程序里看不到任何公开列表，不受影响）。
+ */
+export const jobsRequestProvider: TodayProvider = {
+  kind: 'jobs_request',
+  roles: ['ops'],
+  async list() {
+    const { rows } = await getPool()
+      .query<{ id: string; description: string; phone: string | null; city: string; trade: string; name: string; created_at: Date; sec_status: string | null }>(
+        `SELECT p.id, p.description, p.phone, COALESCE(jc.name, p.city) AS city, COALESCE(t.name, p.trade_key) AS trade, c.name, p.created_at, p.sec_status
+           FROM jobs_posts p JOIN contacts c ON c.id = p.contact_id
+           LEFT JOIN jobs_cities jc ON jc.key = p.city_key LEFT JOIN jobs_trades t ON t.key = p.trade_key
+          WHERE p.status = 'pending' ORDER BY p.created_at LIMIT 30`
+      )
+      .catch(() => ({ rows: [] as { id: string; description: string; phone: string | null; city: string; trade: string; name: string; created_at: Date; sec_status: string | null }[] }));
+    return rows.map((r) => ({
+      id: `jobs_request:${r.id}`,
+      kind: 'jobs_request' as const,
+      priority: PRIORITY.review - 1,
+      title: `${r.name} 在小程序请商会找师傅：${r.trade} · ${r.city}`,
+      suggestion: `原话：“${clip(r.description, 60)}”。看一眼没问题就派给师傅（会通知对口、核验过的师傅）；不合适就不派。${r.sec_status === 'review' ? '微信检测建议人工看一眼。' : ''}`,
+      detail: r.description,
+      actions: [
+        { type: 'post' as const, label: '派给师傅', endpoint: `/api/v1/workbench/jobs/posts/${r.id}`, body: { action: 'approve' }, primary: true, done: '已派出' },
+        ...(r.phone ? [{ type: 'tel' as const, label: '打电话', phone: r.phone }] : []),
+        { type: 'post' as const, label: '不派', endpoint: `/api/v1/workbench/jobs/posts/${r.id}`, body: { action: 'remove', note: '今天页：不派' }, confirm: '不派这一条？客户那边不会收到通知。', done: '已不派', danger: true },
+        { type: 'link' as const, label: '打开', href: `/zh/staff/jobs?status=pending&id=${r.id}` }
+      ],
+      href: `/zh/staff/jobs?status=pending&id=${r.id}`,
+      tags: ['找师傅'],
+      at: r.created_at.toISOString()
+    }));
+  }
+};
+
+export const B_PROVIDERS: TodayProvider[] = [recapProvider, paymentProvider, followupProvider, inquiryProvider, jobsProProvider, jobsRequestProvider];

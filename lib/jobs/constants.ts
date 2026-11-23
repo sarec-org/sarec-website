@@ -4,7 +4,7 @@
 export type ProRole = 'company' | 'licensed' | 'pro_service' | 'worker';
 export type PosterRole = 'owner' | 'landlord' | 'property' | 'developer' | 'crew';
 export type Timing = 'asap' | 'week' | 'month' | 'flexible';
-export type PostStatus = 'open' | 'found' | 'closed' | 'removed';
+export type PostStatus = 'pending' | 'open' | 'found' | 'closed' | 'removed';
 export type ProStatus = 'draft' | 'pending' | 'verified' | 'returned' | 'removed';
 
 export const PRO_ROLES: { key: ProRole; label: string }[] = [
@@ -31,7 +31,7 @@ export const PROPERTY_TYPES = [
   { key: 'condo', label: '公寓' },
   { key: 'commercial', label: '商业' }
 ];
-export const STATUS_LABEL: Record<PostStatus, string> = { open: '找人中', found: '已找到', closed: '已关闭', removed: '已下架' };
+export const STATUS_LABEL: Record<PostStatus, string> = { pending: '商会在看', open: '找人中', found: '已找到', closed: '已关闭', removed: '已下架' };
 export const PRO_STATUS_LABEL: Record<ProStatus, string> = { draft: '还没提交', pending: '核验中', verified: '核验通过', returned: '已退回', removed: '已下架' };
 
 export const roleLabel = (r: string) => PRO_ROLES.find((x) => x.key === r)?.label ?? r;

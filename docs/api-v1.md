@@ -335,6 +335,13 @@ BASE=http://localhost:3400 STAFF_EMAIL=… pnpm dlx tsx scripts/crm-e2e-http.ts 
 - **本人修改**：确认页「我要修改」→ `/zh/jobs/register`，用登记的手机号收验证码登录（登录按手机号找到同一份档案），`GET /jobs/me/pro` 带回代登记的资料；`POST /jobs/me/pro` 提交即算本人已确认（`self_confirm_via='edit'`）。本人点过“不用登记”后又自己来登记，照常可以登记。
 - **确认短信**：`SAREC：商会帮你登记了「找工人·接活儿」的接活儿资料（名称）。请点链接确认或修改：<网站>/zh/jobs/confirm/<一次性令牌> 不是你本人或不想登记，也可以在链接里说一声。` 走发消息总闸 `lib/crm/notifyGate.ts`（和子任务 B 同一份 `gateSend`：正式站 `notify_live` 没开 → `held` 只记录；测试站 / 本机只发测试号码，其他 `blocked` 只记录）。`notify_log` 里收件人打码、正文里令牌打码（`kind='代登记确认短信'`，`ref='jobs_pro:<id>'`）。
 
+### 12.x 1.5.1 指令 46：小程序里直接填「发布活儿」（迁移 0049）
+- 是"请商会帮忙找师傅"的预约，不是公开发帖：交上来先是 `jobs_posts.status='pending'`、`source='mp'`，只有本人和工作人员看得到；工作人员看过「派给师傅」才变 `open` 并照常通知对口、核验过的接活人。网站公开「全部活儿」不列 `source='mp'` 的。
+- `GET /jobs/meta` 多 `postMode: 'in_app' | 'sheet'`（后台开关 `jobs_post_in_app` 默认开 = in_app；关了或 0049 没跑 = sheet，小程序照旧弹「加商会微信＋复制网址」）。
+- `GET /jobs/requests` → `{mode, phone（已验证的，没有 null）, maxLen:200, receivedText, receivedSub}`；`POST /jobs/requests {trade, cityKey, description}` → `{id, message「收到了，商会会帮你联系合适的师傅」, sub}`。没验证手机 `400 need_phone`；新方式关着 `403 not_open`；一句话 msgSecCheck 明确违规 `400`（不存），拿不准 / 没检测照收；同一人一天最多 5 条 `429`。小程序头可调。
+- 工作人员：`POST /workbench/jobs/posts/:id {action:'approve'}`「派给师傅」（只对 pending；人工看过记 `sec_status='pass'`、`sec_note=<谁>`；返回 `notified`、`message`）；`{action:'remove'}` 对 pending 就是「不派」。`GET /workbench/jobs/posts?status=pending`，网站端每条多 `fromMp, description, phone, secStatus`；pending 排最前。「今天」多一类 `jobs_request`（派给师傅 / 打电话 / 不派）。
+- 开关：`GET/PATCH /workbench/jobs/switches` 多 `postInApp`（admin 改，记操作记录）。
+
 ## 13. 后台「今天」页 `/zh/staff`（后台综合优化 B，迁移 0039）
 
 - `GET /api/v1/staff/today`（任何工作人员；每类待办按角色过滤）→ `{ today, live, items, failed, yesterday }`，类型见 `lib/crm/today/types.ts`（`TodayPayload`）。

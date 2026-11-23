@@ -25,9 +25,11 @@ export type Switches = {
   feeMode: FeeMode;
   freeContacts: number;
   freePosts: number | null;
+  /** 1.5.1 指令 46：小程序「发布活儿」= 小程序里直接填（true，默认）/ 老方式弹「加商会微信＋复制网址」（false，一键切回） */
+  postInApp: boolean;
 };
 
-const BOOL_KEYS = { find: 'jobs_find_on', work: 'jobs_work_on' } as const;
+const BOOL_KEYS = { find: 'jobs_find_on', work: 'jobs_work_on', postInApp: 'jobs_post_in_app' } as const;
 export const FEE_KEYS = { feeMode: 'jobs_work_fee_mode', freeContacts: 'jobs_free_contacts', freePosts: 'jobs_free_posts' } as const;
 const OLD_PAID_KEY = 'jobs_require_paid_member';
 export const DEFAULT_FREE_CONTACTS = 2;
@@ -47,6 +49,7 @@ function strictInt(v: unknown, max: number): number | null {
 export async function getSwitches(db: Db = getPool()): Promise<Switches> {
   const find = await getSetting<unknown>(db, BOOL_KEYS.find, true);
   const work = await getSetting<unknown>(db, BOOL_KEYS.work, true);
+  const postInApp = await getSetting<unknown>(db, BOOL_KEYS.postInApp, true);
   let mode = await getSetting<unknown>(db, FEE_KEYS.feeMode, null);
   if (!isMode(mode)) {
     // 还没跑到 D28 的库：从旧开关读（开 = 必须是会员；关 = 全部免费）；都没有就用新默认
@@ -62,7 +65,8 @@ export async function getSwitches(db: Db = getPool()): Promise<Switches> {
     requirePaid: feeMode === 'members_only',
     feeMode,
     freeContacts: fc ?? DEFAULT_FREE_CONTACTS,
-    freePosts: fp
+    freePosts: fp,
+    postInApp: !(postInApp === false || postInApp === 'false')
   };
 }
 
@@ -83,7 +87,7 @@ export async function switchesDetail(db: Db = getPool()) {
     )
     .catch(() => ({ rows: [] as { actor: string; target_id: string; before_value: unknown; after_value: unknown; created_at: Date }[] }));
   const NAME: Record<string, string> = {
-    [BOOL_KEYS.find]: '「找工人／施工队」栏目', [BOOL_KEYS.work]: '「我要接活儿」栏目', [OLD_PAID_KEY]: '接活是否要求缴费会员（旧）',
+    [BOOL_KEYS.find]: '「找工人／施工队」栏目', [BOOL_KEYS.work]: '「我要接活儿」栏目', [BOOL_KEYS.postInApp]: '小程序「发布活儿」的做法', [OLD_PAID_KEY]: '接活是否要求缴费会员（旧）',
     [FEE_KEYS.feeMode]: '接活儿收费方式', [FEE_KEYS.freeContacts]: '免费联系次数', [FEE_KEYS.freePosts]: '非会员免费发活儿条数'
   };
   const parse = (v: unknown) => {
@@ -96,6 +100,7 @@ export async function switchesDetail(db: Db = getPool()) {
     changes: {
       find: by[BOOL_KEYS.find] ?? null,
       work: by[BOOL_KEYS.work] ?? null,
+      postInApp: by[BOOL_KEYS.postInApp] ?? null,
       requirePaid: by[FEE_KEYS.feeMode] ?? by[OLD_PAID_KEY] ?? null,
       feeMode: by[FEE_KEYS.feeMode] ?? null,
       freeContacts: by[FEE_KEYS.freeContacts] ?? null,

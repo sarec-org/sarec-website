@@ -22,7 +22,8 @@ export const KIND_NAME: Record<TodayKind, string> = {
   exception: '失败和异常',
   ugc_report: '被举报的内容',
   ugc_machine: '机器拦下的内容',
-  profile_review: '个人主页待看一眼'
+  profile_review: '个人主页待看一眼',
+  jobs_request: '找师傅：小程序交来的待派'
 };
 
 export function allProviders(): TodayProvider[] {
