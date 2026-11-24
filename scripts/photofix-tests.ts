@@ -87,6 +87,21 @@ async function main() {
   assert.equal(await gate.retryPendingFor(main2), 0, '重复调用不重复交');
   ok('卡住的图：本人登录后重新交给微信 → 推回"通过" → 自动公开；重复登录不重复交');
 
+  console.log('4 不登录、只是打开页面也会重交（2 分钟一次）');
+  const main3 = await contact('只开页面的人', `oFIX${sfx}c`);
+  gate.__setForTest(async () => null, () => true);
+  await saveProject(main3, { title: `${P}页面重交`, images: [img('c')] });
+  const pid3 = (await pool.query<{ id: string }>(`SELECT id FROM profile_projects WHERE contact_id = $1`, [main3])).rows[0].id;
+  useWx();
+  const before = calls.length;
+  await gate.retryPendingSoon(main3);
+  const ck3 = (await pool.query<{ trace_id: string | null }>(`SELECT trace_id FROM image_checks WHERE target = $1`, ['project:' + pid3])).rows[0];
+  assert.ok(ck3.trace_id, '打开页面就重交了');
+  await pool.query(`UPDATE image_checks SET trace_id = NULL WHERE target = $1`, ['project:' + pid3]);
+  await gate.retryPendingSoon(main3);
+  assert.equal(calls.length, before + 1, '2 分钟内不再查第二次');
+  ok('打开首页 / 我的照片时重交卡住的图；2 分钟内只查一次');
+
   console.log(`\n全部通过：${passed} 项`);
 }
 
