@@ -12,10 +12,11 @@ import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
 
 type Member = { id: string; name: string; role: 'owner' | 'helper' };
-type Org = { id: string; name: string; public_contact: string | null; staff_note: string | null; status: string; review_left: number; agreed_at: string | null; suspended_at: string | null; suspend_reason: string | null; helps: number; members: Member[] | null; events: number; open_code: string | null; created_at: string };
+type Org = { id: string; name: string; is_demo?: boolean; public_contact: string | null; staff_note: string | null; status: string; review_left: number; agreed_at: string | null; suspended_at: string | null; suspend_reason: string | null; helps: number; members: Member[] | null; events: number; open_code: string | null; created_at: string };
 type Ev = { id: string; code: string; organizer: string; title: string; mode: string; when: string; status: string; secStatus: string | null; description: string | null; locationName: string | null; address: string | null; people: number; reviewNote: string | null; takenDownReason: string | null; createdAt: string };
 type App = { id: string; org_name: string; person_name: string; phone: string | null; note: string | null; from_title: string | null; status: string; created_at: string };
-type Overview = { switches: { tool: boolean; chain: boolean }; organizers: Org[]; events: Ev[]; applications: App[]; guests: number; promiseVersion: string };
+type ReviewCode = { code: string; expires_at: string; created_at: string; created_by: string; note: string | null; revoked_at: string | null; uses: number; org_name: string };
+type Overview = { reviewCodes?: ReviewCode[]; switches: { tool: boolean; chain: boolean }; organizers: Org[]; events: Ev[]; applications: App[]; guests: number; promiseVersion: string };
 type Code = { code: string; expiresAt: string; qr: string | null; qrPlain: string | null };
 type LogRow = { actor: string; reason: string; created_at: string; title: string | null; organizer: string | null };
 
@@ -89,7 +90,7 @@ function Page({ admin }: { admin: boolean }) {
         <h2 className={styles.h2}>开关</h2>
         {[
           { k: 'tool', name: '活动工具总开关', on: d.switches.tool, hint: d.switches.tool ? '开着：开通的主办方在「我的」里能看到「我办的活动」。万一审核不认，关掉后入口消失、主办方活动页显示"暂停使用"，不用重新传小程序。' : '关着：主办方看不到「我办的活动」，报名页显示"暂停使用"。' },
-          { k: 'chain', name: '接龙模式', on: d.switches.chain, hint: d.switches.chain ? '开着：发活动时多一个「接龙」模板。' : '关着（默认）：第一版代码里有接龙，但不给用；第二版单独提审再打开。' }
+          { k: 'chain', name: '接龙模式', on: d.switches.chain, hint: d.switches.chain ? '开着：发活动时多一个「接龙」模板（审核员用审核码进去也能看到）。' : '关着（默认）：第一版代码里有接龙，但不给用，审核员也看不到；第二版单独提审再打开。' }
         ].map((x) => (
           <div key={x.k} className={styles.row}>
             <span><b>{x.name}</b> <span className={`${styles.badge} ${x.on ? styles.badgeGreen : styles.badgeMuted}`}>{x.on ? '开着' : '关着'}</span><br /><span className={styles.small}>{x.hint}</span></span>
@@ -100,6 +101,8 @@ function Page({ admin }: { admin: boolean }) {
           </div>
         ))}
       </div>
+
+      <ReviewCodes list={d.reviewCodes ?? []} busy={busy} post={post} />
 
       <div className={styles.card}>
         <h2 className={styles.h2}>等放行的活动（{pending.length}）</h2>
@@ -138,7 +141,7 @@ function Page({ admin }: { admin: boolean }) {
         {d.organizers.map((o) => (
           <div key={o.id} className={styles.listItem}>
             <div className={styles.row}>
-              <span><b>{o.name}</b> <span className={`${styles.badge} ${o.status === 'active' ? styles.badgeGreen : o.status === 'suspended' ? styles.badgeRed : styles.badgeMuted}`}>{ORG_STATUS[o.status]}</span></span>
+              <span><b>{o.name}</b> {o.is_demo && <span className={`${styles.badge} ${styles.badgeMuted}`}>审核演示</span>} <span className={`${styles.badge} ${o.status === 'active' ? styles.badgeGreen : o.status === 'suspended' ? styles.badgeRed : styles.badgeMuted}`}>{ORG_STATUS[o.status]}</span></span>
               <span className={styles.small}>公开活动 {o.events} 场 · 先审后发还剩 {o.review_left} 场 · 商会帮忙 {o.helps} 次</span>
             </div>
             <p className={styles.small}>
@@ -219,5 +222,36 @@ function Page({ admin }: { admin: boolean }) {
         {log.map((l, i) => <p key={i} className={styles.small}>{fmtDateTime(l.created_at)} · {l.actor} 查看了「{l.organizer}」的「{l.title}」 · 原因：{l.reason}</p>)}
       </div>
     </>
+  );
+}
+
+/** 审核用开通码（指令 57 第 4 条）：给微信审核员用，可多人反复用、默认 60 天、可一键作废 */
+function ReviewCodes({ list, busy, post }: { list: ReviewCode[]; busy: boolean; post: (b: Record<string, unknown>, okText?: string) => Promise<unknown> }) {
+  const [days, setDays] = useState('60');
+  const live = (c: ReviewCode) => !c.revoked_at && new Date(c.expires_at).getTime() > Date.now();
+  return (
+    <div className={styles.card}>
+      <h2 className={styles.h2}>审核用开通码</h2>
+      <p className={styles.small}>
+        给微信审核员（陌生微信号）进「我办的活动」看完整功能用：小程序「我的 → 我也要办活动」页上的「已有开通码」框里填这 10 位码 → 看《主办方数据承诺》→「我看完了，开通」。
+        所有填这个码的微信号都成为演示主办方「SAREC 审核测试」的负责人（先审后发 0 场，机器检测照旧）。演示主办方不进试用看板，它的活动和所有主办方活动一样不进首页、不进商会的客户和群发。
+        过审后点「作废」，码就不能再用；要连演示主办方一起停掉，在下面主办方列表里停用「SAREC 审核测试」。
+      </p>
+      <div className={styles.btnRow}>
+        <label className={styles.small}>有效天数 <input className={styles.input} style={{ maxWidth: 80 }} value={days} onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))} /></label>
+        <button className={`${styles.btn} ${styles.btnSmall}`} disabled={busy} onClick={() => post({ action: 'review_code', days: Number(days) || 60 })}>出一个审核码</button>
+      </div>
+      {!list.length && <p className={styles.muted}>还没有出过审核码</p>}
+      {list.map((c) => (
+        <div key={c.code} className={styles.row}>
+          <span>
+            <span className={styles.mono}>{c.code}</span>{' '}
+            <span className={`${styles.badge} ${live(c) ? styles.badgeGreen : styles.badgeMuted}`}>{c.revoked_at ? '已作废' : live(c) ? '能用' : '已过期'}</span>
+            <br /><span className={styles.small}>{c.org_name} · {fmtDateTime(c.expires_at)} 前有效 · 已有 {c.uses} 个微信号用它开通 · {c.created_by} {fmtDateTime(c.created_at)} 出的{c.revoked_at ? ` · ${fmtDateTime(c.revoked_at)} 作废` : ''}</span>
+          </span>
+          {!c.revoked_at && <button className={`${styles.btn} ${styles.btnSmall} ${styles.btnDanger}`} disabled={busy} onClick={() => { if (window.confirm(`作废审核码 ${c.code}？作废后谁都不能再用它开通。`)) post({ action: 'review_revoke', code: c.code }); }}>作废</button>}
+        </div>
+      ))}
+    </div>
   );
 }

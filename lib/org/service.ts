@@ -21,7 +21,7 @@ import { markGuestIfNew } from './guest';
 import { CHAIN_TEMPLATE, FEE_LABEL, FORM_FIELDS, PROMISE_SECTIONS, PROMISE_TITLE, PROMISE_VERSION, TEMPLATES, bannedWord, disclosure } from './texts';
 
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const randCode = (n: number) => Array.from(randomBytes(n)).map((b) => ALPHA[b % ALPHA.length]).join('');
+export const randCode = (n: number) => Array.from(randomBytes(n)).map((b) => ALPHA[b % ALPHA.length]).join('');
 const sha = (s: string) => createHash('sha256').update(s, 'utf8').digest('hex');
 export const MAX_HELPERS = 2; // 待东哥定（暂定 2 个）
 export const EXPORT_TTL_MIN = 10;
@@ -133,16 +133,20 @@ export async function createCode(db: Db, orgId: string, kind: 'owner' | 'helper'
   return { code, expiresAt };
 }
 
+export const DEMO_ORG_NAME = 'SAREC 审核测试';
 async function codeRow(db: Db, raw: string, lock = false) {
   const code = normalizeOrgCode(raw);
   if (!/^[A-Z0-9]{10}$/.test(code)) throw new CrmError('bad_request', '开通码不对，请找商会重新生成');
-  const { rows } = await db.query<{ code: string; organizer_id: string; kind: 'owner' | 'helper'; expires_at: Date; used_at: Date | null; org_name: string; org_status: string }>(
-    `SELECT k.code, k.organizer_id, k.kind, k.expires_at, k.used_at, o.name AS org_name, o.status AS org_status
+  // 审核码（kind = 'review'，迁移 0051）可多人反复用；0051 新加的列用 to_jsonb 取，迁移没跑时也不报错
+  const { rows } = await db.query<{ code: string; organizer_id: string; kind: 'owner' | 'helper' | 'review'; expires_at: Date; used_at: Date | null; org_name: string; org_status: string;
+    revoked_at: string | null }>(
+    `SELECT k.code, k.organizer_id, k.kind, k.expires_at, k.used_at, o.name AS org_name, o.status AS org_status, to_jsonb(k)->>'revoked_at' AS revoked_at
        FROM organizer_codes k JOIN organizers o ON o.id = k.organizer_id WHERE k.code = $1 ${lock ? 'FOR UPDATE OF k' : ''}`,
     [code]
   );
   const r = rows[0];
-  if (!r || r.used_at) throw new CrmError('bad_request', '这个码已经用过或不存在，请找商会（或负责人）重新生成');
+  if (r && r.revoked_at) throw new CrmError('bad_request', '这个码已作废，请找商会重新生成');
+  if (!r || (r.used_at && r.kind !== 'review')) throw new CrmError('bad_request', '这个码已经用过或不存在，请找商会（或负责人）重新生成');
   if (r.expires_at.getTime() < Date.now()) throw new CrmError('bad_request', '这个码已过期，请找商会（或负责人）重新生成');
   if (r.org_status === 'suspended') throw new CrmError('forbidden', '这个主办方已停用，请联系商会');
   return r;
@@ -152,7 +156,8 @@ async function codeRow(db: Db, raw: string, lock = false) {
 export async function codeInfo(raw: string) {
   await requireToolOn();
   const r = await codeRow(getPool(), raw);
-  return { organizer: r.org_name, kind: r.kind, promise: promise() };
+  // 审核码开出来的是负责人（小程序按 owner 显示）
+  return { organizer: r.org_name, kind: r.kind === 'review' ? 'owner' : r.kind, demo: r.kind === 'review', promise: promise() };
 }
 
 /** 看完数据承诺点「我看完了，开通」 */
@@ -161,6 +166,7 @@ export async function claimCode(contactId: string, raw: string, agree: boolean) 
   if (!agree) throw new CrmError('bad_request', '请先看完《主办方数据承诺》，点「我看完了，开通」');
   return withTransaction(async (db) => {
     const r = await codeRow(db, raw, true);
+    if (r.kind === 'review') return claimReview(db, contactId, r);
     if (r.kind === 'helper') {
       const { rows: n } = await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM organizer_members WHERE organizer_id = $1 AND role = 'helper' AND removed_at IS NULL AND contact_id <> $2`, [r.organizer_id, contactId]);
       if (n[0].n >= MAX_HELPERS) throw new CrmError('bad_request', `这个主办方已经有 ${MAX_HELPERS} 个帮手了，请负责人先去掉一个`);
@@ -183,6 +189,26 @@ export async function claimCode(contactId: string, raw: string, agree: boolean) 
     await db.query(`UPDATE contacts SET org_guest_since = NULL WHERE id = $1`, [contactId]);
     return { organizer: r.org_name, role: r.kind, message: r.kind === 'owner' ? `已开通「${r.org_name}」，可以在「我的 → 我办的活动」发活动了` : `已加为「${r.org_name}」的帮手` };
   });
+}
+
+/**
+ * 审核用开通码（指令 57 第 4 条，迁移 0051）：可多人反复用，每个用它的微信号都成为同一个演示主办方「SAREC 审核测试」
+ * （is_demo，先审后发 0 场，机器检测照旧）的负责人。同一个人再输一次只是回到那里。演示主办方不进试用看板。
+ * 审核员本人不因此"变成商会的人"：新来的号照普通客人标"主办方的客人"，不进客户列表。
+ */
+async function claimReview(db: Db, contactId: string, r: { code: string; organizer_id: string; org_name: string }) {
+  const { rows: ex } = await db.query(`SELECT 1 FROM organizer_members WHERE organizer_id = $1 AND contact_id = $2 AND removed_at IS NULL`, [r.organizer_id, contactId]);
+  if (!ex[0]) {
+    await markGuestIfNew(db, contactId);
+    await db.query(
+      `INSERT INTO organizer_members (organizer_id, contact_id, role, added_by) VALUES ($1, $2, 'owner', $3)
+       ON CONFLICT (organizer_id, contact_id) DO UPDATE SET role = 'owner', removed_at = NULL, added_at = now(), added_by = EXCLUDED.added_by`,
+      [r.organizer_id, contactId, `code:${r.code}`]);
+    await db.query(`UPDATE organizer_codes SET uses = uses + 1, used_by = $2 WHERE code = $1`, [r.code, contactId]);
+    await db.query(`UPDATE organizers SET agreed_at = coalesce(agreed_at, now()), agreed_version = coalesce(agreed_version, $2), agreed_by = coalesce(agreed_by, $3), updated_at = now() WHERE id = $1`,
+      [r.organizer_id, PROMISE_VERSION, contactId]);
+  }
+  return { organizer: r.org_name, role: 'owner', demo: true, message: `已开通「${r.org_name}」（审核演示用），可以在「我的 → 我办的活动」发活动了` };
 }
 
 export async function helperCode(contactId: string, orgId?: string | null) {

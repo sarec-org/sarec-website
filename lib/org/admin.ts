@@ -9,7 +9,7 @@ import { setSetting } from '@/lib/crm/orders';
 import type { Staff } from '@/lib/crm/auth';
 import { audit } from '@/lib/crm/staff';
 import { orgBindCode, wxConfigured } from '@/lib/crm/wechat';
-import { ORG_QR_PREFIX, chainOn, createCode, toolOn, whenText, type OrgEvent } from './service';
+import { DEMO_ORG_NAME, ORG_QR_PREFIX, chainOn, createCode, randCode, toolOn, whenText, type OrgEvent } from './service';
 import { PROMISE_VERSION } from './texts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,11 +27,12 @@ export async function overview() {
   const pool = getPool();
   const { rows: orgs } = await pool.query(
     `SELECT o.id, o.name, o.logo_url, o.public_contact, o.staff_note, o.status, o.review_left, o.agreed_at, o.agreed_version, o.suspended_at, o.suspend_reason, o.helps, o.created_at, o.created_by,
+            coalesce((to_jsonb(o)->>'is_demo')::boolean, false) AS is_demo,
             (SELECT json_agg(json_build_object('id', c.id, 'name', coalesce(NULLIF(c.name, '微信用户'), '（没填名字）'), 'role', m.role) ORDER BY m.role DESC)
                FROM organizer_members m JOIN contacts c ON c.id = m.contact_id WHERE m.organizer_id = o.id AND m.removed_at IS NULL) AS members,
             (SELECT count(*)::int FROM org_events e WHERE e.organizer_id = o.id AND e.status = 'published') AS events,
             (SELECT k.code FROM organizer_codes k WHERE k.organizer_id = o.id AND k.kind = 'owner' AND k.used_at IS NULL AND k.expires_at > now() ORDER BY k.created_at DESC LIMIT 1) AS open_code
-       FROM organizers o ORDER BY o.status = 'suspended', o.created_at DESC`
+       FROM organizers o ORDER BY o.status = 'suspended', coalesce((to_jsonb(o)->>'is_demo')::boolean, false), o.created_at DESC`
   );
   const { rows: events } = await pool.query<OrgEvent & { org_name: string; people: number }>(
     `SELECT e.*, o.name AS org_name, (SELECT coalesce(sum(party_size), 0)::int FROM org_regs r WHERE r.event_id = e.id AND r.status = 'registered') AS people
@@ -43,7 +44,14 @@ export async function overview() {
     `SELECT a.*, e.title AS from_title FROM org_applications a LEFT JOIN org_events e ON e.id = a.from_event ORDER BY a.status = 'open' DESC, a.created_at DESC LIMIT 100`
   );
   const { rows: g } = await pool.query<{ n: number }>(`SELECT count(*)::int AS n FROM contacts WHERE org_guest_since IS NOT NULL`);
+  // 审核用开通码（迁移 0051）：没跑迁移时这里就是空的
+  const { rows: reviewCodes } = await pool.query(
+    `SELECT k.code, k.expires_at, k.created_at, k.created_by, to_jsonb(k)->>'note' AS note, to_jsonb(k)->>'revoked_at' AS revoked_at,
+            coalesce((to_jsonb(k)->>'uses')::int, 0) AS uses, o.name AS org_name
+       FROM organizer_codes k JOIN organizers o ON o.id = k.organizer_id WHERE k.kind = 'review' ORDER BY k.created_at DESC LIMIT 20`
+  );
   return {
+    reviewCodes,
     switches: { tool: await toolOn(), chain: await chainOn() },
     organizers: orgs,
     events: events.map((e) => ({
@@ -82,6 +90,46 @@ export async function newOwnerCode(s: Staff, orgId: string) {
   const c = await createCode(getPool(), orgId, 'owner', who(s));
   await audit(getPool(), s, 'org_code', 'organizer', orgId, {});
   return { ...c, ...(await bindQr(c.code)) };
+}
+
+/**
+ * 审核用开通码（指令 57 第 4 条，迁移 0051）：给微信审核员用。可多人反复用，默认 60 天有效，可一键作废。
+ * 都指向同一个演示主办方「SAREC 审核测试」（没有就建，停用了就恢复）。上线双击文件里跑 db/sql/org_review_code.sql 做同样的事。
+ */
+export async function newReviewCode(s: Staff, b: Record<string, unknown>) {
+  const days = Math.max(1, Math.min(120, Math.floor(Number(b.days)) || 60));
+  const code = randCode(10);
+  const expiresAt = new Date(Date.now() + days * 86400_000);
+  try {
+    await withTransaction(async (db) => {
+      const { rows } = await db.query<{ id: string }>(`SELECT id FROM organizers WHERE is_demo AND name = $1 ORDER BY created_at LIMIT 1 FOR UPDATE`, [DEMO_ORG_NAME]);
+      let orgId = rows[0]?.id;
+      if (!orgId) {
+        const r = await db.query<{ id: string }>(
+          `INSERT INTO organizers (name, staff_note, status, review_left, created_by, is_demo) VALUES ($1, '微信审核员用的演示主办方（不是真实主办方）', 'active', 0, $2, true) RETURNING id`,
+          [DEMO_ORG_NAME, who(s)]);
+        orgId = r.rows[0].id;
+      } else {
+        await db.query(`UPDATE organizers SET status = 'active', review_left = 0, suspended_at = NULL, suspended_by = NULL, suspend_reason = NULL, updated_at = now() WHERE id = $1`, [orgId]);
+      }
+      await db.query(`INSERT INTO organizer_codes (code, organizer_id, kind, created_by, expires_at, note) VALUES ($1, $2, 'review', $3, $4, '微信审核用')`, [code, orgId, who(s), expiresAt]);
+      await audit(db, s, 'org_review_code', 'organizer_code', code, { after: { days } });
+    });
+  } catch (e) {
+    if (/is_demo|kind_check|column/.test(String((e as Error).message))) throw new CrmError('bad_request', '数据库还没升级（迁移 0051），先跑迁移再出审核码');
+    throw e;
+  }
+  return { code, expiresAt, message: `已出审核用开通码 ${code}（${days} 天内有效，可多人反复用）` };
+}
+
+/** 作废审核码：码不能再用。已经用它开通的审核员留在「SAREC 审核测试」里（要一并停用就在下面主办方列表里停用它） */
+export async function revokeReviewCode(s: Staff, raw: unknown) {
+  const code = String(raw ?? '').trim().toUpperCase();
+  if (!/^[A-Z0-9]{10}$/.test(code)) throw new CrmError('bad_request', '审核码不对');
+  const { rowCount } = await getPool().query(`UPDATE organizer_codes SET revoked_at = coalesce(revoked_at, now()), revoked_by = coalesce(revoked_by, $2) WHERE code = $1 AND kind = 'review'`, [code, who(s)]);
+  if (!rowCount) throw new CrmError('not_found', '找不到这个审核码');
+  await audit(getPool(), s, 'org_review_code_revoke', 'organizer_code', code, {});
+  return { message: `已作废审核码 ${code}` };
 }
 
 export async function updateOrganizer(s: Staff, orgId: string, b: Record<string, unknown>) {
@@ -211,10 +259,12 @@ export async function trial() {
             (SELECT count(*)::int FROM org_regs r JOIN org_events e ON e.id = r.event_id WHERE e.organizer_id = o.id AND r.status = 'cancelled') AS cancelled,
             (SELECT count(*)::int FROM org_applications a JOIN org_events e ON e.id = a.from_event WHERE e.organizer_id = o.id) AS apps,
             (SELECT count(*)::int FROM org_exports x WHERE x.organizer_id = o.id) AS exports
-       FROM organizers o ORDER BY o.created_at`
+       FROM organizers o WHERE NOT coalesce((to_jsonb(o)->>'is_demo')::boolean, false) ORDER BY o.created_at`
   );
   const { rows: tot } = await pool.query<{ apps: number; from_events: number }>(
-    `SELECT count(*)::int AS apps, count(*) FILTER (WHERE from_event IS NOT NULL)::int AS from_events FROM org_applications`);
+    `SELECT count(*)::int AS apps, count(*) FILTER (WHERE a.from_event IS NOT NULL)::int AS from_events
+       FROM org_applications a LEFT JOIN org_events e ON e.id = a.from_event LEFT JOIN organizers o ON o.id = e.organizer_id
+      WHERE NOT coalesce((to_jsonb(o)->>'is_demo')::boolean, false)`); // 审核演示主办方的活动页点进来的申请不算
   const mins = (a: Date | null, b: Date | null) => (a && b ? Math.max(0, Math.round((new Date(b).getTime() - new Date(a).getTime()) / 60000)) : null);
   return {
     rows: rows.map((r) => ({
