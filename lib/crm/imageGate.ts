@@ -67,6 +67,24 @@ const openidOf = wechatOpenidOf;
  * 指令 51：这个人卡在"没拿到微信身份 / 没提交上"的图，现在能拿到身份了就重新交给微信检测一次。
  * 在本人每次登录小程序时调用（这时他刚访问过小程序，符合微信"近两小时访问过"的要求）。只处理最近 7 天的、最多 20 张。
  */
+const lastRetry = new Map<string, number>();
+/**
+ * 指令 55（11/23）：本人打开小程序首页 / 我的照片 / 传照片页时也顺手重交卡住的图（以前只挂在"登录"上，用缓存登录的人一直不触发）。
+ * 同一个人 2 分钟内只查一次；最多等 3 秒，出错不影响页面。只在小程序请求里调（微信要求本人近两小时访问过小程序）。
+ */
+export async function retryPendingSoon(contactId: string | null): Promise<void> {
+  if (!contactId) return;
+  const now = Date.now();
+  if ((lastRetry.get(contactId) ?? 0) > now - 120_000) return;
+  lastRetry.set(contactId, now);
+  if (lastRetry.size > 5000) lastRetry.clear();
+  try {
+    await Promise.race([retryPendingFor(contactId), new Promise((r) => setTimeout(r, 3000))]);
+  } catch {
+    /* 不影响页面 */
+  }
+}
+
 export async function retryPendingFor(contactId: string): Promise<number> {
   if (!configured() || !(await gateReady())) return 0;
   const openid = await openidOf(contactId);

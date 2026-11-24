@@ -1,11 +1,12 @@
 /** GET /api/v1/home —— 1.2 首页服务台（小程序首页、网站手机版共用）：状态卡、近期活动、上一场回顾、研究与动态、相册通知 */
 import { homeData } from '@/lib/crm/growth';
-import { handler, isMp12, isMp131, isMp14, mp131Safe, ok, optionalContact, siteUrl } from '@/lib/crm/http';
+import { handler, isMp12, isMp131, isMp14, mp131Safe, mpVersion, ok, optionalContact, siteUrl } from '@/lib/crm/http';
 import { noMoneySummaries } from '@/lib/noMoney';
 import { homeEntriesOrder } from '@/lib/crm/features';
 import { contentResearchList, setContentVisibility, type Visibility } from '@/lib/mpContent';
 import { getSetting } from '@/lib/crm/orders';
 import { getPool } from '@/lib/db/client';
+import { retryPendingSoon } from '@/lib/crm/imageGate';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
@@ -18,6 +19,8 @@ export const GET = handler(async (req: Request) => {
   ]);
   // 研究与动态：小程序版显示范围（与 /api/v1/content/research 同一套过滤）
   setContentVisibility(vis);
+  // 指令 55：本人打开小程序首页时，顺手把卡住的图重交微信检测（和下面的取数同时跑，2 分钟一次）
+  const retry = me && mpVersion(req) ? retryPendingSoon(me) : Promise.resolve();
   const v131 = sp.get('v') === '131';
   const [data, entriesOrder, h131, showcaseEntry, mp12] = await Promise.all([
     homeData(me, { base: siteUrl(req), withQr: sp.get('qr') !== '0' }),
@@ -42,5 +45,6 @@ export const GET = handler(async (req: Request) => {
     out.showcaseEntry = showcaseEntry;
   }
   const safe = mp12 ? noMoneySummaries(out) : out;
+  await retry;
   return ok(isMp131(req) ? mp131Safe(safe) : safe);
 });
