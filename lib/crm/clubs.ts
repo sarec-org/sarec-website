@@ -13,7 +13,7 @@ import { CrmError } from './events';
 import { getSetting } from './orders';
 import { memberStatus } from './membership';
 import { msgSecCheck } from './contentSec';
-import { gateSlot, pendingSlots } from './imageGate';
+import { gateSlot, pendingSlots, wechatOpenidOf } from './imageGate';
 import type { Staff } from './auth';
 
 export type Club = {
@@ -75,11 +75,8 @@ async function isMemberOf(clubId: string, contactId: string): Promise<boolean> {
   return !!rows[0];
 }
 
-async function openidOf(contactId: string): Promise<string | null> {
-  const { rows } = await getPool().query<{ o: string | null }>(`SELECT wechat_openid AS o FROM contacts WHERE id = $1`, [contactId]);
-  const o = rows[0]?.o ?? null;
-  return o && !o.startsWith('dev-openid-') ? o : null;
-}
+// 指令 51：和图片检测同一个查法（本档案没有就看合并进来的旧档案）
+const openidOf = (contactId: string) => wechatOpenidOf(contactId);
 
 /** 列表：每个俱乐部的人数、我加没加入、我以前有没有表达过意向 */
 export async function listClubs(contactId: string | null) {

@@ -255,7 +255,7 @@ export async function wechatLogin(code: string): Promise<{ token: string; contac
   } else {
     throw new CrmError('wechat_unconfigured', '小程序登录暂未配置，请用邮箱验证码登录');
   }
-  return withTransaction(async (db) => {
+  const res = await withTransaction(async (db) => {
     const { rows } = await db.query<{ id: string; email_verified_at: Date | null; phone_verified_at: Date | null }>(
       `SELECT id, email_verified_at, phone_verified_at FROM contacts WHERE wechat_openid = $1`,
       [openid]
@@ -274,6 +274,16 @@ export async function wechatLogin(code: string): Promise<{ token: string; contac
       id = t[0].id;
       verified = !!(t[0].email_verified_at || t[0].phone_verified_at);
     }
+    // 指令 51（11/23）：微信身份还挂在合并前的旧档案上、主档案这一格是空的 → 挪到主档案（微信身份一个只能挂一个档案）。
+    // 这样以后传图、发内容时就能用本人的微信身份去做微信内容检测，检测通过自动公开。
+    const holder = rows[0]?.id;
+    if (holder && id && id !== holder) {
+      const { rows: mm } = await db.query<{ o: string | null }>(`SELECT wechat_openid AS o FROM contacts WHERE id = $1`, [id]);
+      if (!mm[0]?.o) {
+        await db.query(`UPDATE contacts SET wechat_openid = NULL WHERE id = $1`, [holder]);
+        await db.query(`UPDATE contacts SET wechat_openid = $2, wechat_unionid = COALESCE(wechat_unionid, $3), updated_at = now() WHERE id = $1`, [id, openid, unionid ?? null]);
+      }
+    }
     if (!id) {
       const ins = await db.query<{ id: string }>(
         `INSERT INTO contacts (name, wechat_openid, wechat_unionid, acquisition_source) VALUES ('微信用户', $1, $2, 'miniprogram') RETURNING id`,
@@ -285,6 +295,14 @@ export async function wechatLogin(code: string): Promise<{ token: string; contac
     const token = await createSession(db, id, 'miniprogram');
     return { token, contactId: id, needsBind: !verified };
   });
+  // 指令 51：这个人有卡在"没拿到微信身份"的图，现在登录着、身份拿得到 → 重新交给微信检测（最多等 4 秒，不挡登录）
+  try {
+    const { retryPendingFor } = await import('./imageGate');
+    await Promise.race([retryPendingFor(res.contactId), new Promise((r) => setTimeout(r, 4000))]);
+  } catch {
+    /* 重新检测失败不影响登录，图还在后台等工作人员放行 */
+  }
+  return res;
 }
 
 // ── 网站扫码登录 ────────────────────────────────────────────────────────

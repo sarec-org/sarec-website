@@ -10,16 +10,13 @@ import { memberStatus } from './membership';
 import { msgSecCheck } from './contentSec';
 import type { Staff } from './auth';
 import { MACHINE_REASON } from './mediaCheck';
-import { CHECKING_PROJECT_REASON, gateProjectImages, gateReady, passTarget } from './imageGate';
+import { CHECKING_PROJECT_REASON, gateProjectImages, gateReady, passTarget, wechatOpenidOf } from './imageGate';
 
 async function log(actor: string, kind: string, targetId: string | null, action: string, note?: string | null) {
   await getPool().query(`INSERT INTO ugc_actions (kind, target_id, action, actor, note) VALUES ($1, $2, $3, $4, $5)`, [kind, targetId, action, actor, note ?? null]);
 }
-async function openidOf(contactId: string): Promise<string | null> {
-  const { rows } = await getPool().query<{ o: string | null }>(`SELECT wechat_openid AS o FROM contacts WHERE id = $1`, [contactId]);
-  const o = rows[0]?.o ?? null;
-  return o && !o.startsWith('dev-openid-') ? o : null;
-}
+// 指令 51：和图片检测同一个查法（本档案没有就看合并进来的旧档案）
+const openidOf = (contactId: string) => wechatOpenidOf(contactId);
 
 // ── 举报 ─────────────────────────────────────────────────────────────
 export const REPORT_REASONS = ['广告推销', '色情低俗', '赌博、涉及钱财', '违法违规', '冒充他人', '骚扰或人身攻击', '其他'];

@@ -4,12 +4,16 @@
 import { listMyPhotos, uploadMyPhoto } from '@/lib/crm/customerPhotos';
 import { CrmError } from '@/lib/crm/events';
 import { handler, isMp14, isMpOlderThan, mpVersion, ok, requireContact } from '@/lib/crm/http';
+import { retryPendingSoon } from '@/lib/crm/imageGate';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
-export const GET = handler(async (req: Request, { params }: { params: { slug: string } }) =>
-  ok({ photos: await listMyPhotos(await requireContact(req), decodeURIComponent(params.slug), !!mpVersion(req) && !isMpOlderThan(req, [1, 5, 0])) })
-);
+export const GET = handler(async (req: Request, { params }: { params: { slug: string } }) => {
+  const me = await requireContact(req);
+  // 指令 55：打开这场的传照片页时顺手重交卡住的图（2 分钟一次）
+  if (mpVersion(req)) await retryPendingSoon(me);
+  return ok({ photos: await listMyPhotos(me, decodeURIComponent(params.slug), !!mpVersion(req) && !isMpOlderThan(req, [1, 5, 0])) });
+});
 export const POST = handler(async (req: Request, { params }: { params: { slug: string } }) => {
   const me = await requireContact(req);
   const form = await req.formData().catch(() => null);

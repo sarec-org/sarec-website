@@ -64,11 +64,20 @@ export async function uploadMyPhoto(contactId: string, slug: string, data: Buffe
   const pool = getPool();
   const hash = createHash('sha256').update(data).digest('hex');
   // 完全相同的照片：直接返回已有那张（谁传的都算，不重复存）
-  const { rows: dup } = await pool.query(
-    `SELECT id, url, thumb_url, visibility, review_status, original_url FROM event_photos WHERE event_id = $1 AND content_hash = $2 AND variant_of IS NULL`,
+  const { rows: dup } = await pool.query<{ id: string; url: string; thumb_url: string; visibility: string; review_status: string; original_url: string | null; is_hidden: boolean; uploader_contact_id: string | null }>(
+    `SELECT id, url, thumb_url, visibility, review_status, original_url, is_hidden, uploader_contact_id FROM event_photos WHERE event_id = $1 AND content_hash = $2 AND variant_of IS NULL`,
     [ev.id, hash]
   );
-  if (dup[0]) return toMine(dup[0], true);
+  if (dup[0]) {
+    // 指令 56（11/23）：本人删掉的照片不再挡同一张重传——删掉的那条去掉内容指纹，下面照常当新照片存（重新检测）。
+    // 微信判不通过撤下的（rejected）照旧挡；别人传的、还在的照旧"已经传过了"。
+    const d = dup[0];
+    if (d.is_hidden && d.uploader_contact_id === contactId && d.review_status !== 'rejected') {
+      await pool.query(`UPDATE event_photos SET content_hash = NULL WHERE id = $1`, [d.id]);
+    } else {
+      return toMine(d, true);
+    }
+  }
   const [w, ph] = await Promise.all([watermark(data), dHash(data).catch(() => null)]);
   const gate = !!opts.toAlbum && (await gateReady());
   const id = randomUUID();
@@ -192,7 +201,8 @@ export async function listAllMyPhotos(contactId: string, withdrawn = false) {
 
 export async function deleteMyPhoto(contactId: string, photoId: string) {
   await ownPhoto(contactId, photoId);
-  await getPool().query(`UPDATE event_photos SET is_hidden = true, visibility = 'private' WHERE id = $1 OR variant_of = $1`, [photoId]);
+  // 指令 56：删掉的照片去掉内容指纹，以后同一张能重新传（不再提示"已经传过了"）
+  await getPool().query(`UPDATE event_photos SET is_hidden = true, visibility = 'private', content_hash = CASE WHEN id = $1 THEN NULL ELSE content_hash END WHERE id = $1 OR variant_of = $1`, [photoId]);
   return { ok: true };
 }
 

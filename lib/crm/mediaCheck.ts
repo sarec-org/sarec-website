@@ -4,14 +4,13 @@
  * 0048 之前用老办法登记的（ugc_actions kind=media_check，target=“project:<id>” 或 “photo:<id>”，note=trace_id）照旧处理：不通过的自动撤下。
  */
 import { getPool } from '@/lib/db/client';
-import { handleCheckResult, MACHINE_REASON } from './imageGate';
+import { handleCheckResult, MACHINE_REASON, wechatOpenidOf } from './imageGate';
 
 export { MACHINE_REASON };
 
+// 指令 51：和图片检测同一个查法
 export async function openidOf(contactId: string): Promise<string | null> {
-  const { rows } = await getPool().query<{ o: string | null }>(`SELECT wechat_openid AS o FROM contacts WHERE id = $1`, [contactId]);
-  const o = rows[0]?.o ?? null;
-  return o && !o.startsWith('dev-openid-') ? o : null;
+  return wechatOpenidOf(contactId);
 }
 
 /** 微信推回的检测结果 */
