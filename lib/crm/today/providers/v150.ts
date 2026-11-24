@@ -84,7 +84,7 @@ async function profileReview(): Promise<TodayItem[]> {
        LEFT JOIN profile_projects p ON a.kind = 'profile_project' AND p.id::text = a.target_id
        LEFT JOIN member_cards m ON a.kind = 'profile' AND m.contact_id::text = a.target_id
        JOIN contacts c ON c.id::text = CASE WHEN a.kind = 'profile_project' THEN p.contact_id::text ELSE a.target_id END
-      WHERE a.action = 'machine_review' AND a.created_at > now() - interval '30 days' AND c.account_kind IS NULL
+      WHERE a.action = 'machine_review' AND a.created_at > now() - interval '30 days' AND c.account_kind IS NULL AND c.org_guest_since IS NULL
         AND coalesce(p.status, m.profile_status, 'ok') = 'ok'
         AND NOT EXISTS (SELECT 1 FROM ugc_actions x WHERE x.target_id = a.target_id AND x.actor <> 'machine' AND x.created_at > a.created_at)
       ORDER BY a.kind, a.target_id, a.created_at DESC

@@ -12,6 +12,7 @@ import {
 import { deliver, isProduction, loadJobsTemplate } from './notify';
 import { getSwitches } from './settings';
 import { latestPosts } from './posts';
+import { approveRequest, postMode, requestsReady } from './requests';
 import { proBrief } from './pros';
 import { groupCities, loadCities } from './cities';
 import { findSideEntries, loadGroups, loadHomeEntries, loadTrades, tradeMap, tradesWithPros, workSideEntries } from './trades';
@@ -30,6 +31,8 @@ export async function buildMeta(v: Viewer) {
   return {
     // D28：requirePaid 保留兼容（= feeMode 是 members_only）；feeMode 三选一、freeContacts 免费联系次数、freePosts 非会员免费发活儿条数（null 不限）
     switches: { find: s.find, work: s.work, requirePaid: s.requirePaid, feeMode: s.feeMode, freeContacts: s.freeContacts, freePosts: s.freePosts },
+    /** 1.5.1 指令 46：小程序「发布活儿」怎么做——in_app 小程序里直接填（默认）/ sheet 老的「加商会微信＋复制网址」（后台一键切回；0049 没跑也是 sheet） */
+    postMode: await postMode(pool),
     staffPreview,
     staffPreviewText: staffPreview ? STAFF_PREVIEW_TEXT : null,
     /** 指令 7 · D16：只在测试站给——手机验证码固定 246810，小程序在验证手机的地方显示 testFixedCodeText 这行小字 */
@@ -76,18 +79,20 @@ export async function buildMeta(v: Viewer) {
 export async function staffPosts(q: { status?: string | null; mp: boolean }) {
   const pool = getPool();
   const trades = await tradeMap(pool);
-  const st = q.status && ['open', 'found', 'closed', 'removed'].includes(q.status) ? q.status : null;
+  const st = q.status && ['pending', 'open', 'found', 'closed', 'removed'].includes(q.status) ? q.status : null;
+  const hasSource = await requestsReady(pool);
   const { rows } = await pool.query<{
     id: string; title: string; status: PostStatus; close_reason: string | null; staff_note: string | null; city: string; trade_key: string; poster_role: string;
     created_at: Date; expires_at: Date; budget_range: string | null; contact_count: number; notified: number; reports: number; first_contact_at: Date | null; poster_name: string;
+    source: string; description: string; phone: string | null; sec_status: string | null;
   }>(
     `SELECT p.id, p.title, p.status, p.close_reason, p.staff_note, COALESCE(jc.name, p.city) AS city, p.trade_key, p.poster_role, p.created_at, p.expires_at, p.budget_range, p.first_contact_at,
-            c.name AS poster_name,
+            COALESCE(NULLIF(c.name, ''), '（没填名字）') AS poster_name, ${hasSource ? 'p.source' : "'web'"} AS source, p.description, p.phone, p.sec_status,
             (SELECT count(*)::int FROM jobs_contacts jc WHERE jc.direction = 'post' AND jc.post_id = p.id) AS contact_count,
             (SELECT count(*)::int FROM jobs_notifications n WHERE n.kind = 'dispatch' AND n.post_id = p.id) AS notified,
             (SELECT count(*)::int FROM jobs_reports r WHERE r.target_type = 'post' AND r.target_id = p.id AND r.status = 'open') AS reports
        FROM jobs_posts p JOIN contacts c ON c.id = p.contact_id LEFT JOIN jobs_cities jc ON jc.key = p.city_key
-      WHERE ($1::text IS NULL OR p.status = $1) ORDER BY p.created_at DESC LIMIT 300`,
+      WHERE ($1::text IS NULL OR p.status = $1) ORDER BY (p.status = 'pending') DESC, p.created_at DESC LIMIT 300`,
     [st]
   );
   return {
@@ -97,7 +102,10 @@ export async function staffPosts(q: { status?: string | null; mp: boolean }) {
           id: r.id, title: r.title, status: r.status, statusLabel: STATUS_LABEL[r.status], closeReason: r.close_reason, note: r.staff_note, city: r.city,
           tradeName: trades.get(r.trade_key)?.name ?? r.trade_key, posterLabel: posterLabel(r.poster_role), posterName: r.poster_name,
           createdAt: r.created_at, expiresAt: r.expires_at, budget: r.budget_range, contactCount: r.contact_count, notifiedCount: r.notified,
-          openReports: r.reports, firstContactAt: r.first_contact_at
+          openReports: r.reports, firstContactAt: r.first_contact_at,
+          // 1.5.1：小程序交来的（source = mp）带上原话和电话，工作人员看过再派
+          source: r.source, fromMp: r.source === 'mp',
+          ...(r.source === 'mp' ? { description: r.description, phone: r.phone, secStatus: r.sec_status } : {})
         })
   };
 }
@@ -112,11 +120,22 @@ export async function staffPostAction(s: Staff, id: string, b: Record<string, un
       [id, actor, note]
     );
     if (!rowCount) throw new CrmError('not_found', '找不到这个活儿');
+  } else if (b.action === 'approve') {
+    // 1.5.1：小程序交来的，工作人员看过点「派给师傅」→ 变成找人中，并照常通知对口、核验过的接活人
+    const r = await approveRequest(pool, id, actor);
+    if (note) await pool.query(`UPDATE jobs_posts SET staff_note = $2 WHERE id = $1`, [id, note]);
+    await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, reason) VALUES ($1, 'jobs_post_approve', 'jobs_post', $2, $3)`, [actor, id, note || null]);
+    const { rows } = await pool.query<{ id: string; title: string; status: PostStatus; staff_note: string | null }>(`SELECT id, title, status, staff_note FROM jobs_posts WHERE id = $1`, [id]);
+    return {
+      post: { id: rows[0].id, title: rows[0].title, status: rows[0].status, statusLabel: STATUS_LABEL[rows[0].status], note: rows[0].staff_note },
+      notified: r.notified,
+      message: r.notified ? `已派出：通知了 ${r.notified} 位对口的师傅` : '已转成找人中；现在没有对口、在这个城市的师傅可通知，可以电话告诉客户先等等'
+    };
   } else if (b.action === 'note') {
     const { rowCount } = await pool.query(`UPDATE jobs_posts SET staff_note = $2, updated_at = now() WHERE id = $1`, [id, note || null]);
     if (!rowCount) throw new CrmError('not_found', '找不到这个活儿');
   } else {
-    throw new CrmError('bad_request', 'action 只能是 remove 或 note');
+    throw new CrmError('bad_request', 'action 只能是 approve、remove 或 note');
   }
   await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, reason) VALUES ($1, $2, 'jobs_post', $3, $4)`, [actor, `jobs_post_${b.action}`, id, note || null]);
   const { rows } = await pool.query<{ id: string; title: string; status: PostStatus; staff_note: string | null }>(`SELECT id, title, status, staff_note FROM jobs_posts WHERE id = $1`, [id]);

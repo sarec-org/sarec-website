@@ -1,12 +1,15 @@
 'use client';
-/** 后台「活儿」：所有发布的活儿——状态（自动更新）、联系次数、到期日；可下架、写备注。工作人员不代接活人联系发布人，这里不提供电话外呼。 */
+/**
+ * 后台「活儿」：所有发布的活儿——状态（自动更新）、联系次数、到期日；可下架、写备注。工作人员不代接活人联系发布人，这里不提供电话外呼。
+ * 1.5.1 指令 46：小程序里交来的（请商会找师傅）先是「商会在看」，排在最前面，带原话和电话；看过点「派给师傅」才通知对口的接活人，不合适点「不派」。
+ */
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDate, fmtDateTime } from '@/components/crm/client';
 
-type P = { id: string; title: string; city: string; status: string; statusLabel: string; closeReason: string | null; tradeName: string; posterLabel: string; posterName: string; createdAt: string; expiresAt: string; budget: string | null; contactCount: number; notifiedCount: number; openReports: number; firstContactAt: string | null; note: string | null };
-const FILTERS = [['', '全部'], ['open', '找人中'], ['found', '已找到'], ['closed', '已关闭 / 到期'], ['removed', '已下架']] as const;
+type P = { id: string; title: string; city: string; status: string; fromMp?: boolean; description?: string; phone?: string | null; secStatus?: string | null; statusLabel: string; closeReason: string | null; tradeName: string; posterLabel: string; posterName: string; createdAt: string; expiresAt: string; budget: string | null; contactCount: number; notifiedCount: number; openReports: number; firstContactAt: string | null; note: string | null };
+const FILTERS = [['', '全部'], ['pending', '小程序交来·待派'], ['open', '找人中'], ['found', '已找到'], ['closed', '已关闭 / 到期'], ['removed', '已下架']] as const;
 
 export default function StaffJobsPosts() {
   return (
@@ -17,7 +20,7 @@ export default function StaffJobsPosts() {
 }
 
 function Posts() {
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('status') ?? '' : ''));
   const [rows, setRows] = useState<P[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const load = useCallback(async () => {
@@ -28,7 +31,7 @@ function Posts() {
   async function act(id: string, b: Record<string, unknown>, okText: string) {
     const r = await api(`/api/v1/workbench/jobs/posts/${id}`, { body: b });
     if (!r.ok) return setMsg({ ok: false, text: r.message });
-    setMsg({ ok: true, text: okText });
+    setMsg({ ok: true, text: (r.data as { message?: string } | undefined)?.message ?? okText });
     load();
   }
   return (
@@ -39,7 +42,7 @@ function Posts() {
       </div>
       <Msg m={msg} />
       {!rows && <p className={styles.muted}>正在加载…</p>}
-      {rows && rows.length === 0 && <p className={styles.muted}>{status ? '这个状态下没有活儿。' : '还没有人发布活儿。'}</p>}
+      {rows && rows.length === 0 && <p className={styles.muted}>{status === 'pending' ? '小程序交来的都处理完了。' : status ? '这个状态下没有活儿。' : '还没有人发布活儿。'}</p>}
       {rows?.map((p) => <Row key={p.id} p={p} act={act} />)}
     </>
   );
@@ -49,20 +52,22 @@ function Row({ p, act }: { p: P; act: (id: string, b: Record<string, unknown>, o
   const [note, setNote] = useState(p.note ?? '');
   const [confirm, setConfirm] = useState(false);
   return (
-    <div className={styles.card} style={p.status === 'open' ? { borderLeft: '3px solid var(--gold)' } : undefined}>
+    <div className={styles.card} style={p.status === 'open' || p.status === 'pending' ? { borderLeft: '3px solid var(--gold)' } : undefined}>
       <div><a href={`/zh/jobs/posts/${p.id}`} target="_blank" rel="noreferrer" style={{ color: 'var(--ivory)' }}><b>{p.title}</b></a> <span className={`${styles.badge} ${p.status === 'open' ? '' : styles.badgeMuted}`}>{p.closeReason === 'expired' ? '已到期' : p.statusLabel}</span>{p.openReports ? <span className={`${styles.badge} ${styles.badgeRed}`}>投诉 {p.openReports}</span> : null}{p.status === 'open' && !p.firstContactAt && Date.now() - new Date(p.createdAt).getTime() > 864e5 ? <span className={`${styles.badge} ${styles.badgeRed}`}>24 小时没人联系</span> : null}</div>
-      <div className={styles.small}>{p.posterLabel} · {p.posterName} · {p.tradeName} · {p.city}{p.budget ? ` · 预算 ${p.budget}` : ''}</div>
+      {p.fromMp && <div className={styles.small}><span className={styles.badge}>小程序交来</span> 原话：“{p.description}”{p.phone ? <> · 电话 <a href={`tel:${p.phone}`} style={{ color: 'var(--ivory)' }}>{p.phone}</a></> : null}{p.secStatus === 'review' ? ' · 微信检测建议人工看一眼' : p.secStatus === 'unchecked' ? ' · 没过微信检测（测试站不检测 / 接口没回）' : ''}</div>}
+      <div className={styles.small}>{p.fromMp ? '客户' : p.posterLabel} · {p.posterName} · {p.tradeName} · {p.city}{p.budget ? ` · 预算 ${p.budget}` : ''}</div>
       <div className={styles.small}>发布 {fmtDateTime(p.createdAt)} · 到期 {fmtDate(p.expiresAt)} · 已通知 {p.notifiedCount} 人 · 联系 {p.contactCount} 次{p.firstContactAt ? ` · 第一次有人联系 ${fmtDateTime(p.firstContactAt)}` : ''}</div>
       <div className={styles.inputRow}>
         <input className={styles.input} placeholder="备注（只有工作人员看得到）" value={note} onChange={(e) => setNote(e.target.value)} />
         <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={note === (p.note ?? '')} onClick={() => act(p.id, { action: 'note', note }, '备注已保存')}>存备注</button>
+        {p.status === 'pending' && <button className={styles.btn} onClick={() => act(p.id, { action: 'approve', note: note || undefined }, '已派出')}>派给师傅</button>}
         {p.status !== 'removed' && (confirm ? (
           <>
-            <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => { setConfirm(false); act(p.id, { action: 'remove', note: note || undefined }, '已下架，发布人和接活人都看不到这条了'); }}>确认下架</button>
+            <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => { setConfirm(false); act(p.id, { action: 'remove', note: note || undefined }, p.status === 'pending' ? '已不派，这一条不会通知任何人' : '已下架，发布人和接活人都看不到这条了'); }}>{p.status === 'pending' ? '确认不派' : '确认下架'}</button>
             <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setConfirm(false)}>不下架</button>
           </>
         ) : (
-          <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setConfirm(true)}>下架</button>
+          <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setConfirm(true)}>{p.status === 'pending' ? '不派' : '下架'}</button>
         ))}
       </div>
     </div>

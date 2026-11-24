@@ -10,7 +10,9 @@ const MONEY_TABLES = ['orders', 'applications', 'room_bookings', 'room_passes', 
 // 这些列合并时不从微信档案复制
 const SKIP_COLS = new Set([
   'id', 'member_no', 'email', 'phone_e164', 'email_verified_at', 'phone_verified_at', 'wechat_openid', 'wechat_unionid',
-  'created_at', 'updated_at', 'referred_by', 'referred_channel', 'referred_at'
+  'created_at', 'updated_at', 'referred_by', 'referred_channel', 'referred_at',
+  // 1.6.0：「主办方的客人」标记不跟着合并带到商会已有的档案上（合并本身就是本人验证联系方式 = 主动和商会发生关系）
+  'org_guest_since', 'chamber_linked_at', 'chamber_linked_reason'
 ]);
 
 type Fk = { table_name: string; column_name: string };

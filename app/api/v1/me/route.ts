@@ -7,5 +7,13 @@ export const dynamic = 'force-dynamic';
 export const GET = handler(async (req: Request) => {
   const me = await requireContact(req);
   const mp = new URL(req.url).searchParams.get('view') === 'mp' || (await isMp12(req));
-  return ok(mp ? await myOverviewMp(me) : await myOverview(me));
+  // 1.6.0：开通的主办方（负责人 / 帮手）在「我的」里多一行「我办的活动」；不是主办方的人这里是 null，页面和以前一样
+  // 指令 57：orgToolOn = 后台「活动工具总开关」。关着时小程序「我的」最底下的「我也要办活动」也不显示（被驳回时后台关掉就行，不用重新传包）
+  const org = mp ? await import('@/lib/org/service').catch(() => null) : null;
+  const [data, organizer, orgToolOn] = await Promise.all([
+    mp ? myOverviewMp(me) : myOverview(me),
+    org ? org.meEntry(me).catch(() => null) : null,
+    org ? org.toolOn().catch(() => true) : true
+  ]);
+  return ok(mp ? { ...data, organizer, orgToolOn } : data);
 });

@@ -49,7 +49,7 @@ export async function audience(filters: unknown, opts: { limit?: number } = {}):
   const review = process.env.CRM_REVIEW_EMAIL?.trim().toLowerCase() ?? '';
   const { rows } = await getPool().query<{ contact_id: string; email: string; name: string | null; company: string | null; last_event: string | null }>(
     `WITH verified AS (
-       SELECT c.id AS contact_id, lower(c.email) AS email FROM contacts c WHERE c.email IS NOT NULL AND c.email_verified_at IS NOT NULL
+       SELECT c.id AS contact_id, lower(c.email) AS email FROM contacts c WHERE c.email IS NOT NULL AND c.email_verified_at IS NOT NULL AND c.org_guest_since IS NULL
        UNION
        SELECT m.contact_id, lower(m.value) FROM contact_methods m WHERE m.kind = 'email' AND m.is_current AND m.status = 'confirmed'
      ), facts AS (

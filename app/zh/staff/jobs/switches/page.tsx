@@ -9,18 +9,20 @@ import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
 import { api, fmtDateTime } from '@/components/crm/client';
 
 type FeeMode = 'all_free' | 'free_quota' | 'members_only';
-type Sw = { find: boolean; work: boolean; requirePaid: boolean; feeMode: FeeMode; freeContacts: number; freePosts: number | null };
+type Sw = { find: boolean; work: boolean; postInApp: boolean; requirePaid: boolean; feeMode: FeeMode; freeContacts: number; freePosts: number | null };
 type Change = { updatedBy: string | null; updatedAt: string } | null;
 type LogRow = { key: string; name: string; actor: string; at: string; before: unknown; after: unknown };
 type Detail = { switches: Sw; changes: Record<string, Change>; feeModes: { key: FeeMode; label: string; hint: string }[]; log: LogRow[] };
 
-const ITEMS: { k: 'find' | 'work'; name: string; on: string; off: string }[] = [
+const ITEMS: { k: 'find' | 'work' | 'postInApp'; name: string; on: string; off: string; onBtn?: string; offBtn?: string }[] = [
   { k: 'find', name: '「找工人／施工队」栏目', on: '打开后，首页和网站出现「找工人／施工队」；只显示已经有核验通过的人的工种。', off: '关掉后，普通人看不到这个栏目，直接打开页面看到"这个功能还没开放"。工作人员照常能看。' },
-  { k: 'work', name: '「我要接活儿」栏目', on: '打开后，首页和网站出现「我要接活儿」：登记接活儿、看全部活儿。', off: '关掉后，普通人看不到这个栏目。工作人员照常能看。' }
+  { k: 'work', name: '「我要接活儿」栏目', on: '打开后，首页和网站出现「我要接活儿」：登记接活儿、看全部活儿。', off: '关掉后，普通人看不到这个栏目。工作人员照常能看。' },
+  // 1.5.1 指令 46：万一微信审核不认，一键切回老方式（不用重新传小程序）
+  { k: 'postInApp', name: '小程序「发布活儿」：在小程序里直接填', on: '现在是新方式（默认）：客户在小程序里选工种、城市，写一句话，交上来先进「今天」和「活儿 › 小程序交来·待派」，工作人员看过再派给师傅。页面下方小字仍有「加商会微信／在网站发」。', off: '现在是老方式：小程序点「发布活儿」弹出「加商会微信＋复制网站地址」，小程序里不能直接填。', onBtn: '切回老方式（加商会微信＋复制网址）', offBtn: '改回新方式（小程序里直接填）' }
 ];
 const MODE_LABEL: Record<FeeMode, string> = { all_free: '全部免费', free_quota: '免费额度', members_only: '必须是会员' };
 
-const FIELD: Record<string, string> = { find: '找工人', work: '接活儿', requirePaid: '要求缴费会员', feeMode: '收费方式', freeContacts: '免费联系次数', freePosts: '非会员免费发活儿' };
+const FIELD: Record<string, string> = { find: '找工人', work: '接活儿', postInApp: '小程序里直接填', requirePaid: '要求缴费会员', feeMode: '收费方式', freeContacts: '免费联系次数', freePosts: '非会员免费发活儿' };
 const FIELD_KEY: Record<string, string> = { feeMode: 'jobs_work_fee_mode', freePosts: 'jobs_free_posts' };
 function show(key: string, v: unknown): string {
   // J9-4：老记录（指令 6 一次改三个开关）存的是对象 → 逐项写出来
@@ -94,13 +96,13 @@ function Switches({ admin }: { admin: boolean }) {
         <div key={it.k} className={styles.card}>
           <div className={styles.row}>
             <span><b>{it.name}</b></span>
-            <span className={`${styles.badge} ${sw[it.k] ? styles.badgeGreen : styles.badgeMuted}`}>{sw[it.k] ? '开着' : '关着'}</span>
+            <span className={`${styles.badge} ${sw[it.k] ? styles.badgeGreen : styles.badgeMuted}`} style={{ whiteSpace: 'nowrap' }}>{it.k === 'postInApp' ? (sw[it.k] ? '新方式' : '老方式') : sw[it.k] ? '开着' : '关着'}</span>
           </div>
           <p className={styles.small}>{sw[it.k] ? it.on : it.off}</p>
           <p className={styles.small}>{changed(it.k) ? `上次改动：${changed(it.k)!.updatedBy?.replace(/^staff:/, '') ?? '—'}，${fmtDateTime(changed(it.k)!.updatedAt)}` : '还没人改过（默认值）'}</p>
           {ask?.patch[it.k] !== undefined ? confirmBox : (
-            <button className={`${styles.btn} ${sw[it.k] ? styles.btnQuiet : ''}`} disabled={!admin} onClick={() => setAsk({ patch: { [it.k]: !sw[it.k] }, text: `${sw[it.k] ? '关掉' : '打开'}${it.name}` })}>
-              {!admin ? '只有管理员能改' : sw[it.k] ? '关掉' : '打开'}
+            <button className={`${styles.btn} ${sw[it.k] ? styles.btnQuiet : ''}`} disabled={!admin} onClick={() => setAsk({ patch: { [it.k]: !sw[it.k] }, text: it.onBtn ? (sw[it.k] ? it.onBtn : it.offBtn!) : `${sw[it.k] ? '关掉' : '打开'}${it.name}` })}>
+              {!admin ? '只有管理员能改' : sw[it.k] ? (it.onBtn ?? '关掉') : (it.offBtn ?? '打开')}
             </button>
           )}
         </div>

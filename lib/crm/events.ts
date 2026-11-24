@@ -147,6 +147,8 @@ export async function startRegistration(
       reg ? [ev.id, contactId, status] : [ev.id, contactId, status, opts.source ?? 'online', opts.refContactId ?? null, opts.channelCode ?? null]
     );
     reg = rows[0];
+    // 1.6.0：本人报名商会自己的活动 = 主动和商会发生关系，去掉「主办方的客人」标记
+    await import('@/lib/org/guest').then((m) => m.linkToChamber(db, contactId, '报名商会活动'));
     // 1.3.1 B：连续爽约进候补、候补排队时间、前 24 小时内报名即确认、报满提醒工作人员
     const { afterRegister } = await import('@/lib/crm/seats');
     await afterRegister(db, ev, reg.id, opts.source ?? 'online');

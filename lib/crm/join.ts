@@ -83,6 +83,7 @@ export async function submitJoin(contactId: string, b: { name?: string; company?
       `INSERT INTO join_requests (contact_id, name, company, industry, phone, email, source, event_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
       [contactId, name, company || null, industry || null, phone, email[0]?.e ?? null, String(b.source ?? 'home').slice(0, 20), ev[0]?.id ?? null]
     );
+    await import('@/lib/org/guest').then((m) => m.linkToChamber(db, contactId, '申请入会'));
     return { id: rows[0].id, created: true };
   });
   let linkSent = false;

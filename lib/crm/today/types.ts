@@ -48,7 +48,9 @@ export type TodayKind =
   /** 1.5.0（providers/v150.ts）：举报 / 机器拦下的内容 / 个人主页建议看一眼 */
   | 'ugc_report'
   | 'ugc_machine'
-  | 'profile_review';
+  | 'profile_review'
+  /** 1.5.1（providers/b.ts）：小程序里交来的「发布活儿」，等工作人员看过再派给师傅 */
+  | 'jobs_request';
 
 /** 卡片上的按钮。页面按 type 渲染；所有按钮都要够大（手机上一指点中）。 */
 export type TodayAction =

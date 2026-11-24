@@ -21,7 +21,7 @@ const openidOf = (contactId: string) => wechatOpenidOf(contactId);
 // ── 举报 ─────────────────────────────────────────────────────────────
 export const REPORT_REASONS = ['广告推销', '色情低俗', '赌博、涉及钱财', '违法违规', '冒充他人', '骚扰或人身攻击', '其他'];
 const OLD_REASON: Record<string, string> = { 赌博或金钱输赢: '赌博、涉及钱财' };
-const KINDS = ['meetup', 'profile', 'card', 'photo', 'club_member'] as const;
+const KINDS = ['meetup', 'profile', 'card', 'photo', 'club_member', 'org_event'] as const; // 1.6.0 org_event：主办方的活动
 
 export async function report(contactId: string, b: Record<string, unknown>) {
   const kind = String(b.kind ?? '');
@@ -66,6 +66,10 @@ async function targetSummary(kind: string, id: string): Promise<{ text: string; 
       const [ck, mid] = id.split(':');
       const { rows } = await pool.query<{ name: string | null; club: string | null }>(`SELECT NULLIF(c.name, '微信用户') AS name, (SELECT name FROM clubs WHERE key = $2) AS club FROM contacts c WHERE c.id::text = $1`, [mid ?? '', ck ?? '']);
       return rows[0] ? { text: `俱乐部「${rows[0].club ?? ck}」的成员 ${rows[0].name ?? 'SAREC 用户'}`, link: '/zh/staff/clubs' } : { text: id, link: null };
+    }
+    if (kind === 'org_event') {
+      const { rows } = await pool.query<{ title: string; org: string; status: string }>(`SELECT e.title, o.name AS org, e.status FROM org_events e JOIN organizers o ON o.id = e.organizer_id WHERE e.code = $1 OR e.id::text = $1`, [id]);
+      return rows[0] ? { text: `主办方「${rows[0].org}」的活动「${rows[0].title}」${rows[0].status === 'taken_down' ? ' · 已下架' : ''}`, link: '/zh/staff/organizers' } : { text: '（活动已删除）', link: null };
     }
     if (kind === 'photo') {
       const { rows } = await pool.query<{ thumb_url: string; title: string }>(`SELECT p.thumb_url, e.title FROM event_photos p JOIN events e ON e.id = p.event_id WHERE p.id::text = $1`, [id]);

@@ -14,9 +14,9 @@ export type AccountKind = 'internal' | 'review_demo' | 'test';
 export const ACCOUNT_KIND_LABEL: Record<AccountKind, string> = { internal: '内部账号', review_demo: '审核演示账号', test: '测试账号' };
 
 /** SQL 片段：这个档案是真实客户（不是内部 / 审核演示 / 测试）。alias 是 contacts 的别名。 */
-export const realContact = (alias = 'c') => `${alias}.account_kind IS NULL`;
+export const realContact = (alias = 'c') => `(${alias}.account_kind IS NULL AND ${alias}.org_guest_since IS NULL)`;
 /** SQL 片段：按 contact_id 列判断（没有 contacts 连接时用） */
-export const realContactId = (col: string) => `NOT EXISTS (SELECT 1 FROM contacts _ak WHERE _ak.id = ${col} AND _ak.account_kind IS NOT NULL)`;
+export const realContactId = (col: string) => `NOT EXISTS (SELECT 1 FROM contacts _ak WHERE _ak.id = ${col} AND (_ak.account_kind IS NOT NULL OR _ak.org_guest_since IS NOT NULL))`;
 
 export async function isNotReal(db: Db, contactId: string | null | undefined): Promise<boolean> {
   if (!contactId) return false;

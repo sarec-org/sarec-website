@@ -472,10 +472,11 @@ export const OPENED_ONLY_SQL = `(NULLIF(NULLIF(trim(c.name), ''), '微信用户'
 
 /** 客户列表上面的数字：客户（不含内部 / 测试账号）、只打开过未登记、会员 */
 export async function contactCounts() {
-  const { rows } = await getPool().query<{ customers: number; opened: number; members: number; internal: number }>(
-    `SELECT count(*) FILTER (WHERE NOT ${OPENED_ONLY_SQL} AND c.account_kind IS NULL)::int AS customers,
-            count(*) FILTER (WHERE ${OPENED_ONLY_SQL} AND c.account_kind IS NULL)::int AS opened,
-            count(*) FILTER (WHERE c.account_kind IS NULL AND EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.membership_end_date >= current_date
+  const { rows } = await getPool().query<{ customers: number; opened: number; org_guests: number; members: number; internal: number }>(
+    `SELECT count(*) FILTER (WHERE NOT ${OPENED_ONLY_SQL} AND c.account_kind IS NULL AND c.org_guest_since IS NULL)::int AS customers,
+            count(*) FILTER (WHERE ${OPENED_ONLY_SQL} AND c.account_kind IS NULL AND c.org_guest_since IS NULL)::int AS opened,
+            count(*) FILTER (WHERE c.org_guest_since IS NOT NULL)::int AS org_guests,
+            count(*) FILTER (WHERE c.account_kind IS NULL AND c.org_guest_since IS NULL AND EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.membership_end_date >= current_date
                      AND (a.application_status IN ('approved','paid','second_payment_due') OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))))::int AS members,
             count(*) FILTER (WHERE c.account_kind IS NOT NULL)::int AS internal
        FROM contacts c WHERE c.merged_into IS NULL`
@@ -509,7 +510,8 @@ export async function searchContacts(f: ContactFilter, limit = 200) {
        FROM contacts c LEFT JOIN m ON m.contact_id = c.id
        LEFT JOIN contact_methods me ON me.contact_id = c.id AND me.kind = 'email' AND me.is_current
        LEFT JOIN contact_methods mp ON mp.contact_id = c.id AND mp.kind = 'phone' AND mp.is_current
-      WHERE ($1 = '' OR c.name ILIKE '%' || $1 || '%' OR c.name_alt ILIKE '%' || $1 || '%' OR c.email ILIKE '%' || $1 || '%'
+      WHERE c.org_guest_since IS NULL -- 1.6.0：「主办方的客人」默认不在客户列表里（明细收起，见后台「主办方」页的查看留痕）
+        AND ($1 = '' OR c.name ILIKE '%' || $1 || '%' OR c.name_alt ILIKE '%' || $1 || '%' OR c.email ILIKE '%' || $1 || '%'
              OR me.value ILIKE '%' || $1 || '%'
              OR ($2::text IS NOT NULL AND (c.phone_e164 = $2 OR mp.value = $2)) OR c.member_no::text = $1)
         AND ($9::text IS NULL OR coalesce(me.status, 'none') = $9)

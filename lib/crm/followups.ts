@@ -240,7 +240,7 @@ export async function scanFollowups(now = new Date()): Promise<{ postEvent: numb
        JOIN registrations r ON r.event_id = e.id AND r.contact_id = c.id AND r.status <> 'cancelled'
       WHERE coalesce(e.ends_at, e.starts_at) BETWEEN $1::timestamptz - interval '24 hours' AND $1::timestamptz
         AND e.event_status <> 'cancelled'
-        AND c.account_kind IS NULL -- 后台综合优化 八：内部 / 审核演示 / 测试账号不收跟进提醒
+        AND c.account_kind IS NULL AND c.org_guest_since IS NULL -- 后台综合优化 八：内部 / 审核演示 / 测试账号不收跟进提醒
       ORDER BY a.contact_id, e.id, a.created_at DESC`,
     [now]
   );
@@ -267,7 +267,7 @@ export async function scanFollowups(now = new Date()): Promise<{ postEvent: numb
        FROM applications a
        JOIN contacts c ON c.id = a.contact_id
        LEFT JOIN membership_tiers t ON t.slug = a.selected_tier_slug
-      WHERE c.account_kind IS NULL AND (a.application_status IN ('approved','paid','second_payment_due')
+      WHERE c.account_kind IS NULL AND c.org_guest_since IS NULL AND (a.application_status IN ('approved','paid','second_payment_due')
              OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
         AND a.membership_end_date BETWEEN $1::date AND $1::date + 30
         -- 已经续费（有更晚的有效会籍）的不提醒

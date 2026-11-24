@@ -295,6 +295,7 @@ export async function setCommitteeInterest(contactId: string, key: string, on: b
      ON CONFLICT (contact_id, committee) DO UPDATE SET name = EXCLUDED.name, phone = EXCLUDED.phone, needs_fill = false`,
     [contactId, key, name, phone]
   );
+  await import('@/lib/org/guest').then((m) => m.linkToChamber(pool, contactId, '专委会意向'));
   // 补齐这个人其他“待补填”的意向
   await pool.query(`UPDATE committee_interests SET name = $2, phone = $3, needs_fill = false WHERE contact_id = $1 AND needs_fill`, [contactId, name, phone]);
   return committees(contactId);
@@ -314,7 +315,7 @@ export async function committeeInterestList() {
             EXISTS (SELECT 1 FROM applications a WHERE a.contact_id = c.id AND a.membership_end_date >= current_date
                      AND (a.application_status IN ('approved','paid','second_payment_due') OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))) AS is_member
        FROM committee_interests ci JOIN contacts c ON c.id = ci.contact_id
-      WHERE c.account_kind IS NULL
+      WHERE c.account_kind IS NULL AND c.org_guest_since IS NULL
       ORDER BY ci.committee, ci.needs_fill, ci.created_at DESC`
   );
   return rows.map((r) => ({ ...r, committee_name: names.get(r.committee) ?? r.committee }));
@@ -324,7 +325,7 @@ export async function committeeInterestStats() {
   const { rows } = await getPool().query(
     `SELECT ci.committee, count(*)::int AS n,
             array_agg(COALESCE(ci.name, NULLIF(c.name, '微信用户'), '待补填') || CASE WHEN ci.needs_fill THEN '（待补填）' ELSE '' END ORDER BY ci.created_at DESC) AS names
-       FROM committee_interests ci JOIN contacts c ON c.id = ci.contact_id WHERE c.account_kind IS NULL GROUP BY ci.committee`
+       FROM committee_interests ci JOIN contacts c ON c.id = ci.contact_id WHERE c.account_kind IS NULL AND c.org_guest_since IS NULL GROUP BY ci.committee`
   );
   return rows;
 }

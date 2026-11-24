@@ -331,6 +331,7 @@ export async function saveMyPro(v: Viewer, contactId: string, b: Record<string, 
     params
   );
   const id = rows[0].id;
+  await import('@/lib/org/guest').then((m) => m.linkToChamber(pool, contactId, '登记接活'));
   // 商会代登记的人自己登录改资料并提交 = 本人已确认（确认链接随之作废）；本人点过“不用登记”后又自己来登记，也算确认
   await pool.query(
     `UPDATE jobs_pros SET self_confirmed_at = now(), self_confirm_via = 'edit', self_declined_at = NULL, confirm_nonce = NULL

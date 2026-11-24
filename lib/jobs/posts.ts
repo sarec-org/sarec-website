@@ -13,6 +13,7 @@ import { getSwitches } from './settings';
 import { tradeMap, type Trade } from './trades';
 import { cityNames, loadCities, resolveCity } from './cities';
 import { checkDescription, openidOf, saveSec, type SecOutcome } from './secCheck';
+import { requestsReady } from './requests';
 import { QUOTA_USED_UP_TEXT, alreadyContacted, checkPostQuota, freeLeftFor, freeLeftText, markUsedUp, quotaApplies } from './quota';
 
 export type PostRow = {
@@ -76,13 +77,15 @@ export async function listPosts(q: { trade?: string | null; city?: string | null
   const offset = Math.max(0, Number(q.cursor) || 0);
   const limit = q.limit ?? 20;
   const cityKey = q.city ? (await resolveCity(pool, q.city, { allowDisabled: true }))?.key ?? '__none__' : null;
+  // 1.5.1：小程序交来的（source = 'mp'）只通知对口的人，不进公开列表
+  const notMp = (await requestsReady(pool)) ? ` AND source <> 'mp'` : '';
   const { rows } = await pool.query<PostRow>(
-    `SELECT * FROM jobs_posts WHERE status = 'open' AND expires_at > now()
+    `SELECT * FROM jobs_posts WHERE status = 'open' AND expires_at > now()${notMp}
         AND ($1::text IS NULL OR trade_key = $1) AND ($2::text IS NULL OR city_key = $2)
       ORDER BY created_at DESC, id LIMIT ${limit + 1} OFFSET $3`,
     [q.trade || null, cityKey, offset]
   );
-  const { rows: cs } = await pool.query<{ k: string }>(`SELECT DISTINCT city_key AS k FROM jobs_posts WHERE status = 'open' AND expires_at > now() AND city_key IS NOT NULL`);
+  const { rows: cs } = await pool.query<{ k: string }>(`SELECT DISTINCT city_key AS k FROM jobs_posts WHERE status = 'open' AND expires_at > now() AND city_key IS NOT NULL${notMp}`);
   const have = new Set(cs.map((r) => r.k));
   const all = await loadCities(pool, { all: true });
   const names = new Map(all.map((c) => [c.key, c.name]));
@@ -171,7 +174,8 @@ export async function getPost(id: string, v: Viewer) {
   const pool = getPool();
   const post = await postById(pool, id);
   const mine = !!post && post.contact_id === v.contactId;
-  if (!post || (post.status === 'removed' && !mine && !v.staff)) throw new CrmError('not_found', '找不到这个活儿，可能已经下架');
+  // 1.5.1：小程序交来、工作人员还没看的（pending）只有本人和工作人员看得到
+  if (!post || ((post.status === 'removed' || post.status === 'pending') && !mine && !v.staff)) throw new CrmError('not_found', '找不到这个活儿，可能已经下架');
   const trades = await tradeMap(pool);
   const e = await eligibility(pool, post, v.contactId, v.staff);
   return {
@@ -278,6 +282,9 @@ export async function patchPost(id: string, v: Viewer, b: Record<string, unknown
   const mine = !!v.contactId && v.contactId === post.contact_id;
   if (!mine && !byToken) throw new CrmError(v.contactId ? 'forbidden' : 'unauthorized', v.contactId ? '只有发布人能改这个活儿' : '请先登录');
   if (post.status === 'removed') throw new CrmError('conflict', '这个活儿已被工作人员下架，不能再改');
+  if (post.status === 'pending' && (b.status === 'open' || b.status === 'found' || b.renew === true || b.action === 'renew')) {
+    throw new CrmError('conflict', '商会还在看这一条，看过就会帮你联系师傅；不需要了可以关掉');
+  }
   const sets: string[] = [];
   const vals: unknown[] = [id];
   const add = (col: string, val: unknown) => { vals.push(val); sets.push(`${col} = $${vals.length}`); };
