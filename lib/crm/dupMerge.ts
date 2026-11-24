@@ -41,6 +41,56 @@ const ident = (s: string) => {
   return `"${s}"`;
 };
 
+// 指令 58（11/24）：名片、头像这类"一人一份"的东西，两边都有时上面的搬家会撞唯一约束、整份留在旧档案，
+// 保留档案那份是空的（东哥 11/21 合并后名片资料"没了"）。这里按格子补：保留档案空着的格子用被合并档案的补上，
+// 保留档案已经填了的一律不动（以后填的为准）；被合并档案那份原样留着当底。补了哪些记进合并记录，撤销时只撤还没被改过的。
+const CARD_TEXT = ['company', 'title', 'intro', 'wechat_id', 'name_en', 'company_en', 'title_en', 'industry', 'project_photo_url', 'website', 'address', 'logo_url', 'bio', 'company_intro'];
+const CARD_ARR = ['offers', 'seeks'];
+// 保留档案的名片从来没编辑过（content_updated_at 为空）时，模板、公开勾选、审核状态也整份跟过来
+const CARD_WHOLE = ['template', 'show_phone', 'show_email', 'show_wechat', 'show_website', 'show_region', 'show_address', 'searchable', 'reviewed_at', 'reviewed_by', 'sec_check', 'content_updated_at'];
+const CONTACT_TEXT = ['avatar_url', 'region_self', 'name_alt', 'gender', 'age_range'];
+export type Filled = { t: 'member_cards' | 'contacts'; col: string; prev: unknown; val: unknown };
+
+export async function fillFromMerged(db: Db, keptId: string, mergedId: string): Promise<Filled[]> {
+  const out: Filled[] = [];
+  const one = async (t: Filled['t'], key: string, col: string, cond: string) => {
+    const C = ident(col);
+    const { rows } = await db.query<{ prev: unknown; val: unknown }>(
+      `WITH old AS (SELECT to_jsonb(k.${C}) AS prev FROM ${ident(t)} k WHERE k.${ident(key)} = $1)
+       UPDATE ${ident(t)} k SET ${C} = m.${C} FROM ${ident(t)} m
+        WHERE k.${ident(key)} = $1 AND m.${ident(key)} = $2 AND ${cond}
+       RETURNING (SELECT prev FROM old) AS prev, to_jsonb(k.${C}) AS val`,
+      [keptId, mergedId]
+    );
+    if (rows[0]) out.push({ t, col, prev: rows[0].prev, val: rows[0].val });
+  };
+  const { rows: cards } = await db.query<{ contact_id: string; content_updated_at: Date | null }>(
+    `SELECT contact_id, content_updated_at FROM member_cards WHERE contact_id = ANY($1::uuid[])`,
+    [[keptId, mergedId]]
+  );
+  const kept = cards.find((c) => c.contact_id === keptId);
+  const merged = cards.find((c) => c.contact_id === mergedId);
+  if (kept && merged && merged.content_updated_at) {
+    for (const c of CARD_TEXT) await one('member_cards', 'contact_id', c, `(k.${ident(c)} IS NULL OR btrim(k.${ident(c)}) = '') AND nullif(btrim(m.${ident(c)}), '') IS NOT NULL`);
+    for (const c of CARD_ARR) await one('member_cards', 'contact_id', c, `coalesce(cardinality(k.${ident(c)}), 0) = 0 AND coalesce(cardinality(m.${ident(c)}), 0) > 0`);
+    if (!kept.content_updated_at) for (const c of CARD_WHOLE) await one('member_cards', 'contact_id', c, `k.${ident(c)} IS DISTINCT FROM m.${ident(c)}`);
+  }
+  for (const c of CONTACT_TEXT) await one('contacts', 'id', c, `(k.${ident(c)} IS NULL OR btrim(k.${ident(c)}::text) = '') AND nullif(btrim(m.${ident(c)}::text), '') IS NOT NULL`);
+  return out;
+}
+
+async function unfill(db: Db, keptId: string, list: Filled[]) {
+  for (const f of list) {
+    const key = f.t === 'contacts' ? 'id' : 'contact_id';
+    const C = ident(f.col);
+    await db.query(
+      `UPDATE ${ident(f.t)} SET ${C} = (jsonb_populate_record(NULL::${ident(f.t)}, jsonb_build_object($2::text, $3::jsonb))).${C}
+        WHERE ${ident(key)} = $1 AND to_jsonb(${C}) IS NOT DISTINCT FROM $4::jsonb`,
+      [keptId, f.col, JSON.stringify(f.prev ?? null), JSON.stringify(f.val ?? null)]
+    );
+  }
+}
+
 export async function mergeContacts(s: Staff, keptId: string, mergedId: string, reason?: string) {
   if (keptId === mergedId) throw new CrmError('bad_request', '选的是同一份档案');
   return withTransaction(async (db) => {
@@ -109,6 +159,10 @@ export async function mergeContacts(s: Staff, keptId: string, mergedId: string, 
       added.points_ledger.push(ins[0].id);
     }
 
+    // 名片、头像等"一人一份"的：保留档案空着的格子用被合并档案的补上
+    const filled = await fillFromMerged(db, keptId, mergedId);
+    if (filled.length) { (added as Record<string, unknown>)._filled = filled; notes.push(`补了保留档案空着的 ${filled.length} 格（名片 / 头像等）`); }
+
     // 以前挂到被合并档案下的微信登录，改挂到保留档案
     const { rows: rep } = await db.query<{ id: string }>(`UPDATE contacts SET merged_into = $1 WHERE merged_into = $2 RETURNING id`, [keptId, mergedId]);
     await db.query(`UPDATE contacts SET merged_into = $1, updated_at = now() WHERE id = $2`, [keptId, mergedId]);
@@ -132,6 +186,7 @@ export async function undoMerge(s: Staff, mergeId: string) {
     if (!m) throw new CrmError('not_found', '找不到这次合并');
     if (m.undone_at) throw new CrmError('conflict', '这次合并已经撤销过了');
     for (const id of m.added.points_ledger ?? []) await db.query(`DELETE FROM points_ledger WHERE id = $1`, [id]);
+    await unfill(db, m.kept_id, ((m.added as Record<string, unknown>)._filled as Filled[] | undefined) ?? []);
     for (const [table, list] of Object.entries(m.moved)) {
       if (table === '_repointed') continue;
       for (const r of list) await db.query(`UPDATE ${ident(table)} SET ${ident(r.col)} = $1 WHERE id::text = $2`, [m.merged_id, r.id]);
