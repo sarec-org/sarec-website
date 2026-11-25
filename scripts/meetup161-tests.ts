@@ -109,6 +109,11 @@ async function main() {
   const { rows: still } = await pool.query(`SELECT title, note, sec_status FROM club_meetups WHERE id = $1`, [id]);
   assert.equal(still[0].title, '周五下午掼蛋局'); assert.equal(still[0].note, '新手欢迎'); assert.equal(still[0].sec_status, 'ok');
   ok('文字检测：拦词拒绝（提示不复述）、微信检测 risky 拒绝；被拒的修改一个字都没写进去');
+  // 验收 V21-1：地点名称、地址也拦字
+  await rejects(editMeetup(creator, id, { address: '下注 赢钱 1 号' }), 'bad_words');
+  await rejects(editMeetup(creator, id, { location: '赌场 赢钱' }), 'bad_words');
+  await rejects(createMeetup(creator, key, { title: '周六掼蛋', startsAt: new Date(Date.now() + 864e5).toISOString(), location: '会议室', address: '下注 1 号', capacity: 4 }), 'bad_words');
+  ok('地点名称、地址里有拦的字 → 发起 / 修改都拒绝');
 
   // ① 改地址（东哥的情形）+ ⑤ 标记
   const r1 = await editMeetup(creator, id, { location: '商会会议室', address: '456 Right Ave, Irvine CA' });
@@ -154,8 +159,21 @@ async function main() {
   assert.equal((await meetupDetail(alice, id)).gone, '这个组局暂时看不到，可能还在内容检测中');
   assert.equal((await board(alice)), undefined, '组局板上别人也看不到');
   assert.ok((await meetupDetail(creator, id)).meetup?.pending, '发起人自己看得到，写着检测中');
+  // 验收 V21-2：检测中也能“不去了”；只改地址时检测没结果不藏起来
+  await editMeetup(creator, id, { address: '789 Pending Rd, Irvine CA' });
+  process.env.WX_SECRET = 'test-secret';
+  await editMeetup(creator, id, { title: '周五下午掼蛋局（二楼b）' });
+  delete process.env.WX_SECRET;
+  await editMeetup(creator, id, { address: '790 Pending Rd, Irvine CA' });
+  assert.ok((await meetupDetail(alice, id)).meetup, '只改地址、检测没结果：仍然显示');
+  ok('只改地址时检测没结果 → 不把已显示的组局藏起来');
+  await editMeetup(creator, id, { title: '周五下午掼蛋局（二楼c）' });
+  await joinMeetup(alice, id, false);
+  await joinMeetup(alice, id, true).catch(() => null);
+  ok('组局在检测中：报了名的人照样能“不去了”');
   process.env.WX_SECRET = 'test-secret';
   await editMeetup(creator, id, { title: '周五下午掼蛋局（三楼）' }); // 再改一次，检测通过 → 恢复显示
+  await joinMeetup(alice, id, true).catch(() => null);
   assert.ok((await meetupDetail(alice, id)).meetup);
   ok('改了文字但没检测上 → 先只有发起人看得到（和发起时同一规矩）；再改检测通过 → 恢复显示');
 

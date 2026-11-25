@@ -279,11 +279,12 @@ export async function createMeetup(contactId: string, key: string, b: Record<str
   if (!title) throw new CrmError('bad_request', '请写一个标题，例如“周六下午掼蛋局”');
   if (!Number.isFinite(starts.getTime()) || starts.getTime() < Date.now() - 60e3) throw new CrmError('bad_request', '请选一个还没到的时间');
   if (!(capacity >= 2 && capacity <= 200)) throw new CrmError('bad_request', '人数上限请填 2 到 200');
-  const bad = gambleWords(`${title} ${note}`);
+  // 指令 60 验收 V21-1：地点名称、地址也拦字、也交微信检测（转发卡片标题会带上地点）
+  const bad = gambleWords(`${title} ${note} ${location ?? ''} ${address ?? ''}`);
   // 测试窗口 Q14：提示不复述被拦的词，也不自己写出“输赢、金额”这类字
   if (bad) throw new CrmError('bad_words', '这段文字不能发，请只写活动内容和时间，例如“周六下午掼蛋”');
   // 文本安全检测：通过才直接显示；不通 / 需复核 → 先不显示，告诉发起人“稍后显示”
-  const sec = await msgSecCheck(`${title}\n${note}\n${location ?? ''}`, await openidOf(contactId), 3);
+  const sec = await msgSecCheck(`${title}\n${note}\n${location ?? ''}\n${address ?? ''}`, await openidOf(contactId), 3);
   if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再发');
   const secStatus = sec === 'pass' ? 'ok' : 'pending';
   const { rows } = await getPool().query<{ id: string }>(
@@ -313,6 +314,11 @@ export async function joinMeetup(contactId: string, id: string, on: boolean) {
       [id]
     );
     const u = rows[0];
+    // 验收 V21-2：还在内容检测中也能"不去了"
+    if (!on && u && u.status === 'open') {
+      await db.query(`DELETE FROM club_meetup_joins WHERE meetup_id = $1 AND contact_id = $2`, [id, contactId]);
+      return { message: '已退出这个组局' };
+    }
     if (u && u.status === 'open' && u.sec_status === 'pending') throw new CrmError('pending', '这个组局还在内容检测中，过了才能参加');
     if (!u || u.status !== 'open' || u.sec_status !== 'ok') throw new CrmError('not_found', '这个组局已经取消或下架了');
     if (!on) {
@@ -362,13 +368,16 @@ export async function editMeetup(contactId: string, id: string, b: Record<string
   if (!Number.isFinite(starts.getTime()) || starts.getTime() < Date.now() - 60e3) throw new CrmError('bad_request', '请选一个还没到的时间');
   if (!(capacity >= 2 && capacity <= 200)) throw new CrmError('bad_request', '人数上限请填 2 到 200');
   if (capacity < u.joined) throw new CrmError('bad_request', `已经有 ${u.joined} 人报名了，人数上限不能少于 ${u.joined}`);
-  if (gambleWords(`${title} ${note ?? ''}`)) throw new CrmError('bad_words', '这段文字不能发，请只写活动内容和时间，例如“周六下午掼蛋”');
+  if (gambleWords(`${title} ${note ?? ''} ${location ?? ''} ${address ?? ''}`)) throw new CrmError('bad_words', '这段文字不能发，请只写活动内容和时间，例如“周六下午掼蛋”');
   const textOf = (t: string, n: string | null, l: string | null) => `${t}\n${n ?? ''}\n${l ?? ''}`;
   let secStatus = u.sec_status;
-  if (textOf(title, note, location) !== textOf(u.title, u.note, u.location)) {
-    const sec = await msgSecCheck(textOf(title, note, location), await openidOf(contactId), 3);
+  const textChanged = textOf(title, note, location) !== textOf(u.title, u.note, u.location);
+  const addrChanged = (address ?? '') !== (u.address ?? '');
+  if (textChanged || addrChanged) {
+    const sec = await msgSecCheck(`${textOf(title, note, location)}\n${address ?? ''}`, await openidOf(contactId), 3);
     if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再发');
-    secStatus = sec === 'pass' ? 'ok' : 'pending';
+    // 只改了地址（改错地址的情况）：检测没结果时不把已显示的组局藏起来；标题 / 备注 / 地点名称变了照旧等检测
+    if (textChanged) secStatus = sec === 'pass' ? 'ok' : 'pending';
   }
   const timeChanged = starts.getTime() !== new Date(u.starts_at).getTime();
   const placeChanged = (location ?? '') !== (u.location ?? '') || (address ?? '') !== (u.address ?? '');
