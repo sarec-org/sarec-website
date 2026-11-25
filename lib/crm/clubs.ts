@@ -24,6 +24,9 @@ export type Club = {
 /** 赌博 / 金钱类字样：组局标题和一句话里出现就请发起人改掉 */
 const MONEY_GAMBLE = /输赢|赢钱|输钱|赌|下注|押注|筹码|彩头|奖金|奖品|奖励|红包|抽水|带钱|输了.{0,4}钱|赢了.{0,4}钱|\$|美元|美金|人民币|\d+\s*(元(?![旦宵])|块|刀)/;
 
+/** 1.6.1：组局「转发」总开关（crm_settings.club_share_on，默认开）。被驳回时关掉它：转发按钮和右上角转发都收起，组局照常 */
+export const clubShareOn = () => getSetting<unknown>(getPool(), 'club_share_on', true).then((v) => !(v === false || v === 'false')).catch(() => true);
+
 export function gambleWords(text: string): string | null {
   const m = MONEY_GAMBLE.exec(text);
   return m ? m[0] : null;
