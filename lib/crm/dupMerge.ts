@@ -128,6 +128,14 @@ export async function mergeContacts(s: Staff, keptId: string, mergedId: string, 
               `SELECT event_id, arrival_status, checked_in_at FROM registrations WHERE id::text = $1`,
               [r.id]
             );
+            // 指令 61 F2：被合并那份是有效报名、保留档案那份是"已取消" → 保留档案改回已报名（东哥 11/6 那场就是这样，传照片时被当成取消的）
+            const { rows: st } = await db.query<{ status: string }>(`SELECT status FROM registrations WHERE id::text = $1`, [r.id]);
+            if (st[0] && st[0].status !== 'cancelled') {
+              await db.query(
+                `UPDATE registrations SET status = $3, cancelled_at = NULL, updated_at = now() WHERE event_id = $1 AND contact_id = $2 AND status = 'cancelled'`,
+                [b[0]?.event_id, keptId, st[0].status]
+              );
+            }
             if (b[0]?.arrival_status === 'checked_in') {
               await db.query(
                 `UPDATE registrations SET arrival_status = 'checked_in', checked_in_at = coalesce(checked_in_at, $3), arrived_at = coalesce(arrived_at, $3), updated_at = now()

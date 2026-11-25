@@ -21,6 +21,7 @@ const pool = getPool();
 const sfx = randomBytes(3).toString('hex');
 const P = `验收58-${sfx}`;
 const ids: string[] = [];
+let evId: string | null = null;
 const S: Staff = { contactId: '00000000-0000-0000-0000-000000000000', email: 'test', name: P, roles: ['admin'] };
 let passed = 0;
 const ok = (n: string) => { passed++; console.log(`  ✓ ${n}`); };
@@ -69,12 +70,24 @@ async function main() {
   assert.equal(c3.company, '今天填的公司'); assert.equal(c3.title, '名誉会长'); assert.equal(c3.intro, '简介'); assert.equal(c3.website, 'https://example.com');
   ok('主档案已经填了的（今天重填的）不覆盖，只补空着的');
   await undoMerge(S, r2.mergeId);
+
+  // 指令 61 F2：同一场两边都有报名，主档案那份"已取消"、旧档案那份有效且签到过 → 合并后主档案改回已报名、补上签到
+  const { rows: ev } = await pool.query<{ id: string }>(`INSERT INTO events (slug, title, starts_at) VALUES ($1, $2, now() - interval '3 days') RETURNING id`, [`m58-${sfx}`, `${P}-活动`]);
+  evId = ev[0].id;
+  await pool.query(`INSERT INTO registrations (event_id, contact_id, status, cancelled_at) VALUES ($1, $2, 'cancelled', now())`, [evId, main1]);
+  await pool.query(`INSERT INTO registrations (event_id, contact_id, status, arrival_status, checked_in_at) VALUES ($1, $2, 'registered', 'checked_in', now() - interval '3 days')`, [evId, old]);
+  const r3 = await mergeContacts(S, main1, old, P);
+  const { rows: rg } = await pool.query<{ status: string; arrival_status: string }>(`SELECT status, arrival_status FROM registrations WHERE event_id = $1 AND contact_id = $2`, [evId, main1]);
+  assert.equal(rg[0].status, 'registered'); assert.equal(rg[0].arrival_status, 'checked_in');
+  ok('同一场两边都有报名：主档案"已取消"+旧档案有效签到 → 合并后主档案改回已报名、带签到');
+  await undoMerge(S, r3.mergeId);
 }
 
 main()
   .then(() => console.log(`\n通过 ${passed} 项`))
   .catch((e) => { console.error('失败：', e); process.exitCode = 1; })
   .finally(async () => {
+    if (evId) { await pool.query(`DELETE FROM registrations WHERE event_id = $1`, [evId]); await pool.query(`DELETE FROM events WHERE id = $1`, [evId]); }
     await pool.query(`DELETE FROM contact_merges WHERE kept_id = ANY($1::uuid[]) OR merged_id = ANY($1::uuid[])`, [ids]);
     await pool.query(`DELETE FROM crm_audit_log WHERE target_id = ANY($1::text[])`, [ids]);
     await pool.query(`DELETE FROM sessions WHERE contact_id = ANY($1::uuid[])`, [ids]);
