@@ -24,6 +24,9 @@ export type Club = {
 /** 赌博 / 金钱类字样：组局标题和一句话里出现就请发起人改掉 */
 const MONEY_GAMBLE = /输赢|赢钱|输钱|赌|下注|押注|筹码|彩头|奖金|奖品|奖励|红包|抽水|带钱|输了.{0,4}钱|赢了.{0,4}钱|\$|美元|美金|人民币|\d+\s*(元(?![旦宵])|块|刀)/;
 
+/** 1.6.1：组局「转发」总开关（crm_settings.club_share_on，默认开）。被驳回时关掉它：转发按钮和右上角转发都收起，组局照常 */
+export const clubShareOn = () => getSetting<unknown>(getPool(), 'club_share_on', true).then((v) => !(v === false || v === 'false')).catch(() => true);
+
 export function gambleWords(text: string): string | null {
   const m = MONEY_GAMBLE.exec(text);
   return m ? m[0] : null;
@@ -180,18 +183,47 @@ export async function clubDetail(contactId: string | null, key: string) {
 }
 
 type MeetupRow = {
-  id: string; title: string; starts_at: Date; location: string | null; address: string | null; capacity: number; note: string | null;
+  id: string; club_id: string; title: string; starts_at: Date; location: string | null; address: string | null; capacity: number; note: string | null;
   status: string; sec_status: string; creator_id: string; creator_name: string | null; joined: number; mine: boolean;
+  // 1.6.1（0052）：改过时间 / 地点的时间；我报名的时间（报名早于改动的人才显示「已改」）
+  time_changed_at?: Date | null; place_changed_at?: Date | null; my_joined_at?: Date | null;
 };
+
+const MEETUP_SELECT = `SELECT u.*, NULLIF(ct.name, '微信用户') AS creator_name,
+            (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined,
+            EXISTS (SELECT 1 FROM club_meetup_joins j WHERE j.meetup_id = u.id AND j.contact_id = $2) AS mine,
+            (SELECT j.joined_at FROM club_meetup_joins j WHERE j.meetup_id = u.id AND j.contact_id = $2) AS my_joined_at
+       FROM club_meetups u JOIN contacts ct ON ct.id = u.creator_id`;
+
+/** 1.6.1：「时间已改」「地点已改」——只给报名在改动之前的参加者看（发起人自己不显示） */
+function changedLabel(u: MeetupRow, contactId: string | null): string | null {
+  if (!u.mine || u.creator_id === contactId || u.status !== 'open' || !u.my_joined_at) return null;
+  const at = new Date(u.my_joined_at).getTime();
+  const t = !!u.time_changed_at && new Date(u.time_changed_at).getTime() > at;
+  const p = !!u.place_changed_at && new Date(u.place_changed_at).getTime() > at;
+  return t && p ? '时间、地点已改' : t ? '时间已改' : p ? '地点已改' : null;
+}
+
+/** 组局板和组局详情页用同一个样子 */
+function meetupView(u: MeetupRow, contactId: string | null, geo: unknown) {
+  const started = new Date(u.starts_at).getTime() <= Date.now();
+  return {
+    id: u.id, title: u.title, startsAt: u.starts_at, location: u.location, address: u.address, geo, capacity: u.capacity, note: u.note,
+    joined: u.joined, full: u.joined >= u.capacity, iJoined: u.mine, mineCreated: u.creator_id === contactId,
+    creator: u.creator_name ?? 'SAREC 用户', cancelled: u.status === 'cancelled',
+    pending: u.status === 'cancelled' ? null : u.sec_status === 'pending' ? '内容检测中，稍后显示（只有您自己看得到）' : u.sec_status === 'rejected' ? '内容没通过检测，别人看不到，请点「修改」改一下' : null,
+    // 1.6.1：发起人能改（没取消、没下架、还没开始）；改过时间 / 地点给参加者的标记
+    canEdit: u.creator_id === contactId && u.status === 'open' && !started,
+    started,
+    changed: changedLabel(u, contactId)
+  };
+}
 
 async function listMeetups(c: Club, contactId: string | null, canSee: boolean) {
   if (!canSee) return [];
   // 过了开始时间 3 小时自动收起；被下架的不显示；还没过检测的只给发起人自己看（写“稍后显示”）
   const { rows } = await getPool().query<MeetupRow>(
-    `SELECT u.*, NULLIF(ct.name, '微信用户') AS creator_name,
-            (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined,
-            EXISTS (SELECT 1 FROM club_meetup_joins j WHERE j.meetup_id = u.id AND j.contact_id = $2) AS mine
-       FROM club_meetups u JOIN contacts ct ON ct.id = u.creator_id
+    `${MEETUP_SELECT}
       WHERE u.club_id = $1 AND u.status <> 'taken_down' AND u.starts_at > now() - interval '3 hours'
         AND (u.sec_status = 'ok' OR u.creator_id = $2)
         -- 测试窗口 Q12：已取消的排最后，取消一天后收起
@@ -201,12 +233,40 @@ async function listMeetups(c: Club, contactId: string | null, canSee: boolean) {
   );
   const { geocode } = await import('./geo');
   const geos = await Promise.all(rows.map((u) => (u.address ? geocode(u.address) : Promise.resolve(null))));
-  return rows.map((u, i) => ({
-    id: u.id, title: u.title, startsAt: u.starts_at, location: u.location, address: u.address, geo: geos[i], capacity: u.capacity, note: u.note,
-    joined: u.joined, full: u.joined >= u.capacity, iJoined: u.mine, mineCreated: u.creator_id === contactId,
-    creator: u.creator_name ?? 'SAREC 用户', cancelled: u.status === 'cancelled',
-    pending: u.status === 'cancelled' ? null : u.sec_status === 'pending' ? '内容检测中，稍后显示（只有您自己看得到）' : u.sec_status === 'rejected' ? '内容没通过检测，别人看不到，请修改后重新发起' : null
-  }));
+  return rows.map((u, i) => meetupView(u, contactId, geos[i]));
+}
+
+/**
+ * 1.6.1 组局详情页（转发出去的卡片打开这里）。看的规矩和俱乐部页一样：
+ * - 俱乐部成员 / 负责人：看得到这个组局，能报名 / 不去了；发起人能改、能取消。
+ * - 不是成员（含没登录）：和俱乐部页一样看不到组局内容，只给俱乐部名字和「加入后能看到这个组局，也能报名」+「加入」。
+ * - 已取消 / 已下架：写“这个组局已取消”；还没过内容检测的只有发起人自己看得到，别人看到的也是“找不到”。
+ */
+export async function meetupDetail(contactId: string | null, id: string) {
+  const gone = (message: string, club?: { key: string; name: string; membersOnly: boolean } | null) =>
+    ({ meetup: null, gone: message, locked: false, club: club ?? null, joinedClub: false, leader: false, canEdit: false });
+  if (!/^[0-9a-f-]{36}$/.test(id)) return gone('找不到这个组局，可能链接不完整');
+  const { rows } = await getPool().query<MeetupRow & { club_key: string; club_name: string; club_members_only: boolean; club_closed: Date | null; leader: string | null }>(
+    `${MEETUP_SELECT.replace('FROM club_meetups u JOIN contacts ct ON ct.id = u.creator_id',
+      `, cl.key AS club_key, cl.name AS club_name, cl.members_only AS club_members_only, cl.closed_at AS club_closed, cl.leader_contact_id AS leader
+       FROM club_meetups u JOIN contacts ct ON ct.id = u.creator_id JOIN clubs cl ON cl.id = u.club_id`)}
+      WHERE u.id = $1`,
+    [id, contactId]
+  );
+  const u = rows[0];
+  if (!u) return gone('找不到这个组局，可能已经删掉了');
+  const club = { key: u.club_key, name: u.club_name, membersOnly: u.club_members_only };
+  if (u.club_closed) return gone('这个俱乐部已经关闭了', null);
+  const leader = !!contactId && u.leader === contactId;
+  const joinedClub = !!contactId && (await isMemberOf(u.club_id, contactId));
+  if (u.status === 'taken_down' || u.status === 'cancelled') return { ...gone('这个组局已取消', club), joinedClub, leader };
+  if (u.sec_status !== 'ok' && u.creator_id !== contactId) return { ...gone('这个组局暂时看不到，可能还在内容检测中', club), joinedClub, leader };
+  if (!joinedClub && !leader) {
+    return { meetup: null, gone: null, locked: true, lockedNote: `加入「${club.name}」后能看到这个组局，也能报名`, club, joinedClub, leader, canEdit: false };
+  }
+  const { geocode } = await import('./geo');
+  const view = meetupView(u, contactId, u.address ? await geocode(u.address) : null);
+  return { meetup: view, gone: null, locked: false, club, joinedClub, leader, canEdit: view.canEdit };
 }
 
 export async function createMeetup(contactId: string, key: string, b: Record<string, unknown>) {
@@ -222,11 +282,12 @@ export async function createMeetup(contactId: string, key: string, b: Record<str
   if (!title) throw new CrmError('bad_request', '请写一个标题，例如“周六下午掼蛋局”');
   if (!Number.isFinite(starts.getTime()) || starts.getTime() < Date.now() - 60e3) throw new CrmError('bad_request', '请选一个还没到的时间');
   if (!(capacity >= 2 && capacity <= 200)) throw new CrmError('bad_request', '人数上限请填 2 到 200');
-  const bad = gambleWords(`${title} ${note}`);
+  // 指令 60 验收 V21-1：地点名称、地址也拦字、也交微信检测（转发卡片标题会带上地点）
+  const bad = gambleWords(`${title} ${note} ${location ?? ''} ${address ?? ''}`);
   // 测试窗口 Q14：提示不复述被拦的词，也不自己写出“输赢、金额”这类字
   if (bad) throw new CrmError('bad_words', '这段文字不能发，请只写活动内容和时间，例如“周六下午掼蛋”');
   // 文本安全检测：通过才直接显示；不通 / 需复核 → 先不显示，告诉发起人“稍后显示”
-  const sec = await msgSecCheck(`${title}\n${note}\n${location ?? ''}`, await openidOf(contactId), 3);
+  const sec = await msgSecCheck(`${title}\n${note}\n${location ?? ''}\n${address ?? ''}`, await openidOf(contactId), 3);
   if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再发');
   const secStatus = sec === 'pass' ? 'ok' : 'pending';
   const { rows } = await getPool().query<{ id: string }>(
@@ -256,6 +317,11 @@ export async function joinMeetup(contactId: string, id: string, on: boolean) {
       [id]
     );
     const u = rows[0];
+    // 验收 V21-2：还在内容检测中也能"不去了"
+    if (!on && u && u.status === 'open') {
+      await db.query(`DELETE FROM club_meetup_joins WHERE meetup_id = $1 AND contact_id = $2`, [id, contactId]);
+      return { message: '已退出这个组局' };
+    }
     if (u && u.status === 'open' && u.sec_status === 'pending') throw new CrmError('pending', '这个组局还在内容检测中，过了才能参加');
     if (!u || u.status !== 'open' || u.sec_status !== 'ok') throw new CrmError('not_found', '这个组局已经取消或下架了');
     if (!on) {
@@ -271,6 +337,74 @@ export async function joinMeetup(contactId: string, id: string, on: boolean) {
     await db.query(`INSERT INTO club_meetup_joins (meetup_id, contact_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [id, contactId]);
     return { message: '已参加' };
   });
+}
+
+/**
+ * 1.6.1 发起人修改组局：标题、时间、地点、地址、人数上限、一句话（没传的格子不改）。
+ * - 只有发起人能改；别人一律“找不到这个组局”（不告诉是谁发的）。
+ * - 已取消 / 已下架 / 已经开始的不能改。人数上限不能少于已经报名的人数。
+ * - 文字和发起时同样的规矩：拦词（不复述被拦的词）+ 微信文本检测；文字改了才重新检测，检测不通 / 没检测上就先只给发起人看。
+ * - 改了时间或地点（地点名 / 地址）：记下改动时间，之前报名的人看到「时间已改 / 地点已改」。组局没有提醒消息，这里也不发消息。
+ */
+export async function editMeetup(contactId: string, id: string, b: Record<string, unknown>) {
+  if (!/^[0-9a-f-]{36}$/.test(id)) throw new CrmError('not_found', '找不到这个组局');
+  const { rows } = await getPool().query<{ creator_id: string; title: string; starts_at: Date; location: string | null; address: string | null; capacity: number; note: string | null; status: string; sec_status: string; joined: number }>(
+    `SELECT u.creator_id, u.title, u.starts_at, u.location, u.address, u.capacity, u.note, u.status, u.sec_status,
+            (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined
+       FROM club_meetups u WHERE u.id = $1`,
+    [id]
+  );
+  const u = rows[0];
+  if (!u || u.creator_id !== contactId) throw new CrmError('not_found', '找不到这个组局');
+  if (u.status === 'cancelled') throw new CrmError('closed', '这个组局已经取消了，不能再改。可以重新发起一个');
+  if (u.status !== 'open') throw new CrmError('closed', '这个组局已经下架了，不能再改');
+  if (new Date(u.starts_at).getTime() <= Date.now()) throw new CrmError('closed', '这个组局已经开始了，不能再改');
+  if (await isBanned(contactId)) throw new CrmError('club_banned', '您暂时不能修改组局。有疑问请在「联系商会」里找工作人员。');
+  const has = (k: string) => b[k] !== undefined && b[k] !== null;
+  const title = has('title') ? String(b.title).trim().slice(0, 30) : u.title;
+  const note = has('note') ? String(b.note).trim().slice(0, 80) || null : u.note;
+  const location = has('location') ? String(b.location).trim().slice(0, 60) || null : u.location;
+  const address = has('address') ? String(b.address).trim().slice(0, 120) || null : u.address;
+  const capacity = has('capacity') ? Math.floor(Number(b.capacity)) : u.capacity;
+  const starts = has('startsAt') ? new Date(String(b.startsAt)) : new Date(u.starts_at);
+  if (!title) throw new CrmError('bad_request', '请写一个标题，例如“周六下午掼蛋局”');
+  if (!Number.isFinite(starts.getTime()) || starts.getTime() < Date.now() - 60e3) throw new CrmError('bad_request', '请选一个还没到的时间');
+  if (!(capacity >= 2 && capacity <= 200)) throw new CrmError('bad_request', '人数上限请填 2 到 200');
+  if (capacity < u.joined) throw new CrmError('bad_request', `已经有 ${u.joined} 人报名了，人数上限不能少于 ${u.joined}`);
+  if (gambleWords(`${title} ${note ?? ''} ${location ?? ''} ${address ?? ''}`)) throw new CrmError('bad_words', '这段文字不能发，请只写活动内容和时间，例如“周六下午掼蛋”');
+  const textOf = (t: string, n: string | null, l: string | null) => `${t}\n${n ?? ''}\n${l ?? ''}`;
+  let secStatus = u.sec_status;
+  const textChanged = textOf(title, note, location) !== textOf(u.title, u.note, u.location);
+  const addrChanged = (address ?? '') !== (u.address ?? '');
+  if (textChanged || addrChanged) {
+    const sec = await msgSecCheck(`${textOf(title, note, location)}\n${address ?? ''}`, await openidOf(contactId), 3);
+    if (sec === 'risky') throw new CrmError('bad_words', '这段内容没通过微信内容检测，请修改后再发');
+    // 只改了地址（改错地址的情况）：检测没结果时不把已显示的组局藏起来；标题 / 备注 / 地点名称变了照旧等检测
+    if (textChanged) secStatus = sec === 'pass' ? 'ok' : 'pending';
+  }
+  const timeChanged = starts.getTime() !== new Date(u.starts_at).getTime();
+  const placeChanged = (location ?? '') !== (u.location ?? '') || (address ?? '') !== (u.address ?? '');
+  const changed = timeChanged || placeChanged || title !== u.title || note !== u.note || capacity !== u.capacity || secStatus !== u.sec_status;
+  if (!changed) return { id, message: '没有改动' };
+  await withTransaction(async (db) => {
+    // 人数上限再确认一次（改的同时有人报名）
+    const { rows: n } = await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM club_meetup_joins WHERE meetup_id = $1`, [id]);
+    if (capacity < n[0].n) throw new CrmError('bad_request', `已经有 ${n[0].n} 人报名了，人数上限不能少于 ${n[0].n}`);
+    await db.query(
+      `UPDATE club_meetups SET title = $2, starts_at = $3, location = $4, address = $5, capacity = $6, note = $7, sec_status = $8,
+              edited_at = now(), updated_at = now(),
+              time_changed_at = CASE WHEN $9 THEN now() ELSE time_changed_at END,
+              place_changed_at = CASE WHEN $10 THEN now() ELSE place_changed_at END
+        WHERE id = $1 AND creator_id = $11 AND status = 'open'`,
+      [id, title, starts, location, address, capacity, note, secStatus, timeChanged, placeChanged, contactId]
+    );
+  });
+  await log('creator:' + contactId, 'meetup', id, 'edit', [timeChanged && '时间', placeChanged && '地点'].filter(Boolean).join('、') || null);
+  const notice = timeChanged || placeChanged ? '，已经报名的人会看到「' + (timeChanged && placeChanged ? '时间、地点' : timeChanged ? '时间' : '地点') + '已改」' : '';
+  return {
+    id,
+    message: secStatus === 'ok' ? `已修改${notice}` : '已修改，内容检测中，稍后显示（现在只有您自己看得到）'
+  };
 }
 
 /** 发起人取消；负责人下架（有记录） */
