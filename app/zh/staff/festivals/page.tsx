@@ -33,8 +33,9 @@ function FestForm({ v, set, cats, isNew }: { v: Form; set: (v: Form) => void; ca
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
       {isNew && (
-        <label className={styles.small} htmlFor={id + '-key'}>编号（小写英文）
-          <input id={id + '-key'} className={styles.input} style={{ margin: 0 }} value={v.key} placeholder="如 lunar_new_year" onChange={(e) => set({ ...v, key: e.target.value })} />
+        // 指令 89-B 验收 P3-3：编号可以不填，保存时自动生成（东哥填不了"小写英文"）
+        <label className={styles.small} htmlFor={id + '-key'}>编号（可不填，自动生成）
+          <input id={id + '-key'} className={styles.input} style={{ margin: 0 }} value={v.key} placeholder="不填就自动生成" onChange={(e) => set({ ...v, key: e.target.value })} />
         </label>
       )}
       <label className={styles.small} htmlFor={id + '-name'}>名字
@@ -103,7 +104,7 @@ function Festivals() {
     return r.ok;
   }
   const save = (f: Form, create: boolean) => post({
-    action: 'save', create, key: f.key.trim(), name: f.name, kind: f.kind, showBeforeDays: Number(f.before), showUntilOffset: Number(f.until), homeBeforeDays: Number(f.home),
+    action: 'save', create, key: f.key.trim() || (create ? `fest_${Date.now().toString(36)}` : ''), name: f.name, kind: f.kind, showBeforeDays: Number(f.before), showUntilOffset: Number(f.until), homeBeforeDays: Number(f.home),
     categoryKey: f.cat || null, greetCategoryKey: f.greet || null, sort: f.sort === '' ? null : Number(f.sort), active: f.active
   }, 'save' + f.key);
 

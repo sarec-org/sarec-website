@@ -2,8 +2,8 @@
 /**
  * 指令 89-B.1 / B.3：后台「常用」一排 + 「开关在哪」一排（东哥找小程序码找不到，停在「设置」页一墙说明文字）。
  * - 「下载小程序码」：小程序首页码（pages/home/home），一点就下载 PNG（/api/v1/staff/mp-code，服务器出码后存 Blob，不重复调微信）。
- * - 「复制小程序链接」：复制小程序 AppID + 首页路径（公众号文章、菜单、视频号挂小程序时填这两项）。
- *   服务器现在没有生成短链接的能力（要调新的微信接口，先要东哥点头），复制了什么在提示里说清。
+ * - 「复制小程序路径（给技术 / 公众号配菜单用）」：复制小程序 AppID + 首页路径（公众号文章、菜单、视频号挂小程序时填这两项）。
+ *   原名「复制小程序链接」名不副实（验收 P2-3）已改名；真短链接要调新的微信接口，东哥点头前不做。
  * - 其余是最常用页面的直达；名字和导航（nav.ts）一致（总则第 1 条）。只显示登录者能进的。
  * 「设置」页和后台首页「今天」都用这一份。
  */
@@ -34,8 +34,8 @@ export const SWITCHES: { href: string; label: string; role: string }[] = [
   { href: '/zh/staff/clubs', label: '俱乐部开 / 关（麻将、掼蛋）', role: 'ops' },
   { href: '/zh/staff/jobs/switches', label: '找工人接活儿开关', role: 'ops' },
   { href: '/zh/staff/notify', label: '手机通知总闸', role: 'ops|checkin|finance' },
-  { href: '/zh/staff/settings#zelle', label: 'Zelle 付款', role: 'admin' },
-  { href: '/zh/staff/settings#timeline', label: '活动确认时间线', role: 'admin' }
+  { href: '/zh/staff/settings#zelle', label: 'Zelle 付款', role: 'admin' }
+  // 「活动确认时间线」不放这一排：它关着时已经在下面「N 项功能关着」里（同一页不出现两次，总则第 11 条）；在「活动」一组里改
 ];
 
 async function downloadCode(setMsg: (m: M) => void, setBusy: (b: boolean) => void) {
@@ -77,7 +77,7 @@ async function copyLink(setMsg: (m: M) => void) {
   const text = `${d.name} 小程序\nAppID：${d.appid}\n首页路径：${d.path}`;
   try {
     await navigator.clipboard.writeText(text);
-    setMsg({ ok: true, text: `已复制小程序 AppID（${d.appid}）和首页路径（${d.path}）。公众号文章插小程序、公众号菜单、视频号挂小程序时填这两项。` });
+    setMsg({ ok: true, text: `已复制小程序 AppID（${d.appid}）和首页路径（${d.path}）——这不是能点开的链接，是公众号菜单、公众号文章插小程序时要填的两项。要发给朋友，请用「下载小程序码」发图片。` });
   } catch {
     setMsg({ ok: true, text: `浏览器不让自动复制，请手动复制：AppID ${d.appid}，首页路径 ${d.path}` });
   }
@@ -95,8 +95,10 @@ export function QuickActions({ roles, title = '常用', showSwitches = true }: {
         <button type="button" className={styles.btn} style={PILL} disabled={busy} onClick={() => downloadCode(setMsg, setBusy)}>
           {busy ? '正在生成…' : '下载小程序码'}
         </button>
-        <button type="button" className={`${styles.btn} ${styles.btnGhost}`} style={PILL} onClick={() => copyLink(setMsg)}>
-          复制小程序链接
+        {/* 指令 89-B 验收 P2-3：原来叫「复制小程序链接」，复制出来的却不是能点开的链接（名不副实）。改名说清是什么、给谁用；
+            真短链接要调新的微信接口，东哥点头前不做。没拿掉：公众号菜单 / 文章插小程序确实要填这两项，拿掉了技术同事又得问开发 */}
+        <button type="button" className={`${styles.btn} ${styles.btnQuiet}`} style={PILL} onClick={() => copyLink(setMsg)}>
+          复制小程序路径（给技术 / 公众号配菜单用）
         </button>
         {links.map((l) => (
           <Link key={l.href} href={l.href} className={`${styles.btn} ${styles.btnGhost}`} style={PILL}>
@@ -107,7 +109,7 @@ export function QuickActions({ roles, title = '常用', showSwitches = true }: {
       {msg && <p className={msg.ok ? styles.success : styles.error} role="status" style={{ marginBottom: 0 }}>{msg.text}</p>}
       {showSwitches && sw.length > 0 && (
         <>
-          <h2 className={styles.h2} style={{ marginTop: '1rem' }}>开关</h2>
+          <h2 className={styles.h2} id="switches" style={{ marginTop: '1rem', scrollMarginTop: 140 }}>开关</h2>
           <div style={ROW}>
             {sw.map((l) =>
               l.href.startsWith('/zh/staff/settings#') ? (

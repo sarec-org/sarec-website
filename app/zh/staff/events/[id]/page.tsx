@@ -10,15 +10,18 @@ import { EventData, EventHub } from '@/components/crm/staff/EventHub';
 import { checkinA4, registerPoster, type MaterialEvent } from '@/components/crm/staff/eventMaterials';
 import { saveImage, savedText } from '@/components/crm/staff/SaveImage';
 import { AiPoster } from '@/components/crm/staff/AiPoster';
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
 type PrepRow = { event_id: string; total: number; done: number; overdue: number };
 type Tpl = { key: string; name: string };
-type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; pay_link?: string | null; added_by_name?: string | null; is_placeholder?: boolean };
+type Reg = { contact_id: string; name: string; member_no: number; email: string | null; phone_e164: string | null; status: string; arrival_status: string; source: string; order_status: string | null; paid_when?: string | null; pay_link?: string | null; added_by_name?: string | null; is_placeholder?: boolean; account_kind?: string | null };
 
 export default function StaffEventDetail({ params }: { params: { id: string } }) {
   const [data, setData] = useState<{ event: Ev; registrations: Reg[] } | null>(null);
+  useHashScroll(!!data); // 指令 89-B 验收：从活动列表「名单 ›」、顶上「报名与签到」带 #regs 进来时滚到名单
   const [editing, setEditing] = useState(false);
+  const [allRegs, setAllRegs] = useState(false);
   const [tabData, setTabData] = useState(false);
   useEffect(() => setTabData(new URLSearchParams(location.search).get('tab') === 'data'), []);
   const [full, setFull] = useState(false);
@@ -167,6 +170,64 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
             <Msg m={msg} />
             <EventHub eventId={params.id} current={tabData ? 'data' : 'regs'} />
             {tabData && <EventData eventId={params.id} />}
+            {/* 指令 89-B 验收 P2-1：报名名单挪到第一屏（原来压在 AI 海报下面、页面最底）；顶上「报名与签到」点了跳到这里 */}
+            {(() => {
+              const live = data.registrations.filter((r) => r.status !== 'cancelled');
+              const real = live.filter((r) => !r.account_kind);
+              const n = (st: string) => real.filter((r) => r.status === st).length;
+              const internal = live.length - real.length;
+              const arrived = data.registrations.filter((r) => !r.account_kind && r.arrival_status === 'checked_in').length;
+              return (
+                <>
+                  <h2 className={styles.h2} id="regs" style={{ scrollMarginTop: 140 }}>报名名单：已报名 {n('registered')} 人{n('waitlisted') ? ` · 候补 ${n('waitlisted')}` : ''} · 已签到 {arrived}</h2>
+                  <p className={styles.small} style={{ marginTop: 0 }}>
+                    只数真实客户，和上面「报名与签到 到场/报名」、活动列表同一个数。{internal ? `另有内部 / 测试账号 ${internal} 个（表里标了，不算数）。` : ''}
+                    {data.registrations.length - live.length ? `已取消 ${data.registrations.length - live.length} 个排在最后。` : ''}
+                  </p>
+                  {can(s, 'ops') && (
+                    <div className={styles.btnRow} style={{ marginBottom: '0.6rem' }}>
+                      <a className={styles.btn} style={{ flex: '0 1 auto' }} href={`/api/v1/staff/events/${params.id}/export`} download onClick={() => setMsg({ ok: true, text: `正在下载「${data.event.title}」的报名名单（Excel 能直接打开的 CSV，全部 ${data.registrations.length} 条，含候补、已取消，内部 / 测试账号单独标出）` })}>
+                        导出报名名单（Excel）
+                      </a>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+            {Number(data.event.fee_cents) > 0 && (() => {
+              const live = data.registrations.filter((r) => r.status !== 'cancelled');
+              const paid = live.filter((r) => r.order_status === 'paid' && r.paid_when !== 'onsite').length;
+              const onsite = live.filter((r) => r.order_status === 'paid' && r.paid_when === 'onsite').length;
+              const unpaid = live.length - paid - onsite;
+              return <p className={styles.notice}>收费：已付 <strong>{paid}</strong> · 未付 <strong>{unpaid}</strong> · 现场付 <strong>{onsite}</strong>。没付的，系统已在报名后、活动前 5 天各发过一次付款链接；到场没付的签到台现场 Zelle 扫码。</p>;
+            })()}
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead><tr><th>姓名</th><th>联系方式</th><th>报名</th><th>到场</th><th>付款</th></tr></thead>
+                <tbody>
+                  {[...data.registrations].sort((a, b) => Number(a.status === 'cancelled') - Number(b.status === 'cancelled')).slice(0, allRegs ? undefined : 10).map((r) => (
+                    <tr key={r.contact_id} style={r.status === 'cancelled' || r.account_kind ? { opacity: 0.6 } : undefined}>
+                      <td><a href={`/zh/staff/contacts/${r.contact_id}`} style={{ color: 'var(--gold)' }}>{r.name}</a> <span className={styles.small}>#{r.member_no}</span>{r.account_kind && <span className={`${styles.badge} ${styles.badgeMuted}`} style={{ marginLeft: 4 }}>内部 / 测试</span>}</td>
+                      <td className={styles.small}>{r.phone_e164 ?? r.email}</td>
+                      <td>{({ registered: '已报名', waitlisted: '候补', cancelled: '已取消' } as Record<string, string>)[r.status]}{r.source === 'companion' ? `（由 ${r.added_by_name ?? '朋友'} 代报名${r.is_placeholder ? '，本人还没登录过' : ''}）` : r.source !== 'online' ? `（${r.source === 'onsite' ? '现场' : '工作人员'}）` : ''}</td>
+                      <td>{({ none: '—', checked_in: '已签到', arrived_pending_payment: '到场待核款' } as Record<string, string>)[r.arrival_status]}</td>
+                      <td>{r.order_status ? (r.order_status === 'paid' ? (r.paid_when === 'onsite' ? '现场付' : '已付') : ({ pending_payment: '未付', payment_submitted: '已提交，待核款' } as Record<string, string>)[r.order_status] ?? r.order_status) : '—'}
+                        {r.pay_link && (
+                          <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} style={{ marginLeft: 6 }} onClick={async () => setMsg({ ok: await copyText(r.pay_link!), text: `${r.name} 的付款链接已复制，可以直接发给本人` })}>
+                            复制付款链接
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {data.registrations.length > 10 && (
+              <button className={`${styles.btn} ${styles.btnGhost}`} style={{ marginTop: 8 }} onClick={() => setAllRegs((x) => !x)}>
+                {allRegs ? '收起，只看前 10 个' : `看全部 ${data.registrations.length} 个 ›`}
+              </button>
+            )}
             <div className={styles.card}>
               <div className={styles.row}><span className={styles.rowLabel}>时间</span><span className={styles.rowValue}>{fmtDateTime(String(data.event.starts_at))}</span></div>
               <div className={styles.row}><span className={styles.rowLabel}>费用</span><span className={styles.rowValue}>{data.event.fee_cents ? money(data.event.fee_cents) : '免费'}</span></div>
@@ -320,36 +381,6 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
               </>
             )}
 
-            <h2 className={styles.h2}>报名名单（{data.registrations.length}）</h2>
-            {Number(data.event.fee_cents) > 0 && (() => {
-              const live = data.registrations.filter((r) => r.status !== 'cancelled');
-              const paid = live.filter((r) => r.order_status === 'paid' && r.paid_when !== 'onsite').length;
-              const onsite = live.filter((r) => r.order_status === 'paid' && r.paid_when === 'onsite').length;
-              const unpaid = live.length - paid - onsite;
-              return <p className={styles.notice}>收费：已付 <strong>{paid}</strong> · 未付 <strong>{unpaid}</strong> · 现场付 <strong>{onsite}</strong>。没付的，系统已在报名后、活动前 5 天各发过一次付款链接；到场没付的签到台现场 Zelle 扫码。</p>;
-            })()}
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead><tr><th>姓名</th><th>联系方式</th><th>报名</th><th>到场</th><th>付款</th></tr></thead>
-                <tbody>
-                  {data.registrations.map((r) => (
-                    <tr key={r.contact_id}>
-                      <td><a href={`/zh/staff/contacts/${r.contact_id}`} style={{ color: 'var(--gold)' }}>{r.name}</a> <span className={styles.small}>#{r.member_no}</span></td>
-                      <td className={styles.small}>{r.phone_e164 ?? r.email}</td>
-                      <td>{({ registered: '已报名', waitlisted: '候补', cancelled: '已取消' } as Record<string, string>)[r.status]}{r.source === 'companion' ? `（由 ${r.added_by_name ?? '朋友'} 代报名${r.is_placeholder ? '，本人还没登录过' : ''}）` : r.source !== 'online' ? `（${r.source === 'onsite' ? '现场' : '工作人员'}）` : ''}</td>
-                      <td>{({ none: '—', checked_in: '已签到', arrived_pending_payment: '到场待核款' } as Record<string, string>)[r.arrival_status]}</td>
-                      <td>{r.order_status ? (r.order_status === 'paid' ? (r.paid_when === 'onsite' ? '现场付' : '已付') : ({ pending_payment: '未付', payment_submitted: '已提交，待核款' } as Record<string, string>)[r.order_status] ?? r.order_status) : '—'}
-                        {r.pay_link && (
-                          <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} style={{ marginLeft: 6 }} onClick={async () => setMsg({ ok: await copyText(r.pay_link!), text: `${r.name} 的付款链接已复制，可以直接发给本人` })}>
-                            复制付款链接
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </>
         )
       }

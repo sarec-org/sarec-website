@@ -38,9 +38,18 @@ export default function HomeSlides() {
     <StaffGate title="首页轮播" role="ops" wide>
       {() => (
         <>
-          <p className={styles.small}>轮播内容系统自动取：活动封面和时间、已发布的照片、入会 / 会员服务、公告。最多 5 张，没有就不凑。你只需要处理例外，所有手动设置必须有截止时间；活动取消、结束等状态优先于手动设置。轮播上不能出现金额、付款字样和“已报 N 人”。</p>
+          {/* 指令 89-B 验收 P2-6：第一屏先给能点的（原来是两行说明＋预览，没有按钮）；说明收成一行 */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: '0.5rem' }}>
+            <a href="#add" className={styles.btn} style={{ flex: '0 1 auto', minHeight: 44, padding: '0.4rem 1rem' }}>＋ 加一条（置顶 / 隐藏 / 改文案 / 手动加一张）</a>
+            <a href="#active" className={`${styles.btn} ${styles.btnGhost}`} style={{ flex: '0 1 auto', minHeight: 44, padding: '0.4rem 1rem' }}>生效中的手动设置</a>
+            <a href="#preview" className={`${styles.btn} ${styles.btnQuiet}`} style={{ flex: '0 1 auto', minHeight: 44, padding: '0.4rem 1rem' }}>三种人看到什么</a>
+          </div>
+          <details className={styles.small} style={{ marginBottom: '0.5rem' }}>
+            <summary style={{ cursor: 'pointer' }}>轮播怎么排的 ›</summary>
+            <p className={styles.small}>轮播内容系统自动取：活动封面和时间、已发布的照片、入会 / 会员服务、公告。最多 5 张，没有就不凑。你只需要处理例外，所有手动设置必须有截止时间；活动取消、结束等状态优先于手动设置。轮播上不能出现金额、付款字样和“已报 N 人”。</p>
+          </details>
           <Msg m={msg} />
-          <h2 className={styles.h}>现在三种人分别看到什么</h2>
+          <h2 className={styles.h} id="preview" style={{ scrollMarginTop: 140 }}>现在三种人分别看到什么</h2>
           {prev && (
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {Object.entries(prev).map(([who, list]) => (
@@ -55,7 +64,7 @@ export default function HomeSlides() {
               ))}
             </div>
           )}
-          <h2 className={styles.h}>加一条手动设置</h2>
+          <h2 className={styles.h} id="add" style={{ scrollMarginTop: 140 }}>加一条手动设置</h2>
           <div className={styles.card}>
             <label className={styles.label}>做什么</label>
             <select className={styles.select} value={form.action} onChange={(e) => set('action', e.target.value)}>
@@ -98,7 +107,7 @@ export default function HomeSlides() {
             <input className={styles.input} type="datetime-local" value={form.expiresAt} onChange={(e) => set('expiresAt', e.target.value)} />
             <button className={styles.btn} onClick={save}>保存</button>
           </div>
-          <h2 className={styles.h}>生效中的手动设置</h2>
+          <h2 className={styles.h} id="active" style={{ scrollMarginTop: 140 }}>生效中的手动设置</h2>
           {!ovs.length && <p className={styles.muted}>没有，首页全按系统自动排。</p>}
           {ovs.map((o) => (
             <div key={o.id} className={styles.card}>

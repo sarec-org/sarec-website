@@ -134,6 +134,8 @@ export type TodayPayload = {
   failed: string[];
   /** 三.5 昨天的四个结果（ops 才有） */
   yesterday: { visits: number; newArrived: number; joined: number; inquiries: number } | null;
+  /** 指令 89-B 验收 P2-1：今天（洛杉矶）新报名的真实客户，按活动分（只给网站后台，运营 / 签到员） */
+  newRegs?: { eventId: string; title: string; n: number }[];
   /** 1.5.0 体验1（第三部分 2）：登录者有没有绑定手机工作台；没绑时网站「今天」页顶上提示去绑 */
   mpBind?: { bound: boolean; boundAt: string | Date | null; bindHref: string };
 };

@@ -67,7 +67,13 @@ function PosterTemplates() {
     const r = await api<Data>('/api/v1/staff/poster-templates');
     if (r.ok) {
       setD(r.data);
-      setCat((c) => c || r.data.categories.find((x) => x.purpose === 'event')?.key || r.data.categories[0]?.key || '');
+      // 指令 89-B 验收 P3-6：搜「祝福」带 ?purpose=greeting 进来时直接打开「节日祝福图」
+      const want: Purpose = new URLSearchParams(location.search).get('purpose') === 'greeting' ? 'greeting' : 'event';
+      setCat((c) => {
+        if (c) return c;
+        if (want === 'greeting') setPurpose('greeting');
+        return r.data.categories.find((x) => x.purpose === want)?.key || r.data.categories[0]?.key || '';
+      });
     } else setMsg({ ok: false, text: r.message });
   }, []);
   useEffect(() => { load(); }, [load]);

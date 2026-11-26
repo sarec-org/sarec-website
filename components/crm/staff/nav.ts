@@ -31,6 +31,8 @@ export type NavItem = {
   /** 栏里的小组（例如「客户」下面的「找工人 · 接活儿」） */
   sub?: string;
   words: string[];
+  /** 指令 89-B 验收 P2-5：搜这几个词时，这一项一定排第一（"最该去的地方"，不靠同分时的先后顺序碰运气） */
+  pin?: string[];
 };
 type Entry = Omit<NavItem, 'tab' | 'group'>;
 
@@ -89,11 +91,13 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/cards', label: '内容审核', role: 'ops', words: ['审核', '名片', '电子名片', '客户照片', '下架', '名片审核', '照片审核', '照片'] },
     // 1.5.0 新页面（名字东哥 11/14 已点头）：群发、内容管理（举报 + 主页审核 + 机器拦下的内容）、商会风采
     { href: '/zh/staff/broadcast', label: '群发', role: 'ops', words: ['群发', '发短信', '发通知', '服务通知', '选人', '按条件选人', '常用人群', '短信', '邮件通讯', '发邮件', '退订', '打开率', '通知', '群发通知', '发消息', '推送'] },
+    // 指令 89-B 验收 P2-4：举报 / 下架原来分在 7 个页面，这一页汇总各处待处理几条、点进各自页面
+    { href: '/zh/staff/moderation', label: '举报与下架', role: 'ops', words: ['举报', '下架', '投诉', '违规', '待审', '审核', '拦下', '举报活动', '下架活动', '恢复'], pin: ['举报', '下架', '投诉', '举报活动', '下架活动', '违规'] },
     { href: '/zh/staff/content', label: '内容管理', role: 'ops', words: ['内容管理', '举报', '投诉', '违规', '恢复', '禁止', '个人主页', '主页审核', '项目', '案例', '机器拦下', '组局', '用户发的', '拉黑', '照片'] },
     // 1.7.0：主办方出海报能选的模板底图；「传自己的海报」开关也在这页
     { href: '/zh/staff/poster-templates', label: '海报模板', role: 'ops', words: ['海报', '海报模板', '模板', '模板库', '底图', '节日海报', '传自己的海报', '上传海报', 'AI 生成', '祝福', '节日祝福', '祝福图', '落款', '换海报', '换模板', '换一张海报', '祝福模板', '节日祝福图', 'AI 标识', 'AI标识', '传海报', '开关'] },
     // 指令 83：挑海报页按日期智能排序用的节日表（提前几天、显示到哪天、对应分类、每年日期）
-    { href: '/zh/staff/festivals', label: '节日日期表', role: 'ops', words: ['节日', '节日日期', '节日表', '日期表', '春节', '感恩节', '圣诞', '农历', '智能排序', '海报排序', '提前几天', '加节日', '加一个节日', '节日祝福'] },
+    { href: '/zh/staff/festivals', label: '节日日期表', role: 'ops', words: ['节日', '节日日期', '节日表', '日期表', '春节', '感恩节', '圣诞', '农历', '智能排序', '海报排序', '提前几天', '加节日', '加一个节日', '节日祝福'], pin: ['节日', '节日表', '节日日期', '节日日期表'] },
     { href: '/zh/staff/showcase', label: '商会风采', role: 'ops', words: ['商会风采', '风采', '副会长单位', '合作方', '战略合作方', '标志', 'logo'] },
     { href: '/zh/staff/agent', label: 'AI 助手', role: 'ops', words: ['AI', '人工智能', '机器人', '常见问题', 'FAQ', '对话'] }
   ],
@@ -101,8 +105,8 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/data', label: '数据', role: 'ops', words: ['统计', '增长', '点击统计', '推荐排行', '流程数据', '功能排行', '到场率', '转化', '排行', '功能月报', '操作记录', '新人名单', '谁来过', '访问的都是谁', '到场名单', '入会名单', '只打开过', '导出名单', '推荐', '谁推荐的', '报表', '数据统计'] }
   ],
   设置与团队: [
-    { href: '/zh/staff/settings', label: '设置', role: '', words: ['价格', '折扣', 'Zelle', '商家优惠', '商会微信', '微信二维码', '换二维码', '邮件额度', '企业微信', '视频号', '专委会', '邀请提醒', '带朋友', '名片模板', '贴图话题', '服务号', '首页与邀请', '关着的功能', '绑定码', '我的绑定码', '手机工作台', '增长与设置', '常用', '小程序码', '下载小程序码', '二维码', '开关', '关掉', '复制小程序链接', '设置'] },
-    { href: '/zh/staff/team', label: '团队', role: 'admin', words: ['工作人员', '同事', '权限', '绑定', '工作台', '出码', '加人', '角色', '员工', '加员工', '加同事', '开通', '开通工作台', '绑定工作台', '停用同事', '管理员'] },
+    { href: '/zh/staff/settings', label: '设置', role: '', words: ['价格', '折扣', 'Zelle', '商家优惠', '商会微信', '微信二维码', '换二维码', '邮件额度', '企业微信', '视频号', '专委会', '邀请提醒', '带朋友', '名片模板', '贴图话题', '服务号', '首页与邀请', '关着的功能', '绑定码', '我的绑定码', '手机工作台', '增长与设置', '常用', '小程序码', '下载小程序码', '二维码', '开关', '关掉', '复制小程序路径', '设置'] },
+    { href: '/zh/staff/team', label: '团队', role: 'admin', words: ['工作人员', '同事', '权限', '绑定', '工作台', '出码', '加人', '角色', '员工', '加员工', '加同事', '开通', '开通工作台', '绑定工作台', '停用同事', '管理员'], pin: ['权限', '角色', '团队', '同事', '停用同事'] },
     // 子任务 C（第二部分 五）：每人选收哪几类通知、走哪个渠道；通知总闸、发送记录
     { href: '/zh/staff/notify', label: '手机通知', role: 'ops|checkin|finance', words: ['通知', '手机通知', '短信通知', '企业微信', '每日汇总', '通知渠道', '通知设置', '总闸', '发送记录', '通知总闸', '关掉通知', '开关'] },
     { href: '/zh/staff/system', label: '系统状态', role: 'ops', words: ['线上巡检', '巡检', '线上报错', '报错', '错误', 'bug', '出错'] },
@@ -120,21 +124,26 @@ export const NAV_ITEMS: NavItem[] = NAV_TABS.flatMap((tab) => NAV[tab].map((e) =
  */
 type Extra = Omit<NavItem, 'group'> & { page: string };
 const EXTRA_RAW: Extra[] = [
-  { href: '/zh/staff/settings#common', label: '下载小程序码（首页二维码）', page: '设置', tab: '设置与团队', role: '', words: ['小程序码', '二维码', '码', '太阳码', '菊花码', '首页码', '小程序二维码', '复制小程序链接', '小程序链接', '链接', 'AppID', '小程序路径', '扫码', '常用'] },
-  { href: '/zh/staff/poster-templates#upload-own', label: '传自己的海报（开关）', page: '海报模板', tab: '内容', role: 'ops', words: ['传海报', '上传海报', '自己的海报', '传自己的海报', '关掉传海报', '打开传海报', '开关', '关掉'] },
-  { href: '/zh/staff/poster-templates#ai-badge', label: '「AI 生成」标识（开关）', page: '海报模板', tab: '内容', role: 'ops', words: ['AI 标识', 'AI标识', 'AI 生成', 'AI生成', '标识', '水印', '角标', '开关'] },
-  { href: '/zh/staff/poster-templates#upload', label: '上传新海报模板', page: '海报模板', tab: '内容', role: 'ops', words: ['换海报', '换模板', '换一张海报', '加模板', '新模板', '上传模板', '海报', '模板', '祝福图'] },
-  { href: '/zh/staff/festivals#add', label: '加一个节日', page: '节日日期表', tab: '内容', role: 'ops', words: ['加节日', '新节日', '节日', '祝福'] },
-  { href: '/zh/staff/organizers', label: '主办方活动工具总开关', page: '主办方', tab: '活动', role: 'ops', words: ['开关', '关掉', '主办方开关', '活动工具开关', '自动开通', '接龙模式', '开通'] },
-  { href: '/zh/staff/clubs#club-mahjong', label: '麻将俱乐部（开 / 关）', page: '俱乐部', tab: '客户', role: 'ops', words: ['麻将', '开麻将', '关麻将', '麻将开关', '开关'] },
-  { href: '/zh/staff/clubs#club-guandan', label: '掼蛋俱乐部（改介绍）', page: '俱乐部', tab: '客户', role: 'ops', words: ['掼蛋', '改掼蛋介绍', '掼蛋介绍', '牌局'] },
-  { href: '/zh/staff/notify', label: '手机通知总闸', page: '手机通知', tab: '设置与团队', role: 'ops|checkin|finance', words: ['总闸', '通知开关', '关掉通知', '开关', '关掉', '通知'] },
-  { href: '/zh/staff/settings#zelle', label: 'Zelle 付款（开关）', page: '设置', tab: '设置与团队', role: 'admin', words: ['Zelle', 'zelle 开关', '开关'] },
-  { href: '/zh/staff/settings#timeline', label: '活动确认时间线（开关）', page: '设置', tab: '设置与团队', role: 'admin', words: ['确认时间线', '出席确认', '确认出席', '开关'] },
-  { href: '/zh/staff/settings#off', label: '现在关着的功能', page: '设置', tab: '设置与团队', role: '', words: ['关着的功能', '关掉', '开关', '没开', '没打开'] },
-  { href: '/zh/staff/settings#wechat-qr', label: '换商会微信二维码', page: '设置', tab: '设置与团队', role: 'admin', words: ['商会微信', '微信二维码', '加微信', '换二维码', '二维码', '码'] },
-  { href: '/zh/staff/team#add', label: '加人（开通手机工作台）', page: '团队', tab: '设置与团队', role: 'admin', words: ['加人', '加员工', '员工', '新同事', '开通工作台', '开通', '权限', '角色'] },
-  { href: '/zh/staff/contacts', label: '导出客户名单（Excel）', page: '客户', tab: '客户', role: 'ops', words: ['导出', '导出名单', '名单', '导出会员', '会员名单', 'Excel', 'CSV'] }
+  { href: '/zh/staff/settings#common', label: '下载小程序码（首页二维码）', page: '设置', tab: '设置与团队', role: '', words: ['小程序码', '二维码', '码', '太阳码', '菊花码', '首页码', '小程序二维码', '扫码', '常用'], pin: ['小程序码', '二维码', '码', '太阳码', '菊花码', '首页码', '小程序二维码'] },
+  { href: '/zh/staff/settings#common', label: '复制小程序路径（给技术 / 公众号配菜单用）', page: '设置', tab: '设置与团队', role: '', words: ['小程序链接', '链接', '复制链接', '小程序路径', '路径', 'AppID', '公众号菜单', '复制小程序链接'], pin: ['小程序链接', '链接', '复制链接', '小程序路径', '路径', 'appid', '公众号菜单', '复制小程序链接'] },
+  { href: '/zh/staff/events?want=list', label: '导出一场活动的报名名单（先选活动）', page: '活动', tab: '活动', role: 'ops', words: ['导出', '名单', '报名名单', '活动名单', '导出名单', '导出报名', '导出报名名单', '谁报名', '今天谁报名', '今天报名', '报名的人', '看报名', 'Excel', 'CSV'], pin: ['导出', '名单', '报名名单', '活动名单', '导出名单', '导出报名', '导出报名名单', '谁报名', '今天谁报名', '今天报名', '报名的人', '看报名', '报名'] },
+  { href: '/zh/staff/poster-templates#list', label: '换 / 下架海报模板（按分类看）', page: '海报模板', tab: '内容', role: 'ops', words: ['换海报', '换模板', '下架模板', '换一张海报', '模板', '海报模板下架', '恢复模板'], pin: ['换海报', '换模板', '下架模板', '换一张海报', '模板', '海报模板下架', '恢复模板'] },
+  { href: '/zh/staff/poster-templates#upload', label: '上传新海报模板', page: '海报模板', tab: '内容', role: 'ops', words: ['加模板', '新模板', '上传模板', '传模板', '上传海报模板'], pin: ['加模板', '新模板', '上传模板', '传模板', '上传海报模板'] },
+  { href: '/zh/staff/poster-templates#upload-own', label: '传自己的海报（开关）', page: '海报模板', tab: '内容', role: 'ops', words: ['传海报', '上传海报', '自己的海报', '传自己的海报', '关掉传海报', '打开传海报', '开关', '关掉'], pin: ['传海报', '上传海报', '自己的海报', '传自己的海报', '关掉传海报', '打开传海报'] },
+  { href: '/zh/staff/poster-templates#ai-badge', label: '「AI 生成」标识（开关）', page: '海报模板', tab: '内容', role: 'ops', words: ['AI 标识', 'AI标识', 'AI 生成', 'AI生成', '标识', '水印', '角标', '开关'], pin: ['ai 标识', 'ai标识', 'ai 生成', 'ai生成', '标识', '水印', '角标'] },
+  { href: '/zh/staff/poster-templates?purpose=greeting#list', label: '节日祝福图模板', page: '海报模板', tab: '内容', role: 'ops', words: ['祝福', '祝福图', '节日祝福', '祝福模板', '节日祝福图', '贺图'], pin: ['祝福', '祝福图', '节日祝福', '祝福模板', '节日祝福图', '贺图'] },
+  { href: '/zh/staff/festivals#add', label: '加一个节日', page: '节日日期表', tab: '内容', role: 'ops', words: ['加节日', '新节日', '加一个节日'], pin: ['加节日', '新节日'] },
+  { href: '/zh/staff/settings#switches', label: '各个开关（一排直达）', page: '设置', tab: '设置与团队', role: '', words: ['开关', '关掉', '打开', '总开关'], pin: ['开关', '关掉', '打开', '总开关'] },
+  { href: '/zh/staff/organizers#switches', label: '主办方活动工具总开关', page: '主办方', tab: '活动', role: 'ops', words: ['开关', '关掉', '主办方开关', '活动工具开关', '自动开通', '接龙模式', '开通'], pin: ['主办方开关', '活动工具开关', '自动开通', '接龙模式'] },
+  { href: '/zh/staff/clubs#club-mahjong', label: '麻将俱乐部（开 / 关、上不上首页）', page: '俱乐部', tab: '客户', role: 'ops', words: ['麻将', '开麻将', '关麻将', '麻将开关', '开关'], pin: ['麻将', '开麻将', '关麻将', '麻将开关'] },
+  { href: '/zh/staff/clubs#club-guandan', label: '掼蛋俱乐部（改介绍）', page: '俱乐部', tab: '客户', role: 'ops', words: ['掼蛋', '改掼蛋介绍', '掼蛋介绍', '牌局'], pin: ['掼蛋', '改掼蛋介绍', '掼蛋介绍'] },
+  { href: '/zh/staff/notify', label: '手机通知总闸', page: '手机通知', tab: '设置与团队', role: 'ops|checkin|finance', words: ['总闸', '通知开关', '关掉通知', '开关', '关掉', '通知'], pin: ['总闸', '通知开关', '关掉通知'] },
+  { href: '/zh/staff/settings#zelle', label: 'Zelle 付款（开关）', page: '设置', tab: '设置与团队', role: 'admin', words: ['Zelle', 'zelle 开关', '开关'], pin: ['zelle', 'zelle 开关'] },
+  { href: '/zh/staff/settings#timeline', label: '活动确认时间线（开关）', page: '设置', tab: '设置与团队', role: 'admin', words: ['确认时间线', '出席确认', '确认出席', '开关'], pin: ['确认时间线', '出席确认', '确认出席'] },
+  { href: '/zh/staff/settings#off', label: '现在关着的功能', page: '设置', tab: '设置与团队', role: '', words: ['关着的功能', '关掉', '开关', '没开', '没打开', '说明'], pin: ['关着的功能', '没开', '没打开'] },
+  { href: '/zh/staff/settings#wechat-qr', label: '换商会微信二维码', page: '设置', tab: '设置与团队', role: 'admin', words: ['商会微信', '微信二维码', '加微信', '换二维码', '二维码', '码'], pin: ['商会微信', '微信二维码', '加微信', '换二维码'] },
+  { href: '/zh/staff/team#add', label: '加人（开通手机工作台）', page: '团队', tab: '设置与团队', role: 'admin', words: ['加人', '加员工', '员工', '新同事', '加同事', '工作人员', '开通工作台', '开通'], pin: ['加人', '加员工', '员工', '新同事', '加同事', '开通工作台', '开通', '工作人员'] },
+  { href: '/zh/staff/contacts', label: '导出客户名单（全部客户，按条件筛）', page: '客户', tab: '客户', role: 'ops', words: ['导出客户', '客户名单', '导出会员', '会员名单', '全部客户'], pin: ['导出客户', '客户名单', '导出会员', '会员名单', '全部客户'] }
 ];
 export const SEARCH_EXTRA: NavItem[] = EXTRA_RAW.map(({ page, ...e }) => ({ ...e, group: e.tab, sub: page }));
 
@@ -182,6 +191,7 @@ export function searchNav(q: string, items: NavItem[]): NavItem[] {
   const s = q.trim().toLowerCase();
   if (!s) return [];
   const score = (it: NavItem) => {
+    if (it.pin?.some((w) => w.toLowerCase() === s)) return -1;
     const l = it.label.toLowerCase();
     if (l === s) return 0;
     if (l.startsWith(s)) return 1;

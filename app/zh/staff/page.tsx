@@ -46,7 +46,7 @@ const DESC: Record<string, string> = {
   '/zh/staff/display': '会员资料能否在官网展示（不影响会员身份）',
   '/zh/staff/agent': '网站上的商会 AI 助手：月预算、每日用量、常见问题库、最近对话和线索',
   '/zh/staff/team': '工作人员和权限：加人、每人一行「出码」（同事用微信扫一下就绑定好手机工作台）、停用、改角色，立即生效；网站登录邮箱也在这里管',
-  '/zh/staff/settings': '最上面「常用」：下载小程序码、复制小程序链接、渠道码、海报模板、节日日期表；各个开关直达；收款与价格、活动、小程序与微信、邮件；关着的功能',
+  '/zh/staff/settings': '最上面「常用」：下载小程序码、复制小程序路径、渠道码、海报模板、节日日期表；各个开关直达；收款与价格、活动、小程序与微信、邮件；关着的功能',
   '/zh/staff/jobs': '发布的活儿：状态（自动到期）、联系次数、到期日；下架、写备注',
   '/zh/staff/jobs/pros': '登记接活的人：待核验 / 已通过 / 退回 / 下架；加州承包商牌照自动查，其余一键打开官方查询页 + 核验清单',
   '/zh/staff/jobs/trades': '工种与资质表：增删改、排序、分组、开放；首页 7 个入口换和排序',
@@ -61,6 +61,7 @@ const DESC: Record<string, string> = {
   // 1.5.0 新页面
   '/zh/staff/clubs': '俱乐部：新建 / 编辑 / 关闭、指定负责人、上传群二维码（快过期标红）；组局放行 / 下架 / 恢复；禁止名单；操作记录',
   '/zh/staff/broadcast': '按条件选人（实时人数、各渠道能发到几个）→ 写内容（短信 / 邮件 / 微信服务通知）→ 先发东哥预览 → 管理员确认（受「手机通知」总闸管，关着只记录不发）；页面下面也能按期发「邮件通讯」',
+  '/zh/staff/moderation': '被举报的、机器拦下的、等放行的主办方活动、组局、名片、客户照片、找工人投诉、下架的模板：每处各有几条要处理，点进去办',
   '/zh/staff/content': '用户发的组局、个人主页、项目、名片、照片发了就公开：这里看被举报的、机器拦下的、已下架的，可下架、恢复、禁止此人',
   '/zh/staff/showcase': '副会长单位、战略合作方：标志、简介、项目图文、联系人、排序、下架；小程序首页入口开关'
 };
@@ -138,6 +139,16 @@ function Today({ ops }: { ops: boolean }) {
           </div>
         </section>
       ))}
+      {d.newRegs && (
+        // 指令 89-B 验收 P2-1：今天谁报名了，一行看到、点了直接到那场的报名名单
+        <p className={styles.card} style={{ margin: '0 0 0.6rem', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <strong>今天新报名 {d.newRegs.reduce((a, x) => a + x.n, 0)} 人</strong>
+          {d.newRegs.map((x) => (
+            <Link key={x.eventId} href={`/zh/staff/events/${x.eventId}#regs`} style={{ color: 'var(--gold)' }}>{x.title} {x.n} 人 ›</Link>
+          ))}
+          {!d.newRegs.length && <Link href="/zh/staff/events?want=list" style={{ color: 'var(--gold)' }}>看各场报名名单 ›</Link>}
+        </p>
+      )}
       <h2 className={styles.h2} style={{ marginTop: '0.6rem' }}>要办的事{d.items.length ? `（${d.items.length}）` : ''}</h2>
       {d.failed.length > 0 && <p className={styles.error}>这几类暂时读不出来：{d.failed.join('、')}。请稍后刷新，或直接去对应页面看。</p>}
       {d.items.length === 0 ? (
@@ -200,7 +211,7 @@ export default function StaffHome() {
           <p className={styles.lead}>
             {s.name}，您好。{new Intl.DateTimeFormat('zh-CN', { timeZone: 'America/Los_Angeles', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date())}（洛杉矶）。您的权限：{s.roles.map((r) => ROLE_NAME[r] ?? r).join('、')}
           </p>
-          {/* 指令 89-B：后台首页也放「常用」一排（下载小程序码、复制小程序链接、渠道码……），和「设置」页同一份、同样的名字 */}
+          {/* 指令 89-B：后台首页也放「常用」一排（下载小程序码、复制小程序路径、渠道码……），和「设置」页同一份、同样的名字 */}
           <QuickActions roles={s.roles} showSwitches={false} />
           <Today ops={can(s, 'ops')} />
           <h2 className={styles.h2} style={{ marginTop: '2rem' }}>全部功能</h2>

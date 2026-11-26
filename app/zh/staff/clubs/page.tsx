@@ -28,11 +28,18 @@ type Data = { clubs: Club[]; meetups: Meetup[]; bans: Ban[]; actions: Action[] }
 type Form = { editing: boolean; key: string; name: string; intro: string; membersOnly: boolean; sortOrder: string; icon: string; status: 'active' | 'preparing'; leaderNo: string; dropLeader: boolean; leaderName: string | null };
 
 const ACTION_TEXT: Record<string, string> = {
-  save: '保存了俱乐部', close_club: '关闭了俱乐部', reopen_club: '重新打开了俱乐部', set_qr: '换了群二维码', take_down: '下架了组局', restore: '恢复了组局',
+  save: '保存了俱乐部', close_club: '关闭了俱乐部', reopen_club: '重新打开了俱乐部', show_on_home: '设成在小程序首页显示（已成立＋打开）', set_qr: '换了群二维码', take_down: '下架了组局', restore: '恢复了组局',
   approve: '放行了组局', ban: '禁止了', unban: '解除禁止', remove: '移出了成员'
 };
 
 /** 群二维码状态：服务器给的是日期（可能带时间），只取前 10 位 */
+/** 指令 89-B 验收 P2-2：小程序首页到底显示不显示（= 没关闭 且 已成立），不显示时说清为什么 */
+function homeState(c: Club): { on: boolean; why: string } {
+  if (c.closed_at && c.status !== 'active') return { on: false, why: '已关闭、筹备中' };
+  if (c.closed_at) return { on: false, why: '已关闭' };
+  if (c.status !== 'active') return { on: false, why: '筹备中，只在「全部」里' };
+  return { on: true, why: '' };
+}
 function qrState(c: Club): { text: string; bad: boolean } {
   if (!c.group_qr_url) return { text: '还没上传群二维码', bad: true };
   const d = (c.group_qr_expires ?? '').slice(0, 10);
@@ -149,13 +156,13 @@ function Clubs() {
       </div>
       <p style={{ margin: '0 0 0.6rem', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {d.clubs.map((c) => (
-          <a key={c.key} href={`#club-${c.key}`} className={`${styles.chip} ${c.closed_at ? '' : styles.chipOn}`} style={{ textDecoration: 'none' }}>
-            {c.name}：{c.closed_at ? '关着' : '开着'} ›
+          <a key={c.key} href={`#club-${c.key}`} className={`${styles.chip} ${homeState(c).on ? styles.chipOn : ''}`} style={{ textDecoration: 'none' }}>
+            {c.name}：{homeState(c).on ? '首页显示' : `首页不显示（${homeState(c).why}）`} ›
           </a>
         ))}
       </p>
 
-      <h2 className={styles.h}>俱乐部（{d.clubs.filter((c) => !c.closed_at).length} 个开着）</h2>
+      <h2 className={styles.h}>俱乐部（{d.clubs.filter((c) => homeState(c).on).length} 个在小程序首页显示，共 {d.clubs.length} 个）</h2>
       {d.clubs.map((c) => {
         const q = qrState(c);
         return (
@@ -165,7 +172,20 @@ function Clubs() {
               {c.members_only && <span className={styles.badge}>仅会员</span>}
               {c.closed_at && <span className={`${styles.badge} ${styles.badgeMuted}`}>已关闭</span>}
             </p>
-            <p className={styles.small} style={{ margin: 0 }}>{c.status === 'active' ? '已成立' : '筹备中（小程序首页不显示，只在「全部」里）'} · {c.icon ? `${c.icon} · ` : ''}英文短名 {c.key} · 排序 {c.sort_order}（小程序首页方块按这个排，数字小的在前） · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
+            {(() => {
+              const h = homeState(c);
+              return (
+                <div className={h.on ? styles.success : styles.notice} style={{ margin: '0 0 6px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <strong>小程序首页：{h.on ? '显示' : `不显示（${h.why}）`}</strong>
+                  {!h.on && (
+                    <button className={`${styles.btn} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'show_on_home', key: c.key }, 'h' + c.key)}>
+                      在小程序首页显示（打开＋改成已成立）
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+            <p className={styles.small} style={{ margin: 0 }}>{c.status === 'active' ? '已成立' : '筹备中'} · {c.icon ? `${c.icon} · ` : ''}英文短名 {c.key} · 排序 {c.sort_order}（小程序首页方块按这个排，数字小的在前） · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
             {c.intro && <p style={{ margin: '0.3rem 0' }}>{c.intro}</p>}
             {!c.closed_at && (
               <div style={{ borderTop: '1px solid var(--line-2)', marginTop: 8, paddingTop: 8 }}>

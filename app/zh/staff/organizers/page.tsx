@@ -6,6 +6,7 @@
  * 「我也要办活动」申请 → 平台查看记录。不给主办方任何后台账号密码。
  */
 import Link from 'next/link';
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
@@ -47,6 +48,7 @@ function CodeBox({ c, title }: { c: Code; title: string }) {
 
 function Page({ admin }: { admin: boolean }) {
   const [d, setD] = useState<Overview | null>(null);
+  useHashScroll(!!d); // 从「举报与下架」/ 搜索带 #pending 等点进来时滚到那一块
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ name: '', publicContact: '', staffNote: '', applicationId: '' });
@@ -79,14 +81,31 @@ function Page({ admin }: { admin: boolean }) {
   const others = d.events.filter((e) => e.status !== 'review');
   return (
     <>
-      <p className={styles.small}>
-        经商会开通的主办方，在小程序「我的 → 我办的活动」里自己发活动、出海报、门口扫码签到、看名单和导出。他们的活动和报名人只在主办方自己那里，
-        <b>不进商会的活动、客户、今天、待跟进、群发、邮件通讯、积分</b>。只通过主办方活动来过的人（「主办方的客人」，现在 {d.guests} 人）不在「客户」列表里。
-        试用情况看 <Link href="/zh/staff/organizers/trial">主办方试用看板 ›</Link>
-      </p>
+      {/* 指令 89-B 验收 P2-6：第一屏先给能点的（手机上原来第一屏全是说明）；说明收成一行 */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: '0.6rem' }}>
+        {[
+          ['#switches', '开关'],
+          ['#pending', `等放行的活动（${pending.length}）`],
+          ['#org-events', '主办方的活动（下架）'],
+          ['#org-new', '开通一个主办方'],
+          ['#org-list', `主办方（${d.organizers.length}）`],
+          ['#org-apply', '「我也要办活动」申请'],
+          ['#review-codes', '审核用开通码']
+        ].map(([h, l], i) => (
+          <a key={h} href={h} className={`${styles.btn} ${i === 1 && pending.length ? '' : styles.btnGhost}`} style={{ flex: '0 1 auto', minHeight: 44, padding: '0.4rem 0.9rem' }}>{l}</a>
+        ))}
+        <Link href="/zh/staff/organizers/trial" className={`${styles.btn} ${styles.btnQuiet}`} style={{ flex: '0 1 auto', minHeight: 44, padding: '0.4rem 0.9rem' }}>主办方试用看板 ›</Link>
+      </div>
+      <details className={styles.small} style={{ marginBottom: '0.6rem' }}>
+        <summary style={{ cursor: 'pointer' }}>主办方是什么、他们的数据去哪 ›</summary>
+        <p className={styles.small}>
+          经商会开通的主办方，在小程序「我的 → 我办的活动」里自己发活动、出海报、门口扫码签到、看名单和导出。他们的活动和报名人只在主办方自己那里，
+          <b>不进商会的活动、客户、今天、待跟进、群发、邮件通讯、积分</b>。只通过主办方活动来过的人（「主办方的客人」，现在 {d.guests} 人）不在「客户」列表里。
+        </p>
+      </details>
       <Msg m={msg} />
 
-      <div className={styles.card}>
+      <div className={styles.card} id="switches" style={{ scrollMarginTop: 140 }}>
         <h2 className={styles.h2}>开关</h2>
         {[
           { k: 'tool', name: '活动工具总开关', on: d.switches.tool, hint: d.switches.tool ? '开着：开通的主办方在「我的」里能看到「我办的活动」。万一审核不认，关掉后入口消失、主办方活动页显示"暂停使用"，不用重新传小程序。' : '关着：主办方看不到「我办的活动」，报名页显示"暂停使用"。' },
@@ -106,7 +125,7 @@ function Page({ admin }: { admin: boolean }) {
       <ReviewCodes list={d.reviewCodes ?? []} busy={busy} post={post} />
 
       <div className={styles.card}>
-        <h2 className={styles.h2}>等放行的活动（{pending.length}）</h2>
+        <h2 className={styles.h2} id="pending" style={{ scrollMarginTop: 140 }}>等放行的活动（{pending.length}）</h2>
         <p className={styles.small}>机器检测说「建议复核」（或正式站检测没出结果）的，以及「主办方自动开通」关着时新主办方的前几场（默认 3 场，每个主办方可改），先在这里看一眼再公开。放行前报名页只有主办方自己看得到。</p>
         {!pending.length && <p className={styles.muted}>没有等放行的活动</p>}
         {pending.map((e) => (
@@ -124,7 +143,7 @@ function Page({ admin }: { admin: boolean }) {
       </div>
 
       <div className={styles.card}>
-        <h2 className={styles.h2}>开通一个主办方</h2>
+        <h2 className={styles.h2} id="org-new" style={{ scrollMarginTop: 140 }}>开通一个主办方</h2>
         <div className={styles.field}><label className={styles.label}>主办方名称（报名页、海报上显示）</label><input className={styles.input} value={form.name} maxLength={40} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="例如：尔湾华人商会" /></div>
         <div className={styles.field}><label className={styles.label}>对外联系方式（报名页「联系主办方」显示，可不填）</label><input className={styles.input} value={form.publicContact} maxLength={60} onChange={(e) => setForm({ ...form, publicContact: e.target.value })} placeholder="例如：电话 949-xxx-xxxx / 微信号 xxx" /></div>
         <div className={styles.field}><label className={styles.label}>后台备注（只有工作人员看）</label><input className={styles.input} value={form.staffNote} maxLength={200} onChange={(e) => setForm({ ...form, staffNote: e.target.value })} placeholder="谁介绍的、负责人是谁" /></div>
@@ -137,7 +156,7 @@ function Page({ admin }: { admin: boolean }) {
       </div>
 
       <div className={styles.card}>
-        <h2 className={styles.h2}>主办方（{d.organizers.length}）</h2>
+        <h2 className={styles.h2} id="org-list" style={{ scrollMarginTop: 140 }}>主办方（{d.organizers.length}）</h2>
         {!d.organizers.length && <p className={styles.muted}>还没有开通任何主办方</p>}
         {d.organizers.map((o) => (
           <div key={o.id} className={styles.listItem}>
@@ -167,7 +186,7 @@ function Page({ admin }: { admin: boolean }) {
       </div>
 
       <div className={styles.card}>
-        <h2 className={styles.h2}>主办方的活动（最近 60 天和以后的）</h2>
+        <h2 className={styles.h2} id="org-events" style={{ scrollMarginTop: 140 }}>主办方的活动（最近 60 天和以后的）</h2>
         <p className={styles.small}>出问题可以一键下架（主办方能看到原因）。名单明细商会这边平时看不到；处理投诉、主办方请帮忙时，管理员写原因才能打开，每次都记下来。</p>
         {!others.length && <p className={styles.muted}>还没有</p>}
         {others.length > 0 && (
@@ -201,7 +220,7 @@ function Page({ admin }: { admin: boolean }) {
       </div>
 
       <div className={styles.card}>
-        <h2 className={styles.h2}>「我也要办活动」申请（{d.applications.filter((a) => a.status === 'open').length} 条没处理）</h2>
+        <h2 className={styles.h2} id="org-apply" style={{ scrollMarginTop: 140 }}>「我也要办活动」申请（{d.applications.filter((a) => a.status === 'open').length} 条没处理）</h2>
         {!d.applications.length && <p className={styles.muted}>还没有人申请</p>}
         {d.applications.map((a) => (
           <div key={a.id} className={styles.listItem}>
@@ -232,7 +251,7 @@ function ReviewCodes({ list, busy, post }: { list: ReviewCode[]; busy: boolean; 
   const live = (c: ReviewCode) => !c.revoked_at && new Date(c.expires_at).getTime() > Date.now();
   return (
     <div className={styles.card}>
-      <h2 className={styles.h2}>审核用开通码</h2>
+      <h2 className={styles.h2} id="review-codes" style={{ scrollMarginTop: 140 }}>审核用开通码</h2>
       <p className={styles.small}>
         给微信审核员（陌生微信号）进「我办的活动」看完整功能用：小程序「我的 → 我也要办活动」页上的「已有开通码」框里填这 10 位码 → 看《主办方数据承诺》→「我看完了，开通」。
         所有填这个码的微信号都成为演示主办方「SAREC 审核测试」的负责人（先审后发 0 场，机器检测照旧）。演示主办方不进试用看板，它的活动和所有主办方活动一样不进首页、不进商会的客户和群发。

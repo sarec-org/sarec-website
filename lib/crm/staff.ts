@@ -156,11 +156,14 @@ export async function listStaffEvents() {
   const { rows } = await getPool().query(
     `SELECT e.id, e.slug, e.title, e.starts_at, e.ends_at, e.location_name, e.capacity, e.fee_cents, e.topic_tags, e.region,
             e.registration_open, e.is_listed, e.event_status,
-            count(r.*) FILTER (WHERE r.status = 'registered')::int AS registered,
-            count(r.*) FILTER (WHERE r.status = 'waitlisted')::int AS waitlisted,
-            count(r.*) FILTER (WHERE r.arrival_status = 'checked_in')::int AS checked_in,
-            count(r.*) FILTER (WHERE r.arrival_status = 'arrived_pending_payment')::int AS arrived_pending
-       FROM events e LEFT JOIN registrations r ON r.event_id = e.id
+            -- 指令 89-B 验收 P2-1：和活动页顶上「报名与签到 到场/报名」（lib/crm/eventFlow.ts eventHub）同一口径——只数真实客户，
+            -- 内部 / 测试账号（contacts.account_kind 不为空）另数一个 internal，列表上写「另有内部 / 测试 N」。原来这里连内部账号一起数，所以列表"报名 8"、详情"0/7"对不上。
+            count(r.*) FILTER (WHERE r.status = 'registered' AND c.account_kind IS NULL)::int AS registered,
+            count(r.*) FILTER (WHERE r.status = 'waitlisted' AND c.account_kind IS NULL)::int AS waitlisted,
+            count(r.*) FILTER (WHERE r.arrival_status = 'checked_in' AND c.account_kind IS NULL)::int AS checked_in,
+            count(r.*) FILTER (WHERE r.arrival_status = 'arrived_pending_payment' AND c.account_kind IS NULL)::int AS arrived_pending,
+            count(r.*) FILTER (WHERE r.status <> 'cancelled' AND c.account_kind IS NOT NULL)::int AS internal
+       FROM events e LEFT JOIN registrations r ON r.event_id = e.id LEFT JOIN contacts c ON c.id = r.contact_id
       GROUP BY e.id ORDER BY e.starts_at DESC LIMIT 200`
   );
   return rows;
@@ -927,4 +930,59 @@ export async function setDisplay(s: Staff, applicationId: string, displayStatus:
     });
     return { id: applicationId, displayStatus };
   });
+}
+
+/**
+ * 指令 89-B 验收 P1：一场活动的报名名单导出 CSV（工作人员 ops）。
+ * 字段口径照「客户」导出（会员编号、姓名、另一姓名、邮箱 / 状态、手机 / 状态、行业、会员等级），再加这场的报名状态、报名方式、报名时间、到场、签到时间、付款。
+ * 全部报名记录都导（含候补、已取消），内部 / 测试账号单独一列标出来（和页面「真实客户 N 人」的口径对得上）。
+ */
+export async function exportEventRegistrationsCsv(s: Staff, eventId: string): Promise<{ csv: string; title: string; date: string; slug: string }> {
+  const pool = getPool();
+  const { rows: ev } = await pool.query<{ title: string; slug: string; d: string }>(
+    `SELECT title, slug, to_char(starts_at AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM-DD') AS d FROM events WHERE id = $1`,
+    [eventId]
+  );
+  if (!ev[0]) throw new CrmError('not_found', '找不到这场活动');
+  const { rows } = await pool.query(
+    `WITH m AS (
+       SELECT DISTINCT ON (a.contact_id) a.contact_id, a.selected_tier_slug
+         FROM applications a
+        WHERE a.contact_id IS NOT NULL AND a.membership_end_date >= current_date
+          AND (a.application_status IN ('approved','paid','second_payment_due')
+               OR (a.application_status = 'under_review' AND a.payment_status IN ('paid','partially_paid')))
+        ORDER BY a.contact_id, a.membership_end_date DESC)
+     SELECT c.member_no::int, c.name, c.name_alt, c.email, c.phone_e164, c.role_sub, c.account_kind,
+            me.value AS cur_email, me.status AS email_status, mp.value AS cur_phone, mp.status AS phone_status,
+            (SELECT t.name_zh FROM membership_tiers t WHERE t.slug = m.selected_tier_slug) AS tier_name,
+            r.status, r.source, r.arrival_status,
+            to_char(r.created_at AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM-DD HH24:MI') AS created_at,
+            to_char(r.checked_in_at AT TIME ZONE 'America/Los_Angeles', 'YYYY-MM-DD HH24:MI') AS checked_in_at,
+            (SELECT ab.name FROM contacts ab WHERE ab.id = r.added_by) AS added_by_name,
+            (SELECT o.status FROM orders o WHERE o.contact_id = r.contact_id AND o.related_id = r.event_id AND o.purpose = 'event_fee' AND o.status <> 'cancelled' LIMIT 1) AS order_status
+       FROM registrations r JOIN contacts c ON c.id = r.contact_id
+       LEFT JOIN m ON m.contact_id = c.id
+       LEFT JOIN contact_methods me ON me.contact_id = c.id AND me.kind = 'email' AND me.is_current
+       LEFT JOIN contact_methods mp ON mp.contact_id = c.id AND mp.kind = 'phone' AND mp.is_current
+      WHERE r.event_id = $1
+      ORDER BY (r.status = 'cancelled'), r.created_at`,
+    [eventId]
+  );
+  const REG: Record<string, string> = { registered: '已报名', waitlisted: '候补', cancelled: '已取消' };
+  const SRC: Record<string, string> = { online: '自己报名', onsite: '现场登记', staff: '工作人员', companion: '朋友代报名' };
+  const ARR: Record<string, string> = { none: '', checked_in: '已签到', arrived_pending_payment: '到场待核款' };
+  const PAY: Record<string, string> = { paid: '已付', pending_payment: '未付', payment_submitted: '已提交，待核款' };
+  const head = ['会员编号', '姓名', '另一姓名', '邮箱', '邮箱状态', '手机', '手机状态', '行业', '会员等级', '报名状态', '报名方式', '报名时间（洛杉矶）', '到场', '签到时间（洛杉矶）', '付款', '账号类型'];
+  const lines = rows.map((r) =>
+    [
+      r.member_no, r.name, r.name_alt, r.cur_email ?? r.email, r.email_status ? STATUS_TEXT.email[r.email_status as MethodStatus] : '无',
+      r.cur_phone ?? r.phone_e164, r.phone_status ? STATUS_TEXT.phone[r.phone_status as MethodStatus] : '无',
+      findRoleSub(r.role_sub)?.label ?? null, r.tier_name ?? '注册用户',
+      REG[r.status] ?? r.status, (SRC[r.source] ?? r.source) + (r.source === 'companion' && r.added_by_name ? `（${r.added_by_name}）` : ''),
+      r.created_at, ARR[r.arrival_status] ?? r.arrival_status, r.checked_in_at, r.order_status ? PAY[r.order_status] ?? r.order_status : '',
+      r.account_kind ? '内部 / 测试账号' : ''
+    ].map(csvCell).join(',')
+  );
+  await audit(pool, s, 'export_event_registrations', 'event', eventId, { after: { count: rows.length } });
+  return { csv: '﻿' + [head.join(','), ...lines].join('\r\n'), title: ev[0].title, date: ev[0].d, slug: ev[0].slug };
 }
