@@ -22,7 +22,7 @@ export async function offFeatures(): Promise<OffFeature[]> {
     ifOn: '打开后，给申请人发缴费链接、给工作人员发短信 / 企业微信 / 邮件、每日汇总都会真的发出去', where: '要东哥点头后才打开（由开发按东哥的话打开）', whereHref: '', admin: true
   });
   add((await g('confirm_timeline_enabled', false)) === true, {
-    key: 'confirm_timeline', name: '出席确认时间线', now: '关着：一条确认消息都不发、一个人都不自动转',
+    key: 'confirm_timeline', name: '活动确认时间线', now: '关着：一条确认消息都不发、一个人都不自动转',
     ifOn: '打开后，活动前按设定时间请报名的人确认出席；没确认的名额按候补顺序递补', where: '设置 › 活动 › 活动确认时间线', whereHref: '/zh/staff/settings#timeline', admin: true
   });
   add((await g('patrol_email_enabled', false)) === true, {

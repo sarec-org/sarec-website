@@ -6,6 +6,7 @@
  * - 禁止名单：按会员号，或从组局的发起人一键「禁止此人」；「解除」。
  * - 操作记录：谁、什么时候、做了什么。
  */
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
@@ -47,6 +48,7 @@ const plus7 = () => new Date(Date.now() + 7 * 86400e3).toLocaleDateString('en-CA
 
 function Clubs() {
   const [d, setD] = useState<Data | null>(null);
+  useHashScroll(!!d); // 指令 89-B：搜索 / 开关带 #club-xxx 点进来时滚到那个俱乐部
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const closeMsg = useCallback(() => setMsg(null), []);
   const [busy, setBusy] = useState('');
@@ -140,12 +142,24 @@ function Clubs() {
         </div>
       )}
       <Toast m={msg} onClose={closeMsg} />
+      {/* 指令 89-B.4：第一屏给"要干的事"——新建原来在所有俱乐部卡片下面；每个俱乐部一个直达（开 / 关麻将、改掼蛋介绍不用往下翻找） */}
+      <div className={styles.btnRow} style={{ marginBottom: '0.6rem' }}>
+        {!f && <button className={styles.btn} onClick={() => { setMsg(null); setF(blankForm()); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}>＋ 新建俱乐部</button>}
+        <a href="#meetups" className={`${styles.btn} ${styles.btnGhost}`}>组局（{meetups.length}）</a>
+      </div>
+      <p style={{ margin: '0 0 0.6rem', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {d.clubs.map((c) => (
+          <a key={c.key} href={`#club-${c.key}`} className={`${styles.chip} ${c.closed_at ? '' : styles.chipOn}`} style={{ textDecoration: 'none' }}>
+            {c.name}：{c.closed_at ? '关着' : '开着'} ›
+          </a>
+        ))}
+      </p>
 
       <h2 className={styles.h}>俱乐部（{d.clubs.filter((c) => !c.closed_at).length} 个开着）</h2>
       {d.clubs.map((c) => {
         const q = qrState(c);
         return (
-          <div key={c.key} className={styles.card} style={{ opacity: c.closed_at ? 0.65 : 1 }}>
+          <div key={c.key} id={`club-${c.key}`} className={styles.card} style={{ opacity: c.closed_at ? 0.65 : 1, scrollMarginTop: 140 }}>
             <p className={styles.cardTitle}>
               {c.name}
               {c.members_only && <span className={styles.badge}>仅会员</span>}
@@ -246,7 +260,7 @@ function Clubs() {
         </div>
       )}
 
-      <h2 className={styles.h}>组局（{meetups.length}）</h2>
+      <h2 className={styles.h} id="meetups" style={{ scrollMarginTop: 140 }}>组局（{meetups.length}）</h2>
       <div className={styles.field}>
         <label className={styles.label} htmlFor="mf">看哪个俱乐部的</label>
         <select id="mf" className={styles.select} value={clubFilter} onChange={(e) => setClubFilter(e.target.value)}>

@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import css from './nav.module.css';
-import { NAV_ITEMS, NAV_TABS, activeHref, activeTab, canSee, searchNav, tabHref, type NavItem, type NavTab } from './nav';
+import { NAV_ITEMS, NAV_TABS, SEARCH_EXTRA, activeHref, activeTab, canSee, searchNav, tabHref, type NavItem, type NavTab } from './nav';
 import { useStaffMe } from './useStaffMe';
 import { SaveImageHost } from './SaveImage';
 
@@ -48,13 +48,13 @@ function NavSearch({ items, onGo, autoFocus }: { items: NavItem[]; onGo: (href: 
         <div className={css.searchList} role="listbox">
           {res.length ? (
             res.slice(0, 8).map((it) => (
-              <button key={it.href} type="button" className={css.searchItem} onMouseDown={(e) => e.preventDefault()} onClick={() => go(it.href)}>
+              <button key={it.href + it.label} type="button" className={css.searchItem} onMouseDown={(e) => e.preventDefault()} onClick={() => go(it.href)}>
                 <span>{it.label}</span>
                 <span className={css.searchGroup}>{it.sub ? `${it.tab} › ${it.sub}` : it.tab}</span>
               </button>
             ))
           ) : (
-            <p className={css.searchEmpty}>没找到「{q.trim()}」。试试：团队、相册、群发、签到、绑定、二维码、轮播、报错</p>
+            <p className={css.searchEmpty}>没找到「{q.trim()}」。试试：小程序码、海报、开关、名单、导出、签到、群发、团队</p>
           )}
         </div>
       )}
@@ -148,12 +148,21 @@ export function StaffNav() {
 
   const roles = me?.staff.roles ?? [];
   const items = useMemo(() => NAV_ITEMS.filter((it) => canSee(roles, it)), [roles.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 指令 89-B.2：搜索还能搜到页面里的开关和常用操作（下载小程序码、传自己的海报……）；放前面，同分时先出这些"要干的事"
+  const searchItems = useMemo(() => [...SEARCH_EXTRA.filter((it) => canSee(roles, it)), ...items], [items]); // eslint-disable-line react-hooks/exhaustive-deps
   const tabs = NAV_TABS.map((t) => ({ tab: t, href: tabHref(t, items) })).filter((x): x is { tab: NavTab; href: string } => !!x.href);
   const active = activeHref(pathname);
   const curTab = activeTab(pathname);
   const logged = status === 'ok' && !!me;
   const go = (href: string) => {
     setMenu(false);
+    // 搜到的是本页里的一块（#锚点）：直接改地址栏的 #，页面自己滚过去、展开
+    const [path, hash] = href.split('#');
+    if (hash && path === pathname) {
+      if (location.hash === '#' + hash) window.dispatchEvent(new HashChangeEvent('hashchange'));
+      else location.hash = hash;
+      return;
+    }
     router.push(href);
   };
 
@@ -167,7 +176,7 @@ export function StaffNav() {
         <div className={css.topRight}>
           {logged && (
             <div className={css.desktopOnly}>
-              <NavSearch items={items} onGo={go} />
+              <NavSearch items={searchItems} onGo={go} />
             </div>
           )}
           <Link href="/" className={`${css.home} ${logged ? css.desktopOnly : ''}`}>
@@ -193,7 +202,7 @@ export function StaffNav() {
 
       {logged && menu && (
         <div className={`${css.mobilePanel} ${css.mobileOnly}`}>
-          <NavSearch items={items} onGo={go} />
+          <NavSearch items={searchItems} onGo={go} />
           <div className={css.groupGrid} style={{ marginTop: 12 }}>
             <Link href="/" className={css.item} onClick={() => setMenu(false)}>
               返回官网

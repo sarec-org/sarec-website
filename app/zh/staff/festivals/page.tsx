@@ -5,6 +5,7 @@
  * - 每年的日期：能加能删（农历节日每年不同；表里已算到 2031 年）。
  * - 能加新节日。所有操作记操作记录（crm_audit_log）。改动 1 分钟内小程序能看到。
  */
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
@@ -77,6 +78,7 @@ function FestForm({ v, set, cats, isNew }: { v: Form; set: (v: Form) => void; ca
 
 function Festivals() {
   const [d, setD] = useState<Data | null>(null);
+  useHashScroll(!!d); // 指令 89-B：从「开关」/ 搜索带 #某块 点进来时滚到那一块
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const closeMsg = useCallback(() => setMsg(null), []);
   const [busy, setBusy] = useState('');
@@ -113,6 +115,10 @@ function Festivals() {
     <>
       <p className={styles.lead}>小程序「挑海报」从上到下：① 在祝福窗口里的节日祝福（节日前 N 天出现，到节后第 M 天撤）；② 快到的节日（节日类活动分类，离今天近的在前）；③ 常用活动（按使用次数）。今天（洛杉矶）是 {d.today}。改动 1 分钟内小程序能看到。</p>
       <Toast m={msg} onClose={closeMsg} />
+      {/* 指令 89-B.4：「加一个节日」原来只在页面最底下（22 个节日之后），第一屏给直达 */}
+      <div className={styles.btnRow} style={{ marginBottom: '0.8rem' }}>
+        <a href="#add" className={styles.btn}>＋ 加一个节日</a>
+      </div>
       {(d.datesLeftDays == null || d.datesLeftDays < 365) && (
         <div className={`${styles.card} ${styles.cardGold}`}>
           <p className={styles.cardTitle}>日期表还剩不到 1 年{d.datesUntil ? `（有节日只排到 ${d.datesUntil}）` : '（有节日一个以后的日期都没有）'}</p>
@@ -176,7 +182,7 @@ function Festivals() {
         );
       })}
 
-      <h2 className={styles.h}>加一个节日</h2>
+      <h2 className={styles.h} id="add" style={{ scrollMarginTop: 140 }}>加一个节日</h2>
       <div className={styles.card}>
         <FestForm v={nf} set={setNf} cats={d.categories} isNew />
         <p className={styles.small}>加好后在它下面「看 / 改日期」里把每年的日期加上。</p>

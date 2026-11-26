@@ -3,7 +3,8 @@
  * 设置与团队 › 设置（后台综合优化 11/21，第二部分十）。
  * - 所有配置集中到这里：原「设置」页（管理员）+ 原「增长」页里的配置（企业微信、首页与邀请、名片模板库、视频号、邀请提醒、带朋友、贴图话题与服务号、专委会状态）。
  * - 分组；每项一行：名字 + 当前值 + 一句人话说明，点开才改（手机上一屏看得清，不用左右滑）。
- * - 最上面列“现在关着的功能”：只列出，不在这里替东哥打开。
+ * - 指令 89-B（11/26）：最上面一排「常用」（下载小程序码、复制小程序链接、渠道码、海报模板、节日日期表、团队）＋「开关」直达；
+ *   “现在关着的功能”收到下面、默认折叠成一行「N 项功能关着 ›」（只列出，不在这里替东哥打开）；我的手机工作台绑定码收成一项放到最下面。
  * - 「我的手机工作台绑定码」从后台首页挪到这里（三.5）；线上巡检、线上报错在「系统状态」。
  * - 谁能改什么不变：原「设置」页的项只有管理员能看能改；原「增长」页的配置运营也能改（接口没变）。
  * 读写还是原来的接口：/api/v1/staff/settings（管理员）、/api/v1/staff/growth（运营）、/api/v1/workbench/seats（确认时间线）。
@@ -15,6 +16,7 @@ import { Msg, StaffGate, can, type StaffInfo } from '@/components/crm/staff/Staf
 import { api } from '@/components/crm/client';
 import { WechatQr } from '@/components/crm/staff/WechatQr';
 import { MpBind } from '@/components/crm/staff/MpBind';
+import { QuickActions } from '@/components/crm/staff/QuickActions';
 
 type S = {
   settings: { key: string; value: unknown; updated_by: string | null }[];
@@ -56,18 +58,24 @@ function Group({ title, note, children }: { title: string; note?: string; childr
   );
 }
 
-/** 最上面：现在关着的功能（只列出、不打开） */
+/**
+ * 现在关着的功能（只列出、不打开）。
+ * 指令 89-B.3：原来放在页面最上面、整段展开，一墙字；现在收到「常用」「开关」下面，默认折叠成一行「N 项功能关着 ›」，点开才看说明。
+ */
 function OffList({ admin }: { admin: boolean }) {
   const [items, setItems] = useState<Off[] | null>(null);
   useEffect(() => {
     api<{ items: Off[] }>('/api/v1/staff/off-features').then((r) => r.ok && setItems(r.data.items));
   }, []);
   if (!items) return null;
+  if (!items.length) return <p className={styles.small} style={{ margin: '0.4rem 0 1rem' }}>现在没有关着的功能。</p>;
   return (
-    <div className={styles.card} style={{ borderLeft: '4px solid var(--gold)' }}>
-      <p className={styles.cardTitle}>现在关着的功能（{items.length} 项）</p>
-      <p className={styles.small} style={{ marginTop: 0 }}>这里只列出来、说清开了会怎样，不替东哥打开。要开，请到后面写的地方改{admin ? '' : '（标“管理员”的要管理员改）'}。</p>
-      {!items.length && <p style={{ margin: 0 }}>现在没有关着的功能。</p>}
+    <details id="off" className={styles.card} style={{ borderLeft: '4px solid var(--gold)', scrollMarginTop: 140 }}>
+      <summary style={{ cursor: 'pointer', minHeight: 32, listStyle: 'none' }}>
+        <strong>{items.length} 项功能关着 ›</strong>
+        <span className={styles.small}>　{items.map((x) => x.name).join('、')}</span>
+      </summary>
+      <p className={styles.small} style={{ margin: '0.5rem 0 0' }}>这里只列出来、说清开了会怎样，不替东哥打开。要开，请到后面写的地方改{admin ? '' : '（标“管理员”的要管理员改）'}。</p>
       {items.map((x) => (
         <div key={x.key} style={{ padding: '0.55rem 0', borderTop: '1px solid var(--line-2)' }}>
           <strong>{x.name}</strong>
@@ -79,7 +87,7 @@ function OffList({ admin }: { admin: boolean }) {
           </div>
         </div>
       ))}
-    </div>
+    </details>
   );
 }
 
@@ -229,25 +237,9 @@ function Hub({ s }: { s: StaffInfo }) {
         </div>
       )}
       <Msg m={msg} />
+      {/* 指令 89-B：第一屏是能点的东西——常用操作（第一个就是下载小程序码）、开关直达；关着的功能说明折叠成一行 */}
+      <QuickActions roles={s.roles} />
       <OffList admin={admin} />
-
-      <div className={styles.grid2} style={{ margin: '1rem 0' }}>
-        {admin && (
-          <Link href="/zh/staff/team" className={`${styles.card} ${styles.cardGold}`} style={{ textDecoration: 'none', color: 'inherit', margin: 0 }}>
-            <p className={styles.cardTitle}>团队 ›</p>
-            <p className={styles.muted} style={{ margin: 0 }}>加人、给同事出码开通手机工作台、改角色、停用、网站登录邮箱</p>
-          </Link>
-        )}
-        {ops && (
-          <Link href="/zh/staff/system" className={`${styles.card} ${styles.cardGold}`} style={{ textDecoration: 'none', color: 'inherit', margin: 0 }}>
-            <p className={styles.cardTitle}>系统状态 ›</p>
-            <p className={styles.muted} style={{ margin: 0 }}>线上巡检、线上报错（新报错交给开发处理，不进待办）</p>
-          </Link>
-        )}
-      </div>
-
-      <h2 className={styles.h2} id="mp-bind">我的手机工作台</h2>
-      <MpBind admin={admin} />
 
       {admin && d && (
         <Group title="收款与价格" note="只有管理员能看、能改。">
@@ -457,6 +449,12 @@ function Hub({ s }: { s: StaffInfo }) {
           </Item>
         </Group>
       )}
+
+      <Group title="我的手机工作台">
+        <Item id="mp-bind" title="我的手机工作台绑定码" now="点开生成" desc="用自己的微信扫一下，在小程序「我的」里打开工作台；给同事开通去「团队」。">
+          <MpBind admin={admin} />
+        </Item>
+      </Group>
 
       {!admin && (
         <p className={styles.small} style={{ marginTop: '1.5rem' }}>价格、收款、确认时间线、邮件额度、团队只有管理员能看能改。</p>

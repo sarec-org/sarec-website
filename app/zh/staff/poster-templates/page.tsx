@@ -8,6 +8,7 @@
  *   祝福模板能设落款位（左、上、右、下四个 0–1 的数；不设 = 默认底部一条并垫底板）。上传、改分类时选用途（模板的用途跟着分类）。
  * - 所有操作记操作记录（crm_audit_log）。
  */
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
@@ -49,6 +50,7 @@ function SigInputs({ v, onChange, id }: { v: string[]; onChange: (v: string[]) =
 
 function PosterTemplates() {
   const [d, setD] = useState<Data | null>(null);
+  useHashScroll(!!d); // 指令 89-B：从「开关」/ 搜索带 #某块 点进来时滚到那一块
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const closeMsg = useCallback(() => setMsg(null), []);
   const [cat, setCat] = useState('');
@@ -130,8 +132,13 @@ function PosterTemplates() {
       <p className={styles.lead}>主办方在小程序里发活动、出海报时可以选一张模板底图，服务器把活动名称、时间、地点、主办方和报名码印上去。一共 {d.templates.filter((t) => t.status === 'active').length} 张在用（{d.templates.length} 张里），{d.categories.length} 个分类。改动 1 分钟内小程序就能看到。</p>
       <Toast m={msg} onClose={closeMsg} />
       <Lightbox url={big} onClose={() => setBig(null)} />
+      {/* 指令 89-B.4：要干的事放第一屏——上传新模板原来只在页面最底下 */}
+      <div className={styles.btnRow} style={{ marginBottom: '0.8rem' }}>
+        <a href="#upload" className={styles.btn}>＋ 上传新模板</a>
+        <a href="#list" className={`${styles.btn} ${styles.btnGhost}`}>换 / 下架模板（按分类看）</a>
+      </div>
 
-      <div className={`${styles.card} ${styles.cardGold}`}>
+      <div id="upload-own" className={`${styles.card} ${styles.cardGold}`} style={{ scrollMarginTop: 140 }}>
         <p className={styles.cardTitle}>传自己的海报：{d.uploadOn ? '开着' : '关着'}</p>
         <p className={styles.small} style={{ margin: '0 0 8px' }}>打开后，主办方出海报时可以用自己手机里的图当底图。要先在微信后台核清服务类目再开。</p>
         <div className={styles.btnRow}>
@@ -144,7 +151,7 @@ function PosterTemplates() {
       {d.aiBadge && (() => {
         const b = badge ?? { on: d.aiBadge.on, textH: String(+(d.aiBadge.textH * 100).toFixed(1)), opacity: String(d.aiBadge.opacity), style: d.aiBadge.style, pos: d.aiBadge.pos };
         return (
-          <div className={styles.card}>
+          <div id="ai-badge" className={styles.card} style={{ scrollMarginTop: 140 }}>
             <p className={styles.cardTitle}>「AI 生成」标识：{d.aiBadge.on ? `开着（${BADGE_STYLE[d.aiBadge.style] ?? d.aiBadge.style}、${d.aiBadge.style === 'strip' ? '贴条子' : BADGE_POS[d.aiBadge.pos]}、字高 ${+(d.aiBadge.textH * 100).toFixed(1)}%）` : '关着（国家标准要求保留）'}</p>
             <p className={styles.small} style={{ margin: '0 0 8px' }}>活动海报和祝福图成品右上角的标识（服务器出图时画，改了马上生效，不用发版）。字和底色按右上角底图深浅自动选。国家标准 GB 45438-2025 要求：标识文字高度不低于画面最短边的 5%、在边或角、清晰可辨，所以字高最小 5%，不能调低。每张模板还能在下面单独选位置（压到标题时换个角）。</p>
             <div className={styles.btnRow}>
@@ -170,7 +177,7 @@ function PosterTemplates() {
         );
       })()}
 
-      <h2 className={styles.h}>用途</h2>
+      <h2 className={styles.h} id="list" style={{ scrollMarginTop: 140 }}>用途</h2>
       <div className={styles.chips}>
         {(['event', 'greeting'] as Purpose[]).map((p) => (
           <button key={p} className={`${styles.chip} ${p === purpose ? styles.chipOn : ''}`} onClick={() => pickPurpose(p)}>
@@ -271,7 +278,7 @@ function PosterTemplates() {
         </>
       )}
 
-      <h2 className={styles.h}>上传新模板</h2>
+      <h2 className={styles.h} id="upload" style={{ scrollMarginTop: 140 }}>上传新模板</h2>
       <div className={styles.card}>
         <div className={styles.field}>
           <label className={styles.label} htmlFor="pt-purpose">用途<span className={styles.required}>*</span></label>
