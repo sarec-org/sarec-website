@@ -970,7 +970,7 @@ export async function exportEventRegistrationsCsv(s: Staff, eventId: string): Pr
   );
   const REG: Record<string, string> = { registered: '已报名', waitlisted: '候补', cancelled: '已取消' };
   const SRC: Record<string, string> = { online: '自己报名', onsite: '现场登记', staff: '工作人员', companion: '朋友代报名' };
-  const ARR: Record<string, string> = { none: '', checked_in: '已签到', arrived_pending_payment: '到场待核款' };
+  const ARR: Record<string, string> = { none: '否', checked_in: '已签到', arrived_pending_payment: '到场待核款' };
   const PAY: Record<string, string> = { paid: '已付', pending_payment: '未付', payment_submitted: '已提交，待核款' };
   const head = ['会员编号', '姓名', '另一姓名', '邮箱', '邮箱状态', '手机', '手机状态', '行业', '会员等级', '报名状态', '报名方式', '报名时间（洛杉矶）', '到场', '签到时间（洛杉矶）', '付款', '账号类型'];
   const lines = rows.map((r) =>

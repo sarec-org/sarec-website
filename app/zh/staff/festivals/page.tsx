@@ -38,8 +38,8 @@ function FestForm({ v, set, cats, isNew }: { v: Form; set: (v: Form) => void; ca
           <input id={id + '-key'} className={styles.input} style={{ margin: 0 }} value={v.key} placeholder="不填就自动生成" onChange={(e) => set({ ...v, key: e.target.value })} />
         </label>
       )}
-      <label className={styles.small} htmlFor={id + '-name'}>名字
-        <input id={id + '-name'} className={styles.input} style={{ margin: 0 }} value={v.name} maxLength={20} onChange={(e) => set({ ...v, name: e.target.value })} />
+      <label className={styles.small} htmlFor={id + '-name'}>名字（例如 中秋节）
+        <input id={id + '-name'} className={styles.input} style={{ margin: 0 }} value={v.name} maxLength={20} placeholder="例如 中秋节" onChange={(e) => set({ ...v, name: e.target.value })} />
       </label>
       <label className={styles.small} htmlFor={id + '-kind'}>类别
         <select id={id + '-kind'} className={styles.select} style={{ margin: 0 }} value={v.kind} onChange={(e) => set({ ...v, kind: e.target.value as Kind })}>

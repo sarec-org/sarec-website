@@ -181,7 +181,7 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                 <>
                   <h2 className={styles.h2} id="regs" style={{ scrollMarginTop: 140 }}>报名名单：已报名 {n('registered')} 人{n('waitlisted') ? ` · 候补 ${n('waitlisted')}` : ''} · 已签到 {arrived}</h2>
                   <p className={styles.small} style={{ marginTop: 0 }}>
-                    只数真实客户，和上面「报名与签到 到场/报名」、活动列表同一个数。{internal ? `另有内部 / 测试账号 ${internal} 个（表里标了，不算数）。` : ''}
+                    只数真实客户，和上面「报名 N · 到场 N」、活动列表同一个数。{internal ? `另有内部 / 测试账号 ${internal} 个（表里标了，不算数）。` : ''}
                     {data.registrations.length - live.length ? `已取消 ${data.registrations.length - live.length} 个排在最后。` : ''}
                   </p>
                   {can(s, 'ops') && (

@@ -158,6 +158,12 @@ export function StaffNav() {
     setMenu(false);
     // 搜到的是本页里的一块（#锚点）：直接改地址栏的 #，页面自己滚过去、展开
     const [path, hash] = href.split('#');
+    // 已经在这一页、要换的是 ?参数（例如在海报模板页再搜「祝福」→ ?purpose=greeting）：页面只在打开时读参数，直接整页打开新地址
+    const [base, query] = path.split('?');
+    if (query && base === pathname) {
+      window.location.assign(href);
+      return;
+    }
     if (hash && path === pathname) {
       if (location.hash === '#' + hash) window.dispatchEvent(new HashChangeEvent('hashchange'));
       else location.hash = hash;

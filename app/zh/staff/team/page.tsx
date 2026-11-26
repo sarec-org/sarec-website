@@ -1,6 +1,7 @@
 'use client';
 /** 1.3.1 F：团队与权限（只有管理员）。每个微信账号一行，分别显示、可单独停用；加人生成 24 小时绑定码；关键操作记录可查。
  *  1.4.0：每人一行「出码」（小程序码 + 8 位码备用）；设置页“按邮箱管工作人员”并到这里（东哥已点头）。 */
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
@@ -62,6 +63,7 @@ const WEB_ROLES: [string, string][] = [['checkin', '签到员'], ['finance', '�
 
 export default function Team() {
   const [team, setTeam] = useState<M[]>([]);
+  useHashScroll(team.length > 0); // 指令 89-B 验收：搜「员工 / 加人」带 #add 进来时，等名单加载完再滚到加人那块
   const [log, setLog] = useState<LogRow[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // 刚加的人 / 某一行出的码：按工作人员 id 存，显示在那一行下面

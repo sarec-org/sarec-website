@@ -32,10 +32,12 @@ function Board() {
   if (err) return <p className={styles.error}>{err}</p>;
   if (!d) return <p className={styles.muted}>正在数各处的待处理…</p>;
   const total = ROWS.reduce((a, r) => a + (r.todo(d) ?? 0), 0);
+  // 验收第 2 轮 P3-4：有待处理的排前面（多的在前），其余照原顺序
+  const rows = ROWS.map((r, i) => ({ r, i, t: r.todo(d) ?? 0 })).sort((a, b) => (b.t > 0 ? 1 : 0) - (a.t > 0 ? 1 : 0) || b.t - a.t || a.i - b.i).map((x) => x.r);
   return (
     <>
       <p className={styles.lead} style={{ marginTop: 0 }}>{total ? `一共 ${total} 条要处理，点每一行的「去处理 ›」。` : '现在没有要处理的举报和待审内容。'}</p>
-      {ROWS.map((r) => {
+      {rows.map((r) => {
         const t = r.todo(d);
         const info = r.info?.(d);
         return (
@@ -43,7 +45,7 @@ function Board() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <p className={styles.cardTitle} style={{ margin: 0 }}>
                 {r.title}
-                {t === null ? <span className={`${styles.badge} ${styles.badgeMuted}`}>读不到</span> : t > 0 ? <span className={`${styles.badge} ${styles.badgeRed}`}>待处理 {t}</span> : null}
+                {t === null ? <span className={`${styles.badge} ${styles.badgeMuted}`}>读不到</span> : t > 0 ? <span className={`${styles.badge} ${styles.badgeRed}`}>待处理 {t}</span> : <span className={`${styles.badge} ${styles.badgeMuted}`}>待处理 0</span>}
                 {info ? <span className={styles.small}>　{info}</span> : null}
               </p>
               <p className={styles.small} style={{ margin: '4px 0 0' }}>{r.what}</p>

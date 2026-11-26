@@ -8,9 +8,10 @@
  * 「设置」页和后台首页「今天」都用这一份。
  */
 import Link from 'next/link';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { canSee } from './nav';
+import { api } from '@/components/crm/client';
 
 type M = { ok: boolean; text: string } | null;
 
@@ -83,7 +84,67 @@ async function copyLink(setMsg: (m: M) => void) {
   }
 }
 
-export function QuickActions({ roles, title = '常用', showSwitches = true }: { roles: string[]; title?: string; showSwitches?: boolean }) {
+
+type ClubLite = { key: string; name: string; status?: string; closed_at: string | null };
+
+/**
+ * 指令 89-B 验收第 2 轮 P2：每个俱乐部「小程序首页显示」的直达开关（手机上开麻将原来要 4 下：菜单 › 搜 › 结果 › 按钮）。
+ * 不在首页的：一个按钮，点了确认一下就「打开＋改成已成立」（和俱乐部页卡片上的按钮是同一个动作 show_on_home）；
+ * 已在首页的：链接到俱乐部页那张卡片（关闭在卡片上，免得在这里误关）。onlyOff = 只列没上首页的（后台首页用，省地方）。
+ */
+function ClubSwitches({ onlyOff, setMsg }: { onlyOff: boolean; setMsg: (m: M) => void }) {
+  const [clubs, setClubs] = useState<ClubLite[] | null>(null);
+  const [busy, setBusy] = useState('');
+  const load = useCallback(() => {
+    api<{ clubs: ClubLite[] }>('/api/v1/staff/clubs').then((r) => r.ok && setClubs(r.data.clubs));
+  }, []);
+  useEffect(load, [load]);
+  if (!clubs) return null;
+  const on = (c: ClubLite) => !c.closed_at && c.status === 'active';
+  const list = onlyOff ? clubs.filter((c) => !on(c)) : clubs;
+  if (!list.length) return null;
+  async function show(c: ClubLite) {
+    if (!window.confirm(`让「${c.name}」在小程序首页显示？会同时打开它、改成已成立，1 分钟内小程序首页「专委会与俱乐部」里就能看到。`)) return;
+    setBusy(c.key);
+    const r = await api<{ message: string }>('/api/v1/staff/clubs', { body: { action: 'show_on_home', key: c.key } });
+    setBusy('');
+    setMsg(r.ok ? { ok: true, text: r.data.message } : { ok: false, text: r.message });
+    load();
+  }
+  const offN = clubs.filter((c) => !on(c)).length;
+  const buttons = (
+      <div style={ROW}>
+        {list.map((c) =>
+          on(c) ? (
+            <Link key={c.key} href={`/zh/staff/clubs#club-${c.key}`} className={`${styles.btn} ${styles.btnQuiet}`} style={PILL}>{c.name}：已在首页 ›</Link>
+          ) : (
+            <button key={c.key} type="button" className={`${styles.btn} ${styles.btnGhost}`} style={PILL} disabled={!!busy} onClick={() => show(c)}>
+              {busy === c.key ? '正在打开…' : `${c.name}：点一下上首页`}
+            </button>
+          )
+        )}
+      </div>
+  );
+  // 后台首页：收成一行（点开 1 下 → 按钮 1 下 → 确认），不把下面的「今天新报名」挤出手机第一屏
+  if (onlyOff) {
+    return (
+      <details style={{ marginTop: '0.6rem' }}>
+        <summary className={`${styles.btn} ${styles.btnGhost}`} style={{ ...PILL, display: 'inline-flex', cursor: 'pointer', listStyle: 'none' }} aria-label="俱乐部上小程序首页">
+          俱乐部上小程序首页（{offN} 个没上）›
+        </summary>
+        <div style={{ marginTop: 8 }}>{buttons}</div>
+      </details>
+    );
+  }
+  return (
+    <>
+      <p className={styles.small} style={{ margin: '0.8rem 0 0.3rem' }}>俱乐部上不上小程序首页：</p>
+      {buttons}
+    </>
+  );
+}
+
+export function QuickActions({ roles, title = '常用', showSwitches = true, clubs = 'all' }: { roles: string[]; title?: string; showSwitches?: boolean; clubs?: 'all' | 'off' | 'none' }) {
   const [msg, setMsg] = useState<M>(null);
   const [busy, setBusy] = useState(false);
   const links = LINKS.filter((l) => canSee(roles, l));
@@ -107,6 +168,7 @@ export function QuickActions({ roles, title = '常用', showSwitches = true }: {
         ))}
       </div>
       {msg && <p className={msg.ok ? styles.success : styles.error} role="status" style={{ marginBottom: 0 }}>{msg.text}</p>}
+      {!showSwitches && clubs !== 'none' && canSee(roles, { role: 'ops' }) && <ClubSwitches onlyOff={clubs === 'off'} setMsg={setMsg} />}
       {showSwitches && sw.length > 0 && (
         <>
           <h2 className={styles.h2} id="switches" style={{ marginTop: '1rem', scrollMarginTop: 140 }}>开关</h2>
@@ -119,6 +181,7 @@ export function QuickActions({ roles, title = '常用', showSwitches = true }: {
               )
             )}
           </div>
+          {clubs !== 'none' && canSee(roles, { role: 'ops' }) && <ClubSwitches onlyOff={clubs === 'off'} setMsg={setMsg} />}
         </>
       )}
     </section>

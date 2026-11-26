@@ -219,8 +219,9 @@ function Clubs() {
             </div>
             <div className={styles.btnRow} style={{ marginTop: 10 }}>
               <button className={`${styles.btn} ${styles.btnSmall}`} onClick={() => { setMsg(null); setF({ editing: true, key: c.key, name: c.name, intro: c.intro ?? '', membersOnly: c.members_only, sortOrder: String(c.sort_order), icon: c.icon ?? '', status: c.status === 'active' ? 'active' : 'preparing', leaderNo: '', dropLeader: false, leaderName: c.leader_name }); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>编辑</button>
+              {/* 指令 89-B 验收第 2 轮 P3-3：筹备中的俱乐部"重新打开"了首页也不显示（老陷阱），所以筹备中不给「重新打开」，只用上面的「在小程序首页显示」；已成立的才用关闭 / 重新打开 */}
               {c.closed_at
-                ? <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'reopen_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>重新打开</button>
+                ? (c.status === 'active' ? <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'reopen_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>重新打开</button> : null)
                 : <button className={`${styles.btn} ${styles.btnDanger} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'close_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>关闭俱乐部</button>}
             </div>
           </div>

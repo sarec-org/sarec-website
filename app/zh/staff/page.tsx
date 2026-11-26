@@ -122,6 +122,16 @@ function Today({ ops }: { ops: boolean }) {
   const y = d.yesterday;
   return (
     <>
+      {d.newRegs && (
+        // 指令 89-B 验收 P2-1：今天谁报名了，一行看到、点了直接到那场的报名名单（第 3 轮：挪到绑定提示上面，手机第一屏能看到）
+        <p className={styles.card} style={{ margin: '0 0 0.6rem', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+          <strong>今天新报名 {d.newRegs.reduce((a, x) => a + x.n, 0)} 人</strong>
+          {d.newRegs.map((x) => (
+            <Link key={x.eventId} href={`/zh/staff/events/${x.eventId}#regs`} style={{ color: 'var(--gold)' }}>{x.title} {x.n} 人 ›</Link>
+          ))}
+          {!d.newRegs.length && <Link href="/zh/staff/events?want=list" style={{ color: 'var(--gold)' }}>看各场报名名单 ›</Link>}
+        </p>
+      )}
       {d.mpBind && !d.mpBind.bound && (
         // 1.5.0 体验1（第三部分 2）：还没绑定手机工作台的，顶上提示去绑（出码 → 用自己的微信扫一下就好）
         <div className={styles.notice} role="note" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
@@ -139,16 +149,6 @@ function Today({ ops }: { ops: boolean }) {
           </div>
         </section>
       ))}
-      {d.newRegs && (
-        // 指令 89-B 验收 P2-1：今天谁报名了，一行看到、点了直接到那场的报名名单
-        <p className={styles.card} style={{ margin: '0 0 0.6rem', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-          <strong>今天新报名 {d.newRegs.reduce((a, x) => a + x.n, 0)} 人</strong>
-          {d.newRegs.map((x) => (
-            <Link key={x.eventId} href={`/zh/staff/events/${x.eventId}#regs`} style={{ color: 'var(--gold)' }}>{x.title} {x.n} 人 ›</Link>
-          ))}
-          {!d.newRegs.length && <Link href="/zh/staff/events?want=list" style={{ color: 'var(--gold)' }}>看各场报名名单 ›</Link>}
-        </p>
-      )}
       <h2 className={styles.h2} style={{ marginTop: '0.6rem' }}>要办的事{d.items.length ? `（${d.items.length}）` : ''}</h2>
       {d.failed.length > 0 && <p className={styles.error}>这几类暂时读不出来：{d.failed.join('、')}。请稍后刷新，或直接去对应页面看。</p>}
       {d.items.length === 0 ? (
@@ -212,7 +212,7 @@ export default function StaffHome() {
             {s.name}，您好。{new Intl.DateTimeFormat('zh-CN', { timeZone: 'America/Los_Angeles', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date())}（洛杉矶）。您的权限：{s.roles.map((r) => ROLE_NAME[r] ?? r).join('、')}
           </p>
           {/* 指令 89-B：后台首页也放「常用」一排（下载小程序码、复制小程序路径、渠道码……），和「设置」页同一份、同样的名字 */}
-          <QuickActions roles={s.roles} showSwitches={false} />
+          <QuickActions roles={s.roles} showSwitches={false} clubs="off" />
           <Today ops={can(s, 'ops')} />
           <h2 className={styles.h2} style={{ marginTop: '2rem' }}>全部功能</h2>
           <Desk roles={s.roles} />
