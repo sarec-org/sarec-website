@@ -353,7 +353,7 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
 }
 
 /** 接口用：权限和 posterData 一样（负责人 / 帮手，活动没下架 / 取消） */
-export async function eventPosterPng(contactId: string, eventId: string): Promise<Buffer> {
+export async function eventPosterPng(contactId: string, eventId: string, base?: string): Promise<Buffer> {
   const pool = getPool();
   const { ev } = await eventAccess(pool, contactId, eventId, 'helper');
   if (ev.status !== 'published' && ev.status !== 'review') throw new CrmError('event_closed', '这场活动已下架或取消，不能出海报');
@@ -371,7 +371,7 @@ export async function eventPosterPng(contactId: string, eventId: string): Promis
   if (!ev.poster_tpl) throw new CrmError('not_found', '这场活动没有选海报模板');
   const tpl = await getTemplate(ev.poster_tpl, pool);
   if (!tpl) throw new CrmError('not_found', '这场活动选的海报模板找不到了');
-  const [image, qr] = await Promise.all([fetchTemplateImage(tpl, 'l'), codePng(ev.code, 'register', contactId)]);
+  const [image, qr] = await Promise.all([fetchTemplateImage(tpl, 'l', base), codePng(ev.code, 'register', contactId)]);
   return renderPoster({
     image, box: tpl.box, ink: tpl.ink, qr, info, badge: await aiBadgeConfig(pool), badgePos: tpl.badge_pos
   });

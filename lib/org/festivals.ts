@@ -37,7 +37,7 @@ export function requestToday(req: Request): string {
   }
   return laToday();
 }
-/** 给人看的日期（V171-2）：今天 / 明天 / M月D日（节日期间的加「· 节日中」）/ 不是今年的带年份 */
+/** 给人看的日期（V171-2/17）：今天 / 明天 / M月D日（节日期间的加「· 节日中」）/ 离今天超过一年的才带年份 */
 export function dateLabel(today: string, date: string | null): string | null {
   if (!date) return null;
   const d = daysBetween(today, date);
@@ -45,7 +45,8 @@ export function dateLabel(today: string, date: string | null): string | null {
   if (d === 1) return '明天';
   const [y, m, dd] = [+date.slice(0, 4), +date.slice(5, 7), +date.slice(8, 10)];
   const md = `${m}月${dd}日`;
-  const s = y === +today.slice(0, 4) ? md : `${y}年${md}`;
+  // V171-17：一年以内（≤ 365 天）不带年份，超过一年才带
+  const s = d > 365 ? `${y}年${md}` : md;
   return d < 0 ? `${s} · 节日中` : s;
 }
 const dayNo = (s: string) => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 86400000);

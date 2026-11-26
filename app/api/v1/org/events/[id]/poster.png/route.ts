@@ -4,7 +4,7 @@
  * 地址里的 ?v=<活动 updated_at 毫秒>-<模板版本> 只用来让缓存跟着内容换新。
  */
 import { CrmError } from '@/lib/crm/events';
-import { fail, handler, requireContact } from '@/lib/crm/http';
+import { fail, handler, requireContact, siteUrl } from '@/lib/crm/http';
 import { eventPosterPng } from '@/lib/org/posterRender';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
   const me = await requireContact(req);
   let png: Buffer;
   try {
-    png = await eventPosterPng(me, params.id);
+    png = await eventPosterPng(me, params.id, siteUrl(req));
   } catch (e) {
     if (e instanceof CrmError) throw e;
     console.error('[org poster.png]', e instanceof Error ? e.message : 'unknown');

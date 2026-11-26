@@ -283,7 +283,7 @@ export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
 }
 
 /** 接口用：查模板（必须是上架的祝福模板）、取名片、检查落款、出图 */
-export async function greetingPng(contactId: string, tplId: string, styleRaw: string | null, lineRaw: string | null): Promise<Buffer> {
+export async function greetingPng(contactId: string, tplId: string, styleRaw: string | null, lineRaw: string | null, base?: string): Promise<Buffer> {
   const style = (styleRaw || 'plain') as GreetStyle;
   if (!STYLES.includes(style)) throw new CrmError('bad_request', '版式不对，只能是 plain / company / personal');
   const pool = getPool();
@@ -296,7 +296,7 @@ export async function greetingPng(contactId: string, tplId: string, styleRaw: st
   // V171-1 兜底：老版小程序把默认落款（「公司 姓名 敬贺」）当 line 传；公司版 / 个人版收到它就按没传处理，免得公司名、名字印两遍
   if (line && style !== 'plain' && line === defaultLine(card)) line = null;
   const [image, avatar, logo] = await Promise.all([
-    fetchTemplateImage(tpl, 'l'),
+    fetchTemplateImage(tpl, 'l', base),
     style === 'personal' ? fetchPic(card.avatarUrl, 'cover', 320) : Promise.resolve(null),
     style === 'company' ? fetchPic(card.logoUrl, 'contain', 320) : Promise.resolve(null)
   ]);

@@ -151,31 +151,46 @@ export async function checkTemplateForEvent(raw: unknown, db: Db = getPool()): P
 }
 
 /**
- * 从 Blob 取模板图（大图 l / 小图 t）。
- * - 地址带版本号、换图会换地址，所以按地址在内存里缓存（同一个函数实例里反复出图不再每次打 Blob；最多 16 张）。
- * - 取不到（测试站 11/26 出现过 Blob 对出图函数连续回 403）：隔 400ms 再试一次；还不行把状态码、响应头里的几个关键字段和正文开头记进日志再抛错。
+ * 取模板图（大图 l / 小图 t）。
+ * - 出图时传 via（本站地址）：优先取本站 /api/v1/poster-img/<id>/<版本>/<size>.jpg。这个地址带版本号、CDN 长缓存（immutable），
+ *   绝大多数请求在 CDN 就挡掉，不回源打 Blob（V171-15：测试站 11/26 出图函数连续直拉 Blob 原图被回 403 约 8 分钟）。取不到再退回 Blob 原地址。
+ * - poster-img 接口自己调用时不传 via（直接取 Blob，免得自己调自己）。
+ * - 重试：两个来源都试过还不行，隔 400ms、1.2s 各再来一轮。最后失败把状态码、关键响应头、正文开头记日志。
+ * - 同一个函数实例里按地址在内存缓存（最多 16 张；地址带版本号，换图会换地址）。
  */
 const imgCache = new Map<string, Buffer>();
 const IMG_CACHE_MAX = 16;
-export async function fetchTemplateImage(t: Pick<PosterTemplate, 'image_url' | 'thumb_url'>, size: 't' | 'l'): Promise<Buffer> {
-  const url = size === 't' ? t.thumb_url : t.image_url;
-  const hit = imgCache.get(url);
+const BACKOFF = [400, 1200];
+export async function fetchTemplateImage(
+  t: Pick<PosterTemplate, 'image_url' | 'thumb_url'> & Partial<Pick<PosterTemplate, 'id' | 'version'>>,
+  size: 't' | 'l',
+  via?: string
+): Promise<Buffer> {
+  const blob = size === 't' ? t.thumb_url : t.image_url;
+  const hit = imgCache.get(blob);
   if (hit) return hit;
-  let res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) {
-    await new Promise((r) => setTimeout(r, 400));
-    res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'sarec-poster/1.0' } });
+  const sources = via && t.id && t.version ? [imgUrl(via, t.id, t.version, size), blob] : [blob];
+  let last: { status: number; url: string; info: string } | null = null;
+  for (let round = 0; round <= BACKOFF.length; round++) {
+    if (round) await new Promise((r) => setTimeout(r, BACKOFF[round - 1]));
+    for (const url of sources) {
+      try {
+        const res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'sarec-poster/1.0' } });
+        if (res.ok && (res.headers.get('content-type') ?? '').startsWith('image/')) {
+          const buf = Buffer.from(await res.arrayBuffer());
+          imgCache.set(blob, buf);
+          if (imgCache.size > IMG_CACHE_MAX) imgCache.delete(imgCache.keys().next().value as string);
+          return buf;
+        }
+        const h = ['server', 'x-vercel-id', 'x-vercel-cache', 'x-vercel-error', 'x-vercel-mitigated', 'content-type'].map((k) => `${k}=${res.headers.get(k) ?? ''}`).join(' ');
+        last = { status: res.status, url, info: `${h} ${(await res.text().catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}` };
+      } catch (e) {
+        last = { status: 0, url, info: e instanceof Error ? e.message : 'fetch failed' };
+      }
+    }
   }
-  if (!res.ok) {
-    const h = ['server', 'x-vercel-id', 'x-vercel-error', 'x-vercel-mitigated', 'content-type', 'cache-control'].map((k) => `${k}=${res.headers.get(k) ?? ''}`).join(' ');
-    const body = (await res.text().catch(() => '')).slice(0, 200).replace(/\s+/g, ' ');
-    console.error('[poster template image]', res.status, url.replace(/^https:\/\/[^/]+/, ''), h, body);
-    throw new Error(`模板图取不到（${res.status}）`);
-  }
-  const buf = Buffer.from(await res.arrayBuffer());
-  imgCache.set(url, buf);
-  if (imgCache.size > IMG_CACHE_MAX) imgCache.delete(imgCache.keys().next().value as string);
-  return buf;
+  console.error('[poster template image]', last?.status, last?.url.replace(/^https:\/\/[^/]+/, ''), last?.info);
+  throw new Error(`模板图取不到（${last?.status ?? '?'}）`);
 }
 
 // ── 后台 ─────────────────────────────────────────────────────────────

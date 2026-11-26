@@ -4,7 +4,7 @@
  * line 最多 30 字、过禁用词和微信文本检测，不通过 400 中文提示；模板不是上架的祝福图 404；出图失败 500（小程序提示重试）。
  */
 import { CrmError } from '@/lib/crm/events';
-import { fail, handler, requireContact } from '@/lib/crm/http';
+import { fail, handler, requireContact, siteUrl } from '@/lib/crm/http';
 import { greetingPng } from '@/lib/org/greetings';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +14,7 @@ export const GET = handler(async (req: Request, { params }: { params: { id: stri
   const q = new URL(req.url).searchParams;
   let png: Buffer;
   try {
-    png = await greetingPng(me, params.id, q.get('style'), q.get('line'));
+    png = await greetingPng(me, params.id, q.get('style'), q.get('line'), siteUrl(req));
   } catch (e) {
     if (e instanceof CrmError) throw e;
     console.error('[greetings render.png]', e instanceof Error ? e.message : 'unknown');
