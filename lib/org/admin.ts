@@ -9,7 +9,7 @@ import { setSetting } from '@/lib/crm/orders';
 import type { Staff } from '@/lib/crm/auth';
 import { audit } from '@/lib/crm/staff';
 import { orgBindCode, wxConfigured } from '@/lib/crm/wechat';
-import { DEMO_ORG_NAME, ORG_QR_PREFIX, chainOn, createCode, randCode, toolOn, whenText, type OrgEvent } from './service';
+import { DEMO_ORG_NAME, ORG_QR_PREFIX, chainOn, createCode, openMode, randCode, toolOn, whenText, type OrgEvent } from './service';
 import { PROMISE_VERSION } from './texts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,7 +52,7 @@ export async function overview() {
   );
   return {
     reviewCodes,
-    switches: { tool: await toolOn(), chain: await chainOn() },
+    switches: { tool: await toolOn(), chain: await chainOn(), open: (await openMode()) === 'auto' },
     organizers: orgs,
     events: events.map((e) => ({
       id: e.id, code: e.code, organizer: e.org_name, organizerId: e.organizer_id, title: e.title, mode: e.mode, when: whenText(e), status: e.status,
@@ -198,6 +198,15 @@ export async function eventAction(s: Staff, eventId: string, b: Record<string, u
 }
 
 export async function setSwitch(s: Staff, key: unknown, on: unknown) {
+  // 指令 81：主办方开通方式（开 = 自动：当场开通、先发后审；关 = 需审核：申请制、前几场人工放行）
+  if (key === 'open') {
+    if (typeof on !== 'boolean') throw new CrmError('bad_request', '开关不对，请刷新后再试');
+    const before = await openMode();
+    const after = on ? 'auto' : 'review';
+    await setSetting(getPool(), 'org_open_mode', after, who(s));
+    await audit(getPool(), s, 'setting', 'crm_settings', 'org_open_mode', { before, after });
+    return { message: on ? '已改成「自动开通」：点办活动当场开通，发的活动过了内容检测直接公开，马上生效' : '已改成「需审核」：办活动要先申请、商会开通，新主办方前几场人工放行，马上生效' };
+  }
   const k = key === 'chain' ? 'org_chain_on' : key === 'tool' ? 'org_tool_on' : null;
   if (!k || typeof on !== 'boolean') throw new CrmError('bad_request', '开关不对，请刷新后再试');
   const before = k === 'org_chain_on' ? await chainOn() : await toolOn();
