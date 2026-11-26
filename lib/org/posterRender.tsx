@@ -43,12 +43,20 @@ function font(): Promise<Buffer> {
 const EMOJI = new RegExp('[\\p{Extended_Pictographic}\\u{FE0F}\\u{200D}]', 'gu');
 const clean = (s: string | null | undefined) => String(s ?? '').replace(EMOJI, '').replace(/\s+/g, ' ').trim();
 
-/** 估算一行字的宽度（中文一个字 = 1em，英文数字约 0.56em） */
+/** 估算一行字的宽度（中文 / 全角 1em；英文小写和数字约 0.62em、大写 0.74em、空格 0.28em、半角标点 0.36em——宁宽勿窄） */
 function textWidth(s: string, size: number): number {
   let w = 0;
-  for (const ch of s) w += /[\u0000-ɏ -⁯]/.test(ch) ? (/[A-Z]/.test(ch) ? 0.66 : 0.56) : 1;
+  for (const ch of s) {
+    if (ch === ' ') w += 0.28;
+    else if (/[A-Z]/.test(ch)) w += 0.74;
+    else if (/[a-z0-9]/.test(ch)) w += 0.62;
+    else if (/[\u0021-\u007e\u00b7\u2013\u2014]/.test(ch)) w += 0.36;
+    else w += 1;
+  }
   return w * size;
 }
+/** 每一行固定行高（satori 按字体自身的上下高度排行，lineHeight 小于它时不生效；固定高度才和估算一致） */
+const ln = (size: number, k: number) => ({ height: Math.round(size * k), lineHeight: `${Math.round(size * k)}px`, display: 'flex' as const, alignItems: 'center' as const, overflow: 'hidden' as const });
 /** 按宽度断行（最多 n 行，放不下的最后一行末尾加「…」） */
 function wrap(s: string, size: number, width: number, n: number): string[] {
   const chars = Array.from(s);
@@ -58,8 +66,15 @@ function wrap(s: string, size: number, width: number, n: number): string[] {
   for (; i < chars.length && lines.length < n; i++) {
     const ch = chars[i];
     if (cur && textWidth(cur + ch, size) > width) {
-      lines.push(cur);
-      cur = ch === ' ' ? '' : ch;
+      // 英文单词不从中间断：往回找最近的空格（只在最后 14 个字以内找）
+      const sp = cur.lastIndexOf(' ');
+      if (/[A-Za-z0-9]/.test(ch) && sp > 0 && cur.length - sp <= 14) {
+        lines.push(cur.slice(0, sp));
+        cur = cur.slice(sp + 1) + ch;
+      } else {
+        lines.push(cur);
+        cur = ch === ' ' ? '' : ch;
+      }
     } else cur += ch;
   }
   if (lines.length < n) {
@@ -126,19 +141,23 @@ export async function renderPoster(o: { image: Buffer; box: number[] | null; ink
   const t = o.info;
   const titleLen = textWidth(t.title, 1);
   const titleMax = Math.min(84, innerH * 0.22);
-  const oneLine = Math.floor(textW / Math.max(titleLen, 1)) - 1;
+  const oneLine = Math.floor((textW * 0.97) / Math.max(titleLen, 1)) - 1;
   // 短标题一行放得下（字号不小于 56 或已到最大字号）就一行，不硬拆成两行；否则两行按长度缩字
-  let title = Math.round(oneLine >= Math.min(56, titleMax) ? Math.min(titleMax, oneLine) : Math.min(titleMax, Math.max(40, (textW * 2) / Math.max(titleLen, 1) - 2)));
+  let title = Math.round(oneLine >= Math.min(56, titleMax) ? Math.min(titleMax, oneLine) : Math.min(titleMax, Math.max(40, (textW * 0.97 * 2) / Math.max(titleLen, 1) - 2)));
   let body = Math.round(Math.max(22, Math.min(36, innerH * 0.095)));
   let small = Math.round(body * 0.82);
+  // 断行按 92% 宽度估（估算和真实字宽有出入，留余量；每行再加 nowrap，绝不在框里再折一次）
+  const fitW = textW * 0.97;
   const measure = () => {
-    const tl = wrap(t.title, title, textW, 2);
-    const loc = wrap(t.locationName, body, textW, 1);
-    const addr = t.address ? wrap(t.address, small, textW, 2) : [];
-    const org = t.organizer ? wrap(`主办：${t.organizer}`, small, textW, 1) : [];
+    const tl = wrap(t.title, title, fitW, 2);
+    const loc = wrap(t.locationName, body, fitW, 1);
+    const addr = t.address ? wrap(t.address, small, fitW, 2) : [];
+    const org = t.organizer ? wrap(`主办：${t.organizer}`, small, fitW, 1) : [];
     const h = tl.length * title * 1.18 + 14 + body * 1.35 + loc.length * body * 1.35 + addr.length * small * 1.3 + (org.length ? 10 + small * 1.3 : 0);
     return { tl, loc, addr, org, h };
   };
+  // 标题两行放不下（被加了省略号）先缩标题字，最小 32
+  while (title > 32 && wrap(t.title, title, fitW, 2).join('').endsWith('…')) title -= 2;
   let m = measure();
   for (let i = 0; i < 6 && m.h > innerH; i++) {
     const k = Math.max(0.75, innerH / m.h);
@@ -162,20 +181,20 @@ export async function renderPoster(o: { image: Buffer; box: number[] | null; ink
         {plate && (
           <div style={{ position: 'absolute', left: bx, top: by, width: bw, height: bh, borderRadius: 28, background: 'rgba(12,14,20,0.62)', display: 'flex' }} />
         )}
-        <div style={{ position: 'absolute', left: bx + pad, top: by + pad, width: innerW, height: innerH, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', width: textW, color: ink, ...(shadow ? { textShadow: shadow } : {}) }}>
+        <div style={{ position: 'absolute', left: bx + pad, top: by + pad, width: innerW, height: innerH, display: 'flex', flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', width: textW, overflow: 'hidden', color: ink, ...(shadow ? { textShadow: shadow } : {}) }}>
             {m.tl.map((l, i) => (
-              <div key={'t' + i} style={{ fontSize: title, lineHeight: 1.18 }}>{l}</div>
+              <div key={'t' + i} style={{ fontSize: title, ...ln(title, 1.18), whiteSpace: 'nowrap' }}>{l}</div>
             ))}
-            <div style={{ fontSize: body, lineHeight: 1.35, marginTop: 14, color: sub }}>{t.when}</div>
+            <div style={{ fontSize: body, ...ln(body, 1.35), marginTop: 14, color: sub, whiteSpace: 'nowrap' }}>{t.when}</div>
             {m.loc.map((l, i) => (
-              <div key={'l' + i} style={{ fontSize: body, lineHeight: 1.35, color: sub }}>{l}</div>
+              <div key={'l' + i} style={{ fontSize: body, ...ln(body, 1.35), color: sub, whiteSpace: 'nowrap' }}>{l}</div>
             ))}
             {m.addr.map((l, i) => (
-              <div key={'a' + i} style={{ fontSize: small, lineHeight: 1.3, color: sub, opacity: 0.88 }}>{l}</div>
+              <div key={'a' + i} style={{ fontSize: small, ...ln(small, 1.3), color: sub, opacity: 0.88, whiteSpace: 'nowrap' }}>{l}</div>
             ))}
             {m.org.map((l, i) => (
-              <div key={'o' + i} style={{ fontSize: small, lineHeight: 1.3, marginTop: 10, color: sub, opacity: 0.88 }}>{l}</div>
+              <div key={'o' + i} style={{ fontSize: small, ...ln(small, 1.3), marginTop: 10, color: sub, opacity: 0.88, whiteSpace: 'nowrap' }}>{l}</div>
             ))}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft: gap + 20 }}>
@@ -204,22 +223,24 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
   const qr = 250;
   const textW = W - pad * 2 - qr - 40;
   const t = o.info;
-  const one = Math.floor(textW / Math.max(textWidth(t.title, 1), 1)) - 1;
-  const title = Math.round(one >= 48 ? Math.min(60, one) : Math.min(60, Math.max(36, (textW * 2) / Math.max(textWidth(t.title, 1), 1) - 2)));
-  const tl = wrap(t.title, title, textW, 2);
-  const loc = wrap([t.locationName, t.address].filter(Boolean).join(' · '), 28, textW, 2);
-  const org = t.organizer ? wrap(`主办：${t.organizer}`, 24, textW, 1) : [];
+  const fitW = textW * 0.97;
+  const one = Math.floor(fitW / Math.max(textWidth(t.title, 1), 1)) - 1;
+  let title = Math.round(one >= 48 ? Math.min(60, one) : Math.min(60, Math.max(36, (fitW * 2) / Math.max(textWidth(t.title, 1), 1) - 2)));
+  while (title > 32 && wrap(t.title, title, fitW, 2).join('').endsWith('…')) title -= 2;
+  const tl = wrap(t.title, title, fitW, 2);
+  const loc = wrap([t.locationName, t.address].filter(Boolean).join(' · '), 28, fitW, 2);
+  const org = t.organizer ? wrap(`主办：${t.organizer}`, 24, fitW, 1) : [];
   const H2 = ih + SH;
   const res = new ImageResponse(
     (
       <div style={{ width: W, height: H2, display: 'flex', flexDirection: 'column', position: 'relative', fontFamily: 'NotoSansSC', background: '#FFFFFF' }}>
         <img src={`data:image/jpeg;base64,${img.toString('base64')}`} width={W} height={ih} style={{ width: W, height: ih }} />
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', width: W, height: SH, padding: `0 ${pad}px`, background: '#FFFFFF' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', width: textW, color: '#1E1E1E' }}>
-            {tl.map((l, i) => <div key={'t' + i} style={{ fontSize: title, lineHeight: 1.18 }}>{l}</div>)}
-            <div style={{ fontSize: 30, lineHeight: 1.35, marginTop: 12, color: '#333333' }}>{t.when}</div>
-            {loc.map((l, i) => <div key={'l' + i} style={{ fontSize: 28, lineHeight: 1.35, color: '#333333' }}>{l}</div>)}
-            {org.map((l, i) => <div key={'o' + i} style={{ fontSize: 24, lineHeight: 1.3, marginTop: 8, color: '#666666' }}>{l}</div>)}
+          <div style={{ display: 'flex', flexDirection: 'column', width: textW, overflow: 'hidden', color: '#1E1E1E' }}>
+            {tl.map((l, i) => <div key={'t' + i} style={{ fontSize: title, ...ln(title, 1.18), whiteSpace: 'nowrap' }}>{l}</div>)}
+            <div style={{ fontSize: 30, ...ln(30, 1.35), marginTop: 12, color: '#333333' }}>{t.when}</div>
+            {loc.map((l, i) => <div key={'l' + i} style={{ fontSize: 28, ...ln(28, 1.35), color: '#333333', whiteSpace: 'nowrap' }}>{l}</div>)}
+            {org.map((l, i) => <div key={'o' + i} style={{ fontSize: 24, ...ln(24, 1.3), marginTop: 8, color: '#666666' }}>{l}</div>)}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginLeft: 40 }}>
             <img src={`data:image/png;base64,${o.qr.toString('base64')}`} width={qr - 20} height={qr - 20} />
