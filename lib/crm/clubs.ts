@@ -269,6 +269,14 @@ export async function meetupDetail(contactId: string | null, id: string) {
   return { meetup: view, gone: null, locked: false, club, joinedClub, leader, canEdit: view.canEdit };
 }
 
+/** 1.7.0（东哥 11/24「已来一位，还差 3 位，可以最多组 3 桌 12 人」）：掼蛋、麻将 4 人一桌，组局人数只能是 4 / 8 / 12（开 1–3 桌）。小程序 utils/tables.js 同一套。 */
+export const TABLE_CLUBS = ['guandan', 'mahjong'];
+function checkTables(key: string, capacity: number, joined = 0) {
+  if (!TABLE_CLUBS.includes(key)) return;
+  if (![4, 8, 12].includes(capacity)) throw new CrmError('bad_request', '4 人一桌，请选开 1 到 3 桌');
+  if (capacity < joined) throw new CrmError('bad_request', `已经来了 ${joined} 位，至少要开 ${Math.ceil(joined / 4)} 桌`);
+}
+
 export async function createMeetup(contactId: string, key: string, b: Record<string, unknown>) {
   const c = await clubByKey(key);
   if (await isBanned(contactId)) throw new CrmError('club_banned', '您暂时不能发起组局。有疑问请在「联系商会」里找工作人员。');
@@ -282,6 +290,7 @@ export async function createMeetup(contactId: string, key: string, b: Record<str
   if (!title) throw new CrmError('bad_request', '请写一个标题，例如“周六下午掼蛋局”');
   if (!Number.isFinite(starts.getTime()) || starts.getTime() < Date.now() - 60e3) throw new CrmError('bad_request', '请选一个还没到的时间');
   if (!(capacity >= 2 && capacity <= 200)) throw new CrmError('bad_request', '人数上限请填 2 到 200');
+  checkTables(key, capacity);
   // 指令 60 验收 V21-1：地点名称、地址也拦字、也交微信检测（转发卡片标题会带上地点）
   const bad = gambleWords(`${title} ${note} ${location ?? ''} ${address ?? ''}`);
   // 测试窗口 Q14：提示不复述被拦的词，也不自己写出“输赢、金额”这类字
@@ -348,9 +357,10 @@ export async function joinMeetup(contactId: string, id: string, on: boolean) {
  */
 export async function editMeetup(contactId: string, id: string, b: Record<string, unknown>) {
   if (!/^[0-9a-f-]{36}$/.test(id)) throw new CrmError('not_found', '找不到这个组局');
-  const { rows } = await getPool().query<{ creator_id: string; title: string; starts_at: Date; location: string | null; address: string | null; capacity: number; note: string | null; status: string; sec_status: string; joined: number }>(
+  const { rows } = await getPool().query<{ creator_id: string; title: string; starts_at: Date; location: string | null; address: string | null; capacity: number; note: string | null; status: string; sec_status: string; joined: number; club_key: string }>(
     `SELECT u.creator_id, u.title, u.starts_at, u.location, u.address, u.capacity, u.note, u.status, u.sec_status,
-            (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined
+            (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined,
+            (SELECT c.key FROM clubs c WHERE c.id = u.club_id) AS club_key
        FROM club_meetups u WHERE u.id = $1`,
     [id]
   );
@@ -370,6 +380,7 @@ export async function editMeetup(contactId: string, id: string, b: Record<string
   if (!title) throw new CrmError('bad_request', '请写一个标题，例如“周六下午掼蛋局”');
   if (!Number.isFinite(starts.getTime()) || starts.getTime() < Date.now() - 60e3) throw new CrmError('bad_request', '请选一个还没到的时间');
   if (!(capacity >= 2 && capacity <= 200)) throw new CrmError('bad_request', '人数上限请填 2 到 200');
+  if (has('capacity')) checkTables(u.club_key, capacity, u.joined);
   if (capacity < u.joined) throw new CrmError('bad_request', `已经有 ${u.joined} 人报名了，人数上限不能少于 ${u.joined}`);
   if (gambleWords(`${title} ${note ?? ''} ${location ?? ''} ${address ?? ''}`)) throw new CrmError('bad_words', '这段文字不能发，请只写活动内容和时间，例如“周六下午掼蛋”');
   const textOf = (t: string, n: string | null, l: string | null) => `${t}\n${n ?? ''}\n${l ?? ''}`;
