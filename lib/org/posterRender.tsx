@@ -116,8 +116,10 @@ export function AiBadge({ cfg = AI_BADGE_DEFAULT, dark = true, width = W }: { cf
   return (
     <div
       style={{
-        position: 'absolute', right: m, top: m, width: w, height: h, borderRadius: Math.round(h / 3), opacity: cfg.opacity,
-        background: dark ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.55)', color: dark ? '#FFFFFF' : '#1E1E1E',
+        position: 'absolute', right: m, top: m, width: w, height: h, borderRadius: Math.round(h / 3),
+        // 底板跟着 opacity 淡（0.55 → 0.44），字比底板实一些（0.55 → 0.9），小号也认得出
+        background: dark ? `rgba(0,0,0,${(cfg.opacity * 0.8).toFixed(2)})` : `rgba(255,255,255,${(cfg.opacity * 0.9).toFixed(2)})`,
+        color: dark ? `rgba(255,255,255,${Math.min(1, cfg.opacity + 0.35).toFixed(2)})` : `rgba(30,30,30,${Math.min(1, cfg.opacity + 0.35).toFixed(2)})`,
         fontSize: fs, display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}
     >
