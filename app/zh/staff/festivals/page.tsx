@@ -13,19 +13,19 @@ import { Toast } from '@/components/crm/staff/ugcShared';
 
 type Kind = 'cn' | 'us' | 'intl';
 type Fest = {
-  key: string; name: string; kind: Kind; show_before_days: number; show_until_offset: number;
+  key: string; name: string; kind: Kind; show_before_days: number; show_until_offset: number; home_before_days: number;
   category_key: string | null; greet_category_key: string | null; sort: number; active: boolean;
   next: string | null; inWindow: boolean; dates: string[];
 };
 type Cat = { key: string; name: string; purpose: 'event' | 'greeting' };
-type Data = { today: string; festivals: Fest[]; categories: Cat[] };
-type Form = { key: string; name: string; kind: Kind; before: string; until: string; cat: string; greet: string; sort: string; active: boolean };
+type Data = { today: string; datesUntil: string | null; datesLeftDays: number | null; festivals: Fest[]; categories: Cat[] };
+type Form = { key: string; name: string; kind: Kind; before: string; until: string; home: string; cat: string; greet: string; sort: string; active: boolean };
 const KIND: Record<Kind, string> = { cn: '中国', us: '美国', intl: '国际' };
 const toForm = (f: Fest): Form => ({
-  key: f.key, name: f.name, kind: f.kind, before: String(f.show_before_days), until: String(f.show_until_offset),
+  key: f.key, name: f.name, kind: f.kind, before: String(f.show_before_days), until: String(f.show_until_offset), home: String(f.home_before_days),
   cat: f.category_key ?? '', greet: f.greet_category_key ?? '', sort: String(f.sort), active: f.active
 });
-const EMPTY: Form = { key: '', name: '', kind: 'cn', before: '2', until: '0', cat: '', greet: '', sort: '', active: true };
+const EMPTY: Form = { key: '', name: '', kind: 'cn', before: '2', until: '0', home: '14', cat: '', greet: '', sort: '', active: true };
 
 function FestForm({ v, set, cats, isNew }: { v: Form; set: (v: Form) => void; cats: Cat[]; isNew: boolean }) {
   const id = isNew ? 'nf' : 'ef-' + v.key;
@@ -49,6 +49,9 @@ function FestForm({ v, set, cats, isNew }: { v: Form; set: (v: Form) => void; ca
       </label>
       <label className={styles.small} htmlFor={id + '-until'}>节后再显示几天（0 = 当天撤）
         <input id={id + '-until'} className={styles.input} style={{ margin: 0 }} inputMode="numeric" value={v.until} onChange={(e) => set({ ...v, until: e.target.value })} />
+      </label>
+      <label className={styles.small} htmlFor={id + '-home'}>首页「节日祝福」提前几天出现
+        <input id={id + '-home'} className={styles.input} style={{ margin: 0 }} inputMode="numeric" value={v.home} onChange={(e) => set({ ...v, home: e.target.value })} />
       </label>
       <label className={styles.small} htmlFor={id + '-cat'}>办活动分类（「快到的节日」）
         <select id={id + '-cat'} className={styles.select} style={{ margin: 0 }} value={v.cat} onChange={(e) => set({ ...v, cat: e.target.value })}>
@@ -98,7 +101,7 @@ function Festivals() {
     return r.ok;
   }
   const save = (f: Form, create: boolean) => post({
-    action: 'save', create, key: f.key.trim(), name: f.name, kind: f.kind, showBeforeDays: Number(f.before), showUntilOffset: Number(f.until),
+    action: 'save', create, key: f.key.trim(), name: f.name, kind: f.kind, showBeforeDays: Number(f.before), showUntilOffset: Number(f.until), homeBeforeDays: Number(f.home),
     categoryKey: f.cat || null, greetCategoryKey: f.greet || null, sort: f.sort === '' ? null : Number(f.sort), active: f.active
   }, 'save' + f.key);
 
@@ -110,6 +113,12 @@ function Festivals() {
     <>
       <p className={styles.lead}>小程序「挑海报」从上到下：① 在祝福窗口里的节日祝福（节日前 N 天出现，到节后第 M 天撤）；② 快到的节日（节日类活动分类，离今天近的在前）；③ 常用活动（按使用次数）。今天（洛杉矶）是 {d.today}。改动 1 分钟内小程序能看到。</p>
       <Toast m={msg} onClose={closeMsg} />
+      {(d.datesLeftDays == null || d.datesLeftDays < 365) && (
+        <div className={`${styles.card} ${styles.cardGold}`}>
+          <p className={styles.cardTitle}>日期表还剩不到 1 年{d.datesUntil ? `（有节日只排到 ${d.datesUntil}）` : '（有节日一个以后的日期都没有）'}</p>
+          <p className={styles.small} style={{ margin: 0 }}>请在下面给各节日加明后年的日期（农历节日每年不同），或者让开发用 db/sql/festival_dates_gen.mjs 再算一段。日期用完的节日会掉进「常用活动」。</p>
+        </div>
+      )}
 
       <h2 className={styles.h}>接下来的节日</h2>
       <p className={styles.small}>
@@ -127,7 +136,7 @@ function Festivals() {
               {!f.active && <span className={`${styles.badge} ${styles.badgeMuted}`}>停用</span>}
             </p>
             <p className={styles.small} style={{ margin: '0 0 6px', overflowWrap: 'anywhere' }}>
-              下一次 {f.next ?? '（表里没有以后的日期，请加）'} · 提前 {f.show_before_days} 天出祝福 · {f.show_until_offset ? `节后再显示 ${f.show_until_offset} 天` : '当天过完撤'} ·
+              下一次 {f.next ?? '（表里没有以后的日期，请加）'} · 提前 {f.show_before_days} 天出祝福 · 首页提前 {f.home_before_days} 天 · {f.show_until_offset ? `节后再显示 ${f.show_until_offset} 天` : '当天过完撤'} ·
               活动分类：{catName(f.category_key)} · 祝福分类：{catName(f.greet_category_key)} · 日期排到 {last ?? '—'}
             </p>
             {edit?.key === f.key ? (

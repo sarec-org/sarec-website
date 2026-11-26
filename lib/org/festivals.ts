@@ -37,12 +37,25 @@ export function requestToday(req: Request): string {
   }
   return laToday();
 }
+/** 给人看的日期（V171-2）：今天 / 明天 / M月D日（节日期间的加「· 节日中」）/ 不是今年的带年份 */
+export function dateLabel(today: string, date: string | null): string | null {
+  if (!date) return null;
+  const d = daysBetween(today, date);
+  if (d === 0) return '今天';
+  if (d === 1) return '明天';
+  const [y, m, dd] = [+date.slice(0, 4), +date.slice(5, 7), +date.slice(8, 10)];
+  const md = `${m}月${dd}日`;
+  const s = y === +today.slice(0, 4) ? md : `${y}年${md}`;
+  return d < 0 ? `${s} · 节日中` : s;
+}
 const dayNo = (s: string) => Math.round(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)) / 86400000);
 export const daysBetween = (from: string, to: string) => dayNo(to) - dayNo(from);
 
 export type Festival = {
   key: string; name: string; kind: FestivalKind; show_before_days: number; show_until_offset: number;
   category_key: string | null; greet_category_key: string | null; sort: number; active: boolean;
+  /** 首页「节日祝福」栏目提前几天出现（V171-2） */
+  home_before_days: number;
 };
 export type FestivalAt = Festival & {
   /** 这一次（或下一次）的日期；表里没有以后的日期时 null */
@@ -51,9 +64,11 @@ export type FestivalAt = Festival & {
   days: number | null;
   /** 今天在祝福窗口 [D − 提前天数, D + 节后天数] 里 */
   inWindow: boolean;
+  /** 今天在首页窗口 [D − home_before_days, D + 节后天数] 里 */
+  inHome: boolean;
 };
 
-const COLS = `f.key, f.name, f.kind, f.show_before_days, f.show_until_offset, f.category_key, f.greet_category_key, f.sort, f.active`;
+const COLS = `f.key, f.name, f.kind, f.show_before_days, f.show_until_offset, f.category_key, f.greet_category_key, f.sort, f.active, f.home_before_days`;
 
 /** 启用的节日 + 相对 today 的下一次日期（按 sort） */
 export async function festivalsAt(today: string, db: Db = getPool()): Promise<FestivalAt[]> {
@@ -66,7 +81,11 @@ export async function festivalsAt(today: string, db: Db = getPool()): Promise<Fe
   );
   return rows.map((f) => {
     const days = f.date ? daysBetween(today, f.date) : null;
-    return { ...f, days, inWindow: days != null && days <= f.show_before_days && days >= -f.show_until_offset };
+    return {
+      ...f, days,
+      inWindow: days != null && days <= f.show_before_days && days >= -f.show_until_offset,
+      inHome: days != null && days <= f.home_before_days && days >= -f.show_until_offset
+    };
   });
 }
 
@@ -85,8 +104,13 @@ export async function staffFestivals() {
   );
   const by = new Map<string, string[]>();
   for (const d of dates) by.set(d.festival_key, [...(by.get(d.festival_key) ?? []), d.date]);
+  // 日期表排到哪天：启用的节日里"最后一个日期"最早的那个（V171-12：剩不到 1 年后台页顶上提示）
+  const lastOf = all.filter((f) => f.active).map((f) => (by.get(f.key) ?? []).slice(-1)[0] ?? null);
+  const datesUntil = lastOf.some((d) => d == null) ? null : lastOf.sort()[0] ?? null;
   return {
     today,
+    datesUntil,
+    datesLeftDays: datesUntil ? daysBetween(today, datesUntil) : null,
     festivals: all.map((f) => ({ ...f, next: next.get(f.key)?.date ?? null, inWindow: next.get(f.key)?.inWindow ?? false, dates: by.get(f.key) ?? [] })),
     categories: cats
   };
@@ -109,7 +133,7 @@ async function categoryOk(db: Db, key: string | null, purpose: 'event' | 'greeti
 
 /**
  * POST 动作：
- * - { action:'save', key, name, kind, showBeforeDays, showUntilOffset, categoryKey, greetCategoryKey, sort, active, create? }（create=true 新加节日）
+ * - { action:'save', key, name, kind, showBeforeDays, showUntilOffset, homeBeforeDays, categoryKey, greetCategoryKey, sort, active, create? }（create=true 新加节日）
  * - { action:'add_date', key, date } / { action:'del_date', key, date }
  */
 export async function staffFestivalAction(s: Staff, b: Record<string, unknown>) {
@@ -129,20 +153,21 @@ export async function staffFestivalAction(s: Staff, b: Record<string, unknown>) 
       if (!kind) throw new CrmError('bad_request', '请选中国 / 美国 / 国际');
       const before = intIn(b.showBeforeDays, 0, 60, '提前几天');
       const until = intIn(b.showUntilOffset, 0, 60, '节后再显示几天');
+      const home = b.homeBeforeDays == null || b.homeBeforeDays === '' ? (f?.home_before_days ?? 14) : intIn(b.homeBeforeDays, 0, 90, '首页提前几天');
       const sort = b.sort == null || b.sort === '' ? (f?.sort ?? 999) : intIn(b.sort, 0, 9999, '排序');
       const cat = await categoryOk(db, txt(b.categoryKey, 40) || null, 'event', '办活动分类');
       const greet = await categoryOk(db, txt(b.greetCategoryKey, 40) || null, 'greeting', '祝福分类');
       const active = b.active !== false;
-      const after = { key, name, kind, show_before_days: before, show_until_offset: until, category_key: cat, greet_category_key: greet, sort, active };
+      const after = { key, name, kind, show_before_days: before, show_until_offset: until, home_before_days: home, category_key: cat, greet_category_key: greet, sort, active };
       if (create) {
         await db.query(
-          `INSERT INTO festivals (key, name, kind, show_before_days, show_until_offset, category_key, greet_category_key, sort, active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-          [key, name, kind, before, until, cat, greet, sort, active]
+          `INSERT INTO festivals (key, name, kind, show_before_days, show_until_offset, category_key, greet_category_key, sort, active, home_before_days) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+          [key, name, kind, before, until, cat, greet, sort, active, home]
         );
       } else {
         await db.query(
-          `UPDATE festivals SET name=$2, kind=$3, show_before_days=$4, show_until_offset=$5, category_key=$6, greet_category_key=$7, sort=$8, active=$9, updated_at=now() WHERE key=$1`,
-          [key, name, kind, before, until, cat, greet, sort, active]
+          `UPDATE festivals SET name=$2, kind=$3, show_before_days=$4, show_until_offset=$5, category_key=$6, greet_category_key=$7, sort=$8, active=$9, home_before_days=$10, updated_at=now() WHERE key=$1`,
+          [key, name, kind, before, until, cat, greet, sort, active, home]
         );
       }
       await audit(db, s, create ? 'festival_add' : 'festival_save', 'festival', key, { before: f ?? null, after });

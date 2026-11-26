@@ -18,7 +18,7 @@ import { getSetting, setSetting } from '@/lib/crm/orders';
 import { audit } from '@/lib/crm/staff';
 import type { Staff } from '@/lib/crm/auth';
 import type { Db } from '@/lib/crm/profile';
-import { festivalsAt, laToday } from './festivals';
+import { dateLabel, festivalsAt, laToday } from './festivals';
 import { AI_BADGE_KEY, BADGE_STYLES, TEXT_H_MAX, TEXT_H_MIN, aiBadgeConfig, isPlace, normalizeAiBadge } from './aiBadge';
 
 export const STYLE_LABEL: Record<string, string> = { plaque: '圆角小牌', seal: '细金边小章', strip: '贴条子' };
@@ -110,7 +110,7 @@ export async function publicList(base: string, today: string = laToday()) {
   const festCats = categories
     .filter((c) => festOf.has(c.key))
     .sort((a, b) => festOf.get(a.key)!.days - festOf.get(b.key)!.days || order.get(a.key)! - order.get(b.key)!)
-    .map((c) => ({ ...c, festival: festOf.get(c.key)!.festival, date: festOf.get(c.key)!.date, days: festOf.get(c.key)!.days }));
+    .map((c) => ({ ...c, festival: festOf.get(c.key)!.festival, date: festOf.get(c.key)!.date, dateLabel: dateLabel(today, festOf.get(c.key)!.date), days: festOf.get(c.key)!.days }));
   const usesOf = (k: string) => (by.get(k) ?? []).reduce((s, t) => s + (Number(t.uses) || 0), 0);
   const regCats = categories
     .filter((c) => !festOf.has(c.key))

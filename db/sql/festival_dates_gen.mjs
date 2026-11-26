@@ -1,22 +1,23 @@
 #!/usr/bin/env node
 /**
- * 一次性脚本：算出 festival_dates 的日期（2025–2031），打印成 SQL，贴进 db/migrations/0054_greetings.sql。
+ * 一次性脚本：算出 festival_dates 的日期（2025–2035），打印成 SQL，贴进 db/migrations/0054_greetings.sql。
  *   node db/sql/festival_dates_gen.mjs          → 打印 SQL
  *   node db/sql/festival_dates_gen.mjs --check  → 打印核对表（已知日期 + ICU 农历交叉核对）
  * - 农历节日（春节、元宵、端午、七夕、中秋、重阳）：常见的 lunarInfo 表算法（每年一个 16 进制数：
  *   低 4 位 = 闰几月；0x10000 位 = 闰月是不是大月；第 i 月大小 = info & (0x10000 >> i)）。
- *   起点用 2020 年正月初一 = 2020-01-25，表只取 2020–2032 这几年。
- * - 冬至：节气通式 [Y×0.2422 + 21.94] − [Y/4]（21 世纪，Y = 年份后两位），2025–2031 无例外年。
+ *   起点用 2020 年正月初一 = 2020-01-25，表只取 2020–2036 这几年。
+ * - 冬至：节气通式 [Y×0.2422 + 21.94] − [Y/4]（21 世纪，Y = 年份后两位），2025–2035 无例外年。
  * - 美国按星期算的：母亲节 5 月第 2 个周日、阵亡将士纪念日 5 月最后一个周一、父亲节 6 月第 3 个周日、
  *   劳动节 9 月第 1 个周一、感恩节 11 月第 4 个周四；复活节用格里历复活节算法（Anonymous Gregorian）。
  */
 const Y0 = 2025;
-const Y1 = 2031;
+const Y1 = 2035;
 
 // lunarInfo（2020–2032），与通行的 1900–2100 表同一段
 const LUNAR = {
   2020: 0x07954, 2021: 0x06aa0, 2022: 0x0ad50, 2023: 0x05b52, 2024: 0x04b60, 2025: 0x0a6e6, 2026: 0x0a4e0,
-  2027: 0x0d260, 2028: 0x0ea65, 2029: 0x0d530, 2030: 0x05aa0, 2031: 0x076a3, 2032: 0x096d0
+  2027: 0x0d260, 2028: 0x0ea65, 2029: 0x0d530, 2030: 0x05aa0, 2031: 0x076a3, 2032: 0x096d0, 2033: 0x04afb,
+  2034: 0x04ad0, 2035: 0x0a4d0, 2036: 0x1d0b6
 };
 const leapMonth = (y) => LUNAR[y] & 0xf;
 const leapDays = (y) => (leapMonth(y) ? (LUNAR[y] & 0x10000 ? 30 : 29) : 0);
@@ -95,7 +96,9 @@ const KNOWN = [
   // 额外：近几年公认的日期
   ['spring_festival', '2025-01-29'], ['spring_festival', '2026-02-17'], ['spring_festival', '2031-01-23'],
   ['mid_autumn', '2025-10-06'], ['dragon_boat', '2026-06-19'], ['easter', '2026-04-05'], ['easter', '2027-03-28'],
-  ['winter_solstice', '2026-12-22'], ['winter_solstice', '2028-12-21']
+  ['winter_solstice', '2026-12-22'], ['winter_solstice', '2028-12-21'],
+  // 2032–2035 公认春节
+  ['spring_festival', '2032-02-11'], ['spring_festival', '2033-01-31'], ['spring_festival', '2034-02-19'], ['spring_festival', '2035-02-08']
 ];
 const LUNAR_MD = { spring_festival: [1, 1], lantern_festival: [1, 15], dragon_boat: [5, 5], qixi: [7, 7], mid_autumn: [8, 15], double_ninth: [9, 9] };
 const icu = new Intl.DateTimeFormat('zh-u-ca-chinese', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric' });

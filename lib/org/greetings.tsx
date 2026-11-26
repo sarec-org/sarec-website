@@ -23,7 +23,7 @@ import { msgSecCheck } from '@/lib/crm/contentSec';
 import { profileCompany } from '@/lib/crm/cards';
 import { bannedWord } from './texts';
 import { LARGE, fetchTemplateImage, getTemplate, imgUrl } from './posterTemplates';
-import { daysBetween, festivalsAt, laToday, type FestivalAt } from './festivals';
+import { dateLabel, daysBetween, festivalsAt, laToday, type FestivalAt } from './festivals';
 import { AiBadge, AI_BADGE_DEFAULT, aiBadgeConfig, placeFor, planBadge, type AiBadgeCfg, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
 
 const W = LARGE.w;
@@ -31,6 +31,8 @@ const H = LARGE.h;
 /** 没有落款位的祝福图：画面最下面一条 */
 export const DEFAULT_SIG_BOX: [number, number, number, number] = [0.06, 0.84, 0.94, 0.95];
 export const LINE_MAX = 30;
+/** V171-3：落款什么都没有（没名片、没改落款）时印这一行，免得画在底图里的落款框空着（以后可挪到后台设置） */
+export const FALLBACK_LINE = '祝您节日快乐';
 export const STYLES = ['plain', 'company', 'personal'] as const;
 export type GreetStyle = (typeof STYLES)[number];
 
@@ -82,14 +84,18 @@ export async function greetingList(base: string, today: string = laToday()) {
       .map((c) => {
         const f = fest.get(c.key);
         return {
-          key: c.key, name: c.name, date: f?.date ?? c.date, festival: f?.key ?? null, inWindow: f?.inWindow ?? false,
+          key: c.key, name: c.name, date: f?.date ?? c.date, dateLabel: dateLabel(today, f?.date ?? c.date), festival: f?.key ?? null, inWindow: f?.inWindow ?? false,
+          inHome: f?.inHome ?? false,
           items: (by.get(c.key) ?? []).map((t) => ({ id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l') }))
         };
       });
-  // 指令 86 首页栏目「★ 节日祝福」：离今天最近、有图的那个节日的前 4 张；一张图都没有 → null（首页不出这一栏）
-  const first = festivals[0];
+  // 指令 86 首页栏目「★ 节日祝福」：只在节日的首页窗口 [D − home_before_days, D + 节后天数] 里出现（V171-2）；
+  // 几个同时在窗口里取离今天最近的；都不在 → null（首页整栏不出）
+  const first = festivals
+    .filter((x) => x.inHome)
+    .sort((a, b) => Math.abs(fest.get(a.key)!.days!) - Math.abs(fest.get(b.key)!.days!) || fest.get(a.key)!.days! - fest.get(b.key)!.days!)[0];
   const home = first
-    ? { title: '节日祝福', festival: first.festival ?? first.key, category: first.key, festivalName: fest.get(first.key)?.name ?? first.name, items: first.items.slice(0, 4).map((x) => ({ id: x.id, thumb: x.thumb })) }
+    ? { title: '节日祝福', festival: first.festival ?? first.key, category: first.key, festivalName: fest.get(first.key)?.name ?? first.name, date: first.date, dateLabel: first.dateLabel, items: first.items.slice(0, 4).map((x) => ({ id: x.id, thumb: x.thumb })) }
     : null;
   return { version: Number(v[0]?.ms ?? 0), today, festivals, home };
 }
@@ -207,6 +213,7 @@ export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
       o.line ? { text: o.line, k: 0.62, dim: true } : null
     ].filter(Boolean) as Line[];
   }
+  if (!pic && !lines.length) lines = [{ text: FALLBACK_LINE, k: 1 }];
   const empty = !pic && !lines.length;
 
   const plate = !o.sigBox;
@@ -285,7 +292,9 @@ export async function greetingPng(contactId: string, tplId: string, styleRaw: st
   const { rows: cat } = await pool.query<{ active: boolean; purpose: string }>(`SELECT active, purpose FROM poster_categories WHERE key = $1`, [tpl.category_key]);
   if (!cat[0]?.active || cat[0].purpose !== 'greeting') throw new CrmError('not_found', '这张祝福图已经下架了，请换一张');
   const card = await greetingCard(contactId);
-  const line = await checkLine(contactId, lineRaw);
+  let line = await checkLine(contactId, lineRaw);
+  // V171-1 兜底：老版小程序把默认落款（「公司 姓名 敬贺」）当 line 传；公司版 / 个人版收到它就按没传处理，免得公司名、名字印两遍
+  if (line && style !== 'plain' && line === defaultLine(card)) line = null;
   const [image, avatar, logo] = await Promise.all([
     fetchTemplateImage(tpl, 'l'),
     style === 'personal' ? fetchPic(card.avatarUrl, 'cover', 320) : Promise.resolve(null),
