@@ -125,7 +125,10 @@ export async function renderPoster(o: { image: Buffer; box: number[] | null; ink
   // 字号：标题按长度缩字（最多两行），其余按信息位高度；放不下整体按比例缩
   const t = o.info;
   const titleLen = textWidth(t.title, 1);
-  let title = Math.round(Math.min(84, Math.max(40, (textW * 2) / Math.max(titleLen, 1) - 2), innerH * 0.22));
+  const titleMax = Math.min(84, innerH * 0.22);
+  const oneLine = Math.floor(textW / Math.max(titleLen, 1)) - 1;
+  // 短标题一行放得下（字号不小于 56 或已到最大字号）就一行，不硬拆成两行；否则两行按长度缩字
+  let title = Math.round(oneLine >= Math.min(56, titleMax) ? Math.min(titleMax, oneLine) : Math.min(titleMax, Math.max(40, (textW * 2) / Math.max(titleLen, 1) - 2)));
   let body = Math.round(Math.max(22, Math.min(36, innerH * 0.095)));
   let small = Math.round(body * 0.82);
   const measure = () => {
@@ -162,7 +165,7 @@ export async function renderPoster(o: { image: Buffer; box: number[] | null; ink
         <div style={{ position: 'absolute', left: bx + pad, top: by + pad, width: innerW, height: innerH, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
           <div style={{ display: 'flex', flexDirection: 'column', width: textW, color: ink, ...(shadow ? { textShadow: shadow } : {}) }}>
             {m.tl.map((l, i) => (
-              <div key={'t' + i} style={{ fontSize: title, lineHeight: 1.18, letterSpacing: 1 }}>{l}</div>
+              <div key={'t' + i} style={{ fontSize: title, lineHeight: 1.18 }}>{l}</div>
             ))}
             <div style={{ fontSize: body, lineHeight: 1.35, marginTop: 14, color: sub }}>{t.when}</div>
             {m.loc.map((l, i) => (
@@ -201,9 +204,9 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
   const qr = 250;
   const textW = W - pad * 2 - qr - 40;
   const t = o.info;
-  let title = Math.round(Math.min(64, Math.max(36, (textW * 2) / Math.max(textWidth(t.title, 1), 1) - 2)));
+  const one = Math.floor(textW / Math.max(textWidth(t.title, 1), 1)) - 1;
+  const title = Math.round(one >= 48 ? Math.min(60, one) : Math.min(60, Math.max(36, (textW * 2) / Math.max(textWidth(t.title, 1), 1) - 2)));
   const tl = wrap(t.title, title, textW, 2);
-  if (tl.length === 1) title = Math.min(title, 60);
   const loc = wrap([t.locationName, t.address].filter(Boolean).join(' · '), 28, textW, 2);
   const org = t.organizer ? wrap(`主办：${t.organizer}`, 24, textW, 1) : [];
   const H2 = ih + SH;
