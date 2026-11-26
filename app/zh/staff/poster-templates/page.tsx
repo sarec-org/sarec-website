@@ -18,9 +18,11 @@ type Purpose = 'event' | 'greeting';
 type Cat = { key: string; name: string; tier: number; sort: number; active: boolean; purpose: Purpose; festival_date: string | null };
 type Tpl = {
   id: string; code: string | null; category_key: string; name: string; status: 'active' | 'hidden'; source: string | null;
-  version: number; uses: number; box: number[] | null; thumb: string; large: string; purpose: Purpose; sig_box: number[] | null;
+  version: number; uses: number; box: number[] | null; thumb: string; large: string; purpose: Purpose; sig_box: number[] | null; badge_pos?: string | null;
 };
-type Badge = { on: boolean; textH: number; opacity: number };
+type Badge = { on: boolean; textH: number; opacity: number; style: string; pos: string };
+const BADGE_STYLE: Record<string, string> = { seal: '细金边小章', plaque: '圆角小牌', strip: '贴条子（落款条 / 信息栏右端）' };
+const BADGE_POS: Record<string, string> = { tr: '右上角', tl: '左上角', br: '右下角', bl: '左下角', strip: '条子右端' };
 type Data = { categories: Cat[]; templates: Tpl[]; uploadOn: boolean; aiBadge?: Badge };
 const TIER: Record<number, string> = { 1: '常用', 2: '较常用', 3: '其他' };
 const PURPOSE: Record<Purpose, string> = { event: '办活动', greeting: '节日祝福' };
@@ -57,7 +59,7 @@ function PosterTemplates() {
   const [purpose, setPurpose] = useState<Purpose>('event');
   const [sigEdit, setSigEdit] = useState<{ id: string; v: string[] } | null>(null);
   const [dateEdit, setDateEdit] = useState<{ key: string; v: string } | null>(null);
-  const [badge, setBadge] = useState<{ on: boolean; textH: string; opacity: string } | null>(null);
+  const [badge, setBadge] = useState<{ on: boolean; textH: string; opacity: string; style: string; pos: string } | null>(null);
 
   const load = useCallback(async () => {
     const r = await api<Data>('/api/v1/staff/poster-templates');
@@ -140,13 +142,19 @@ function PosterTemplates() {
       </div>
 
       {d.aiBadge && (() => {
-        const b = badge ?? { on: d.aiBadge.on, textH: String(+(d.aiBadge.textH * 100).toFixed(1)), opacity: String(d.aiBadge.opacity) };
+        const b = badge ?? { on: d.aiBadge.on, textH: String(+(d.aiBadge.textH * 100).toFixed(1)), opacity: String(d.aiBadge.opacity), style: d.aiBadge.style, pos: d.aiBadge.pos };
         return (
           <div className={styles.card}>
-            <p className={styles.cardTitle}>「AI 生成」标识：{d.aiBadge.on ? `开着（字高 ${+(d.aiBadge.textH * 100).toFixed(1)}%、底板 ${d.aiBadge.opacity}）` : '关着（国家标准要求保留）'}</p>
-            <p className={styles.small} style={{ margin: '0 0 8px' }}>活动海报和祝福图成品右上角的标识（服务器出图时画，改了马上生效，不用发版）。字和底色按右上角底图深浅自动选。国家标准 GB 45438-2025 要求：标识文字高度不低于画面最短边的 5%、在角落、清晰可辨，所以字高最小 5%，不能调低。</p>
+            <p className={styles.cardTitle}>「AI 生成」标识：{d.aiBadge.on ? `开着（${BADGE_STYLE[d.aiBadge.style] ?? d.aiBadge.style}、${d.aiBadge.style === 'strip' ? '贴条子' : BADGE_POS[d.aiBadge.pos]}、字高 ${+(d.aiBadge.textH * 100).toFixed(1)}%）` : '关着（国家标准要求保留）'}</p>
+            <p className={styles.small} style={{ margin: '0 0 8px' }}>活动海报和祝福图成品右上角的标识（服务器出图时画，改了马上生效，不用发版）。字和底色按右上角底图深浅自动选。国家标准 GB 45438-2025 要求：标识文字高度不低于画面最短边的 5%、在边或角、清晰可辨，所以字高最小 5%，不能调低。每张模板还能在下面单独选位置（压到标题时换个角）。</p>
             <div className={styles.btnRow}>
               <label className={styles.small} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><input type="checkbox" checked={b.on} onChange={(e) => setBadge({ ...b, on: e.target.checked })} />画标识</label>
+              <select aria-label="样式" className={styles.select} style={{ width: 'auto', margin: 0 }} value={b.style} onChange={(e) => setBadge({ ...b, style: e.target.value })}>
+                {Object.entries(BADGE_STYLE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <select aria-label="位置" className={styles.select} style={{ width: 'auto', margin: 0 }} value={b.pos} disabled={b.style === 'strip'} onChange={(e) => setBadge({ ...b, pos: e.target.value })}>
+                {['tr', 'tl', 'br', 'bl'].map((k) => <option key={k} value={k}>{BADGE_POS[k]}</option>)}
+              </select>
               <label className={styles.small} htmlFor="ab-h">字高（画面最短边的 %，5–8）</label>
               <input id="ab-h" type="number" min={5} max={8} step={0.5} className={styles.input} style={{ maxWidth: 80, margin: 0 }} value={b.textH} onChange={(e) => setBadge({ ...b, textH: e.target.value })} />
               <label className={styles.small} htmlFor="ab-op">底板深浅（0.2–1）</label>
@@ -155,7 +163,7 @@ function PosterTemplates() {
                 const th = Number(b.textH);
                 if (!(th >= 5 && th <= 8)) return setMsg({ ok: false, text: '字高要在 5–8 之间（国家标准要求不低于画面最短边的 5%）' });
                 if (!b.on && !window.confirm('国家标准要求保留「AI 生成」标识，关掉需商会确认法律风险。确定关掉？关了以后成品图上都不再有这个标识。')) return;
-                if (await post({ action: 'set_ai_badge', on: b.on, textH: th / 100, opacity: Number(b.opacity) }, 'ab')) setBadge(null);
+                if (await post({ action: 'set_ai_badge', on: b.on, textH: th / 100, opacity: Number(b.opacity), style: b.style, pos: b.pos }, 'ab')) setBadge(null);
               }}>保存</button>
             </div>
           </div>
@@ -242,6 +250,11 @@ function PosterTemplates() {
                       {busy === 'r' + t.id ? '正在换…' : '换图'}
                       <input type="file" accept="image/jpeg,image/png,image/webp" hidden disabled={!!busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) replace(t.id, f); }} />
                     </label>
+                    <select className={styles.select} style={{ width: '100%', margin: 0 }} aria-label="AI 标识位置" value={t.badge_pos ?? ''} disabled={!!busy}
+                      onChange={(e) => post({ action: 'set_badge_pos', id: t.id, pos: e.target.value || null }, 'bp' + t.id)}>
+                      <option value="">AI 标识位置：跟全局</option>
+                      {Object.entries(BADGE_POS).map(([k, v]) => <option key={k} value={k}>AI 标识：{v}</option>)}
+                    </select>
                     <select className={styles.select} style={{ width: '100%', margin: 0 }} aria-label="改分类" value="" disabled={!!busy} onChange={(e) => e.target.value && post({ action: 'set_category', id: t.id, category: e.target.value }, 'c' + t.id)}>
                       <option value="">改分类 / 用途…</option>
                       {(['event', 'greeting'] as Purpose[]).map((p) => (

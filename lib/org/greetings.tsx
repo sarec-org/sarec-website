@@ -24,7 +24,7 @@ import { profileCompany } from '@/lib/crm/cards';
 import { bannedWord } from './texts';
 import { LARGE, fetchTemplateImage, getTemplate, imgUrl } from './posterTemplates';
 import { daysBetween, festivalsAt, laToday, type FestivalAt } from './festivals';
-import { AiBadge, AI_BADGE_DEFAULT, aiBadgeConfig, badgeZone, cornerDark, type AiBadgeCfg, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
+import { AiBadge, AI_BADGE_DEFAULT, aiBadgeConfig, placeFor, planBadge, type AiBadgeCfg, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
 
 const W = LARGE.w;
 const H = LARGE.h;
@@ -181,15 +181,13 @@ function fitLines(lines: Line[], w: number, h: number, max: number, min: number)
 
 export type GreetRenderInput = {
   image: Buffer; sigBox: number[] | null; style: GreetStyle;
-  card: GreetCard; line: string | null; avatar: Buffer | null; logo: Buffer | null; badge?: AiBadgeCfg;
+  card: GreetCard; line: string | null; avatar: Buffer | null; logo: Buffer | null; badge?: AiBadgeCfg; badgePos?: string | null;
 };
 
 /** 出图（不查库）：底图、落款 → PNG */
 export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
   const c = o.card;
   const badge = o.badge ?? AI_BADGE_DEFAULT;
-  const badgeDark = badge.on ? await cornerDark(o.image, badge) : true;
-  const zone = badgeZone(badge, W, H);
   // 各版式要排的东西（没有的不出现）
   let pic: { buf: Buffer; round: boolean } | null = null;
   let lines: Line[] = [];
@@ -213,8 +211,8 @@ export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
 
   const plate = !o.sigBox;
   const box = [...(o.sigBox ?? DEFAULT_SIG_BOX)];
-  // 落款位碰到右上角「AI 生成」标识区：顶边往下让，不盖住标识
-  if (box[2] > zone.x0 && box[1] < zone.y1) box[1] = Math.min(zone.y1 + 0.005, box[3] - 0.03);
+  // 「AI生成」标识：定位置、取色，落款位碰到就让开（box 原地改）；什么都不落款时没有条子，strip 退回右下角
+  const bp = await planBadge({ cfg: badge, img: o.image, cw: W, ch: H, place: placeFor(badge, o.badgePos), box, bar: empty ? null : plate ? 'plate' : 'painted', plateBg: 'rgba(12,14,20,0.55)' });
   const bx = box[0] * W;
   const by = box[1] * H;
   const bw = (box[2] - box[0]) * W;
@@ -269,7 +267,7 @@ export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
             )}
           </div>
         )}
-        <AiBadge cfg={badge} dark={badgeDark} />
+        <AiBadge p={bp} />
       </div>
     ),
     { width: W, height: H, fonts: [{ name: 'NotoSansSC', data: await font(), weight: 700, style: 'normal' }] }
@@ -293,5 +291,5 @@ export async function greetingPng(contactId: string, tplId: string, styleRaw: st
     style === 'personal' ? fetchPic(card.avatarUrl, 'cover', 320) : Promise.resolve(null),
     style === 'company' ? fetchPic(card.logoUrl, 'contain', 320) : Promise.resolve(null)
   ]);
-  return renderGreeting({ image, sigBox: tpl.sig_box, style, card, line, avatar, logo, badge: await aiBadgeConfig() });
+  return renderGreeting({ image, sigBox: tpl.sig_box, style, card, line, avatar, logo, badge: await aiBadgeConfig(), badgePos: tpl.badge_pos });
 }

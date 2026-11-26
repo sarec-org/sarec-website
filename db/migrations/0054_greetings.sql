@@ -93,3 +93,7 @@ INSERT INTO festival_dates (festival_key, date) VALUES
   ('winter_solstice', '2025-12-21'), ('winter_solstice', '2026-12-22'), ('winter_solstice', '2027-12-22'), ('winter_solstice', '2028-12-21'), ('winter_solstice', '2029-12-21'), ('winter_solstice', '2030-12-22'), ('winter_solstice', '2031-12-22'),
   ('christmas', '2025-12-25'), ('christmas', '2026-12-25'), ('christmas', '2027-12-25'), ('christmas', '2028-12-25'), ('christmas', '2029-12-25'), ('christmas', '2030-12-25'), ('christmas', '2031-12-25')
 ON CONFLICT DO NOTHING;
+
+-- ── 指令 88：「AI生成」标识每张模板可配位置 ──────────────────────────
+-- tr 右上 / tl 左上 / br 右下 / bl 左下 / strip 落款条、信息栏右端的底边；NULL = 用全局设置（crm_settings.ai_badge）。国标要求在边或角，所以只有这几种。
+ALTER TABLE poster_templates ADD COLUMN IF NOT EXISTS badge_pos text CHECK (badge_pos IN ('tr', 'tl', 'br', 'bl', 'strip'));

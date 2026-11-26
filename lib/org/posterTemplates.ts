@@ -19,7 +19,10 @@ import { audit } from '@/lib/crm/staff';
 import type { Staff } from '@/lib/crm/auth';
 import type { Db } from '@/lib/crm/profile';
 import { festivalsAt, laToday } from './festivals';
-import { AI_BADGE_KEY, TEXT_H_MAX, TEXT_H_MIN, aiBadgeConfig, normalizeAiBadge } from './aiBadge';
+import { AI_BADGE_KEY, BADGE_STYLES, TEXT_H_MAX, TEXT_H_MIN, aiBadgeConfig, isPlace, normalizeAiBadge } from './aiBadge';
+
+export const STYLE_LABEL: Record<string, string> = { plaque: '圆角小牌', seal: '细金边小章', strip: '贴条子' };
+export const POS_LABEL: Record<string, string> = { tr: '右上角', tl: '左上角', br: '右下角', bl: '左下角', strip: '落款条 / 信息栏右端' };
 
 export const UPLOAD_ON_KEY = 'poster_upload_on';
 /** 第一批老图（没有 box）出图时的默认信息位：画面下部 */
@@ -35,6 +38,8 @@ export type PosterTemplate = {
   id: string; code: string | null; category_key: string; name: string; image_url: string; thumb_url: string;
   box: number[] | null; ink: string | null; layout: number; sort: number; status: 'active' | 'hidden'; source: string | null;
   version: number; uses: number; created_at: Date; updated_at: Date; purpose: Purpose; sig_box: number[] | null;
+  /** 0054（指令 88）：「AI生成」标识位置 tr / tl / br / bl / strip；null = 用全局设置 */
+  badge_pos?: string | null;
 };
 /** 分类的列（festival_date 转成 'YYYY-MM-DD' 字符串，免得 date 被转成 JS 时间后差一天） */
 export const CAT_COLS = (a = '') => `${a}key, ${a}name, ${a}tier, ${a}sort, ${a}active, ${a}updated_at, ${a}purpose, to_char(${a}festival_date, 'YYYY-MM-DD') AS festival_date`;
@@ -277,15 +282,17 @@ export async function staffAction(s: Staff, b: Record<string, unknown>) {
     return { message: on ? '已打开「传自己的海报」' : '已关掉「传自己的海报」' };
   }
   if (action === 'set_ai_badge') {
-    // 「AI 生成」标识 { on, textH, opacity }：textH 是字形高度 / 画面最短边，国标 GB 45438-2025 下限 0.05，不许调低
+    // 「AI生成」标识 { on, textH, opacity, style, pos }：textH 是字形高度 / 画面最短边，国标 GB 45438-2025 下限 0.05，不许调低
     const pool = getPool();
     const before = await aiBadgeConfig(pool);
     const textH = Number(b.textH);
     if (!Number.isFinite(textH) || textH < TEXT_H_MIN - 1e-9 || textH > TEXT_H_MAX + 1e-9) throw new CrmError('bad_request', `字高要在 ${TEXT_H_MIN * 100}%–${TEXT_H_MAX * 100}% 之间（国家标准要求不低于画面最短边的 5%）`);
-    const after = normalizeAiBadge({ on: b.on !== false, textH, opacity: Number(b.opacity) });
+    if (b.style != null && !(BADGE_STYLES as readonly string[]).includes(String(b.style))) throw new CrmError('bad_request', '样式只能是 圆角小牌 / 细金边小章 / 贴条子');
+    if (b.pos != null && !['tr', 'tl', 'br', 'bl'].includes(String(b.pos))) throw new CrmError('bad_request', '位置只能在四个角（国家标准要求在边或角）');
+    const after = normalizeAiBadge({ on: b.on !== false, textH, opacity: Number(b.opacity), style: b.style ?? before.style, pos: b.pos ?? before.pos });
     await setSetting(pool, AI_BADGE_KEY, after, s.name || s.email);
     await audit(pool, s, 'ai_badge', 'setting', AI_BADGE_KEY, { before, after });
-    return { message: after.on ? `已保存：「AI 生成」标识字高 ${+(after.textH * 100).toFixed(1)}%、底板 ${after.opacity}` : '已关掉「AI 生成」标识（成品图不再画；国家标准要求保留，需商会确认法律风险）' };
+    return { message: after.on ? `已保存：「AI生成」标识 ${STYLE_LABEL[after.style]}、${after.style === 'strip' ? '贴条子' : POS_LABEL[after.pos]}、字高 ${+(after.textH * 100).toFixed(1)}%` : '已关掉「AI生成」标识（成品图不再画；国家标准要求保留，需商会确认法律风险）' };
   }
   if (action === 'set_festival_date') {
     const pool = getPool();
@@ -336,6 +343,14 @@ export async function staffAction(s: Staff, b: Record<string, unknown>) {
       await db.query(`UPDATE poster_templates SET sig_box = $2, updated_at = now() WHERE id = $1`, [t.id, sigBox ? JSON.stringify(sigBox) : null]);
       await audit(db, s, 'poster_tpl_sig_box', 'poster_template', t.id, { before: t.sig_box, after: sigBox });
       return { message: sigBox ? `已设好「${t.name}」的落款位` : `已清掉「${t.name}」的落款位（出图时用默认底部并垫底板）` };
+    }
+    if (action === 'set_badge_pos') {
+      // 指令 88：这张模板的「AI生成」标识位置（只能边 / 角）；null = 跟全局
+      const pos = b.pos == null || b.pos === '' ? null : isPlace(b.pos) ? b.pos : undefined;
+      if (pos === undefined) throw new CrmError('bad_request', '位置只能是 右上 / 左上 / 右下 / 左下 / 落款条右端');
+      await db.query(`UPDATE poster_templates SET badge_pos = $2, updated_at = now() WHERE id = $1`, [t.id, pos]);
+      await audit(db, s, 'poster_tpl_badge_pos', 'poster_template', t.id, { before: t.badge_pos ?? null, after: pos });
+      return { message: pos ? `「${t.name}」的 AI 标识放在${POS_LABEL[pos]}` : `「${t.name}」的 AI 标识跟全局设置` };
     }
     if (action === 'rename') {
       const name = txt(b.name, 30);
