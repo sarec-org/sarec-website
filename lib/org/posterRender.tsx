@@ -94,7 +94,9 @@ export async function boxLuminance(img: Buffer, box: number[]): Promise<number> 
   const top = Math.round(box[1] * H);
   const width = Math.max(1, Math.round((box[2] - box[0]) * W));
   const height = Math.max(1, Math.round((box[3] - box[1]) * H));
-  const st = await sharp(img).resize(W, H, { fit: 'fill' }).extract({ left, top, width: Math.min(width, W - left), height: Math.min(height, H - top) }).stats();
+  // 注意：sharp 的 stats() 不管前面的 resize / extract，直接算整张原图——要先 toBuffer() 把裁出来的那块落成图再算
+  const crop = await sharp(img).resize(W, H, { fit: 'fill' }).extract({ left, top, width: Math.min(width, W - left), height: Math.min(height, H - top) }).toBuffer();
+  const st = await sharp(crop).stats();
   const [r, g, b] = st.channels.map((c) => c.mean / 255);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
