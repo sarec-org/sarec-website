@@ -18,6 +18,8 @@ import { msgSecCheck } from '@/lib/crm/contentSec';
 import { checkinKeyOk } from '@/lib/crm/wechat';
 import type { Db } from '@/lib/crm/profile';
 import { markGuestIfNew } from './guest';
+import { checkTemplateForEvent } from './posterTemplates';
+import { checkOwnForEvent, getOwnPoster, ownPublicUrl } from './posterOwn';
 import { CHAIN_TEMPLATE, FEE_LABEL, FORM_FIELDS, PROMISE_SECTIONS, PROMISE_TITLE, PROMISE_VERSION, TEMPLATES, bannedWord, disclosure } from './texts';
 
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -57,7 +59,7 @@ export async function meEntry(contactId: string | null) {
   if (!contactId) return null;
   const orgs = await myOrgs(contactId);
   if (!orgs.length || !(await toolOn())) return null;
-  return { name: orgs[0].name, role: orgs[0].role, count: orgs.length };
+  return { name: orgs[0].name, role: orgs[0].role, count: orgs.length, suspended: orgs[0].status === 'suspended' };
 }
 
 async function memberOf(db: Db, contactId: string, orgId: string): Promise<Member | null> {
@@ -79,6 +81,7 @@ export type OrgEvent = {
   has_fee: boolean; fee_way: string | null; form_fields: string[]; question: string | null; list_public: 'nickname' | 'hidden'; status: string;
   sec_status: string | null; review_note: string | null; taken_down_reason: string | null; checkin_secret: string; info_version: number; poster_version: number;
   created_at: Date; published_at: Date | null;
+  updated_at: Date; poster_tpl: string | null; poster_own: string | null; // 1.7.0（迁移 0053）：选的海报模板 / 自己传的海报
 };
 
 /**
@@ -355,15 +358,21 @@ export async function createEvent(contactId: string, b: Input, orgId?: string | 
   const copiedFrom = typeof b.copyFrom === 'string' && UUID.test(b.copyFrom) ? b.copyFrom : null;
   if (copiedFrom) await eventAccess(getPool(), contactId, copiedFrom, 'helper'); // 只能从自己办过的活动"再办一场"
   const secs = Number(b.composeSecs);
+  // 1.7.0：可选海报模板（不传 / 空 = 不用模板，和以前一样）
+  const posterTpl = await checkTemplateForEvent(b.posterTpl);
+  // 1.7.0「传自己的海报」：可选 posterOwn（上传返回的 ownId / url；开关关着时带了就 403 暂未开放）。和模板都带时用自己的
+  const posterOwn = await checkOwnForEvent(b.posterOwn, contactId, m.id);
+  const tplForInsert = posterOwn ? null : posterTpl;
   const { rows } = await getPool().query<{ id: string; code: string }>(
     `INSERT INTO org_events (organizer_id, code, mode, template, title, starts_at, ends_at, timezone, location_name, address, capacity, deadline_at, description,
-        has_fee, fee_way, form_fields, question, list_public, status, sec_status, checkin_secret, copied_from, compose_secs, created_by, published_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24, CASE WHEN $19 = 'published' THEN now() END)
+        has_fee, fee_way, form_fields, question, list_public, status, sec_status, checkin_secret, copied_from, compose_secs, created_by, poster_tpl, poster_own, published_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26, CASE WHEN $19 = 'published' THEN now() END)
      RETURNING id, code`,
     [m.id, randCode(10), x.mode, x.template, x.title, x.startsAt, x.endsAt, x.timezone, x.locationName, x.address, x.capacity, x.deadlineAt, x.description,
       x.hasFee, x.feeWay, x.formFields, x.question, x.listPublic, status, sec, randomBytes(16).toString('hex'), copiedFrom,
-      Number.isFinite(secs) && secs > 0 ? Math.min(86400, Math.round(secs)) : null, contactId]
+      Number.isFinite(secs) && secs > 0 ? Math.min(86400, Math.round(secs)) : null, contactId, tplForInsert, posterOwn]
   );
+  if (tplForInsert) await getPool().query(`UPDATE poster_templates SET uses = uses + 1 WHERE id = $1`, [tplForInsert]);
   return {
     id: rows[0].id, code: rows[0].code, status,
     message: status === 'published' ? '已发布。下一步：发到群、存海报' : '已提交。新主办方的前几场要商会看一眼再公开，通常当天放行；放行前报名页只有您和帮手看得到'
@@ -377,6 +386,13 @@ export async function updateEvent(contactId: string, eventId: string, b: Input) 
     if (m.status !== 'active') throw new CrmError('forbidden', '主办方已停用，不能改活动');
     if (['taken_down', 'rejected', 'cancelled'].includes(ev.status)) throw new CrmError('bad_request', '这场活动已下架或取消，不能再改。可以「再办一场」');
     const x = await cleanInput(b, false, ev);
+    // 1.7.0：带了 posterTpl 才改模板（空 = 不用模板）；没带这个字段（老版本小程序）= 不动
+    const posterTpl: string | null = 'posterTpl' in b ? (b.posterTpl === ev.poster_tpl ? ev.poster_tpl : await checkTemplateForEvent(b.posterTpl, db)) : ev.poster_tpl;
+    let posterOwn = 'posterOwn' in b ? (b.posterOwn === ev.poster_own ? ev.poster_own : await checkOwnForEvent(b.posterOwn, contactId, ev.organizer_id, db)) : ev.poster_own;
+    // 模板和自己的海报二选一：这次传了哪一个（非空），就清掉另一个
+    let tplNext = posterTpl;
+    if ('posterTpl' in b && posterTpl && !(('posterOwn' in b) && posterOwn)) posterOwn = null;
+    if ('posterOwn' in b && posterOwn) tplNext = null;
     const textChanged = [x.title !== ev.title, (x.description ?? null) !== (ev.description ?? null), x.locationName !== ev.location_name, (x.address ?? null) !== (ev.address ?? null), (x.question ?? null) !== (ev.question ?? null)].some(Boolean);
     let status = ev.status;
     let sec = ev.sec_status;
@@ -390,9 +406,9 @@ export async function updateEvent(contactId: string, eventId: string, b: Input) 
     await db.query(
       `UPDATE org_events SET title=$2, starts_at=$3, ends_at=$4, location_name=$5, address=$6, capacity=$7, deadline_at=$8, description=$9,
               has_fee=$10, fee_way=$11, form_fields=$12, question=$13, list_public=$14, status=$15, sec_status=$16,
-              info_version = info_version + $17, updated_at = now() WHERE id = $1`,
+              info_version = info_version + $17, poster_tpl = $18, poster_own = $19, updated_at = now() WHERE id = $1`,
       [ev.id, x.title, x.startsAt, x.endsAt, x.locationName, x.address, x.capacity, x.deadlineAt, x.description, x.hasFee, x.feeWay, x.formFields, x.question,
-        x.listPublic, status, sec, infoChanged ? 1 : 0]
+        x.listPublic, status, sec, infoChanged ? 1 : 0, tplNext, posterOwn]
     );
     // 名额改大了：候补的人按顺序补上
     await fillWaitlist(db, ev.id);
@@ -413,13 +429,16 @@ export async function cancelEvent(contactId: string, eventId: string) {
 }
 
 /** 再办一场 / 改活动：取这场的全部字段（日期由小程序清空让主办方重选） */
-export async function eventForEdit(contactId: string, eventId: string) {
+export async function eventForEdit(contactId: string, eventId: string, base = '') {
   const { ev, m } = await eventAccess(getPool(), contactId, eventId, 'helper');
+  const own = ev.poster_own ? await getOwnPoster(ev.poster_own) : null;
   return {
     event: {
       id: ev.id, mode: ev.mode, template: ev.template, title: ev.title, startsAt: ev.starts_at, endsAt: ev.ends_at, timezone: ev.timezone,
       locationName: ev.location_name, address: ev.address, capacity: ev.capacity, deadlineAt: ev.deadline_at, description: ev.description,
-      hasFee: ev.has_fee, feeWay: ev.fee_way, formFields: ev.form_fields, question: ev.question, listPublic: ev.list_public, status: ev.status
+      hasFee: ev.has_fee, feeWay: ev.fee_way, formFields: ev.form_fields, question: ev.question, listPublic: ev.list_public, status: ev.status,
+      // 1.7.0：选的模板 / 自己传的海报（posterOwnUrl 走本站 /files/，不用登录头就能显示）
+      posterTpl: ev.poster_tpl ?? null, posterOwn: own?.id ?? null, posterOwnUrl: own ? ownPublicUrl(base, own.url) : null, posterOwnAi: own ? own.ai_generated : null
     },
     role: m.role
   };
@@ -749,11 +768,19 @@ export async function posterData(contactId: string, eventId: string, base: strin
   const { rows: o } = await pool.query<{ name: string; logo_url: string | null }>(`SELECT name, logo_url FROM organizers WHERE id = $1`, [ev.organizer_id]);
   const { wxConfigured } = await import('@/lib/crm/wechat');
   const b = base.replace(/\/$/, '');
+  const tplVer = ev.poster_tpl && !ev.poster_own
+    ? (await pool.query<{ version: number }>(`SELECT version FROM poster_templates WHERE id = $1`, [ev.poster_tpl])).rows[0]?.version ?? null
+    : null;
   return {
     event: { code: ev.code, title: ev.title, when: whenText(ev), locationName: ev.location_name, address: ev.address, fee: feeLabel(ev), mode: ev.mode },
     organizer: { name: o[0].name, logoUrl: o[0].logo_url ? `${b}/_next/image?url=${encodeURIComponent(o[0].logo_url)}&w=256&q=80` : null },
     codeUrl: `${b}/api/v1/org/e/${ev.code}/qr`,
-    isTestCode: !wxConfigured()
+    isTestCode: !wxConfigured(),
+    // 1.7.0：选了模板 → 服务器出成品图的地址（活动改过或模板换过图，v 跟着变）；没选 = null，小程序照旧画老海报
+    posterTpl: ev.poster_tpl ?? null,
+    posterUrl: ev.poster_own
+      ? `${b}/api/v1/org/events/${ev.id}/poster.png?v=${new Date(ev.updated_at).getTime()}-o${ev.poster_own.slice(0, 8)}`
+      : tplVer != null ? `${b}/api/v1/org/events/${ev.id}/poster.png?v=${new Date(ev.updated_at).getTime()}-${tplVer}` : null
   };
 }
 

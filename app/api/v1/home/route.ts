@@ -22,7 +22,7 @@ export const GET = handler(async (req: Request) => {
   // 指令 55：本人打开小程序首页时，顺手把卡住的图重交微信检测（和下面的取数同时跑，2 分钟一次）
   const retry = me && mpVersion(req) ? retryPendingSoon(me) : Promise.resolve();
   const v131 = sp.get('v') === '131';
-  const [data, entriesOrder, h131, showcaseEntry, mp12] = await Promise.all([
+  const [data, entriesOrder, h131, showcaseEntry, mp12, launch] = await Promise.all([
     homeData(me, { base: siteUrl(req), withQr: sp.get('qr') !== '0' }),
     // 1.3 L：首页入口顺序（后台“功能排行”页调整，立即生效）
     homeEntriesOrder(),
@@ -35,11 +35,14 @@ export const GET = handler(async (req: Request) => {
           getPool().query(`SELECT 1 FROM showcase_orgs WHERE NOT hidden LIMIT 1`)
         ]).then(([on, r]) => on === true && (r.rowCount ?? 0) > 0)
       : Promise.resolve(undefined),
-    isMp12(req)
+    isMp12(req),
+    // 1.7.0：首页「我来发起」四张大卡的文字（crm_settings.home_launch）；没有这条设置就不返回，小程序用包里的默认文字
+    getSetting<unknown>(getPool(), 'home_launch', null).then(launchCards).catch(() => null)
   ]);
   const research = sp.get('client') === 'web' ? [] : contentResearchList().items.slice(0, 6);
   // 小程序 1.2：状态卡、近期活动、上一场回顾的简介里不带金额
   const out: Record<string, unknown> = { ...data, research, entriesOrder };
+  if (launch) out.launch = launch;
   if (v131) {
     out.h131 = h131;
     out.showcaseEntry = showcaseEntry;
@@ -48,3 +51,20 @@ export const GET = handler(async (req: Request) => {
   await retry;
   return ok(isMp131(req) ? mp131Safe(safe) : safe);
 });
+
+/** 「我来发起」大卡：只认这四个 key；每项要有 t / words（字符串），tag / foot / go 可选（go = 卡底那行字，不带小程序卡底那行就不显示，配置时要带上）；不合格的项丢掉，一项都不剩就当没设置 */
+const LAUNCH_KEYS = ['l-event', 'l-meetup', 'l-card', 'l-invite'];
+function launchCards(v: unknown) {
+  if (!Array.isArray(v)) return null;
+  const s = (x: unknown, n: number) => (typeof x === 'string' ? x.trim().slice(0, n) : '');
+  const out = v
+    .filter((x): x is Record<string, unknown> => !!x && typeof x === 'object' && LAUNCH_KEYS.includes(String((x as Record<string, unknown>).key)))
+    .map((x) => {
+      const item: Record<string, string> = { key: String(x.key), t: s(x.t, 20), tag: s(x.tag, 20), words: s(x.words, 80) };
+      if (s(x.foot, 40)) item.foot = s(x.foot, 40);
+      if (s(x.go, 40)) item.go = s(x.go, 40); // 卡底那行字（例如「选模板，1 分钟发布 ›」）
+      return item;
+    })
+    .filter((x) => x.t && x.words);
+  return out.length ? out : null;
+}

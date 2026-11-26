@@ -4,5 +4,5 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import { eventForEdit, updateEvent } from '@/lib/org/service';
 type P = { params: { id: string } };
-export const GET = handler(async (req: Request, { params }: P) => ok(await eventForEdit(await requireContact(req), params.id)));
+export const GET = handler(async (req: Request, { params }: P) => ok(await eventForEdit(await requireContact(req), params.id, siteUrl(req))));
 export const PATCH = handler(async (req: Request, { params }: P) => { const me = await requireContact(req); return ok(await updateEvent(me, params.id, await body(req))); });

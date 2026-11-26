@@ -14,6 +14,8 @@ const nextConfig = {
       '/api/v1/agent/**': ['./content/**/*', './app/zh/(internal)/research/*/page.tsx'],
       // 1.4 会员下载模板（不放 public/，只经接口给会员）
       '/api/v1/tools/download/**': ['./private/tools/*'],
+      // 1.7.0 模板海报成品图：出图用的中文字体（SIL OFL）
+      '/api/v1/org/events/**': ['./lib/org/fonts/*'],
       '/api/v1/cards/**': ['./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**'],
       // 商会资料：PDF 逐页转图用 MuPDF（WebAssembly）
       '/api/v1/staff/docs/**': ['./node_modules/.pnpm/mupdf@*/node_modules/mupdf/dist/**']
