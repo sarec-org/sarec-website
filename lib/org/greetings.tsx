@@ -24,7 +24,7 @@ import { profileCompany } from '@/lib/crm/cards';
 import { bannedWord } from './texts';
 import { LARGE, fetchTemplateImage, getTemplate, imgUrl } from './posterTemplates';
 import { daysBetween, festivalsAt, laToday, type FestivalAt } from './festivals';
-import { AiBadge, AI_BADGE_DEFAULT, BADGE_ZONE, aiBadgeConfig, cornerDark, type AiBadgeCfg, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
+import { AiBadge, AI_BADGE_DEFAULT, aiBadgeConfig, badgeZone, cornerDark, type AiBadgeCfg, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
 
 const W = LARGE.w;
 const H = LARGE.h;
@@ -188,7 +188,8 @@ export type GreetRenderInput = {
 export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
   const c = o.card;
   const badge = o.badge ?? AI_BADGE_DEFAULT;
-  const badgeDark = badge.on ? await cornerDark(o.image) : true;
+  const badgeDark = badge.on ? await cornerDark(o.image, badge) : true;
+  const zone = badgeZone(badge, W, H);
   // 各版式要排的东西（没有的不出现）
   let pic: { buf: Buffer; round: boolean } | null = null;
   let lines: Line[] = [];
@@ -213,7 +214,7 @@ export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
   const plate = !o.sigBox;
   const box = [...(o.sigBox ?? DEFAULT_SIG_BOX)];
   // 落款位碰到右上角「AI 生成」标识区：顶边往下让，不盖住标识
-  if (box[2] > BADGE_ZONE.x0 && box[1] < BADGE_ZONE.y1) box[1] = Math.min(BADGE_ZONE.y1 + 0.005, box[3] - 0.03);
+  if (box[2] > zone.x0 && box[1] < zone.y1) box[1] = Math.min(zone.y1 + 0.005, box[3] - 0.03);
   const bx = box[0] * W;
   const by = box[1] * H;
   const bw = (box[2] - box[0]) * W;

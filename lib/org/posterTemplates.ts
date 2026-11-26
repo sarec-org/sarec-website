@@ -19,7 +19,7 @@ import { audit } from '@/lib/crm/staff';
 import type { Staff } from '@/lib/crm/auth';
 import type { Db } from '@/lib/crm/profile';
 import { festivalsAt, laToday } from './festivals';
-import { AI_BADGE_KEY, aiBadgeConfig, normalizeAiBadge } from './aiBadge';
+import { AI_BADGE_KEY, TEXT_H_MAX, TEXT_H_MIN, aiBadgeConfig, normalizeAiBadge } from './aiBadge';
 
 export const UPLOAD_ON_KEY = 'poster_upload_on';
 /** 第一批老图（没有 box）出图时的默认信息位：画面下部 */
@@ -277,13 +277,15 @@ export async function staffAction(s: Staff, b: Record<string, unknown>) {
     return { message: on ? '已打开「传自己的海报」' : '已关掉「传自己的海报」' };
   }
   if (action === 'set_ai_badge') {
-    // 指令 84：「AI 生成」标识 { on, size, opacity }（超范围的值会被收进 0.04–0.10 / 0.2–1）
+    // 「AI 生成」标识 { on, textH, opacity }：textH 是字形高度 / 画面最短边，国标 GB 45438-2025 下限 0.05，不许调低
     const pool = getPool();
     const before = await aiBadgeConfig(pool);
-    const after = normalizeAiBadge({ on: b.on !== false, size: Number(b.size), opacity: Number(b.opacity) });
+    const textH = Number(b.textH);
+    if (!Number.isFinite(textH) || textH < TEXT_H_MIN - 1e-9 || textH > TEXT_H_MAX + 1e-9) throw new CrmError('bad_request', `字高要在 ${TEXT_H_MIN * 100}%–${TEXT_H_MAX * 100}% 之间（国家标准要求不低于画面最短边的 5%）`);
+    const after = normalizeAiBadge({ on: b.on !== false, textH, opacity: Number(b.opacity) });
     await setSetting(pool, AI_BADGE_KEY, after, s.name || s.email);
     await audit(pool, s, 'ai_badge', 'setting', AI_BADGE_KEY, { before, after });
-    return { message: after.on ? `已保存：「AI 生成」标识宽 ${Math.round(after.size * 100)}%、不透明度 ${after.opacity}` : '已关掉「AI 生成」标识（成品图不再画）' };
+    return { message: after.on ? `已保存：「AI 生成」标识字高 ${+(after.textH * 100).toFixed(1)}%、底板 ${after.opacity}` : '已关掉「AI 生成」标识（成品图不再画；国家标准要求保留，需商会确认法律风险）' };
   }
   if (action === 'set_festival_date') {
     const pool = getPool();

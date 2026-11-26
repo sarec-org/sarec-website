@@ -16,7 +16,7 @@ import path from 'node:path';
 import { ImageResponse } from 'next/og';
 import sharp from 'sharp';
 import { getPool } from '@/lib/db/client';
-import { AI_BADGE_DEFAULT, aiBadgeConfig, type AiBadgeCfg } from './aiBadge';
+import { AI_BADGE_DEFAULT, aiBadgeConfig, badgeGeom, badgeZone, type AiBadgeCfg } from './aiBadge';
 import { CrmError } from '@/lib/crm/events';
 import { codePng, eventAccess, whenText } from './service';
 import { DEFAULT_BOX, LARGE, fetchTemplateImage, getTemplate } from './posterTemplates';
@@ -24,14 +24,13 @@ import { getOwnPoster, ownPosterBlocked } from './posterOwn';
 
 const W = LARGE.w;
 const H = LARGE.h;
-/** 信息位 / 落款位不能进入的右上角区域（标识最大 10% 宽，整块在右上角 12%×6% 里） */
-export const BADGE_ZONE = { x0: 1 - 0.12, y1: 0.06 };
 
-export { AI_BADGE_DEFAULT, AI_BADGE_KEY, aiBadgeConfig, normalizeAiBadge, type AiBadgeCfg } from './aiBadge';
+export { AI_BADGE_DEFAULT, AI_BADGE_KEY, aiBadgeConfig, badgeGeom, badgeZone, normalizeAiBadge, type AiBadgeCfg } from './aiBadge';
 
 /** 右上角标识那块底图是不是深色（深底白字＋淡黑底、浅底深字＋淡白底） */
-export async function cornerDark(img: Buffer): Promise<boolean> {
-  return (await boxLuminance(img, [1 - 0.12, 0, 1, 0.05]).catch(() => 0)) < 0.55;
+export async function cornerDark(img: Buffer, cfg: AiBadgeCfg = AI_BADGE_DEFAULT): Promise<boolean> {
+  const z = badgeZone({ ...cfg, on: true }, W, H);
+  return (await boxLuminance(img, [z.x0, 0, 1, z.y1]).catch(() => 0)) < 0.55;
 }
 
 let fontCache: Promise<Buffer> | null = null;
@@ -107,20 +106,17 @@ export async function boxLuminance(img: Buffer, box: number[]): Promise<number> 
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-export function AiBadge({ cfg = AI_BADGE_DEFAULT, dark = true, width = W }: { cfg?: AiBadgeCfg; dark?: boolean; width?: number }) {
+export function AiBadge({ cfg = AI_BADGE_DEFAULT, dark = true, w = W, h = H }: { cfg?: AiBadgeCfg; dark?: boolean; w?: number; h?: number }) {
   if (!cfg.on) return null;
-  const w = Math.round(cfg.size * width);
-  const h = Math.round(w * 0.4);
-  const fs = Math.max(10, Math.min(Math.round(h * 0.58), Math.floor((w - 8) / 3.8)));
-  const m = Math.round(width * 0.016);
+  const g = badgeGeom(cfg, w, h);
   return (
     <div
       style={{
-        position: 'absolute', right: m, top: m, width: w, height: h, borderRadius: Math.round(h / 3),
-        // 底板跟着 opacity 淡（0.55 → 0.44），字比底板实一些（0.55 → 0.9），小号也认得出
+        position: 'absolute', right: g.m, top: g.m, width: g.bw, height: g.bh, borderRadius: Math.round(g.bh / 4),
+        // 底板淡（不透明度 × 0.8），字实（不透明度 + 0.35），按角落明暗取深 / 浅
         background: dark ? `rgba(0,0,0,${(cfg.opacity * 0.8).toFixed(2)})` : `rgba(255,255,255,${(cfg.opacity * 0.9).toFixed(2)})`,
         color: dark ? `rgba(255,255,255,${Math.min(1, cfg.opacity + 0.35).toFixed(2)})` : `rgba(30,30,30,${Math.min(1, cfg.opacity + 0.35).toFixed(2)})`,
-        fontSize: fs, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        fontSize: g.fs, display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
       }}
     >
       AI 生成
@@ -133,11 +129,12 @@ export type PosterInfo = { title: string; when: string; locationName: string; ad
 /** 出图（不查库）：底图、信息、报名码 → PNG。scripts 里的样张也走这里 */
 export async function renderPoster(o: { image: Buffer; box: number[] | null; ink: string | null; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg }): Promise<Buffer> {
   const badge = o.badge ?? AI_BADGE_DEFAULT;
-  const badgeDark = badge.on ? await cornerDark(o.image) : true;
+  const badgeDark = badge.on ? await cornerDark(o.image, badge) : true;
+  const zone = badgeZone(badge, W, H);
   const plate = !o.box;
   const box = [...(o.box ?? DEFAULT_BOX)];
   // 信息位碰到右上角标识区：顶边往下让
-  if (box[2] > BADGE_ZONE.x0 && box[1] < BADGE_ZONE.y1) box[1] = BADGE_ZONE.y1 + 0.005;
+  if (box[2] > zone.x0 && box[1] < zone.y1) box[1] = zone.y1 + 0.005;
   const ink = plate ? '#FFFFFF' : o.ink && /^#[0-9a-f]{6}$/i.test(o.ink) ? o.ink : (await boxLuminance(o.image, box)) > 0.55 ? '#1E1E1E' : '#FFFFFF';
   const sub = ink;
 
@@ -250,7 +247,7 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
   const loc = wrap([t.locationName, t.address].filter(Boolean).join(' · '), 28, fitW, 2);
   const org = t.organizer ? wrap(`主办：${t.organizer}`, 24, fitW, 1) : [];
   const H2 = ih + SH;
-  const badgeDark = o.aiGenerated && badge.on ? await cornerDark(img) : true;
+  const badgeDark = o.aiGenerated && badge.on ? (await boxLuminance(img, [badgeZone(badge, W, H2).x0, 0, 1, Math.min(1, (badgeZone(badge, W, H2).y1 * H2) / ih)]).catch(() => 0)) < 0.55 : true;
   const res = new ImageResponse(
     (
       <div style={{ width: W, height: H2, display: 'flex', flexDirection: 'column', position: 'relative', fontFamily: 'NotoSansSC', background: '#FFFFFF' }}>
@@ -267,7 +264,7 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
             <div style={{ fontSize: 24, marginTop: 8, color: '#1E1E1E' }}>长按识别报名</div>
           </div>
         </div>
-        {o.aiGenerated && <AiBadge cfg={badge} dark={badgeDark} />}
+        {o.aiGenerated && <AiBadge cfg={badge} dark={badgeDark} w={W} h={H2} />}
       </div>
     ),
     { width: W, height: H2, fonts: [{ name: 'NotoSansSC', data: await font(), weight: 700, style: 'normal' }] }

@@ -20,7 +20,7 @@ type Tpl = {
   id: string; code: string | null; category_key: string; name: string; status: 'active' | 'hidden'; source: string | null;
   version: number; uses: number; box: number[] | null; thumb: string; large: string; purpose: Purpose; sig_box: number[] | null;
 };
-type Badge = { on: boolean; size: number; opacity: number };
+type Badge = { on: boolean; textH: number; opacity: number };
 type Data = { categories: Cat[]; templates: Tpl[]; uploadOn: boolean; aiBadge?: Badge };
 const TIER: Record<number, string> = { 1: '常用', 2: '较常用', 3: '其他' };
 const PURPOSE: Record<Purpose, string> = { event: '办活动', greeting: '节日祝福' };
@@ -57,7 +57,7 @@ function PosterTemplates() {
   const [purpose, setPurpose] = useState<Purpose>('event');
   const [sigEdit, setSigEdit] = useState<{ id: string; v: string[] } | null>(null);
   const [dateEdit, setDateEdit] = useState<{ key: string; v: string } | null>(null);
-  const [badge, setBadge] = useState<{ on: boolean; size: string; opacity: string } | null>(null);
+  const [badge, setBadge] = useState<{ on: boolean; textH: string; opacity: string } | null>(null);
 
   const load = useCallback(async () => {
     const r = await api<Data>('/api/v1/staff/poster-templates');
@@ -140,20 +140,22 @@ function PosterTemplates() {
       </div>
 
       {d.aiBadge && (() => {
-        const b = badge ?? { on: d.aiBadge.on, size: String(Math.round(d.aiBadge.size * 100)), opacity: String(d.aiBadge.opacity) };
+        const b = badge ?? { on: d.aiBadge.on, textH: String(+(d.aiBadge.textH * 100).toFixed(1)), opacity: String(d.aiBadge.opacity) };
         return (
           <div className={styles.card}>
-            <p className={styles.cardTitle}>「AI 生成」标识：{d.aiBadge.on ? `开着（宽 ${Math.round(d.aiBadge.size * 100)}%、不透明度 ${d.aiBadge.opacity}）` : '关着'}</p>
-            <p className={styles.small} style={{ margin: '0 0 8px' }}>活动海报和祝福图成品右上角的标识（服务器出图时画，改了马上生效，不用发版）。字和底色按右上角底图深浅自动选。微信 / 国家规定要求 AI 图有显著标识，没有明确放开前不要关。</p>
+            <p className={styles.cardTitle}>「AI 生成」标识：{d.aiBadge.on ? `开着（字高 ${+(d.aiBadge.textH * 100).toFixed(1)}%、底板 ${d.aiBadge.opacity}）` : '关着（国家标准要求保留）'}</p>
+            <p className={styles.small} style={{ margin: '0 0 8px' }}>活动海报和祝福图成品右上角的标识（服务器出图时画，改了马上生效，不用发版）。字和底色按右上角底图深浅自动选。国家标准 GB 45438-2025 要求：标识文字高度不低于画面最短边的 5%、在角落、清晰可辨，所以字高最小 5%，不能调低。</p>
             <div className={styles.btnRow}>
               <label className={styles.small} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><input type="checkbox" checked={b.on} onChange={(e) => setBadge({ ...b, on: e.target.checked })} />画标识</label>
-              <label className={styles.small} htmlFor="ab-size">宽（画面宽的 %，4–10）</label>
-              <input id="ab-size" className={styles.input} style={{ maxWidth: 70, margin: 0 }} inputMode="numeric" value={b.size} onChange={(e) => setBadge({ ...b, size: e.target.value })} />
-              <label className={styles.small} htmlFor="ab-op">不透明度（0.2–1）</label>
+              <label className={styles.small} htmlFor="ab-h">字高（画面最短边的 %，5–8）</label>
+              <input id="ab-h" type="number" min={5} max={8} step={0.5} className={styles.input} style={{ maxWidth: 80, margin: 0 }} value={b.textH} onChange={(e) => setBadge({ ...b, textH: e.target.value })} />
+              <label className={styles.small} htmlFor="ab-op">底板深浅（0.2–1）</label>
               <input id="ab-op" className={styles.input} style={{ maxWidth: 70, margin: 0 }} inputMode="decimal" value={b.opacity} onChange={(e) => setBadge({ ...b, opacity: e.target.value })} />
               <button className={`${styles.btn} ${styles.btnSmall}`} disabled={!!busy || !badge} onClick={async () => {
-                if (!b.on && !window.confirm('确定关掉「AI 生成」标识？关了以后成品图上都不再有这个标识。')) return;
-                if (await post({ action: 'set_ai_badge', on: b.on, size: Number(b.size) / 100, opacity: Number(b.opacity) }, 'ab')) setBadge(null);
+                const th = Number(b.textH);
+                if (!(th >= 5 && th <= 8)) return setMsg({ ok: false, text: '字高要在 5–8 之间（国家标准要求不低于画面最短边的 5%）' });
+                if (!b.on && !window.confirm('国家标准要求保留「AI 生成」标识，关掉需商会确认法律风险。确定关掉？关了以后成品图上都不再有这个标识。')) return;
+                if (await post({ action: 'set_ai_badge', on: b.on, textH: th / 100, opacity: Number(b.opacity) }, 'ab')) setBadge(null);
               }}>保存</button>
             </div>
           </div>
