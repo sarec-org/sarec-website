@@ -150,12 +150,32 @@ export async function checkTemplateForEvent(raw: unknown, db: Db = getPool()): P
   return rows[0].id;
 }
 
-/** 从 Blob 取模板图（大图 l / 小图 t） */
+/**
+ * 从 Blob 取模板图（大图 l / 小图 t）。
+ * - 地址带版本号、换图会换地址，所以按地址在内存里缓存（同一个函数实例里反复出图不再每次打 Blob；最多 16 张）。
+ * - 取不到（测试站 11/26 出现过 Blob 对出图函数连续回 403）：隔 400ms 再试一次；还不行把状态码、响应头里的几个关键字段和正文开头记进日志再抛错。
+ */
+const imgCache = new Map<string, Buffer>();
+const IMG_CACHE_MAX = 16;
 export async function fetchTemplateImage(t: Pick<PosterTemplate, 'image_url' | 'thumb_url'>, size: 't' | 'l'): Promise<Buffer> {
   const url = size === 't' ? t.thumb_url : t.image_url;
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`模板图取不到（${res.status}）`);
-  return Buffer.from(await res.arrayBuffer());
+  const hit = imgCache.get(url);
+  if (hit) return hit;
+  let res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) {
+    await new Promise((r) => setTimeout(r, 400));
+    res = await fetch(url, { cache: 'no-store', headers: { 'User-Agent': 'sarec-poster/1.0' } });
+  }
+  if (!res.ok) {
+    const h = ['server', 'x-vercel-id', 'x-vercel-error', 'x-vercel-mitigated', 'content-type', 'cache-control'].map((k) => `${k}=${res.headers.get(k) ?? ''}`).join(' ');
+    const body = (await res.text().catch(() => '')).slice(0, 200).replace(/\s+/g, ' ');
+    console.error('[poster template image]', res.status, url.replace(/^https:\/\/[^/]+/, ''), h, body);
+    throw new Error(`模板图取不到（${res.status}）`);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  imgCache.set(url, buf);
+  if (imgCache.size > IMG_CACHE_MAX) imgCache.delete(imgCache.keys().next().value as string);
+  return buf;
 }
 
 // ── 后台 ─────────────────────────────────────────────────────────────
