@@ -2,7 +2,7 @@
  *      promise: { title, version, points（《主办方数据承诺》要点；全文看 /api/v1/org/promise） } }。不用登录（登录了才有 me / isOrganizer）。
  *  POST 指令 81：
  *   - mode = auto：{ orgName, logoUrl?, personName?, phone?, agree: true } → 当场开通 → { ok, auto: true, organizer: { id, name } }（已是主办方直接返回已有的）
- *   - mode = review：「我也要办活动」申请（和以前一样）：{ orgName, personName, phone, note, from } → { ok, message } */
+ *   - mode = review，或老版本小程序（请求里没有 agree 字段）：「我也要办活动」申请（和以前一样）：{ orgName, personName, phone, note, from } → { ok, message } */
 import { body, handler, ok, optionalContact, requireContact } from '@/lib/crm/http';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,5 +11,7 @@ export const GET = handler(async (req: Request) => ok(await applyInfo(await opti
 export const POST = handler(async (req: Request) => {
   const me = await requireContact(req);
   const b = await body(req);
-  return ok((await openMode()) === 'auto' ? await openNow(me, b) : await apply(me, b));
+  // 老版本小程序（1.7.0 之前的申请页）不带 agree 字段：照老办法收申请，不让它报错；新开通页一定带 agree
+  const auto = (await openMode()) === 'auto' && 'agree' in b;
+  return ok(auto ? await openNow(me, b) : await apply(me, b));
 });
