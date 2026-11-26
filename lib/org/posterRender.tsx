@@ -26,10 +26,10 @@ const H = LARGE.h;
 /** 「AI 生成」标识：右上角，宽 104（9.6%）、高 40（2.5%），整块在右上角 12%×6% 范围里 */
 const BADGE = { right: 22, top: 22, w: 104, h: 40 };
 /** 信息位不能进入的右上角区域（标识所在的 12%×6%） */
-const BADGE_ZONE = { x0: 1 - 0.12, y1: 0.06 };
+export const BADGE_ZONE = { x0: 1 - 0.12, y1: 0.06 };
 
 let fontCache: Promise<Buffer> | null = null;
-function font(): Promise<Buffer> {
+export function font(): Promise<Buffer> {
   if (!fontCache) {
     fontCache = readFile(path.join(process.cwd(), 'lib/org/fonts/NotoSansSC-Bold.otf')).catch((e) => {
       fontCache = null;
@@ -41,10 +41,10 @@ function font(): Promise<Buffer> {
 
 /** 去掉表情符号等字体里没有的字（避免出图时去网上找字体） */
 const EMOJI = new RegExp('[\\p{Extended_Pictographic}\\u{FE0F}\\u{200D}]', 'gu');
-const clean = (s: string | null | undefined) => String(s ?? '').replace(EMOJI, '').replace(/\s+/g, ' ').trim();
+export const clean = (s: string | null | undefined) => String(s ?? '').replace(EMOJI, '').replace(/\s+/g, ' ').trim();
 
 /** 估算一行字的宽度（中文 / 全角 1em；英文小写和数字约 0.62em、大写 0.74em、空格 0.28em、半角标点 0.36em——宁宽勿窄） */
-function textWidth(s: string, size: number): number {
+export function textWidth(s: string, size: number): number {
   let w = 0;
   for (const ch of s) {
     if (ch === ' ') w += 0.28;
@@ -56,9 +56,9 @@ function textWidth(s: string, size: number): number {
   return w * size;
 }
 /** 每一行固定行高（satori 按字体自身的上下高度排行，lineHeight 小于它时不生效；固定高度才和估算一致） */
-const ln = (size: number, k: number) => ({ height: Math.round(size * k), lineHeight: `${Math.round(size * k)}px`, display: 'flex' as const, alignItems: 'center' as const, overflow: 'hidden' as const });
+export const ln = (size: number, k: number) => ({ height: Math.round(size * k), lineHeight: `${Math.round(size * k)}px`, display: 'flex' as const, alignItems: 'center' as const, overflow: 'hidden' as const });
 /** 按宽度断行（最多 n 行，放不下的最后一行末尾加「…」） */
-function wrap(s: string, size: number, width: number, n: number): string[] {
+export function wrap(s: string, size: number, width: number, n: number): string[] {
   const chars = Array.from(s);
   const lines: string[] = [];
   let cur = '';
@@ -89,7 +89,7 @@ function wrap(s: string, size: number, width: number, n: number): string[] {
 }
 
 /** 信息位底色深浅（0 黑 – 1 白） */
-async function boxLuminance(img: Buffer, box: number[]): Promise<number> {
+export async function boxLuminance(img: Buffer, box: number[]): Promise<number> {
   const left = Math.round(box[0] * W);
   const top = Math.round(box[1] * H);
   const width = Math.max(1, Math.round((box[2] - box[0]) * W));
@@ -99,7 +99,7 @@ async function boxLuminance(img: Buffer, box: number[]): Promise<number> {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function AiBadge() {
+export function AiBadge() {
   return (
     <div
       style={{

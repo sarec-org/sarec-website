@@ -16,6 +16,8 @@ const nextConfig = {
       '/api/v1/tools/download/**': ['./private/tools/*'],
       // 1.7.0 模板海报成品图：出图用的中文字体（SIL OFL）
       '/api/v1/org/events/**': ['./lib/org/fonts/*'],
+      // 1.7.0 节日祝福成品图：同一个字体
+      '/api/v1/greetings/**': ['./lib/org/fonts/*'],
       '/api/v1/cards/**': ['./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**'],
       // 商会资料：PDF 逐页转图用 MuPDF（WebAssembly）
       '/api/v1/staff/docs/**': ['./node_modules/.pnpm/mupdf@*/node_modules/mupdf/dist/**']

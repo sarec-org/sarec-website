@@ -59,7 +59,7 @@ async function ensureCard(db: Db, contactId: string) {
 }
 
 /** 名片资料：未填公司职位时，用资料题 Q12（公司和职位）的回答预填 */
-async function profileCompany(db: Db, contactId: string): Promise<string | null> {
+export async function profileCompany(db: Db, contactId: string): Promise<string | null> {
   const { rows } = await db.query<{ value: { text?: string } }>(
     `SELECT value FROM profile_answers WHERE contact_id = $1 AND item_code = 'Q12' AND status = 'current' AND NOT is_unknown`,
     [contactId]

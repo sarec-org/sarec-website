@@ -6,6 +6,8 @@
  * - 主办方发布 / 改活动时可选一张模板（org_events.poster_tpl），出海报时服务器把字印在模板的信息位（box）上。
  * - 后台（/zh/staff/poster-templates）：上传 / 换图 / 下架 / 恢复 / 上下移 / 改分类 / 改名；「传自己的海报」开关。全部记 crm_audit_log。
  * - 图存 Vercel Blob：poster-templates/<分类>/<编号>_{t,l}_v<版本>.jpg（不加随机后缀；正式站和测试站共用同一批模板图）。
+ * - 迁移 0054（节日祝福）：分类和模板都有 purpose（'event' 办活动 / 'greeting' 节日祝福）。这里的小程序清单、发活动选模板只认 event；
+ *   祝福的清单和出图在 lib/org/greetings.ts。模板的用途跟着分类走（上传、改分类时自动对齐）。祝福模板多一个落款位 sig_box，祝福分类多一个节日日期 festival_date。
  */
 import { randomBytes } from 'node:crypto';
 import { put } from '@vercel/blob';
@@ -24,12 +26,16 @@ export const LARGE = { w: 1080, h: 1620 };
 export const THUMB = { w: 300, h: 450 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type PosterCategory = { key: string; name: string; tier: number; sort: number; active: boolean; updated_at: Date | null };
+export type Purpose = 'event' | 'greeting';
+export const PURPOSE_LABEL: Record<Purpose, string> = { event: '办活动', greeting: '节日祝福' };
+export type PosterCategory = { key: string; name: string; tier: number; sort: number; active: boolean; updated_at: Date | null; purpose: Purpose; festival_date: string | null };
 export type PosterTemplate = {
   id: string; code: string | null; category_key: string; name: string; image_url: string; thumb_url: string;
   box: number[] | null; ink: string | null; layout: number; sort: number; status: 'active' | 'hidden'; source: string | null;
-  version: number; uses: number; created_at: Date; updated_at: Date;
+  version: number; uses: number; created_at: Date; updated_at: Date; purpose: Purpose; sig_box: number[] | null;
 };
+/** 分类的列（festival_date 转成 'YYYY-MM-DD' 字符串，免得 date 被转成 JS 时间后差一天） */
+export const CAT_COLS = (a = '') => `${a}key, ${a}name, ${a}tier, ${a}sort, ${a}active, ${a}updated_at, ${a}purpose, to_char(${a}festival_date, 'YYYY-MM-DD') AS festival_date`;
 
 export const blobPath = (category: string, code: string, size: 't' | 'l', version: number) => `poster-templates/${category}/${code}_${size}_v${version}.jpg`;
 export const imgUrl = (base: string, id: string, version: number, size: 't' | 'l') => `${base.replace(/\/$/, '')}/api/v1/poster-img/${id}/${version}/${size}.jpg`;
@@ -40,12 +46,13 @@ export const uploadOn = (db: Db = getPool()) => getSetting<boolean>(db, UPLOAD_O
 // ── 小程序清单（不要求登录） ─────────────────────────────────────────
 export async function publicList(base: string) {
   const pool = getPool();
-  const { rows: cats } = await pool.query<PosterCategory>(`SELECT * FROM poster_categories WHERE active ORDER BY tier, sort, key`);
+  // 0054：只给「办活动」用途的分类和模板（祝福的走 /api/v1/greetings）
+  const { rows: cats } = await pool.query<PosterCategory>(`SELECT ${CAT_COLS()} FROM poster_categories WHERE active AND purpose = 'event' ORDER BY tier, sort, key`);
   const { rows: tpls } = await pool.query<PosterTemplate>(
     `SELECT t.* FROM poster_templates t JOIN poster_categories c ON c.key = t.category_key
-      WHERE t.status = 'active' AND c.active ORDER BY t.sort, t.created_at`
+      WHERE t.status = 'active' AND c.active AND t.purpose = 'event' AND c.purpose = 'event' ORDER BY t.sort, t.created_at`
   );
-  const { rows: v } = await pool.query<{ ms: string | null }>(`SELECT (extract(epoch FROM max(updated_at)) * 1000)::bigint::text AS ms FROM poster_templates`);
+  const { rows: v } = await pool.query<{ ms: string | null }>(`SELECT (extract(epoch FROM max(updated_at)) * 1000)::bigint::text AS ms FROM poster_templates WHERE purpose = 'event'`);
   const by = new Map<string, PosterTemplate[]>();
   for (const t of tpls) by.set(t.category_key, [...(by.get(t.category_key) ?? []), t]);
   return {
@@ -72,7 +79,8 @@ export async function checkTemplateForEvent(raw: unknown, db: Db = getPool()): P
   const id = String(raw).trim();
   if (!UUID.test(id)) throw new CrmError('bad_request', '选的海报模板不对，请重新选一张');
   const { rows } = await db.query<{ id: string }>(
-    `SELECT t.id FROM poster_templates t JOIN poster_categories c ON c.key = t.category_key WHERE t.id = $1 AND t.status = 'active' AND c.active`,
+    `SELECT t.id FROM poster_templates t JOIN poster_categories c ON c.key = t.category_key
+      WHERE t.id = $1 AND t.status = 'active' AND c.active AND t.purpose = 'event' AND c.purpose = 'event'`,
     [id]
   ).catch(() => ({ rows: [] as { id: string }[] }));
   if (!rows[0]) throw new CrmError('bad_request', '这张海报模板已经下架了，请换一张');
@@ -90,7 +98,7 @@ export async function fetchTemplateImage(t: Pick<PosterTemplate, 'image_url' | '
 // ── 后台 ─────────────────────────────────────────────────────────────
 export async function staffList() {
   const pool = getPool();
-  const { rows: categories } = await pool.query<PosterCategory>(`SELECT * FROM poster_categories ORDER BY tier, sort, key`);
+  const { rows: categories } = await pool.query<PosterCategory>(`SELECT ${CAT_COLS()} FROM poster_categories ORDER BY purpose, tier, sort, key`);
   const { rows: templates } = await pool.query<PosterTemplate>(`SELECT * FROM poster_templates ORDER BY category_key, sort, created_at`);
   return {
     categories,
@@ -123,7 +131,7 @@ const txt = (v: unknown, n: number) => (typeof v === 'string' ? v.trim().slice(0
 const INK = /^#[0-9a-f]{6}$/i;
 
 async function mustCategory(db: Db, key: string): Promise<PosterCategory> {
-  const { rows } = await db.query<PosterCategory>(`SELECT * FROM poster_categories WHERE key = $1`, [key]);
+  const { rows } = await db.query<PosterCategory>(`SELECT ${CAT_COLS()} FROM poster_categories WHERE key = $1`, [key]);
   if (!rows[0]) throw new CrmError('bad_request', '请选分类');
   return rows[0];
 }
@@ -133,8 +141,8 @@ async function mustTemplate(db: Db, id: string): Promise<PosterTemplate> {
   return t;
 }
 
-/** 上传新模板：排在这个分类最后，默认上架 */
-export async function uploadNew(s: Staff, f: { category: string; name: string; file: Buffer; box?: unknown; ink?: unknown }) {
+/** 上传新模板：排在这个分类最后，默认上架；用途跟着分类（祝福分类的模板可以带落款位 sigBox） */
+export async function uploadNew(s: Staff, f: { category: string; name: string; file: Buffer; box?: unknown; ink?: unknown; sigBox?: unknown }) {
   const pool = getPool();
   const cat = await mustCategory(pool, txt(f.category, 40));
   const name = txt(f.name, 30);
@@ -144,12 +152,13 @@ export async function uploadNew(s: Staff, f: { category: string; name: string; f
   const urls = await putImages(cat.key, code, 1, imgs);
   const box = parseBox(f.box);
   const ink = typeof f.ink === 'string' && INK.test(f.ink) ? f.ink : null;
+  const sigBox = cat.purpose === 'greeting' ? parseSigBox(f.sigBox) : null;
   const { rows } = await pool.query<{ id: string }>(
-    `INSERT INTO poster_templates (code, category_key, name, image_url, thumb_url, box, ink, layout, sort, source)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 1, (SELECT coalesce(max(sort), 0) + 1 FROM poster_templates WHERE category_key = $2), '后台上传') RETURNING id`,
-    [code, cat.key, name, urls.imageUrl, urls.thumbUrl, box ? JSON.stringify(box) : null, ink]
+    `INSERT INTO poster_templates (code, category_key, name, image_url, thumb_url, box, ink, layout, sort, source, purpose, sig_box)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 1, (SELECT coalesce(max(sort), 0) + 1 FROM poster_templates WHERE category_key = $2), '后台上传', $8, $9) RETURNING id`,
+    [code, cat.key, name, urls.imageUrl, urls.thumbUrl, box ? JSON.stringify(box) : null, ink, cat.purpose, sigBox ? JSON.stringify(sigBox) : null]
   );
-  await audit(pool, s, 'poster_tpl_upload', 'poster_template', rows[0].id, { after: { code, category: cat.key, name } });
+  await audit(pool, s, 'poster_tpl_upload', 'poster_template', rows[0].id, { after: { code, category: cat.key, name, purpose: cat.purpose, sigBox } });
   return { id: rows[0].id, message: `已上传「${name}」到「${cat.name}」，小程序 1 分钟内能看到` };
 }
 
@@ -177,7 +186,27 @@ export function parseBox(v: unknown): number[] | null {
   return n.map((x) => Math.round(x * 10000) / 10000);
 }
 
-/** 后台的各种小改动：下架 / 恢复 / 上下移 / 改分类 / 改名 */
+/** 落款位 [x0,y0,x1,y1]（0–1）：比信息位放宽（落款可以只占一窄条：宽 ≥ 0.2、高 ≥ 0.04） */
+export function parseSigBox(v: unknown): number[] | null {
+  if (v == null || v === '') return null;
+  let a = v;
+  if (typeof v === 'string') { try { a = JSON.parse(v); } catch { return null; } }
+  if (!Array.isArray(a) || a.length !== 4) return null;
+  const n = a.map(Number);
+  if (n.some((x) => !Number.isFinite(x) || x < 0 || x > 1)) return null;
+  if (n[2] - n[0] < 0.2 || n[3] - n[1] < 0.04) return null;
+  return n.map((x) => Math.round(x * 10000) / 10000);
+}
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** 'YYYY-MM-DD' 而且是真实存在的日期 */
+export function parseDate(v: unknown): string | null {
+  const s = typeof v === 'string' ? v.trim() : '';
+  if (!DATE.test(s)) return null;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : null;
+}
+
+/** 后台的各种小改动：下架 / 恢复 / 上下移 / 改分类 / 改名 / 落款位（祝福）/ 节日日期（祝福分类） */
 export async function staffAction(s: Staff, b: Record<string, unknown>) {
   const action = String(b.action ?? '');
   if (action === 'set_upload_on') {
@@ -187,6 +216,16 @@ export async function staffAction(s: Staff, b: Record<string, unknown>) {
     await setSetting(pool, UPLOAD_ON_KEY, on, s.name || s.email);
     await audit(pool, s, 'poster_upload_on', 'setting', UPLOAD_ON_KEY, { before, after: on });
     return { message: on ? '已打开「传自己的海报」' : '已关掉「传自己的海报」' };
+  }
+  if (action === 'set_festival_date') {
+    const pool = getPool();
+    const cat = await mustCategory(pool, txt(b.category, 40));
+    if (cat.purpose !== 'greeting') throw new CrmError('bad_request', '只有祝福分类有节日日期');
+    const date = parseDate(b.date);
+    if (!date) throw new CrmError('bad_request', '日期格式不对，请按 2026-12-25 这样写');
+    await pool.query(`UPDATE poster_categories SET festival_date = $2, updated_at = now() WHERE key = $1`, [cat.key, date]);
+    await audit(pool, s, 'poster_cat_date', 'poster_category', cat.key, { before: cat.festival_date, after: date });
+    return { message: `已把「${cat.name}」的日期改成 ${date}` };
   }
   const id = String(b.id ?? '');
   return withTransaction(async (db) => {
@@ -213,9 +252,20 @@ export async function staffAction(s: Staff, b: Record<string, unknown>) {
     if (action === 'set_category') {
       const cat = await mustCategory(db, txt(b.category, 40));
       if (cat.key === t.category_key) return { message: '分类没变' };
-      await db.query(`UPDATE poster_templates SET category_key = $2, sort = (SELECT coalesce(max(sort), 0) + 1 FROM poster_templates WHERE category_key = $2), updated_at = now() WHERE id = $1`, [t.id, cat.key]);
-      await audit(db, s, 'poster_tpl_category', 'poster_template', t.id, { before: t.category_key, after: cat.key });
-      return { message: `已把「${t.name}」挪到「${cat.name}」（排在最后）` };
+      // 用途跟着新分类走（活动 ↔ 祝福）
+      await db.query(`UPDATE poster_templates SET category_key = $2, purpose = $3, sort = (SELECT coalesce(max(sort), 0) + 1 FROM poster_templates WHERE category_key = $2), updated_at = now() WHERE id = $1`, [t.id, cat.key, cat.purpose]);
+      await audit(db, s, 'poster_tpl_category', 'poster_template', t.id, { before: { category: t.category_key, purpose: t.purpose }, after: { category: cat.key, purpose: cat.purpose } });
+      const moved = cat.purpose !== t.purpose ? `，用途改成「${PURPOSE_LABEL[cat.purpose]}」` : '';
+      return { message: `已把「${t.name}」挪到「${cat.name}」（排在最后${moved}）` };
+    }
+    if (action === 'set_sig_box') {
+      if (t.purpose !== 'greeting') throw new CrmError('bad_request', '只有祝福模板有落款位');
+      const clear = b.sigBox == null || b.sigBox === '';
+      const sigBox = clear ? null : parseSigBox(b.sigBox);
+      if (!clear && !sigBox) throw new CrmError('bad_request', '落款位要填 4 个 0–1 之间的数（左、上、右、下），宽至少 0.2、高至少 0.04');
+      await db.query(`UPDATE poster_templates SET sig_box = $2, updated_at = now() WHERE id = $1`, [t.id, sigBox ? JSON.stringify(sigBox) : null]);
+      await audit(db, s, 'poster_tpl_sig_box', 'poster_template', t.id, { before: t.sig_box, after: sigBox });
+      return { message: sigBox ? `已设好「${t.name}」的落款位` : `已清掉「${t.name}」的落款位（出图时用默认底部并垫底板）` };
     }
     if (action === 'rename') {
       const name = txt(b.name, 30);
@@ -229,8 +279,12 @@ export async function staffAction(s: Staff, b: Record<string, unknown>) {
 }
 
 // ── 导入（给测试站灌数据；正式库走双击文件里的 SQL） ─────────────────
-type ImportCat = { key?: unknown; name?: unknown; tier?: unknown; sort?: unknown };
-type ImportTpl = { code?: unknown; category_key?: unknown; name?: unknown; image_url?: unknown; thumb_url?: unknown; box?: unknown; ink?: unknown; layout?: unknown; sort?: unknown; source?: unknown };
+type ImportCat = { key?: unknown; name?: unknown; tier?: unknown; sort?: unknown; purpose?: unknown; festival_date?: unknown };
+type ImportTpl = {
+  code?: unknown; category_key?: unknown; name?: unknown; image_url?: unknown; thumb_url?: unknown; box?: unknown; ink?: unknown; layout?: unknown; sort?: unknown; source?: unknown;
+  purpose?: unknown; sig_box?: unknown;
+};
+const purposeOf = (v: unknown): Purpose | null => (v === 'event' || v === 'greeting' ? v : null);
 const BLOB_URL = /^https:\/\/[a-z0-9]+\.public\.blob\.vercel-storage\.com\/poster-templates\//i;
 
 export async function importData(s: Staff, b: { categories?: ImportCat[]; templates?: ImportTpl[] }) {
@@ -245,7 +299,12 @@ export async function importData(s: Staff, b: { categories?: ImportCat[]; templa
       const key = txt(x.key, 40);
       const name = txt(x.name, 20);
       if (!/^[a-z0-9_-]+$/.test(key) || !name) throw new CrmError('bad_request', `分类「${key || name}」的 key / 名字不对`);
-      const r = await db.query(`INSERT INTO poster_categories (key, name, tier, sort) VALUES ($1, $2, $3, $4) ON CONFLICT (key) DO NOTHING`, [key, name, int(x.tier, 3), int(x.sort, 0)]);
+      if (x.purpose != null && !purposeOf(x.purpose)) throw new CrmError('bad_request', `分类「${key}」的用途只能是 event / greeting`);
+      if (x.festival_date != null && x.festival_date !== '' && !parseDate(x.festival_date)) throw new CrmError('bad_request', `分类「${key}」的日期要写成 2026-12-25 这样`);
+      const r = await db.query(
+        `INSERT INTO poster_categories (key, name, tier, sort, purpose, festival_date) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (key) DO NOTHING`,
+        [key, name, int(x.tier, 3), int(x.sort, 0), purposeOf(x.purpose) ?? 'event', parseDate(x.festival_date)]
+      );
       c += r.rowCount ?? 0;
     }
     for (const x of tpls) {
@@ -254,11 +313,20 @@ export async function importData(s: Staff, b: { categories?: ImportCat[]; templa
       const thumbUrl = txt(x.thumb_url, 500);
       if (!code || !txt(x.name, 30) || !BLOB_URL.test(imageUrl) || !BLOB_URL.test(thumbUrl)) throw new CrmError('bad_request', `模板「${code}」缺编号 / 名字，或图片不是 poster-templates 下的 Blob 地址`);
       const box = parseBox(x.box);
+      // 用途：传了就按传的，没传跟着分类；和分类不一致的拒收（不然两边清单都不出现）
+      if (x.purpose != null && !purposeOf(x.purpose)) throw new CrmError('bad_request', `模板「${code}」的用途只能是 event / greeting`);
+      const { rows: cr } = await db.query<{ purpose: Purpose }>(`SELECT purpose FROM poster_categories WHERE key = $1`, [txt(x.category_key, 40)]);
+      if (!cr[0]) throw new CrmError('bad_request', `模板「${code}」的分类「${txt(x.category_key, 40)}」不存在`);
+      const purpose = purposeOf(x.purpose) ?? cr[0].purpose;
+      if (purpose !== cr[0].purpose) throw new CrmError('bad_request', `模板「${code}」的用途和分类「${txt(x.category_key, 40)}」的用途不一致`);
+      const sigBox = x.sig_box == null || x.sig_box === '' ? null : parseSigBox(x.sig_box);
+      if (x.sig_box != null && x.sig_box !== '' && !sigBox) throw new CrmError('bad_request', `模板「${code}」的落款位不对（4 个 0–1 的数，宽 ≥ 0.2、高 ≥ 0.04）`);
       const r = await db.query(
-        `INSERT INTO poster_templates (code, category_key, name, image_url, thumb_url, box, ink, layout, sort, source)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (code) DO NOTHING`,
+        `INSERT INTO poster_templates (code, category_key, name, image_url, thumb_url, box, ink, layout, sort, source, purpose, sig_box)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT (code) DO NOTHING`,
         [code, txt(x.category_key, 40), txt(x.name, 30), imageUrl, thumbUrl, box ? JSON.stringify(box) : null,
-          typeof x.ink === 'string' && INK.test(x.ink) ? x.ink : null, int(x.layout, 1), int(x.sort, 0), txt(x.source, 40) || null]
+          typeof x.ink === 'string' && INK.test(x.ink) ? x.ink : null, int(x.layout, 1), int(x.sort, 0), txt(x.source, 40) || null,
+          purpose, purpose === 'greeting' && sigBox ? JSON.stringify(sigBox) : null]
       );
       t += r.rowCount ?? 0;
     }
