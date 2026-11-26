@@ -18,7 +18,12 @@ import { msgSecCheck } from '@/lib/crm/contentSec';
 import { checkinKeyOk } from '@/lib/crm/wechat';
 import type { Db } from '@/lib/crm/profile';
 import { markGuestIfNew } from './guest';
-import { CHAIN_TEMPLATE, FEE_LABEL, FORM_FIELDS, PROMISE_SECTIONS, PROMISE_TITLE, PROMISE_VERSION, TEMPLATES, bannedWord, disclosure } from './texts';
+import { workbenchAccess } from '@/lib/crm/workbench';
+import { setMethod } from '@/lib/crm/contactInfo';
+import { submitImage } from '@/lib/crm/imageGate';
+import { checkTemplateForEvent } from './posterTemplates';
+import { checkOwnForEvent, getOwnPoster, ownPublicUrl } from './posterOwn';
+import { CHAIN_TEMPLATE, FEE_LABEL, FORM_FIELDS, PROMISE_POINTS, PROMISE_SECTIONS, PROMISE_TITLE, PROMISE_VERSION, TEMPLATES, bannedWord, disclosure } from './texts';
 
 const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const randCode = (n: number) => Array.from(randomBytes(n)).map((b) => ALPHA[b % ALPHA.length]).join('');
@@ -32,6 +37,14 @@ export const SUSPEND_EXPORT_DAYS = 30;
 export const toolOn = (db: Db = getPool()) => getSetting<boolean>(db, 'org_tool_on', true).then((v) => v !== false);
 /** 接龙模式开关（没有记录 = 关）：第一版代码里有，开关关着；第二版单独提审再打开 */
 export const chainOn = (db: Db = getPool()) => getSetting<boolean>(db, 'org_chain_on', false).then((v) => v === true);
+
+/**
+ * 指令 81（11/26）主办方开通方式：'auto'（默认，没有记录 = auto）= 当场开通、先发后审；'review' = 老办法（填申请、商会开通码、新主办方前几场人工放行）。
+ * 万一微信审核因为"人人可发布"驳回，后台「主办方」页把它拨到"需审核"再提审，不用换包。
+ */
+export type OpenMode = 'auto' | 'review';
+export const openMode = (db: Db = getPool()): Promise<OpenMode> =>
+  getSetting<string>(db, 'org_open_mode', 'auto').then((v) => (v === 'review' ? 'review' : 'auto'));
 
 async function requireToolOn() {
   if (!(await toolOn())) throw new CrmError('org_off', '活动工具暂停使用，请稍后再来');
@@ -55,9 +68,12 @@ export async function myOrgs(contactId: string, db: Db = getPool()): Promise<Mem
 /** 「我的」页用：这个人是不是主办方（总开关关着时不给入口） */
 export async function meEntry(contactId: string | null) {
   if (!contactId) return null;
-  const orgs = await myOrgs(contactId);
-  if (!orgs.length || !(await toolOn())) return null;
-  return { name: orgs[0].name, role: orgs[0].role, count: orgs.length };
+  if (!(await toolOn())) return null;
+  let orgs = await myOrgs(contactId);
+  // 指令 81：工作人员还没有任何主办方身份 → 自动成为「中美房地产商会」主办方的负责人
+  if (!orgs.length && (await ensureStaffOrg(contactId))) orgs = await myOrgs(contactId);
+  if (!orgs.length) return null;
+  return { name: orgs[0].name, role: orgs[0].role, count: orgs.length, suspended: orgs[0].status === 'suspended' };
 }
 
 async function memberOf(db: Db, contactId: string, orgId: string): Promise<Member | null> {
@@ -79,6 +95,7 @@ export type OrgEvent = {
   has_fee: boolean; fee_way: string | null; form_fields: string[]; question: string | null; list_public: 'nickname' | 'hidden'; status: string;
   sec_status: string | null; review_note: string | null; taken_down_reason: string | null; checkin_secret: string; info_version: number; poster_version: number;
   created_at: Date; published_at: Date | null;
+  updated_at: Date; poster_tpl: string | null; poster_own: string | null; // 1.7.0（迁移 0053）：选的海报模板 / 自己传的海报
 };
 
 /**
@@ -99,7 +116,7 @@ export async function eventAccess(db: Db, contactId: string, eventId: string, ne
 async function pickOrg(contactId: string, orgId?: string | null): Promise<Member> {
   const orgs = await myOrgs(contactId);
   const m = orgId ? orgs.find((o) => o.id === orgId) : orgs[0];
-  if (!m) throw new CrmError('forbidden', '您还不是开通的主办方。想办活动可以在活动页底部点「我也要办活动」申请。');
+  if (!m) throw new CrmError('forbidden', '您还不是主办方。点「办活动」开通后就能发活动。');
   return m;
 }
 
@@ -173,22 +190,30 @@ export async function claimCode(contactId: string, raw: string, agree: boolean) 
     }
     const { rows: ex } = await db.query<{ role: string; removed_at: Date | null }>(`SELECT role, removed_at FROM organizer_members WHERE organizer_id = $1 AND contact_id = $2`, [r.organizer_id, contactId]);
     if (ex[0] && !ex[0].removed_at && ex[0].role === 'owner' && r.kind === 'helper') throw new CrmError('bad_request', '您已经是这个主办方的负责人了');
-    await db.query(
-      `INSERT INTO organizer_members (organizer_id, contact_id, role, added_by) VALUES ($1, $2, $3, $4)
-       ON CONFLICT (organizer_id, contact_id) DO UPDATE SET role = EXCLUDED.role, removed_at = NULL, added_at = now(), added_by = EXCLUDED.added_by`,
-      [r.organizer_id, contactId, r.kind, `code:${r.code}`]
-    );
-    if (r.kind === 'owner') {
-      await db.query(
-        `UPDATE organizers SET status = 'active', agreed_at = now(), agreed_version = $2, agreed_by = $3, updated_at = now() WHERE id = $1`,
-        [r.organizer_id, PROMISE_VERSION, contactId]
-      );
-    }
+    await bindMember(db, r.organizer_id, contactId, r.kind, `code:${r.code}`);
     await db.query(`UPDATE organizer_codes SET used_at = now(), used_by = $2 WHERE code = $1`, [r.code, contactId]);
-    // 负责人 / 帮手本身是商会认可的合作方：不算"主办方的客人"
-    await db.query(`UPDATE contacts SET org_guest_since = NULL WHERE id = $1`, [contactId]);
     return { organizer: r.org_name, role: r.kind, message: r.kind === 'owner' ? `已开通「${r.org_name}」，可以在「我的 → 我办的活动」发活动了` : `已加为「${r.org_name}」的帮手` };
   });
+}
+
+/**
+ * 把人加成主办方的负责人 / 帮手（开通码、当场开通、工作人员自动开通共用这一套）。
+ * 负责人：主办方转为 active，记下同意《主办方数据承诺》的版本和时间。
+ * 负责人 / 帮手本身是商会认可的合作方：不算"主办方的客人"。
+ */
+async function bindMember(db: Db, orgId: string, contactId: string, role: 'owner' | 'helper', by: string) {
+  await db.query(
+    `INSERT INTO organizer_members (organizer_id, contact_id, role, added_by) VALUES ($1, $2, $3, $4)
+     ON CONFLICT (organizer_id, contact_id) DO UPDATE SET role = EXCLUDED.role, removed_at = NULL, added_at = now(), added_by = EXCLUDED.added_by`,
+    [orgId, contactId, role, by]
+  );
+  if (role === 'owner') {
+    await db.query(
+      `UPDATE organizers SET status = 'active', agreed_at = now(), agreed_version = $2, agreed_by = $3, updated_at = now() WHERE id = $1`,
+      [orgId, PROMISE_VERSION, contactId]
+    );
+  }
+  await db.query(`UPDATE contacts SET org_guest_since = NULL WHERE id = $1`, [contactId]);
 }
 
 /**
@@ -266,7 +291,8 @@ export async function orgHome(contactId: string, orgId?: string | null) {
   const suspended = m.status === 'suspended';
   const exportUntil = suspended && m.suspended_at ? new Date(new Date(m.suspended_at).getTime() + SUSPEND_EXPORT_DAYS * 86400_000) : null;
   return {
-    organizer: { id: m.id, name: m.name, logoUrl: m.logo_url, role: m.role, suspended, exportUntil, reviewLeft: m.review_left },
+    // 自动开通（先发后审）时没有"还要人工放行几场"这回事，给 0
+    organizer: { id: m.id, name: m.name, logoUrl: m.logo_url, role: m.role, suspended, exportUntil, reviewLeft: (await openMode()) === 'auto' ? 0 : m.review_left },
     orgs: orgs.map((o) => ({ id: o.id, name: o.name, role: o.role })),
     stats: { events: past.filter((e) => e.status === 'published').length, people, rate: people ? Math.round((arrived / people) * 100) : null, returning: st[0]?.returning ?? 0 },
     upcoming: evs.filter((e) => !past.includes(e)).reverse().map(row),
@@ -350,23 +376,34 @@ export async function createEvent(contactId: string, b: Input, orgId?: string | 
   if (m.status !== 'active') throw new CrmError('forbidden', '主办方已停用，不能发新活动。有疑问请联系商会');
   const x = await cleanInput(b, true);
   const sec = await secCheck(contactId, [x.title, x.description, x.locationName, x.address, x.question].filter(Boolean).join('\n'));
-  // 先审后发：新主办方前 N 场（待东哥定，暂定 3）先等工作人员放行；之后机器检测通过就直接公开
-  const status = m.review_left > 0 || !machineOk(sec) ? 'review' : 'published';
+  // 需审核模式（老规矩）：新主办方前 N 场（暂定 3）先等工作人员放行；之后机器检测通过就直接公开。
+  // 自动模式（指令 81，先发后审）：不再有"前几场人工放行"，机器检测通过就直接公开；没通过的照旧拦（risky 在 secCheck 里已拒），
+  // 检测服务没配置（skipped）只在非正式环境算过，正式环境照旧进"等放行"。
+  const manual = (await openMode()) === 'review' && m.review_left > 0;
+  const status = manual || !machineOk(sec) ? 'review' : 'published';
   const copiedFrom = typeof b.copyFrom === 'string' && UUID.test(b.copyFrom) ? b.copyFrom : null;
   if (copiedFrom) await eventAccess(getPool(), contactId, copiedFrom, 'helper'); // 只能从自己办过的活动"再办一场"
   const secs = Number(b.composeSecs);
+  // 1.7.0：可选海报模板（不传 / 空 = 不用模板，和以前一样）
+  const posterTpl = await checkTemplateForEvent(b.posterTpl);
+  // 1.7.0「传自己的海报」：可选 posterOwn（上传返回的 ownId / url；开关关着时带了就 403 暂未开放）。和模板都带时用自己的
+  const posterOwn = await checkOwnForEvent(b.posterOwn, contactId, m.id);
+  const tplForInsert = posterOwn ? null : posterTpl;
   const { rows } = await getPool().query<{ id: string; code: string }>(
     `INSERT INTO org_events (organizer_id, code, mode, template, title, starts_at, ends_at, timezone, location_name, address, capacity, deadline_at, description,
-        has_fee, fee_way, form_fields, question, list_public, status, sec_status, checkin_secret, copied_from, compose_secs, created_by, published_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24, CASE WHEN $19 = 'published' THEN now() END)
+        has_fee, fee_way, form_fields, question, list_public, status, sec_status, checkin_secret, copied_from, compose_secs, created_by, poster_tpl, poster_own, published_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26, CASE WHEN $19 = 'published' THEN now() END)
      RETURNING id, code`,
     [m.id, randCode(10), x.mode, x.template, x.title, x.startsAt, x.endsAt, x.timezone, x.locationName, x.address, x.capacity, x.deadlineAt, x.description,
       x.hasFee, x.feeWay, x.formFields, x.question, x.listPublic, status, sec, randomBytes(16).toString('hex'), copiedFrom,
-      Number.isFinite(secs) && secs > 0 ? Math.min(86400, Math.round(secs)) : null, contactId]
+      Number.isFinite(secs) && secs > 0 ? Math.min(86400, Math.round(secs)) : null, contactId, tplForInsert, posterOwn]
   );
+  if (tplForInsert) await getPool().query(`UPDATE poster_templates SET uses = uses + 1 WHERE id = $1`, [tplForInsert]);
   return {
     id: rows[0].id, code: rows[0].code, status,
-    message: status === 'published' ? '已发布。下一步：发到群、存海报' : '已提交。新主办方的前几场要商会看一眼再公开，通常当天放行；放行前报名页只有您和帮手看得到'
+    message: status === 'published' ? '已发布。下一步：发到群、存海报'
+      : manual ? '已提交。新主办方的前几场要商会看一眼再公开，通常当天放行；放行前报名页只有您和帮手看得到'
+        : '已提交。内容检测还没出结果，商会看一眼就公开，通常当天；公开前报名页只有您和帮手看得到'
   };
 }
 
@@ -377,6 +414,13 @@ export async function updateEvent(contactId: string, eventId: string, b: Input) 
     if (m.status !== 'active') throw new CrmError('forbidden', '主办方已停用，不能改活动');
     if (['taken_down', 'rejected', 'cancelled'].includes(ev.status)) throw new CrmError('bad_request', '这场活动已下架或取消，不能再改。可以「再办一场」');
     const x = await cleanInput(b, false, ev);
+    // 1.7.0：带了 posterTpl 才改模板（空 = 不用模板）；没带这个字段（老版本小程序）= 不动
+    const posterTpl: string | null = 'posterTpl' in b ? (b.posterTpl === ev.poster_tpl ? ev.poster_tpl : await checkTemplateForEvent(b.posterTpl, db)) : ev.poster_tpl;
+    let posterOwn = 'posterOwn' in b ? (b.posterOwn === ev.poster_own ? ev.poster_own : await checkOwnForEvent(b.posterOwn, contactId, ev.organizer_id, db)) : ev.poster_own;
+    // 模板和自己的海报二选一：这次传了哪一个（非空），就清掉另一个
+    let tplNext = posterTpl;
+    if ('posterTpl' in b && posterTpl && !(('posterOwn' in b) && posterOwn)) posterOwn = null;
+    if ('posterOwn' in b && posterOwn) tplNext = null;
     const textChanged = [x.title !== ev.title, (x.description ?? null) !== (ev.description ?? null), x.locationName !== ev.location_name, (x.address ?? null) !== (ev.address ?? null), (x.question ?? null) !== (ev.question ?? null)].some(Boolean);
     let status = ev.status;
     let sec = ev.sec_status;
@@ -390,9 +434,9 @@ export async function updateEvent(contactId: string, eventId: string, b: Input) 
     await db.query(
       `UPDATE org_events SET title=$2, starts_at=$3, ends_at=$4, location_name=$5, address=$6, capacity=$7, deadline_at=$8, description=$9,
               has_fee=$10, fee_way=$11, form_fields=$12, question=$13, list_public=$14, status=$15, sec_status=$16,
-              info_version = info_version + $17, updated_at = now() WHERE id = $1`,
+              info_version = info_version + $17, poster_tpl = $18, poster_own = $19, updated_at = now() WHERE id = $1`,
       [ev.id, x.title, x.startsAt, x.endsAt, x.locationName, x.address, x.capacity, x.deadlineAt, x.description, x.hasFee, x.feeWay, x.formFields, x.question,
-        x.listPublic, status, sec, infoChanged ? 1 : 0]
+        x.listPublic, status, sec, infoChanged ? 1 : 0, tplNext, posterOwn]
     );
     // 名额改大了：候补的人按顺序补上
     await fillWaitlist(db, ev.id);
@@ -413,13 +457,16 @@ export async function cancelEvent(contactId: string, eventId: string) {
 }
 
 /** 再办一场 / 改活动：取这场的全部字段（日期由小程序清空让主办方重选） */
-export async function eventForEdit(contactId: string, eventId: string) {
+export async function eventForEdit(contactId: string, eventId: string, base = '') {
   const { ev, m } = await eventAccess(getPool(), contactId, eventId, 'helper');
+  const own = ev.poster_own ? await getOwnPoster(ev.poster_own) : null;
   return {
     event: {
       id: ev.id, mode: ev.mode, template: ev.template, title: ev.title, startsAt: ev.starts_at, endsAt: ev.ends_at, timezone: ev.timezone,
       locationName: ev.location_name, address: ev.address, capacity: ev.capacity, deadlineAt: ev.deadline_at, description: ev.description,
-      hasFee: ev.has_fee, feeWay: ev.fee_way, formFields: ev.form_fields, question: ev.question, listPublic: ev.list_public, status: ev.status
+      hasFee: ev.has_fee, feeWay: ev.fee_way, formFields: ev.form_fields, question: ev.question, listPublic: ev.list_public, status: ev.status,
+      // 1.7.0：选的模板 / 自己传的海报（posterOwnUrl 走本站 /files/，不用登录头就能显示）
+      posterTpl: ev.poster_tpl ?? null, posterOwn: own?.id ?? null, posterOwnUrl: own ? ownPublicUrl(base, own.url) : null, posterOwnAi: own ? own.ai_generated : null
     },
     role: m.role
   };
@@ -749,11 +796,19 @@ export async function posterData(contactId: string, eventId: string, base: strin
   const { rows: o } = await pool.query<{ name: string; logo_url: string | null }>(`SELECT name, logo_url FROM organizers WHERE id = $1`, [ev.organizer_id]);
   const { wxConfigured } = await import('@/lib/crm/wechat');
   const b = base.replace(/\/$/, '');
+  const tplVer = ev.poster_tpl && !ev.poster_own
+    ? (await pool.query<{ version: number }>(`SELECT version FROM poster_templates WHERE id = $1`, [ev.poster_tpl])).rows[0]?.version ?? null
+    : null;
   return {
     event: { code: ev.code, title: ev.title, when: whenText(ev), locationName: ev.location_name, address: ev.address, fee: feeLabel(ev), mode: ev.mode },
     organizer: { name: o[0].name, logoUrl: o[0].logo_url ? `${b}/_next/image?url=${encodeURIComponent(o[0].logo_url)}&w=256&q=80` : null },
     codeUrl: `${b}/api/v1/org/e/${ev.code}/qr`,
-    isTestCode: !wxConfigured()
+    isTestCode: !wxConfigured(),
+    // 1.7.0：选了模板 → 服务器出成品图的地址（活动改过或模板换过图，v 跟着变）；没选 = null，小程序照旧画老海报
+    posterTpl: ev.poster_tpl ?? null,
+    posterUrl: ev.poster_own
+      ? `${b}/api/v1/org/events/${ev.id}/poster.png?v=${new Date(ev.updated_at).getTime()}-o${ev.poster_own.slice(0, 8)}`
+      : tplVer != null ? `${b}/api/v1/org/events/${ev.id}/poster.png?v=${new Date(ev.updated_at).getTime()}-${tplVer}` : null
   };
 }
 
@@ -799,4 +854,130 @@ export async function apply(contactId: string, b: Input) {
   const { linkToChamber } = await import('./guest');
   await linkToChamber(getPool(), contactId, '申请开通主办方');
   return { message: '已收到申请。商会看过后会联系您，开通后在「我的 → 我办的活动」就能发活动' };
+}
+
+// ── 指令 81：免申请，当场开通 ─────────────────────────────────────────
+/** 商会自己作为主办方：固定标识 created_by = 'system:chamber'，只建一次（工作人员自动是它的负责人） */
+export const CHAMBER_ORG_NAME = '中美房地产商会';
+const CHAMBER_ORG_BY = 'system:chamber';
+
+/**
+ * 工作人员（和小程序「工作台」入口同一套判定：workbenchAccess）还没有任何主办方身份 → 确保「中美房地产商会」主办方存在，把他加成负责人。
+ * 返回加进去的主办方；不是工作人员、已经有主办方身份、商会主办方被停用、或者他被从商会主办方里去掉过 → null（不动）。
+ */
+export async function ensureStaffOrg(contactId: string): Promise<{ id: string; name: string } | null> {
+  if (!(await workbenchAccess(contactId).catch(() => null))) return null;
+  return withTransaction(async (db) => {
+    await db.query(`SELECT pg_advisory_xact_lock(hashtext('sarec_chamber_org'))`);
+    const { rows: has } = await db.query(`SELECT 1 FROM organizer_members WHERE contact_id = $1 AND removed_at IS NULL LIMIT 1`, [contactId]);
+    if (has[0]) return null;
+    const { rows } = await db.query<{ id: string; name: string; status: string }>(
+      `SELECT id, name, status FROM organizers WHERE created_by = $1 ORDER BY created_at LIMIT 1`, [CHAMBER_ORG_BY]);
+    let org = rows[0];
+    if (!org) {
+      const r = await db.query<{ id: string; name: string; status: string }>(
+        `INSERT INTO organizers (name, staff_note, status, review_left, created_by) VALUES ($1, '商会自己办活动用（工作人员自动是负责人）', 'active', 0, $2) RETURNING id, name, status`,
+        [CHAMBER_ORG_NAME, CHAMBER_ORG_BY]);
+      org = r.rows[0];
+    }
+    if (org.status === 'suspended') return null;
+    // 被从商会主办方里去掉过的，不自动加回去
+    const { rows: was } = await db.query(`SELECT 1 FROM organizer_members WHERE organizer_id = $1 AND contact_id = $2`, [org.id, contactId]);
+    if (was[0]) return null;
+    await bindMember(db, org.id, contactId, 'owner', 'staff:auto');
+    return { id: org.id, name: org.name };
+  }).catch(() => null); // 迁移没跑 / 并发失败：当作不是主办方，不挡「我的」页
+}
+
+/** 这个人能不能当场开通：做过主办方且被停用的、被禁止发内容的，照旧拦 */
+async function assertMayOpen(contactId: string) {
+  const { rows } = await getPool().query(
+    `SELECT 1 FROM organizer_members m JOIN organizers o ON o.id = m.organizer_id WHERE m.contact_id = $1 AND m.role = 'owner' AND o.status = 'suspended' LIMIT 1`, [contactId]);
+  if (rows[0]) throw new CrmError('forbidden', '您的主办方已停用，暂时不能开通新的。有疑问请在「联系商会」里找工作人员');
+  const { rows: ban } = await getPool().query(`SELECT 1 FROM profile_bans WHERE contact_id = $1`, [contactId]).catch(() => ({ rows: [] as unknown[] }));
+  if (ban[0]) throw new CrmError('forbidden', '您暂时不能发布内容。有疑问请在「联系商会」里找工作人员');
+}
+
+async function profileOf(contactId: string) {
+  const { rows } = await getPool().query<{ name: string | null; phone: string | null }>(
+    `SELECT c.name, coalesce(c.phone_e164, (SELECT m.value FROM contact_methods m WHERE m.contact_id = c.id AND m.kind = 'phone' AND m.is_current LIMIT 1)) AS phone
+       FROM contacts c WHERE c.id = $1`, [contactId]);
+  const name = rows[0]?.name && rows[0].name !== '微信用户' ? rows[0].name : null;
+  return { name, phone: rows[0]?.phone ?? null };
+}
+
+const activeOrg = (orgs: Member[]) => orgs.find((o) => o.status === 'active' && o.role === 'owner') ?? orgs.find((o) => o.status === 'active') ?? null;
+
+/** GET /api/v1/org/apply：开通页要的东西（不登录也能看；登录了带上档案情况和是否已是主办方） */
+export async function applyInfo(contactId: string | null) {
+  const [open, mode] = await Promise.all([toolOn(), openMode()]);
+  let me = { hasName: false, hasPhone: false, name: null as string | null };
+  let organizer: { id: string; name: string } | null = null;
+  if (contactId) {
+    const p = await profileOf(contactId);
+    me = { hasName: !!p.name, hasPhone: !!p.phone, name: p.name };
+    if (open) {
+      let orgs = await myOrgs(contactId);
+      if (!orgs.length && (await ensureStaffOrg(contactId))) orgs = await myOrgs(contactId);
+      const a = activeOrg(orgs);
+      if (a) organizer = { id: a.id, name: a.name };
+    }
+  }
+  return {
+    open, mode, isOrganizer: !!organizer, organizer, me,
+    promise: { title: PROMISE_TITLE, version: PROMISE_VERSION, points: PROMISE_POINTS }
+  };
+}
+
+/**
+ * POST /api/v1/org/apply，自动模式：{ orgName, logoUrl?, personName?, phone?, agree: true } → 当场建一个 active 的主办方、本人当负责人、记下同意承诺的版本和时间。
+ * 已经是主办方（含工作人员自动的商会主办方）→ 直接返回已有的。需审核模式走老的 apply()。
+ */
+export async function openNow(contactId: string, b: Input) {
+  await requireToolOn();
+  const existing = activeOrg(await myOrgs(contactId));
+  if (existing) return { auto: true, organizer: { id: existing.id, name: existing.name }, existing: true };
+  await assertMayOpen(contactId);
+  const staffOrg = await ensureStaffOrg(contactId);
+  if (staffOrg) return { auto: true, organizer: staffOrg, existing: true };
+  if (b.agree !== true) throw new CrmError('bad_request', '请先看《主办方数据承诺》，点「同意并开始办活动」');
+  const orgName = str(b.orgName, 40);
+  if (orgName.length < 2) throw new CrmError('bad_request', '请写主办方名称（至少 2 个字）');
+  const p = await profileOf(contactId);
+  const personName = p.name ? null : str(b.personName, 20);
+  if (!p.name && !personName) throw new CrmError('bad_request', '请写您的称呼');
+  let phone: string | null = null;
+  if (!p.phone) {
+    const raw = str(b.phone, 30);
+    phone = raw ? normalizePhone(raw) ?? normalizePhone(raw, '+86') : null;
+    if (!phone) throw new CrmError('bad_request', raw ? '手机号格式不对，请检查一下' : '请写手机号，方便参加者和商会联系您');
+  }
+  const logoRaw = str(b.logoUrl, 500);
+  const logoUrl = /^https:\/\/\S+$/.test(logoRaw) ? logoRaw : null;
+  const bad = bannedWord([orgName, personName].filter(Boolean).join(' '));
+  if (bad) throw new CrmError('bad_request', `内容里有不能用的字「${bad}」，请改一下`);
+  await secCheck(contactId, [orgName, personName].filter(Boolean).join('\n'));
+  const org = await withTransaction(async (db) => {
+    // 同一个人连点两下：排队，第二下拿到第一下建好的
+    await db.query(`SELECT pg_advisory_xact_lock(hashtext('sarec_org_open:' || $1))`, [contactId]);
+    const { rows: again } = await db.query<{ id: string; name: string }>(
+      `SELECT o.id, o.name FROM organizer_members m JOIN organizers o ON o.id = m.organizer_id
+        WHERE m.contact_id = $1 AND m.removed_at IS NULL AND o.status = 'active' ORDER BY m.role = 'owner' DESC LIMIT 1`, [contactId]);
+    if (again[0]) return again[0];
+    if (personName) await db.query(`UPDATE contacts SET name = $2, updated_at = now() WHERE id = $1 AND (name IS NULL OR name = '' OR name = '微信用户')`, [contactId, personName]);
+    if (phone) {
+      await setMethod(db, contactId, 'phone', phone, 'org_open');
+      const { rows: t } = await db.query(`SELECT 1 FROM contacts WHERE phone_e164 = $1 AND id <> $2`, [phone, contactId]);
+      if (!t[0]) await db.query(`UPDATE contacts SET phone_e164 = coalesce(phone_e164, $2), updated_at = now() WHERE id = $1`, [contactId, phone]);
+    }
+    // review_left 用表的默认值：以后开关拨回"需审核"，这些主办方照老规矩前几场人工放行
+    const { rows } = await db.query<{ id: string; name: string }>(
+      `INSERT INTO organizers (name, logo_url, staff_note, created_by) VALUES ($1, $2, '小程序当场开通', $3) RETURNING id, name`,
+      [orgName, logoUrl, `self:${contactId}`]);
+    await bindMember(db, rows[0].id, contactId, 'owner', 'self:open');
+    return rows[0];
+  });
+  // 标志图交微信图片检测（和头像、相册同一套；后台「内容管理 › 机器拦下的」能看到）。检测是异步的，不挡开通
+  if (logoUrl) await submitImage(logoUrl, `org_logo:${org.id}`, contactId).catch(() => null);
+  return { auto: true, organizer: { id: org.id, name: org.name }, message: `已开通「${org.name}」，现在就可以发活动了` };
 }

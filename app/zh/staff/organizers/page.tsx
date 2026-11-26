@@ -16,7 +16,7 @@ type Org = { id: string; name: string; is_demo?: boolean; public_contact: string
 type Ev = { id: string; code: string; organizer: string; title: string; mode: string; when: string; status: string; secStatus: string | null; description: string | null; locationName: string | null; address: string | null; people: number; reviewNote: string | null; takenDownReason: string | null; createdAt: string };
 type App = { id: string; org_name: string; person_name: string; phone: string | null; note: string | null; from_title: string | null; status: string; created_at: string };
 type ReviewCode = { code: string; expires_at: string; created_at: string; created_by: string; note: string | null; revoked_at: string | null; uses: number; org_name: string };
-type Overview = { reviewCodes?: ReviewCode[]; switches: { tool: boolean; chain: boolean }; organizers: Org[]; events: Ev[]; applications: App[]; guests: number; promiseVersion: string };
+type Overview = { reviewCodes?: ReviewCode[]; switches: { tool: boolean; chain: boolean; open?: boolean }; organizers: Org[]; events: Ev[]; applications: App[]; guests: number; promiseVersion: string };
 type Code = { code: string; expiresAt: string; qr: string | null; qrPlain: string | null };
 type LogRow = { actor: string; reason: string; created_at: string; title: string | null; organizer: string | null };
 
@@ -90,6 +90,7 @@ function Page({ admin }: { admin: boolean }) {
         <h2 className={styles.h2}>开关</h2>
         {[
           { k: 'tool', name: '活动工具总开关', on: d.switches.tool, hint: d.switches.tool ? '开着：开通的主办方在「我的」里能看到「我办的活动」。万一审核不认，关掉后入口消失、主办方活动页显示"暂停使用"，不用重新传小程序。' : '关着：主办方看不到「我办的活动」，报名页显示"暂停使用"。' },
+          { k: 'open', name: '主办方自动开通', on: d.switches.open !== false, hint: d.switches.open !== false ? '开着（默认）：用户点「办活动」填个名称、同意数据承诺就当场开通；发的活动过了微信内容检测直接公开（先发后审），不好的在下面一键下架、停用主办方。工作人员自动是「中美房地产商会」主办方。' : '关着 = 需审核：用户点「办活动」只能填申请，商会出开通码；新主办方前几场要在下面放行。微信审核因为"人人可发布"驳回时关掉它再提审，不用换包。' },
           { k: 'chain', name: '接龙模式', on: d.switches.chain, hint: d.switches.chain ? '开着：发活动时多一个「接龙」模板（审核员用审核码进去也能看到）。' : '关着（默认）：第一版代码里有接龙，但不给用，审核员也看不到；第二版单独提审再打开。' }
         ].map((x) => (
           <div key={x.k} className={styles.row}>
@@ -106,7 +107,7 @@ function Page({ admin }: { admin: boolean }) {
 
       <div className={styles.card}>
         <h2 className={styles.h2}>等放行的活动（{pending.length}）</h2>
-        <p className={styles.small}>新主办方的前几场（默认 3 场，每个主办方可改）和机器检测说「建议复核」的，先在这里看一眼再公开。放行前报名页只有主办方自己看得到。</p>
+        <p className={styles.small}>机器检测说「建议复核」（或正式站检测没出结果）的，以及「主办方自动开通」关着时新主办方的前几场（默认 3 场，每个主办方可改），先在这里看一眼再公开。放行前报名页只有主办方自己看得到。</p>
         {!pending.length && <p className={styles.muted}>没有等放行的活动</p>}
         {pending.map((e) => (
           <div key={e.id} className={styles.listItem}>

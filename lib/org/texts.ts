@@ -55,6 +55,15 @@ export const PROMISE_SECTIONS: { h: string; p: string[] }[] = [
   }
 ];
 
+/** 指令 81：开通页上显示的《主办方数据承诺》要点（短句，全文仍看 PROMISE_SECTIONS / GET /api/v1/org/promise）。改全文时这里一起对一下 */
+export const PROMISE_POINTS: string[] = [
+  '报名信息只用于这场活动的报名、联系和签到；商会不拿去联系参加者、不放进商会的名单。',
+  '完整名单只有负责人能看和导出；帮手只看现场需要的信息；手机号不公开。',
+  '参加者可以随时取消报名，可以要求查看、更正、删除自己的信息。',
+  '活动要真实；不发违法、赌博、色情、虚假内容；小程序里不收钱、不放收款码。',
+  '发布的内容经过安全检测；被举报核实的会下架，严重的停用主办方。'
+];
+
 export const promiseText = () => PROMISE_SECTIONS.map((s) => `${s.h}\n${s.p.join('\n')}`).join('\n\n');
 
 /** 报名页按钮上方的告知小字（{org} 换成主办方名字） */
