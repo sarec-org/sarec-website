@@ -19,6 +19,7 @@ import { audit } from '@/lib/crm/staff';
 import type { Staff } from '@/lib/crm/auth';
 import type { Db } from '@/lib/crm/profile';
 import { festivalsAt, laToday } from './festivals';
+import { AI_BADGE_KEY, aiBadgeConfig, normalizeAiBadge } from './aiBadge';
 
 export const UPLOAD_ON_KEY = 'poster_upload_on';
 /** 第一批老图（没有 box）出图时的默认信息位：画面下部 */
@@ -50,11 +51,14 @@ const itemOf = (base: string, t: Pick<PosterTemplate, 'id' | 'name' | 'version' 
   id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l'), ...(withLayout ? { layout: t.layout } : {})
 });
 
+const FEST_TIER1 = 4;
+const REG_TIER1 = 8;
 /**
- * categories：老包用的（按 tier、sort），一个字段都不动。
- * sections（指令 83 智能排序，today = 洛杉矶今天，非正式环境可拨）：
- *   greeting（在祝福窗口里、且有上架祝福图的节日，各一段，近的在上）→ festival「快到的节日」（节日类活动分类按离今天天数从近到远，
+ * categories：老包用的，字段不变（key、name、tier、items）；指令 85 起顺序和 tier 跟着智能排序走（见下）。
+ * sections（指令 83/86 智能排序，today = 洛杉矶今天，非正式环境可拨）：
+ *   festival「快到的节日」（节日类活动分类按离今天天数从近到远，
  *   过了显示期的按明年算）→ regular「常用活动」（其他活动分类按该类模板 uses 之和从高到低，同分按原顺序）。空的段不给。
+ * greetEntry：今天在某节日祝福窗口 [D−提前天数, D+节后天数] 里、且这个节日有上架祝福图 → { title:'发感恩节祝福 ›', festival, category, date }（近的那个）；否则 null。
  */
 export async function publicList(base: string, today: string = laToday()) {
   const pool = getPool();
@@ -85,13 +89,11 @@ export async function publicList(base: string, today: string = laToday()) {
     );
     for (const t of rows) greetTpls.set(t.category_key, [...(greetTpls.get(t.category_key) ?? []), t]);
   }
-  const greeting = inWin
+  // 指令 86：祝福不混进 sections，只给一条入口（窗口里、有上架祝福图的节日，取离今天最近的那个）
+  const near = inWin
     .filter((f) => greetTpls.get(f.greet_category_key!)?.length)
-    .sort((a, b) => Math.abs(a.days!) - Math.abs(b.days!) || a.days! - b.days! || a.sort - b.sort)
-    .map((f) => ({
-      kind: 'greeting' as const, title: `${f.name}祝福`, festival: f.key, category: f.greet_category_key, date: f.date,
-      items: (greetTpls.get(f.greet_category_key!) ?? []).map((t) => itemOf(base, t, false))
-    }));
+    .sort((a, b) => Math.abs(a.days!) - Math.abs(b.days!) || a.days! - b.days! || a.sort - b.sort)[0];
+  const greetEntry = near ? { title: `发${near.name}祝福 ›`, festival: near.key, category: near.greet_category_key, date: near.date } : null;
   // 节日活动段：一个分类挂了多个节日时取最近的
   const festOf = new Map<string, { date: string; days: number; festival: string }>();
   for (const f of fests) {
@@ -108,13 +110,19 @@ export async function publicList(base: string, today: string = laToday()) {
   const regCats = categories
     .filter((c) => !festOf.has(c.key))
     .sort((a, b) => usesOf(b.key) - usesOf(a.key) || order.get(a.key)! - order.get(b.key)!);
+  // 动态 tier（指令 85）：快到的前 4 个节日分类 + 用得最多的前 8 个普通分类 = 1（老包先画这些），其余 = 2。
+  // 老包按 tier 稳定排序、同档保持服务器顺序，所以 categories 也按 sections 的顺序给，老包不发版也"节日近的在前"。
+  const tierOf = new Map<string, number>();
+  festCats.forEach((c, i) => tierOf.set(c.key, i < FEST_TIER1 ? 1 : 2));
+  regCats.forEach((c, i) => tierOf.set(c.key, i < REG_TIER1 ? 1 : 2));
+  const withTier = <T extends { key: string; tier: number }>(c: T): T => ({ ...c, tier: tierOf.get(c.key) ?? c.tier });
   const sections = [
-    ...greeting,
-    ...(festCats.length ? [{ kind: 'festival' as const, title: '快到的节日', categories: festCats }] : []),
-    ...(regCats.length ? [{ kind: 'regular' as const, title: '常用活动', categories: regCats }] : [])
+    ...(festCats.length ? [{ kind: 'festival' as const, title: '快到的节日', categories: festCats.map(withTier) }] : []),
+    ...(regCats.length ? [{ kind: 'regular' as const, title: '常用活动', categories: regCats.map(withTier) }] : [])
   ];
+  const ordered = [...festCats, ...regCats].map((c) => withTier({ key: c.key, name: c.name, tier: c.tier, items: c.items }));
 
-  return { version: Number(v[0]?.ms ?? 0), uploadOn: await uploadOn(pool), today, categories, sections };
+  return { version: Number(v[0]?.ms ?? 0), uploadOn: await uploadOn(pool), today, categories: ordered, sections, greetEntry };
 }
 
 export async function getTemplate(id: string, db: Db = getPool()): Promise<PosterTemplate | null> {
@@ -153,7 +161,8 @@ export async function staffList() {
   return {
     categories,
     templates: templates.map((t) => ({ ...t, thumb: imgUrl('', t.id, t.version, 't'), large: imgUrl('', t.id, t.version, 'l') })),
-    uploadOn: await uploadOn(pool)
+    uploadOn: await uploadOn(pool),
+    aiBadge: await aiBadgeConfig(pool)
   };
 }
 
@@ -266,6 +275,15 @@ export async function staffAction(s: Staff, b: Record<string, unknown>) {
     await setSetting(pool, UPLOAD_ON_KEY, on, s.name || s.email);
     await audit(pool, s, 'poster_upload_on', 'setting', UPLOAD_ON_KEY, { before, after: on });
     return { message: on ? '已打开「传自己的海报」' : '已关掉「传自己的海报」' };
+  }
+  if (action === 'set_ai_badge') {
+    // 指令 84：「AI 生成」标识 { on, size, opacity }（超范围的值会被收进 0.04–0.10 / 0.2–1）
+    const pool = getPool();
+    const before = await aiBadgeConfig(pool);
+    const after = normalizeAiBadge({ on: b.on !== false, size: Number(b.size), opacity: Number(b.opacity) });
+    await setSetting(pool, AI_BADGE_KEY, after, s.name || s.email);
+    await audit(pool, s, 'ai_badge', 'setting', AI_BADGE_KEY, { before, after });
+    return { message: after.on ? `已保存：「AI 生成」标识宽 ${Math.round(after.size * 100)}%、不透明度 ${after.opacity}` : '已关掉「AI 生成」标识（成品图不再画）' };
   }
   if (action === 'set_festival_date') {
     const pool = getPool();

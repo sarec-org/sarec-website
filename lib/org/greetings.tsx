@@ -24,7 +24,7 @@ import { profileCompany } from '@/lib/crm/cards';
 import { bannedWord } from './texts';
 import { LARGE, fetchTemplateImage, getTemplate, imgUrl } from './posterTemplates';
 import { daysBetween, festivalsAt, laToday, type FestivalAt } from './festivals';
-import { AiBadge, BADGE_ZONE, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
+import { AiBadge, AI_BADGE_DEFAULT, BADGE_ZONE, aiBadgeConfig, cornerDark, type AiBadgeCfg, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
 
 const W = LARGE.w;
 const H = LARGE.h;
@@ -72,10 +72,7 @@ export async function greetingList(base: string, today: string = laToday()) {
     return [3, 0];
   };
   const order = new Map(cats.map((c, i) => [c.key, i]));
-  return {
-    version: Number(v[0]?.ms ?? 0),
-    today,
-    festivals: cats
+  const festivals = cats
       .filter((c) => by.get(c.key)?.length)
       .sort((a, b) => {
         const [ra, da] = rank(a);
@@ -88,8 +85,13 @@ export async function greetingList(base: string, today: string = laToday()) {
           key: c.key, name: c.name, date: f?.date ?? c.date, festival: f?.key ?? null, inWindow: f?.inWindow ?? false,
           items: (by.get(c.key) ?? []).map((t) => ({ id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l') }))
         };
-      })
-  };
+      });
+  // 指令 86 首页栏目「★ 节日祝福」：离今天最近、有图的那个节日的前 4 张；一张图都没有 → null（首页不出这一栏）
+  const first = festivals[0];
+  const home = first
+    ? { title: '节日祝福', festival: first.festival ?? first.key, category: first.key, festivalName: fest.get(first.key)?.name ?? first.name, items: first.items.slice(0, 4).map((x) => ({ id: x.id, thumb: x.thumb })) }
+    : null;
+  return { version: Number(v[0]?.ms ?? 0), today, festivals, home };
 }
 
 // ── 我的落款资料 ─────────────────────────────────────────────────────
@@ -179,12 +181,14 @@ function fitLines(lines: Line[], w: number, h: number, max: number, min: number)
 
 export type GreetRenderInput = {
   image: Buffer; sigBox: number[] | null; style: GreetStyle;
-  card: GreetCard; line: string | null; avatar: Buffer | null; logo: Buffer | null;
+  card: GreetCard; line: string | null; avatar: Buffer | null; logo: Buffer | null; badge?: AiBadgeCfg;
 };
 
 /** 出图（不查库）：底图、落款 → PNG */
 export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
   const c = o.card;
+  const badge = o.badge ?? AI_BADGE_DEFAULT;
+  const badgeDark = badge.on ? await cornerDark(o.image) : true;
   // 各版式要排的东西（没有的不出现）
   let pic: { buf: Buffer; round: boolean } | null = null;
   let lines: Line[] = [];
@@ -264,7 +268,7 @@ export async function renderGreeting(o: GreetRenderInput): Promise<Buffer> {
             )}
           </div>
         )}
-        <AiBadge />
+        <AiBadge cfg={badge} dark={badgeDark} />
       </div>
     ),
     { width: W, height: H, fonts: [{ name: 'NotoSansSC', data: await font(), weight: 700, style: 'normal' }] }
@@ -288,5 +292,5 @@ export async function greetingPng(contactId: string, tplId: string, styleRaw: st
     style === 'personal' ? fetchPic(card.avatarUrl, 'cover', 320) : Promise.resolve(null),
     style === 'company' ? fetchPic(card.logoUrl, 'contain', 320) : Promise.resolve(null)
   ]);
-  return renderGreeting({ image, sigBox: tpl.sig_box, style, card, line, avatar, logo });
+  return renderGreeting({ image, sigBox: tpl.sig_box, style, card, line, avatar, logo, badge: await aiBadgeConfig() });
 }
