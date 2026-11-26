@@ -2,7 +2,8 @@
 /**
  * 1.7.0 节日祝福（迁移 0054）。和海报模板库共用一个库：分类 / 模板 purpose = 'greeting' 的就是祝福图。
  * ------------------------------------------------------------------
- * - GET /api/v1/greetings（不登录）：上架的祝福分类和模板，按"离今天（洛杉矶时间）最近、还没过的节日"排前面（今天的节日算没过；已过的排最后）。
+ * - GET /api/v1/greetings（不登录）：上架的祝福分类和模板，按"离今天（洛杉矶时间）最近、还没过的节日"排前面。
+ *   指令 83：日期从节日表（lib/org/festivals.ts）取这一次 / 下一次，不用每年手改；节后显示期（如春节到初七）里还算这一次。
  *   图片地址和模板库一样走本站 /api/v1/poster-img/<id>/<版本>/{t,l}.jpg。没有上架模板的分类不出现。
  * - GET /api/v1/greetings/me（登录）：落款用的名片资料（姓名、公司、职务、头像、公司标志；没有的给 null）+ 默认落款 defaultLine。
  *   头像 / 标志只用"别人看得到"的那张（contacts.avatar_url、member_cards.logo_url；还在检测中的新图不用）。名片被工作人员下架的，只用姓名和头像。
@@ -22,6 +23,7 @@ import { msgSecCheck } from '@/lib/crm/contentSec';
 import { profileCompany } from '@/lib/crm/cards';
 import { bannedWord } from './texts';
 import { LARGE, fetchTemplateImage, getTemplate, imgUrl } from './posterTemplates';
+import { daysBetween, festivalsAt, laToday, type FestivalAt } from './festivals';
 import { AiBadge, BADGE_ZONE, boxLuminance, clean, font, ln, textWidth, wrap } from './posterRender';
 
 const W = LARGE.w;
@@ -31,36 +33,62 @@ export const DEFAULT_SIG_BOX: [number, number, number, number] = [0.06, 0.84, 0.
 export const LINE_MAX = 30;
 export const STYLES = ['plain', 'company', 'personal'] as const;
 export type GreetStyle = (typeof STYLES)[number];
-const TZ = 'America/Los_Angeles';
 
 // ── 清单（不要求登录） ───────────────────────────────────────────────
-export async function greetingList(base: string) {
+export async function greetingList(base: string, today: string = laToday()) {
   const pool = getPool();
-  const { rows: cats } = await pool.query<{ key: string; name: string; date: string | null }>(
-    `SELECT key, name, to_char(festival_date, 'YYYY-MM-DD') AS date FROM poster_categories
-      WHERE active AND purpose = 'greeting'
-      ORDER BY festival_date IS NULL, festival_date < (now() AT TIME ZONE '${TZ}')::date, festival_date, tier, sort, key`
+  // 指令 83：日期从节日表算（festivals.greet_category_key → 这一次 / 下一次的日期）；没挂到节日表的祝福分类才用老的 festival_date 列
+  const { rows: cats } = await pool.query<{ key: string; name: string; date: string | null; tier: number; sort: number }>(
+    `SELECT key, name, to_char(festival_date, 'YYYY-MM-DD') AS date, tier, sort FROM poster_categories
+      WHERE active AND purpose = 'greeting' ORDER BY tier, sort, key`
   );
+  const fests = await festivalsAt(today, pool);
+  const fest = new Map<string, FestivalAt>();
+  for (const f of fests) {
+    if (!f.greet_category_key || f.date == null || f.days == null) continue;
+    const had = fest.get(f.greet_category_key);
+    if (!had || f.days < had.days!) fest.set(f.greet_category_key, f);
+  }
   const { rows: tpls } = await pool.query<{ id: string; name: string; version: number; category_key: string }>(
     `SELECT t.id, t.name, t.version, t.category_key FROM poster_templates t JOIN poster_categories c ON c.key = t.category_key
       WHERE t.status = 'active' AND c.active AND t.purpose = 'greeting' AND c.purpose = 'greeting' ORDER BY t.sort, t.created_at`
   );
-  // version：祝福模板和祝福分类（改日期 / 改名）最后一次改动的时间（毫秒），小程序用来判断要不要刷新
+  // version：祝福模板、祝福分类、节日表最后一次改动的时间（毫秒），小程序用来判断要不要刷新（日期跟着 today 变，today 也一起给）
   const { rows: v } = await pool.query<{ ms: string | null }>(
     `SELECT (extract(epoch FROM greatest(
         (SELECT max(updated_at) FROM poster_templates WHERE purpose = 'greeting'),
-        (SELECT max(updated_at) FROM poster_categories WHERE purpose = 'greeting'))) * 1000)::bigint::text AS ms`
+        (SELECT max(updated_at) FROM poster_categories WHERE purpose = 'greeting'),
+        (SELECT max(updated_at) FROM festivals))) * 1000)::bigint::text AS ms`
   );
   const by = new Map<string, typeof tpls>();
   for (const t of tpls) by.set(t.category_key, [...(by.get(t.category_key) ?? []), t]);
+  // 排序：挂了节日表的按"这一次 / 下一次"日期从近到远（节后显示期里的还算这一次，排最前）；
+  // 没挂的用老列：还没过的按日期在后，已过的、没日期的最后
+  const rank = (c: (typeof cats)[number]) => {
+    const f = fest.get(c.key);
+    if (f) return [0, f.days!];
+    if (c.date && c.date >= today) return [1, daysBetween(today, c.date)];
+    if (c.date) return [2, daysBetween(today, c.date)];
+    return [3, 0];
+  };
+  const order = new Map(cats.map((c, i) => [c.key, i]));
   return {
     version: Number(v[0]?.ms ?? 0),
+    today,
     festivals: cats
       .filter((c) => by.get(c.key)?.length)
-      .map((c) => ({
-        key: c.key, name: c.name, date: c.date,
-        items: (by.get(c.key) ?? []).map((t) => ({ id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l') }))
-      }))
+      .sort((a, b) => {
+        const [ra, da] = rank(a);
+        const [rb, db] = rank(b);
+        return ra - rb || da - db || order.get(a.key)! - order.get(b.key)!;
+      })
+      .map((c) => {
+        const f = fest.get(c.key);
+        return {
+          key: c.key, name: c.name, date: f?.date ?? c.date, festival: f?.key ?? null, inWindow: f?.inWindow ?? false,
+          items: (by.get(c.key) ?? []).map((t) => ({ id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l') }))
+        };
+      })
   };
 }
 

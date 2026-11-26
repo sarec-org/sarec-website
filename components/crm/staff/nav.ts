@@ -92,6 +92,8 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/content', label: '内容管理', role: 'ops', words: ['内容管理', '举报', '投诉', '违规', '恢复', '禁止', '个人主页', '主页审核', '项目', '案例', '机器拦下', '组局'] },
     // 1.7.0：主办方出海报能选的模板底图；「传自己的海报」开关也在这页
     { href: '/zh/staff/poster-templates', label: '海报模板', role: 'ops', words: ['海报', '海报模板', '模板', '模板库', '底图', '节日海报', '传自己的海报', '上传海报', 'AI 生成', '祝福', '节日祝福', '祝福图', '落款'] },
+    // 指令 83：挑海报页按日期智能排序用的节日表（提前几天、显示到哪天、对应分类、每年日期）
+    { href: '/zh/staff/festivals', label: '节日日期表', role: 'ops', words: ['节日', '节日日期', '节日表', '日期表', '春节', '感恩节', '圣诞', '农历', '智能排序', '海报排序', '提前几天'] },
     { href: '/zh/staff/showcase', label: '商会风采', role: 'ops', words: ['商会风采', '风采', '副会长单位', '合作方', '战略合作方', '标志', 'logo'] },
     { href: '/zh/staff/agent', label: 'AI 助手', role: 'ops', words: ['AI', '人工智能', '机器人', '常见问题', 'FAQ', '对话'] }
   ],

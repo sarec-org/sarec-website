@@ -18,6 +18,7 @@ import { getSetting, setSetting } from '@/lib/crm/orders';
 import { audit } from '@/lib/crm/staff';
 import type { Staff } from '@/lib/crm/auth';
 import type { Db } from '@/lib/crm/profile';
+import { festivalsAt, laToday } from './festivals';
 
 export const UPLOAD_ON_KEY = 'poster_upload_on';
 /** 第一批老图（没有 box）出图时的默认信息位：画面下部 */
@@ -44,7 +45,18 @@ export const imgUrl = (base: string, id: string, version: number, size: 't' | 'l
 export const uploadOn = (db: Db = getPool()) => getSetting<boolean>(db, UPLOAD_ON_KEY, false).then((v) => v === true);
 
 // ── 小程序清单（不要求登录） ─────────────────────────────────────────
-export async function publicList(base: string) {
+type Item = { id: string; name: string; thumb: string; large: string; layout?: number };
+const itemOf = (base: string, t: Pick<PosterTemplate, 'id' | 'name' | 'version' | 'layout'>, withLayout = true): Item => ({
+  id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l'), ...(withLayout ? { layout: t.layout } : {})
+});
+
+/**
+ * categories：老包用的（按 tier、sort），一个字段都不动。
+ * sections（指令 83 智能排序，today = 洛杉矶今天，非正式环境可拨）：
+ *   greeting（在祝福窗口里、且有上架祝福图的节日，各一段，近的在上）→ festival「快到的节日」（节日类活动分类按离今天天数从近到远，
+ *   过了显示期的按明年算）→ regular「常用活动」（其他活动分类按该类模板 uses 之和从高到低，同分按原顺序）。空的段不给。
+ */
+export async function publicList(base: string, today: string = laToday()) {
   const pool = getPool();
   // 0054：只给「办活动」用途的分类和模板（祝福的走 /api/v1/greetings）
   const { rows: cats } = await pool.query<PosterCategory>(`SELECT ${CAT_COLS()} FROM poster_categories WHERE active AND purpose = 'event' ORDER BY tier, sort, key`);
@@ -55,16 +67,54 @@ export async function publicList(base: string) {
   const { rows: v } = await pool.query<{ ms: string | null }>(`SELECT (extract(epoch FROM max(updated_at)) * 1000)::bigint::text AS ms FROM poster_templates WHERE purpose = 'event'`);
   const by = new Map<string, PosterTemplate[]>();
   for (const t of tpls) by.set(t.category_key, [...(by.get(t.category_key) ?? []), t]);
-  return {
-    version: Number(v[0]?.ms ?? 0),
-    uploadOn: await uploadOn(pool),
-    categories: cats
-      .filter((c) => by.get(c.key)?.length)
-      .map((c) => ({
-        key: c.key, name: c.name, tier: c.tier,
-        items: (by.get(c.key) ?? []).map((t) => ({ id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l'), layout: t.layout }))
-      }))
-  };
+  const categories = cats
+    .filter((c) => by.get(c.key)?.length)
+    .map((c) => ({ key: c.key, name: c.name, tier: c.tier, items: (by.get(c.key) ?? []).map((t) => itemOf(base, t)) }));
+
+  // ── 智能排序 ──
+  const fests = await festivalsAt(today, pool);
+  // 祝福段：窗口里、有祝福分类、分类上架且有上架祝福图
+  const inWin = fests.filter((f) => f.inWindow && f.greet_category_key);
+  const greetTpls = new Map<string, PosterTemplate[]>();
+  if (inWin.length) {
+    const { rows } = await pool.query<PosterTemplate>(
+      `SELECT t.* FROM poster_templates t JOIN poster_categories c ON c.key = t.category_key
+        WHERE t.category_key = ANY($1::text[]) AND t.status = 'active' AND c.active AND t.purpose = 'greeting' AND c.purpose = 'greeting'
+        ORDER BY t.sort, t.created_at`,
+      [inWin.map((f) => f.greet_category_key)]
+    );
+    for (const t of rows) greetTpls.set(t.category_key, [...(greetTpls.get(t.category_key) ?? []), t]);
+  }
+  const greeting = inWin
+    .filter((f) => greetTpls.get(f.greet_category_key!)?.length)
+    .sort((a, b) => Math.abs(a.days!) - Math.abs(b.days!) || a.days! - b.days! || a.sort - b.sort)
+    .map((f) => ({
+      kind: 'greeting' as const, title: `${f.name}祝福`, festival: f.key, category: f.greet_category_key, date: f.date,
+      items: (greetTpls.get(f.greet_category_key!) ?? []).map((t) => itemOf(base, t, false))
+    }));
+  // 节日活动段：一个分类挂了多个节日时取最近的
+  const festOf = new Map<string, { date: string; days: number; festival: string }>();
+  for (const f of fests) {
+    if (!f.category_key || f.date == null || f.days == null) continue;
+    const had = festOf.get(f.category_key);
+    if (!had || f.days < had.days) festOf.set(f.category_key, { date: f.date, days: f.days, festival: f.key });
+  }
+  const order = new Map(categories.map((c, i) => [c.key, i]));
+  const festCats = categories
+    .filter((c) => festOf.has(c.key))
+    .sort((a, b) => festOf.get(a.key)!.days - festOf.get(b.key)!.days || order.get(a.key)! - order.get(b.key)!)
+    .map((c) => ({ ...c, festival: festOf.get(c.key)!.festival, date: festOf.get(c.key)!.date, days: festOf.get(c.key)!.days }));
+  const usesOf = (k: string) => (by.get(k) ?? []).reduce((s, t) => s + (Number(t.uses) || 0), 0);
+  const regCats = categories
+    .filter((c) => !festOf.has(c.key))
+    .sort((a, b) => usesOf(b.key) - usesOf(a.key) || order.get(a.key)! - order.get(b.key)!);
+  const sections = [
+    ...greeting,
+    ...(festCats.length ? [{ kind: 'festival' as const, title: '快到的节日', categories: festCats }] : []),
+    ...(regCats.length ? [{ kind: 'regular' as const, title: '常用活动', categories: regCats }] : [])
+  ];
+
+  return { version: Number(v[0]?.ms ?? 0), uploadOn: await uploadOn(pool), today, categories, sections };
 }
 
 export async function getTemplate(id: string, db: Db = getPool()): Promise<PosterTemplate | null> {

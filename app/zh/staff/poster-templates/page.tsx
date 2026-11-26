@@ -4,7 +4,7 @@
  * - 按分类看缩略图（一次看一类，点图看大图）；每张：上移 / 下移、下架 / 恢复、换图、改名、改分类。
  * - 上传新模板：选分类、起名字、选图（服务器裁成 1080×1620 大图 + 300×450 小图）。
  * - 顶上「传自己的海报」开关（默认关）：要先在微信后台核清服务类目再开。
- * - 0054 节日祝福：顶上分「办活动」「节日祝福」两组（祝福图也在这一页管）。祝福分类能改节日日期（小程序里离今天最近的节日排最前），
+ * - 0054 节日祝福：顶上分「办活动」「节日祝福」两组（祝福图也在这一页管）。节日日期在「节日日期表」（/zh/staff/festivals）统一管（指令 83），
  *   祝福模板能设落款位（左、上、右、下四个 0–1 的数；不设 = 默认底部一条并垫底板）。上传、改分类时选用途（模板的用途跟着分类）。
  * - 所有操作记操作记录（crm_audit_log）。
  */
@@ -146,32 +146,23 @@ function PosterTemplates() {
         ))}
       </div>
       {purpose === 'greeting' && (
-        <p className={styles.small}>小程序「发节日祝福」里用的图：用户挑一张，服务器自动印上他名片里的姓名 / 公司 / 头像。节日按日期排，离今天最近、还没过的排最前（今天的节日算没过）。一年一次的节日每年在下面改日期。</p>
+        <p className={styles.small}>小程序「发节日祝福」里用的图：用户挑一张，服务器自动印上他名片里的姓名 / 公司 / 头像。节日按日期排，离今天最近的排最前；日期在「节日日期表」里统一管。</p>
       )}
 
       <h2 className={styles.h}>分类（点一个看这一类的模板）</h2>
       <div className={styles.chips}>
         {cats.map((c) => (
           <button key={c.key} className={`${styles.chip} ${c.key === cat ? styles.chipOn : ''}`} onClick={() => { setCat(c.key); setRenaming(null); setSigEdit(null); setDateEdit(null); }}>
-            {c.name}{c.purpose === 'greeting' && c.festival_date ? ` ${c.festival_date.slice(5).replace('-', '/')}` : ''} {count[c.key]?.on ?? 0}{(count[c.key]?.all ?? 0) > (count[c.key]?.on ?? 0) ? `（下架 ${(count[c.key]?.all ?? 0) - (count[c.key]?.on ?? 0)}）` : ''}
+            {c.name} {count[c.key]?.on ?? 0}{(count[c.key]?.all ?? 0) > (count[c.key]?.on ?? 0) ? `（下架 ${(count[c.key]?.all ?? 0) - (count[c.key]?.on ?? 0)}）` : ''}
           </button>
         ))}
       </div>
 
       {curCat && curCat.purpose === purpose && (
         <>
-          <h2 className={styles.h}>{curCat.name}（{curCat.purpose === 'greeting' ? `节日日期 ${curCat.festival_date ?? '未设'}` : TIER[curCat.tier] ?? `第 ${curCat.tier} 档`}，{list.length} 张，按小程序里的顺序）</h2>
+          <h2 className={styles.h}>{curCat.name}（{curCat.purpose === 'greeting' ? '节日祝福' : TIER[curCat.tier] ?? `第 ${curCat.tier} 档`}，{list.length} 张，按小程序里的顺序）</h2>
           {curCat.purpose === 'greeting' && (
-            <div className={styles.card}>
-              <label className={styles.label} htmlFor="gd-date">「{curCat.name}」的日期（小程序按它排先后；明年的日期到时候在这里改）</label>
-              <div className={styles.btnRow}>
-                <input id="gd-date" type="date" className={styles.input} style={{ maxWidth: 200, margin: 0 }}
-                  value={dateEdit?.key === curCat.key ? dateEdit.v : curCat.festival_date ?? ''}
-                  onChange={(e) => setDateEdit({ key: curCat.key, v: e.target.value })} />
-                <button className={`${styles.btn} ${styles.btnSmall}`} disabled={!!busy || !dateEdit || dateEdit.key !== curCat.key || !dateEdit.v || dateEdit.v === curCat.festival_date}
-                  onClick={async () => { if (dateEdit && await post({ action: 'set_festival_date', category: curCat.key, date: dateEdit.v }, 'd' + curCat.key)) setDateEdit(null); }}>保存日期</button>
-              </div>
-            </div>
+            <p className={styles.small}>节日日期、提前几天出现、显示到哪天，统一在 <a href="/zh/staff/festivals">节日日期表</a> 里改（已排到 2031 年，不用每年手改）。{curCat.festival_date ? `这里显示的 ${curCat.festival_date} 是旧的手填日期，只在这个分类没挂到节日表上时才用。` : ''}</p>
           )}
           {!list.length && <p className={styles.muted}>这一类还没有模板，可以在下面上传。</p>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
