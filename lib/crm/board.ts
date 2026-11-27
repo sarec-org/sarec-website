@@ -284,10 +284,11 @@ async function article(c: Ctx): Promise<Raw[]> {
 
 async function posterNew(c: Ctx): Promise<Raw[]> {
   const { rows } = await getPool().query<{ key: string; name: string; purpose: string; day: string; n: number; last: Date }>(
-    `SELECT c.key, c.name, t.purpose, to_char(t.created_at AT TIME ZONE '${TZ}', 'YYYY-MM-DD') AS day, count(*)::int AS n, max(t.created_at) AS last
+    // 1.7.1 后修：不再按天拆（同一批跨两天会出两条），按分类合；LIMIT 放宽到够装下所有分类
+    `SELECT c.key, c.name, t.purpose, to_char(max(t.created_at) AT TIME ZONE '${TZ}', 'YYYY-MM-DD') AS day, count(*)::int AS n, max(t.created_at) AS last
        FROM poster_templates t JOIN poster_categories c ON c.key = t.category_key
       WHERE t.status = 'active' AND c.active AND t.purpose = c.purpose AND t.created_at >= $1
-      GROUP BY c.key, c.name, t.purpose, day ORDER BY last DESC LIMIT 60`,
+      GROUP BY c.key, c.name, t.purpose ORDER BY last DESC LIMIT 200`,
     [c.since]
   );
   return rows.map((r) => ({
@@ -313,9 +314,12 @@ const MERGE: Partial<Record<AutoKind, (rs: Raw[]) => { text: string; link: Link 
   photos: (rs) => ({ text: `${rs.length} 场活动的照片更新了`, link: '/pages/albums/albums' }),
   article: (rs) => ({ text: `${rs.length} 篇新文章`, link: '/pages/research/research' }),
   poster_new: (rs) => {
-    const n = rs.reduce((s, r) => s + (Number(/新上 (\d+) 张/.exec(r.text)?.[1]) || 0), 0);
-    const allGreet = rs.every((r) => r.text.endsWith('祝福图'));
-    return { text: `新上 ${n} 张${allGreet ? '祝福图' : '海报模板'}`, link: allGreet ? '/pages/greeting/greeting?from=board' : '/pages/org/tpl/tpl' };
+    // 1.7.1 后修：活动海报和祝福图分开数（原来把 3 张祝福图算进「海报模板」里）
+    const cnt = (r: Raw) => Number(/新上 (\d+) 张/.exec(r.text)?.[1]) || 0;
+    const g = rs.filter((r) => r.text.endsWith('祝福图')).reduce((s, r) => s + cnt(r), 0);
+    const e = rs.filter((r) => !r.text.endsWith('祝福图')).reduce((s, r) => s + cnt(r), 0);
+    const text = e && g ? `新上 ${e} 张海报模板、${g} 张祝福图` : e ? `新上 ${e} 张海报模板` : `新上 ${g} 张祝福图`;
+    return { text, link: e ? '/pages/org/tpl/tpl' : '/pages/greeting/greeting?from=board' };
   }
 };
 
