@@ -41,39 +41,52 @@ export function siteFileUrl(blobUrl: string | null, base: string): string | null
  * 1.4.1 会员特权（东哥已点头）：“仅会员”的讲座资料，会员看全部、可下载转发；
  * 注册用户 / 没登录的只看前 N 页预览（默认 3），后面写“会员可看完整版”，不给 PDF 原件。
  */
-function publicView(d: DocRow, base: string, isMember = false) {
+function publicView(d: DocRow & { event_slug?: string | null; event_title?: string | null }, base: string, isMember = false, files: { full?: string; fullBytes?: number } = {}) {
   const locked = d.audience === 'members' && !isMember;
   const n = Math.max(1, d.preview_pages ?? 3);
   const pages = locked ? d.pages.slice(0, n) : d.pages;
+  // 指令 103：讲座课件转发卡片标题「课件｜讲座名」（小程序 1.7.2 起用 shareTitle；文件名同）
+  const shareTitle = d.event_title ? `课件｜${Array.from(d.event_title.trim()).length > 30 ? Array.from(d.event_title.trim()).slice(0, 29).join('') + '…' : d.event_title.trim()}` : d.title;
+  const full = files.full && files.full !== d.pdf_url ? files.full : null;
   return {
     slug: d.slug, title: d.title, summary: d.summary, cover: d.cover_url || d.pages[0]?.url || null,
     pages: pages.map((p) => ({ url: p.url, w: p.w, h: p.h })), pageCount: d.pages.length,
     pdfUrl: locked ? null : siteFileUrl(d.pdf_url, base), pdfBytes: locked ? null : d.pdf_bytes,
+    // 指令 104：pdfUrl 是手机版（压过图、最后有扫码页）；原稿给电脑下载
+    pdfFullUrl: locked || !full ? null : siteFileUrl(full, base), pdfFullBytes: locked || !full ? null : files.fullBytes ?? null,
+    pdfName: `${shareTitle.replace(/[\\/:*?"<>|]+/g, ' ')}.pdf`, shareTitle,
+    eventSlug: d.event_slug ?? null, eventTitle: d.event_title ?? null,
     membersOnly: d.audience === 'members', locked, previewPages: locked ? pages.length : d.pages.length
   };
 }
 
-export async function listPublic(base: string, opts: { eventSlug?: string | null; oldClient?: boolean } = {}) {
-  // 商会介绍等通用资料（不挂活动的）在前；?event=slug 只列那场的讲座资料
-  const { rows } = await getPool().query<DocRow & { event_slug: string | null; event_title: string | null }>(
-    `SELECT d.*, e.slug AS event_slug, e.title AS event_title FROM chamber_docs d LEFT JOIN events e ON e.id = d.event_id
+export async function listPublic(base: string, opts: { eventSlug?: string | null; oldClient?: boolean; lectures?: boolean } = {}) {
+  // 商会介绍等通用资料（不挂活动的）在前；?event=slug 只列那场的讲座资料；?lectures=1 只列讲座课件、按讲座时间倒序（指令 103）
+  const { rows } = await getPool().query<DocRow & { event_slug: string | null; event_title: string | null; event_starts: Date | null }>(
+    `SELECT d.*, e.slug AS event_slug, e.title AS event_title, e.starts_at AS event_starts FROM chamber_docs d LEFT JOIN events e ON e.id = d.event_id
       WHERE d.is_public AND jsonb_array_length(d.pages) > 0 AND ($1::text IS NULL OR e.slug = $1)
         AND NOT ($2::boolean AND d.audience = 'members')
-      ORDER BY (d.event_id IS NOT NULL), d.sort_order, d.created_at`,
-    [opts.eventSlug ?? null, !!opts.oldClient]
+        AND (NOT $3::boolean OR (e.id IS NOT NULL AND e.event_status <> 'cancelled'))
+      ORDER BY CASE WHEN $3::boolean THEN e.starts_at END DESC NULLS LAST, (d.event_id IS NOT NULL), d.sort_order, d.created_at`,
+    [opts.eventSlug ?? null, !!opts.oldClient, !!opts.lectures]
   );
   return rows.map((d) => {
     const v = publicView(d, base, true);
-    return { slug: v.slug, title: v.title, summary: v.summary, cover: v.cover, pageCount: v.pageCount, membersOnly: v.membersOnly, eventSlug: d.event_slug, eventTitle: d.event_title };
+    return {
+      slug: v.slug, title: v.title, summary: v.summary, cover: v.cover, pageCount: v.pageCount, membersOnly: v.membersOnly, eventSlug: d.event_slug, eventTitle: d.event_title,
+      eventDate: d.event_starts ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(d.event_starts) : null, shareTitle: v.shareTitle
+    };
   });
 }
 export async function getPublic(slug: string, base: string, staffPreview = false, isMember = false, oldClient = false) {
-  const { rows } = await getPool().query<DocRow>(`SELECT * FROM chamber_docs WHERE slug = $1`, [slug]);
+  const { rows } = await getPool().query<DocRow & { event_slug: string | null; event_title: string | null }>(
+    `SELECT d.*, e.slug AS event_slug, e.title AS event_title FROM chamber_docs d LEFT JOIN events e ON e.id = d.event_id WHERE d.slug = $1`, [slug]);
   const d = rows[0];
   if (!d || (!d.is_public && !staffPreview) || !d.pages.length) throw new CrmError('not_found', '这份资料不存在或还没公开');
   // 1.4.0 及更早的小程序不会显示“会员可看完整版”，给它截了页它也说不清——直接请它更新（会员 / 工作人员照常看全部）
   if (oldClient && d.audience === 'members' && !isMember && !staffPreview) throw new CrmError('update_needed', '这是会员资料。请先更新小程序（关掉小程序重新打开），再看预览和完整版。');
-  return publicView(d, base, isMember || staffPreview);
+  const { docFiles } = await import('./slides');
+  return publicView(d, base, isMember || staffPreview, d.event_id ? await docFiles(d.id).catch(() => ({})) : {});
 }
 
 export async function track(slug: string, kind: 'open' | 'share' | 'pdf', who: { contactId?: string | null; ref?: string | null; channel?: string | null }) {

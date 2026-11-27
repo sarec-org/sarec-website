@@ -11,6 +11,7 @@ import { checkinA4, registerPoster, type MaterialEvent } from '@/components/crm/
 import { saveImage, savedText } from '@/components/crm/staff/SaveImage';
 import { AiPoster } from '@/components/crm/staff/AiPoster';
 import { useHashScroll } from '@/components/crm/staff/useHashScroll';
+import { EventSlides } from '@/components/crm/staff/EventSlides';
 
 type Ev = Record<string, unknown> & { id: string; slug: string; title: string; checkin_secret: string; registration_open: boolean; is_listed: boolean; event_status: string; fee_cents: number };
 type PrepRow = { event_id: string; total: number; done: number; overdue: number };
@@ -302,6 +303,9 @@ export default function StaffEventDetail({ params }: { params: { id: string } })
                 <p className={styles.small} style={{ margin: 0 }}>这场还没有筹备清单，请运营或管理员在这里生成。</p>
               )}
             </div>
+
+            {/* 指令 103：从活动直接「传课件」；工作台「上传这场的课件」带 ?slides=1 进来滚到这里 */}
+            {can(s, 'ops') && <EventSlides eventId={params.id} />}
 
             <h2 className={styles.h2}>活动物料</h2>
             <div className={styles.card}>

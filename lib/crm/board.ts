@@ -16,6 +16,7 @@
  *    photos       活动相册新照片：公开照片（没隐藏、在相册里、审核通过、不是变体），按"哪场活动 + 哪天传的"算张数
  *    article      研究与动态新文章：小程序能看到的文章里 7 天内发布的
  *    poster_new   新海报模板上架：上架的模板按"分类 + 哪天上架"合并成「新上 N 张××海报 / 祝福图」
+ *    docs_new     讲座课件上传（指令 103）：挂在活动上、已公开、有页面的课件，按上传时间（crm_settings.doc_files.at，没有按建立时间）；仅会员的写「会员可下载」
  * 指令 98「过期自动下架」：每条都带 until（显示到哪天），服务器算，过了就不返回（ticker、days 都一样；days 只放没过期的，不再固定 14 天）：
  *    活动开始报名 / 名额不多 → 活动开始；组局 → 凑齐或开始；节日 → 节日表的显示结束日过完；找工人 → 活儿关了或发出 7 天；
  *    照片 / 新文章 / 新会员 / 新海报 → 7 天；人工通知 → 设定的日子，没设 7 天。
@@ -40,9 +41,11 @@ const TZ = 'America/Los_Angeles';
 export const SETTINGS_KEY = 'board_auto';
 export const TEXT_MAX = 60;
 const TICKER_MAX = 8;
+/** 「讲座课件」列表页（小程序 1.7.2）；合并条点了去这里 */
+const LECTURES_PAGE = '/pages/doc/lectures';
 const MERGE_AT = 3;
 
-export type Kind = 'notice' | 'event_new' | 'seats_low' | 'meetup_short' | 'member_new' | 'jobs_new' | 'festival' | 'photos' | 'article' | 'poster_new';
+export type Kind = 'notice' | 'event_new' | 'seats_low' | 'meetup_short' | 'member_new' | 'jobs_new' | 'festival' | 'photos' | 'article' | 'poster_new' | 'docs_new';
 export type AutoKind = Exclude<Kind, 'notice'>;
 /** 小程序端：string = 小程序页面路径（navigateTo）；{ web } = 网址；null = 不跳 */
 export type Link = string | { web: string } | null;
@@ -63,7 +66,8 @@ export const KINDS: Record<Kind, { label: string; desc: string; icon: string; co
   festival: { label: '节日祝福', desc: '「后天感恩节，发一张祝福」——节日前 2 天起（按节日表），这个节日有祝福图时；过完节撤', icon: 'greeting', color: '#C9403F' },
   photos: { label: '活动相册新照片', desc: '「11/21 讲座 照片上传了 36 张」——公开的照片；7 天后撤', icon: 'photo', color: '#5C5BA0' },
   article: { label: '研究与动态新文章', desc: '「新文章：×××」——小程序能看到的文章；7 天后撤', icon: 'article', color: '#3D5A8A' },
-  poster_new: { label: '新海报模板上架', desc: '「新上 30 张圣诞海报」——按分类、按天合并；7 天后撤', icon: 'poster', color: '#0E7A6B' }
+  poster_new: { label: '新海报模板上架', desc: '「新上 30 张圣诞海报」——按分类、按天合并；7 天后撤', icon: 'poster', color: '#0E7A6B' },
+  docs_new: { label: '讲座课件上传', desc: '「11/27 讲座课件已上传 · 可下载」——挂在活动上、已公开的课件；7 天后撤', icon: 'article', color: '#3D5A8A' }
 };
 export const AUTO_KINDS = (Object.keys(KINDS) as Kind[]).filter((k): k is AutoKind => k !== 'notice');
 
@@ -298,9 +302,27 @@ async function posterNew(c: Ctx): Promise<Raw[]> {
   }));
 }
 
+async function docsNew(c: Ctx): Promise<Raw[]> {
+  const { docFilesAll } = await import('@/lib/docs/slides');
+  const files = await docFilesAll();
+  const { rows } = await getPool().query<{ id: string; slug: string; audience: string; created_at: Date; starts_at: Date; timezone: string | null }>(
+    `SELECT d.id::text, d.slug, d.audience, d.created_at, e.starts_at, e.timezone FROM chamber_docs d JOIN events e ON e.id = d.event_id
+      WHERE d.is_public AND jsonb_array_length(d.pages) > 0 AND e.event_status <> 'cancelled' AND e.is_listed
+      ORDER BY d.created_at DESC LIMIT 30`
+  );
+  return rows
+    .map((r) => ({ r, at: files[r.id]?.at ? new Date(files[r.id].at!) : new Date(r.created_at) }))
+    .filter(({ at }) => at.getTime() >= c.since.getTime() && at.getTime() <= c.now.getTime())
+    .map(({ r, at }) => ({
+      id: `docs_new:${r.id}`, kind: 'docs_new' as const, time: iso(at), until: plus7(at),
+      text: `${md(r.starts_at, r.timezone || TZ)} 讲座课件已上传 · ${r.audience === 'members' ? '会员可下载' : '可下载'}`,
+      link: `/pages/doc/doc?slug=${q(r.slug)}`
+    }));
+}
+
 const AUTO: Record<AutoKind, (c: Ctx) => Promise<Raw[]>> = {
   event_new: eventNew, seats_low: seatsLow, meetup_short: meetupShort, member_new: memberNew, jobs_new: jobsNew,
-  festival, photos, article, poster_new: posterNew
+  festival, photos, article, poster_new: posterNew, docs_new: docsNew
 };
 
 /** 同一天同一种 ≥ 3 条 → 合成一条（文字、去哪） */
@@ -312,6 +334,7 @@ const MERGE: Partial<Record<AutoKind, (rs: Raw[]) => { text: string; link: Link 
   jobs_new: (rs) => ({ text: `新活儿：${rs.slice(0, 2).map((r) => r.text).join('、')} 等 ${rs.length} 个`, link: '/pages/jobs/pros?all=1' }),
   photos: (rs) => ({ text: `${rs.length} 场活动的照片更新了`, link: '/pages/albums/albums' }),
   article: (rs) => ({ text: `${rs.length} 篇新文章`, link: '/pages/research/research' }),
+  docs_new: (rs) => ({ text: `${rs.length} 场讲座课件已上传 · 可下载`, link: LECTURES_PAGE }),
   poster_new: (rs) => {
     const n = rs.reduce((s, r) => s + (Number(/新上 (\d+) 张/.exec(r.text)?.[1]) || 0), 0);
     const allGreet = rs.every((r) => r.text.endsWith('祝福图'));

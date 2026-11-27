@@ -6,6 +6,7 @@ import { laToday } from '@/lib/laDate';
 import { B_PROVIDERS } from './providers/b';
 import { C_LIVE_PROVIDERS, C_PROVIDERS } from './providers/c';
 import { V150_PROVIDERS } from './providers/v150';
+import { SLIDES_PROVIDERS } from './providers/slides';
 import type { TodayContext, TodayItem, TodayKind, TodayLive, TodayLiveProvider, TodayProvider } from './types';
 
 export const KIND_NAME: Record<TodayKind, string> = {
@@ -23,11 +24,12 @@ export const KIND_NAME: Record<TodayKind, string> = {
   ugc_report: '被举报的内容',
   ugc_machine: '机器拦下的内容',
   profile_review: '个人主页待看一眼',
-  jobs_request: '找师傅：小程序交来的待派'
+  jobs_request: '找师傅：小程序交来的待派',
+  slides_upload: '讲座课件待上传'
 };
 
 export function allProviders(): TodayProvider[] {
-  return [...B_PROVIDERS, ...C_PROVIDERS, ...V150_PROVIDERS];
+  return [...B_PROVIDERS, ...C_PROVIDERS, ...V150_PROVIDERS, ...SLIDES_PROVIDERS];
 }
 export function allLiveProviders(): TodayLiveProvider[] {
   return [...C_LIVE_PROVIDERS];
