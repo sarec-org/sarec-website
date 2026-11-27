@@ -14,15 +14,15 @@ import { api } from '@/components/crm/client';
 import { Toast } from '@/components/crm/staff/ugcShared';
 
 type Link = string | { web: string } | null;
-type Item = { id: string; kind: string; color: string; text: string; link: Link; time: string };
+type Item = { id: string; kind: string; color: string; text: string; link: Link; time: string; until: string };
 type Notice = {
-  id: string; text: string; linkLabel: string; pinned: boolean; endsOn: string | null; createdBy: string; createdAt: string;
+  id: string; text: string; linkLabel: string; pinned: boolean; endsOn: string | null; until: string; untilDefault: boolean; createdBy: string; createdAt: string;
   status: 'live' | 'scheduled' | 'expired' | 'removed'; statusLabel: string;
 };
 type Switch = { kind: string; label: string; desc: string; color: string; on: boolean; count: number };
 type Data = {
   today: string; textMax: number; notices: Notice[]; switches: Switch[];
-  preview: { ticker: Item[]; pinned: (Item & { sub: string })[]; dayCount: number; itemCount: number };
+  preview: { ticker: Item[]; pinned: (Item & { sub: string })[]; items: Item[]; dayCount: number; itemCount: number };
   events: { id: string; title: string; date: string }[]; pages: { path: string; label: string }[];
 };
 type LinkType = 'none' | 'event' | 'page' | 'web';
@@ -81,7 +81,7 @@ function Board() {
 
   return (
     <>
-      <p className={styles.lead}>小程序首页搜索框下面那一行「看板」，每 3 秒滚一条；点「全部」是看板页（置顶的在最上面，下面按天列最近 14 天）。大部分消息是自动来的（下面可以分别关），这里也能手动发一句话通知。改动 1 分钟内小程序能看到。</p>
+      <p className={styles.lead}>小程序首页搜索框下面那一行「看板」，每 3 秒滚一条；点「全部」是看板页（置顶的在最上面，下面按天列）。每条都有自己的「显示到哪天」，过了自动撤，不用人管。大部分消息是自动来的（下面可以分别关），这里也能手动发一句话通知。改动 1 分钟内小程序能看到。</p>
       <Toast m={msg} onClose={closeMsg} />
       <div className={styles.btnRow} style={{ marginBottom: '0.8rem' }}>
         <a href="#send" className={styles.btn}>＋ 发通知</a>
@@ -120,7 +120,7 @@ function Board() {
         )}
 
         <details style={{ margin: '6px 0 10px' }}>
-          <summary className={styles.small} style={{ cursor: 'pointer' }}>置顶 / 显示到哪天（可不设：不置顶的 14 天后自然滚出看板）</summary>
+          <summary className={styles.small} style={{ cursor: 'pointer' }}>置顶 / 显示到哪天（可不设：不设就发出 7 天后自动撤）</summary>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginTop: 6 }}>
             <label className={styles.small} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} /> 置顶（永远排最前，看板页最上面醒目显示）
@@ -151,13 +151,25 @@ function Board() {
                 <span style={{ flex: 1 }}>
                   {d.preview.pinned.some((p) => p.id === it.id) && <span className={styles.badge} style={{ marginRight: 6 }}>置顶</span>}
                   {it.text}
-                  <span className={styles.small} style={{ display: 'block' }}>{d.switches.find((s) => s.kind === it.kind)?.label ?? '工作人员通知'} · 点了去 {linkText(it.link)}</span>
+                  <span className={styles.small} style={{ display: 'block' }}>{d.switches.find((s) => s.kind === it.kind)?.label ?? '工作人员通知'} · 点了去 {linkText(it.link)} · 显示到 {it.until}</span>
                 </span>
               </li>
             ))}
           </ol>
         )}
         <p className={styles.small} style={{ margin: '8px 0 0' }}>看板页（「全部」）现在有 {d.preview.itemCount} 条、分 {d.preview.dayCount} 天{d.preview.pinned.length ? `，另有置顶 ${d.preview.pinned.length} 条` : ''}。</p>
+        {d.preview.items.length > 0 && (
+          <details style={{ marginTop: 6 }} id="all">
+            <summary className={styles.small} style={{ cursor: 'pointer' }}>看板页全部 {d.preview.items.length} 条，每条什么时候自动撤</summary>
+            <ul style={{ margin: '6px 0 0', paddingLeft: 0, listStyle: 'none' }}>
+              {d.preview.items.map((it) => (
+                <li key={it.id} className={styles.small} style={{ display: 'flex', alignItems: 'center', padding: '3px 0', overflowWrap: 'anywhere' }}>
+                  {dot(it.color)}<span style={{ flex: 1 }}>{it.text}</span><span style={{ flex: '0 0 auto', marginLeft: 8 }}>显示到 {it.until}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
 
       {/* ③ 通知 */}
@@ -171,7 +183,7 @@ function Board() {
             <span className={`${styles.badge} ${x.status === 'live' ? styles.badgeGreen : styles.badgeMuted}`}>{x.statusLabel}</span>
           </p>
           <p className={styles.small} style={{ margin: '0 0 6px', overflowWrap: 'anywhere' }}>
-            {x.linkLabel} · {x.createdBy} {when(x.createdAt)} 发 · {x.endsOn ? `显示到 ${x.endsOn}` : '不自动撤（不置顶的 14 天后滚出）'}
+            {x.linkLabel} · {x.createdBy} {when(x.createdAt)} 发 · {`自动撤：显示到 ${x.until}（含这天）${x.untilDefault ? '，没设日子，默认发出 7 天' : ''}`}
           </p>
           {(x.status === 'live' || x.status === 'scheduled') && (
             endEdit?.id === x.id ? (

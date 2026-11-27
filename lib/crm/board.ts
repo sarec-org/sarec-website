@@ -4,18 +4,21 @@
  * 消息两种来源：
  * 1. 工作人员手动发的通知（0055 board_notices）：一句话（≤ 60 字）＋可选链接（活动 / 小程序页面 / 网址），可置顶、可设显示到哪天。
  *    - 置顶的单独放 pinned，并永远排在 ticker 最前；不置顶的按发出时间进「按天」列表。
- *    - ends_at 过了就不出现（查询时过滤，不用定时任务）；removed_at 不为空 = 立即撤下。
+ *    - 到设定的日子撤；没设默认发出 7 天后撤（ends_at 为空就按 starts_at + 7 天，查询时算，不改库）；removed_at 不为空 = 立即撤下。
  * 2. 自动消息（每种一个开关，crm_settings.board_auto；没有这条 / 没写到的种类 = 开）——全部从现有表实时算，**只取已公开 / 已过检测的东西**：
- *    event_new    新活动开始报名：商会活动 is_listed、scheduled、开着报名、还没开始，14 天内新建的
+ *    event_new    新活动开始报名：商会活动 is_listed、scheduled、开着报名、还没开始（活动开始就撤）
  *    seats_low    名额快满：上面这类活动里有名额上限、还剩 1 个到 20% 的（剩几个按"已报名 + 递补确认中"算）；文字只说「名额所剩不多」，不写数字
- *    meetup_short 组局还差几位：俱乐部组局 open + 已过微信内容检测（sec_status = ok）、14 天内开始、还没满、俱乐部已成立且没关闭；
+ *    meetup_short 组局还差几位：俱乐部组局 open + 已过微信内容检测（sec_status = ok）、14 天内开始、还没满、俱乐部已成立且没关闭（凑齐或开始就撤）；
  *                 文字由服务器按"哪天 + 上午/下午/晚上 + 俱乐部名 + 局"拼，不用用户自己写的标题
  *    member_new   新入会：最近 7 天成为会员的人数；写名字（公司名，没有就人名）的只用已同意「官网展示」的（display_status = published 且审核通过）
  *    jobs_new     找工人新发的活：公开列表里能看到的（open、没过期、微信检测 pass、不是小程序交来的），文字 = 城市 · 找 + 工种名（不用发布人写的字）；找工人总开关关了就不出
  *    festival     节日祝福：节日表里离今天 ≤ 提前天数（默认 2）的节日、且这个节日有上架的祝福图
  *    photos       活动相册新照片：公开照片（没隐藏、在相册里、审核通过、不是变体），按"哪场活动 + 哪天传的"算张数
- *    article      研究与动态新文章：小程序能看到的文章里 14 天内发布的
+ *    article      研究与动态新文章：小程序能看到的文章里 7 天内发布的
  *    poster_new   新海报模板上架：上架的模板按"分类 + 哪天上架"合并成「新上 N 张××海报 / 祝福图」
+ * 指令 98「过期自动下架」：每条都带 until（显示到哪天），服务器算，过了就不返回（ticker、days 都一样；days 只放没过期的，不再固定 14 天）：
+ *    活动开始报名 / 名额不多 → 活动开始；组局 → 凑齐或开始；节日 → 节日表的显示结束日过完；找工人 → 活儿关了或发出 7 天；
+ *    照片 / 新文章 / 新会员 / 新海报 → 7 天；人工通知 → 设定的日子，没设 7 天。
  * 同一天同一种 ≥ 3 条合成一条（「3 场新活动开始报名」），点了去对应的列表页。
  * 每种自动消息单独 try/catch：某张表还没有 / 查询出错，只少这一种，不影响整个看板。
  *
@@ -36,7 +39,6 @@ import { msgSecCheck } from '@/lib/crm/contentSec';
 const TZ = 'America/Los_Angeles';
 export const SETTINGS_KEY = 'board_auto';
 export const TEXT_MAX = 60;
-const DAYS = 14;
 const TICKER_MAX = 8;
 const MERGE_AT = 3;
 
@@ -44,7 +46,8 @@ export type Kind = 'notice' | 'event_new' | 'seats_low' | 'meetup_short' | 'memb
 export type AutoKind = Exclude<Kind, 'notice'>;
 /** 小程序端：string = 小程序页面路径（navigateTo）；{ web } = 网址；null = 不跳 */
 export type Link = string | { web: string } | null;
-export type BoardItem = { id: string; kind: Kind; icon: string; color: string; text: string; link: Link; time: string };
+/** until：显示到哪天（洛杉矶日期，含这天）；过了服务器就不再返回（指令 98） */
+export type BoardItem = { id: string; kind: Kind; icon: string; color: string; text: string; link: Link; time: string; until: string };
 export type PinnedItem = BoardItem & { sub: string; endsAt: string | null };
 export type BoardDay = { date: string; label: string; items: BoardItem[] };
 export type Board = { ticker: BoardItem[]; pinned: PinnedItem[]; days: BoardDay[]; version: string; today: string };
@@ -52,15 +55,15 @@ export type Board = { ticker: BoardItem[]; pinned: PinnedItem[]; days: BoardDay[
 /** 每种消息：名字（后台开关用）、说明、图标 key（指令 97 定的 10 个：event / meetup / poster / greeting / photo / member / job / article / quota / notice）、颜色（小程序不认识的新图标就用颜色画个圆点，不用发版） */
 export const KINDS: Record<Kind, { label: string; desc: string; icon: string; color: string }> = {
   notice: { label: '工作人员通知', desc: '后台 / 手机工作台手动发的', icon: 'notice', color: '#234A3E' },
-  event_new: { label: '新活动开始报名', desc: '「12/5 周五分享会 开始报名」——商会活动公开且开着报名，14 天内新建的', icon: 'event', color: '#2257B8' },
-  seats_low: { label: '名额快满', desc: '「商会月会 名额所剩不多」——还剩 20% 以内（至少 1 个）时；不写数字（小程序不显示人数）', icon: 'quota', color: '#C97A1E' },
-  meetup_short: { label: '组局还差几位', desc: '「周六下午掼蛋局 还差 3 位」——已过内容检测、14 天内开始、还没满的俱乐部组局', icon: 'meetup', color: '#B07D2B' },
-  member_new: { label: '新入会', desc: '「本周新加入 3 位会员 · 欢迎 ××公司 加入」——只写已同意官网展示的名字，其余只计数', icon: 'member', color: '#0E7A6B' },
-  jobs_new: { label: '找工人新发的活', desc: '「尔湾 · 找水电」——公开列表里能看到的活儿，只写城市和工种', icon: 'job', color: '#7A5A3C' },
-  festival: { label: '节日祝福', desc: '「后天感恩节，发一张祝福」——节日前 2 天起（按节日表），这个节日有祝福图时', icon: 'greeting', color: '#C9403F' },
-  photos: { label: '活动相册新照片', desc: '「11/21 讲座 照片上传了 36 张」——公开的照片', icon: 'photo', color: '#5C5BA0' },
-  article: { label: '研究与动态新文章', desc: '「新文章：×××」——小程序能看到的文章，14 天内发布的', icon: 'article', color: '#3D5A8A' },
-  poster_new: { label: '新海报模板上架', desc: '「新上 30 张圣诞海报」——按分类、按天合并', icon: 'poster', color: '#0E7A6B' }
+  event_new: { label: '新活动开始报名', desc: '「12/5 周五分享会 开始报名」——商会活动公开且开着报名；活动开始就撤', icon: 'event', color: '#2257B8' },
+  seats_low: { label: '名额快满', desc: '「商会月会 名额所剩不多」——还剩 20% 以内（至少 1 个）时；不写数字（小程序不显示人数）；活动开始就撤', icon: 'quota', color: '#C97A1E' },
+  meetup_short: { label: '组局还差几位', desc: '「周六下午掼蛋局 还差 3 位」——已过内容检测、14 天内开始、还没满的俱乐部组局；凑齐或开始就撤', icon: 'meetup', color: '#B07D2B' },
+  member_new: { label: '新入会', desc: '「本周新加入 3 位会员 · 欢迎 ××公司 加入」——只写已同意官网展示的名字，其余只计数；7 天后撤', icon: 'member', color: '#0E7A6B' },
+  jobs_new: { label: '找工人新发的活', desc: '「尔湾 · 找水电」——公开列表里能看到的活儿，只写城市和工种；活儿关了或 7 天后撤', icon: 'job', color: '#7A5A3C' },
+  festival: { label: '节日祝福', desc: '「后天感恩节，发一张祝福」——节日前 2 天起（按节日表），这个节日有祝福图时；过完节撤', icon: 'greeting', color: '#C9403F' },
+  photos: { label: '活动相册新照片', desc: '「11/21 讲座 照片上传了 36 张」——公开的照片；7 天后撤', icon: 'photo', color: '#5C5BA0' },
+  article: { label: '研究与动态新文章', desc: '「新文章：×××」——小程序能看到的文章；7 天后撤', icon: 'article', color: '#3D5A8A' },
+  poster_new: { label: '新海报模板上架', desc: '「新上 30 张圣诞海报」——按分类、按天合并；7 天后撤', icon: 'poster', color: '#0E7A6B' }
 };
 export const AUTO_KINDS = (Object.keys(KINDS) as Kind[]).filter((k): k is AutoKind => k !== 'notice');
 
@@ -96,8 +99,13 @@ const cut = (s: string, n: number) => (Array.from(s).length > n ? Array.from(s).
 const iso = (d: Date | string) => new Date(d).toISOString();
 const q = (s: string) => encodeURIComponent(s);
 
-type Raw = { id: string; kind: AutoKind | 'notice'; text: string; link: Link; time: string };
-const item = (r: Raw): BoardItem => ({ id: r.id, kind: r.kind, icon: KINDS[r.kind].icon, color: KINDS[r.kind].color, text: r.text, link: r.link, time: r.time });
+/** until（ISO）：这条什么时候自动撤（指令 98，每种自己算） */
+type Raw = { id: string; kind: AutoKind | 'notice'; text: string; link: Link; time: string; until: string };
+/** 显示到哪天（含）：撤下时刻往前 1 秒的洛杉矶日期 */
+export const untilDay = (u: string | Date) => laToday(new Date(new Date(u).getTime() - 1000));
+const item = (r: Raw): BoardItem => ({ id: r.id, kind: r.kind, icon: KINDS[r.kind].icon, color: KINDS[r.kind].color, text: r.text, link: r.link, time: r.time, until: untilDay(r.until) });
+const WEEK = 7 * 86400_000;
+const plus7 = (t: Date | string) => new Date(new Date(t).getTime() + WEEK).toISOString();
 
 /** 开关：crm_settings.board_auto；没有这条 / 没写到的种类 = 开 */
 export async function boardSwitches(): Promise<Record<AutoKind, boolean>> {
@@ -109,23 +117,23 @@ export async function boardSwitches(): Promise<Record<AutoKind, boolean>> {
 // ── 自动消息：每种一个函数，返回原始条目（还没合并） ─────────────────────
 type Ctx = { now: Date; today: string; since: Date };
 
-async function eventNew(c: Ctx): Promise<Raw[]> {
+async function eventNew(_c: Ctx): Promise<Raw[]> {
   const { rows } = await getPool().query<{ id: string; slug: string; title: string; starts_at: Date; timezone: string | null; created_at: Date }>(
     `SELECT id, slug, title, starts_at, timezone, created_at FROM events
-      WHERE is_listed AND event_status = 'scheduled' AND registration_open AND starts_at > now() AND created_at >= $1
-      ORDER BY created_at DESC LIMIT 30`,
-    [c.since]
+      WHERE is_listed AND event_status = 'scheduled' AND registration_open AND starts_at > now()
+      ORDER BY created_at DESC LIMIT 30`
   );
+  // 指令 98：活动开始就撤
   return rows.map((e) => ({
-    id: `event_new:${e.id}`, kind: 'event_new', time: iso(e.created_at),
+    id: `event_new:${e.id}`, kind: 'event_new', time: iso(e.created_at), until: iso(e.starts_at),
     text: `${md(e.starts_at, e.timezone || TZ)} ${cut(e.title, 18)} 开始报名`,
     link: `/pages/event/event?slug=${q(e.slug)}`
   }));
 }
 
 async function seatsLow(c: Ctx): Promise<Raw[]> {
-  const { rows } = await getPool().query<{ id: string; slug: string; title: string; capacity: number; taken: number }>(
-    `SELECT e.id, e.slug, e.title, e.capacity,
+  const { rows } = await getPool().query<{ id: string; slug: string; title: string; capacity: number; taken: number; starts_at: Date }>(
+    `SELECT e.id, e.slug, e.title, e.capacity, e.starts_at,
             (SELECT count(*)::int FROM registrations r WHERE r.event_id = e.id
                AND (r.status = 'registered' OR (r.status = 'waitlisted' AND r.confirm_status = 'offered' AND r.offer_expires_at > now()))) AS taken
        FROM events e
@@ -135,7 +143,7 @@ async function seatsLow(c: Ctx): Promise<Raw[]> {
   return rows
     .filter((e) => { const left = e.capacity - e.taken; return left > 0 && left <= e.capacity * 0.2; })
     .map((e) => ({
-      id: `seats_low:${e.id}`, kind: 'seats_low', time: iso(c.now),
+      id: `seats_low:${e.id}`, kind: 'seats_low', time: iso(c.now), until: iso(e.starts_at), // 活动开始就撤
       // 1.3.1 起小程序不显示人数 / 剩几个，只说「所剩不多」
       text: `${cut(e.title, 18)} 名额所剩不多`,
       link: `/pages/event/event?slug=${q(e.slug)}`
@@ -163,7 +171,8 @@ async function meetupShort(c: Ctx): Promise<Raw[]> {
       const period = p.h < 12 ? '上午' : p.h < 18 ? '下午' : '晚上';
       const club = u.club_name.replace(/俱乐部$/, '') || u.club_name;
       return {
-        id: `meetup_short:${u.id}`, kind: 'meetup_short' as const, time: iso(c.now),
+        // 凑齐（上面已滤掉满的）或开始就撤
+        id: `meetup_short:${u.id}`, kind: 'meetup_short' as const, time: iso(c.now), until: iso(u.starts_at),
         text: `${day}${period}${club}局 还差 ${u.capacity - u.joined} 位`,
         link: `/pages/meetupinfo/meetupinfo?id=${u.id}`
       };
@@ -188,7 +197,7 @@ async function memberNew(c: Ctx): Promise<Raw[]> {
   const names = Array.from(new Set(rows.filter((r) => r.shown && r.name).map((r) => cut(r.name!, 12)))).slice(0, 2);
   const latest = rows.reduce((m, r) => (new Date(r.at) > m ? new Date(r.at) : m), new Date(0));
   return [{
-    id: `member_new:${laToday(latest)}`, kind: 'member_new', time: iso(latest),
+    id: `member_new:${laToday(latest)}`, kind: 'member_new', time: iso(latest), until: plus7(latest),
     text: `本周新加入 ${rows.length} 位会员${names.length ? ` · 欢迎 ${names.join('、')} 加入` : ''}`,
     link: '/pages/join/join?from=board'
   }];
@@ -197,8 +206,8 @@ async function memberNew(c: Ctx): Promise<Raw[]> {
 async function jobsNew(c: Ctx): Promise<Raw[]> {
   const pool = getPool();
   if ((await getSetting<unknown>(pool, 'jobs_find_on', true)) === false) return [];
-  const { rows } = await pool.query<{ id: string; created_at: Date; trade: string | null; city: string | null; city_raw: string | null }>(
-    `SELECT p.id, p.created_at, t.name AS trade, ci.name AS city, p.city AS city_raw
+  const { rows } = await pool.query<{ id: string; created_at: Date; expires_at: Date; trade: string | null; city: string | null; city_raw: string | null }>(
+    `SELECT p.id, p.created_at, p.expires_at, t.name AS trade, ci.name AS city, p.city AS city_raw
        FROM jobs_posts p
        LEFT JOIN jobs_trades t ON t.key = p.trade_key
        LEFT JOIN jobs_cities ci ON ci.key = p.city_key
@@ -208,7 +217,8 @@ async function jobsNew(c: Ctx): Promise<Raw[]> {
     [c.since]
   );
   return rows.filter((p) => p.trade).map((p) => ({
-    id: `jobs_new:${p.id}`, kind: 'jobs_new', time: iso(p.created_at),
+    // 活儿关了（查询里只取 open 的）或发出 7 天后撤；活儿先到期就按到期
+    id: `jobs_new:${p.id}`, kind: 'jobs_new', time: iso(p.created_at), until: new Date(Math.min(new Date(p.expires_at).getTime(), new Date(plus7(p.created_at)).getTime())).toISOString(),
     text: `${p.city ? cut(p.city, 8) + ' · ' : ''}找${cut(p.trade!.replace(/（[^）]*）|\([^)]*\)/g, '').trim() || p.trade!, 10)}`,
     link: '/pages/jobs/mine'
   }));
@@ -228,7 +238,8 @@ async function festival(c: Ctx): Promise<Raw[]> {
     const d = f.days!;
     const when = d === 2 ? `后天${f.name}` : d === 1 ? `明天${f.name}` : d === 0 ? `今天${f.name}` : d > 2 ? `${+f.date!.slice(5, 7)}/${+f.date!.slice(8, 10)} ${f.name}` : `${f.name}期间`;
     return {
-      id: `festival:${f.key}:${f.date}`, kind: 'festival' as const, time: iso(c.now),
+      // 过完节撤：节日表的显示结束日（节日当天 + 节后显示天数）过完
+      id: `festival:${f.key}:${f.date}`, kind: 'festival' as const, time: iso(c.now), until: laWallToIso(addDays(f.date!, f.show_until_offset + 1), '00:00'),
       text: `${when}，发一张祝福`,
       link: '/pages/greeting/greeting?from=board'
     };
@@ -246,7 +257,7 @@ async function photos(c: Ctx): Promise<Raw[]> {
     [c.since]
   );
   return rows.map((r) => ({
-    id: `photos:${r.id}:${r.day}`, kind: 'photos', time: iso(r.last),
+    id: `photos:${r.id}:${r.day}`, kind: 'photos', time: iso(r.last), until: plus7(r.last),
     text: `${md(r.starts_at, r.timezone || TZ)} ${cut(r.title, 14)} 照片上传了 ${r.n} 张`,
     link: `/pages/album/album?slug=${q(r.slug)}`
   }));
@@ -258,13 +269,13 @@ async function article(c: Ctx): Promise<Raw[]> {
     getSetting<Record<string, unknown>>(getPool(), 'content_visibility', {})
   ]);
   setContentVisibility(vis as Parameters<typeof setContentVisibility>[0]);
-  const from = addDays(c.today, -(DAYS - 1));
+  const from = addDays(laToday(c.now), -7);
   return contentResearchList().items
     .map((a) => ({ a, day: typeof (a as { date?: unknown }).date === 'string' ? String((a as { date?: string }).date).slice(0, 10) : '' }))
-    .filter(({ day }) => !!parseDay(day) && day >= from && day <= c.today)
+    .filter(({ day }) => !!parseDay(day) && day >= from && day <= laToday(c.now))
     .slice(0, 20)
     .map(({ a, day }) => ({
-      id: `article:${(a as { slug: string }).slug}`, kind: 'article' as const, time: laWallToIso(day, '09:00'),
+      id: `article:${(a as { slug: string }).slug}`, kind: 'article' as const, time: laWallToIso(day, '09:00'), until: plus7(laWallToIso(day, '09:00')),
       text: `新文章：${cut((a as { title: string }).title, 24)}`,
       link: `/pages/article/article?slug=${q((a as { slug: string }).slug)}`
     }));
@@ -279,7 +290,7 @@ async function posterNew(c: Ctx): Promise<Raw[]> {
     [c.since]
   );
   return rows.map((r) => ({
-    id: `poster_new:${r.key}:${r.day}`, kind: 'poster_new', time: iso(r.last),
+    id: `poster_new:${r.key}:${r.day}`, kind: 'poster_new', time: iso(r.last), until: plus7(r.last),
     text: r.purpose === 'greeting' ? `新上 ${r.n} 张${cut(r.name, 8)}祝福图` : `新上 ${r.n} 张${cut(r.name, 8)}海报`,
     // 祝福图去「节日祝福」；活动海报去挑模板页（主办方出海报用的那一页）
     link: r.purpose === 'greeting' ? '/pages/greeting/greeting?from=board' : '/pages/org/tpl/tpl'
@@ -330,10 +341,13 @@ async function resolveLinks(rows: NoticeRow[]): Promise<Map<string, Link>> {
   }));
 }
 
+/** 人工通知什么时候撤：设了就按设的；没设默认发出 7 天后（指令 98，查询时算，不改库） */
+const NOTICE_END = `coalesce(ends_at, starts_at + interval '7 days')`;
+const noticeUntil = (n: NoticeRow) => iso(n.ends_at ?? plus7(n.starts_at));
 async function liveNotices(): Promise<NoticeRow[]> {
   const { rows } = await getPool().query<NoticeRow>(
     `SELECT * FROM board_notices
-      WHERE removed_at IS NULL AND starts_at <= now() AND (ends_at IS NULL OR ends_at > now())
+      WHERE removed_at IS NULL AND starts_at <= now() AND ${NOTICE_END} > now()
       ORDER BY pinned DESC, starts_at DESC LIMIT 50`
   );
   return rows;
@@ -349,7 +363,8 @@ const dayLabel = (today: string, day: string) => {
 export async function buildBoard(opts: { today?: string; now?: Date } = {}): Promise<Board> {
   const now = opts.now ?? new Date();
   const realToday = laToday(now);
-  const ctx: Ctx = { now, today: opts.today ?? realToday, since: new Date(laWallToIso(addDays(realToday, -(DAYS - 1)), '00:00')) };
+  // since：「7 天后撤」的那几种只需要查最近 7 天
+  const ctx: Ctx = { now, today: opts.today ?? realToday, since: new Date(now.getTime() - WEEK) };
   const sw = await boardSwitches();
   const [notices, ...autos] = await Promise.all([
     liveNotices().catch((e) => { console.warn('[board] notices', e instanceof Error ? e.message : e); return [] as NoticeRow[]; }),
@@ -358,22 +373,22 @@ export async function buildBoard(opts: { today?: string; now?: Date } = {}): Pro
   const links = await resolveLinks(notices).catch(() => new Map<string, Link>());
 
   const pinned: PinnedItem[] = notices.filter((n) => n.pinned).map((n) => ({
-    ...item({ id: `notice:${n.id}`, kind: 'notice', text: n.text, link: links.get(n.id) ?? null, time: iso(n.starts_at) }),
+    ...item({ id: `notice:${n.id}`, kind: 'notice', text: n.text, link: links.get(n.id) ?? null, time: iso(n.starts_at), until: noticeUntil(n) }),
     // 指令 97：署名统一「中美房地产商会」，不写个人名字
-    sub: ['中美房地产商会', `${md(n.starts_at)} 发`, n.ends_at ? `${md(new Date(new Date(n.ends_at).getTime() - 1000))} 撤下` : null].filter(Boolean).join(' · '),
-    endsAt: n.ends_at ? iso(n.ends_at) : null
+    sub: ['中美房地产商会', `${md(n.starts_at)} 发`, `${md(new Date(new Date(noticeUntil(n)).getTime() - 1000))} 撤下`].join(' · '),
+    endsAt: noticeUntil(n)
   }));
 
   const raws: Raw[] = [
-    ...notices.filter((n) => !n.pinned).map((n) => ({ id: `notice:${n.id}`, kind: 'notice' as const, text: n.text, link: links.get(n.id) ?? null, time: iso(n.starts_at) })),
+    ...notices.filter((n) => !n.pinned).map((n) => ({ id: `notice:${n.id}`, kind: 'notice' as const, text: n.text, link: links.get(n.id) ?? null, time: iso(n.starts_at), until: noticeUntil(n) })),
     ...autos.flat()
   ];
-  // 按洛杉矶日期分天（最近 14 天），同天同种 ≥ 3 条合并
-  const from = addDays(realToday, -(DAYS - 1));
+  // 指令 98：只放没过期的（until > 现在），按洛杉矶日期分天（不再固定 14 天），同天同种 ≥ 3 条合并
   const byDay = new Map<string, Raw[]>();
   for (const r of raws) {
+    if (new Date(r.until).getTime() <= now.getTime()) continue;
     const day = laToday(new Date(r.time));
-    if (day < from || day > realToday) continue;
+    if (day > realToday) continue;
     byDay.set(day, [...(byDay.get(day) ?? []), r]);
   }
   const days: BoardDay[] = Array.from(byDay.keys()).sort().reverse().map((day) => {
@@ -385,7 +400,8 @@ export async function buildBoard(opts: { today?: string; now?: Date } = {}): Pro
       const m = kind !== 'notice' ? MERGE[kind as AutoKind] : undefined;
       if (m && rs.length >= MERGE_AT) {
         const last = rs.reduce((a, b) => (a.time > b.time ? a : b)).time;
-        out.push({ id: `${kind}:merged:${day}`, kind: kind as AutoKind, time: last, ...m(rs) });
+        const until = rs.reduce((a, b) => (a.until > b.until ? a : b)).until; // 合并的那条：最后一条撤了才撤
+        out.push({ id: `${kind}:merged:${day}`, kind: kind as AutoKind, time: last, until, ...m(rs) });
       } else out.push(...rs);
     }
     out.sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
@@ -455,7 +471,7 @@ export async function parseNoticeLink(v: unknown): Promise<Record<string, string
   throw new CrmError('bad_request', '链接类型不对');
 }
 
-/** 「显示到哪天」（含这一天，洛杉矶时间）→ ends_at = 第二天 0 点；空 = 不自动撤 */
+/** 「显示到哪天」（含这一天，洛杉矶时间）→ ends_at = 第二天 0 点；空 = 默认发出 7 天后撤 */
 function endsAtOf(v: unknown): string | null {
   if (v == null || v === '') return null;
   const d = parseDay(v);
@@ -465,14 +481,14 @@ function endsAtOf(v: unknown): string | null {
 }
 
 const noticeStatus = (n: NoticeRow, now = Date.now()) =>
-  n.removed_at ? 'removed' : n.ends_at && new Date(n.ends_at).getTime() <= now ? 'expired' : new Date(n.starts_at).getTime() > now ? 'scheduled' : 'live';
+  n.removed_at ? 'removed' : new Date(noticeUntil(n)).getTime() <= now ? 'expired' : new Date(n.starts_at).getTime() > now ? 'scheduled' : 'live';
 const STATUS_LABEL: Record<string, string> = { live: '显示中', scheduled: '还没到开始时间', expired: '已到期自动撤下', removed: '已撤下' };
 
 /** 后台页 / 手机工作台：通知列表、开关、现在首页滚的是哪几条、能选的活动和页面 */
 export async function staffBoard() {
   const pool = getPool();
   const [{ rows: ns }, sw, board, { rows: evs }] = await Promise.all([
-    pool.query<NoticeRow>(`SELECT * FROM board_notices ORDER BY (removed_at IS NULL AND (ends_at IS NULL OR ends_at > now())) DESC, pinned DESC, created_at DESC LIMIT 60`),
+    pool.query<NoticeRow>(`SELECT * FROM board_notices ORDER BY (removed_at IS NULL AND ${NOTICE_END} > now()) DESC, pinned DESC, created_at DESC LIMIT 60`),
     boardSwitches(),
     buildBoard(),
     pool.query<{ id: string; title: string; starts_at: Date; timezone: string | null }>(
@@ -498,12 +514,12 @@ export async function staffBoard() {
     textMax: TEXT_MAX,
     notices: ns.map((n) => ({
       id: n.id, text: n.text, link: n.link, linkTo: links.get(n.id) ?? null, linkLabel: linkLabel(n), pinned: n.pinned,
-      startsAt: n.starts_at, endsAt: n.ends_at, endsOn: n.ends_at ? laToday(new Date(new Date(n.ends_at).getTime() - 1000)) : null,
+      startsAt: n.starts_at, endsAt: n.ends_at, endsOn: n.ends_at ? untilDay(n.ends_at) : null, until: untilDay(noticeUntil(n)), untilDefault: !n.ends_at,
       createdBy: n.created_by.replace(/^staff:/, ''), createdAt: n.created_at, removedAt: n.removed_at,
       status: noticeStatus(n), statusLabel: STATUS_LABEL[noticeStatus(n)]
     })),
     switches: AUTO_KINDS.map((k) => ({ kind: k, label: KINDS[k].label, desc: KINDS[k].desc, color: KINDS[k].color, on: sw[k], count: counts[k] ?? 0 })),
-    preview: { ticker: board.ticker, pinned: board.pinned, dayCount: board.days.length, itemCount: board.days.reduce((s, d) => s + d.items.length, 0) },
+    preview: { ticker: board.ticker, pinned: board.pinned, items: board.days.flatMap((d) => d.items), dayCount: board.days.length, itemCount: board.days.reduce((s, d) => s + d.items.length, 0) },
     events: evs.map((e) => ({ id: e.id, title: e.title, date: md(e.starts_at, e.timezone || TZ) })),
     pages: PAGES
   };
@@ -561,7 +577,7 @@ export async function staffBoardAction(s: Staff, b: Record<string, unknown>) {
         const endsAt = endsAtOf(b.endsOn);
         await db.query(`UPDATE board_notices SET ends_at = $2 WHERE id = $1`, [id, endsAt]);
         await audit(db, s, 'board_notice_end', 'board_notice', id, { before: { endsAt: n.ends_at }, after: { endsAt } });
-        return { message: endsAt ? `显示到 ${String(b.endsOn)}（含这天），之后自动撤下` : '已改成不自动撤下' };
+        return { message: endsAt ? `显示到 ${String(b.endsOn)}（含这天），之后自动撤下` : '已改成默认：发出 7 天后自动撤' };
       }
       if (action === 'remove') {
         if (n.removed_at) return { message: '这条已经撤下了' };
