@@ -206,8 +206,8 @@ async function memberNew(c: Ctx): Promise<Raw[]> {
 async function jobsNew(c: Ctx): Promise<Raw[]> {
   const pool = getPool();
   if ((await getSetting<unknown>(pool, 'jobs_find_on', true)) === false) return [];
-  const { rows } = await pool.query<{ id: string; created_at: Date; expires_at: Date; trade: string | null; city: string | null; city_raw: string | null }>(
-    `SELECT p.id, p.created_at, p.expires_at, t.name AS trade, ci.name AS city, p.city AS city_raw
+  const { rows } = await pool.query<{ id: string; created_at: Date; expires_at: Date; trade: string | null; trade_key: string | null; city: string | null; city_raw: string | null }>(
+    `SELECT p.id, p.created_at, p.expires_at, t.name AS trade, p.trade_key, ci.name AS city, p.city AS city_raw
        FROM jobs_posts p
        LEFT JOIN jobs_trades t ON t.key = p.trade_key
        LEFT JOIN jobs_cities ci ON ci.key = p.city_key
@@ -220,7 +220,8 @@ async function jobsNew(c: Ctx): Promise<Raw[]> {
     // 活儿关了（查询里只取 open 的）或发出 7 天后撤；活儿先到期就按到期
     id: `jobs_new:${p.id}`, kind: 'jobs_new', time: iso(p.created_at), until: new Date(Math.min(new Date(p.expires_at).getTime(), new Date(plus7(p.created_at)).getTime())).toISOString(),
     text: `${p.city ? cut(p.city, 8) + ' · ' : ''}找${cut(p.trade!.replace(/（[^）]*）|\([^)]*\)/g, '').trim() || p.trade!, 10)}`,
-    link: '/pages/jobs/mine'
+    // 1.7.1 回归 R2-3：点了去这个工种的师傅列表（和首页找工人方块同一个去处），不去「我的接活儿」
+    link: p.trade_key ? `/pages/jobs/pros?trade=${encodeURIComponent(p.trade_key)}` : '/pages/jobs/pros?all=1'
   }));
 }
 
@@ -307,7 +308,8 @@ const MERGE: Partial<Record<AutoKind, (rs: Raw[]) => { text: string; link: Link 
   event_new: (rs) => ({ text: `${rs.length} 场新活动开始报名`, link: '/pages/events/events' }),
   seats_low: (rs) => ({ text: `${rs.length} 场活动名额快满了`, link: '/pages/events/events' }),
   meetup_short: (rs) => ({ text: `${rs.length} 个组局还差人`, link: '/pages/committees/committees' }),
-  jobs_new: (rs) => ({ text: `找工人：新发了 ${rs.length} 个活儿`, link: '/pages/jobs/mine' }),
+  // R2-3：合并条也写「城市 · 工种」（取前两条），点了去全部工种
+  jobs_new: (rs) => ({ text: `新活儿：${rs.slice(0, 2).map((r) => r.text).join('、')} 等 ${rs.length} 个`, link: '/pages/jobs/pros?all=1' }),
   photos: (rs) => ({ text: `${rs.length} 场活动的照片更新了`, link: '/pages/albums/albums' }),
   article: (rs) => ({ text: `${rs.length} 篇新文章`, link: '/pages/research/research' }),
   poster_new: (rs) => {
