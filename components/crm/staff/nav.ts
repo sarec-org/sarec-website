@@ -84,6 +84,8 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/rooms', label: '会议室与电子屏', role: 'ops', words: ['会议室', '电子屏', '预约', '场地', '屏幕', '收款登记'] }
   ],
   内容: [
+    // 指令 95：首页「商会看板」（搜索框下面那一行滚动消息 + 看板页）：发通知、置顶、撤下、自动消息开关
+    { href: '/zh/staff/board', label: '看板', role: 'ops', words: ['看板', '商会看板', '黑板报', '公告', '发公告', '通知', '发通知', '首页通知', '滚动消息', '首页消息', '置顶通知', '撤下通知', '自动消息', '小黑板'], pin: ['看板', '商会看板', '黑板报', '公告', '发公告', '首页通知', '滚动消息', '首页消息', '小黑板'] },
     { href: '/zh/staff/home-slides', label: '首页轮播', role: 'ops', words: ['轮播', 'banner', '横幅', '置顶', '首页大图', '大图', '首页图片', '轮播图', '首页横幅', '首页'] },
     { href: '/zh/staff/docs', label: '商会资料', role: 'admin', words: ['资料', 'PPT', 'PDF', '介绍', '商会介绍', '文件', '上传PDF', '商会资料'] },
     { href: '/zh/staff/newsletter', label: '邮件通讯', role: 'ops', words: ['邮件', '群发', '通讯', '发邮件', 'newsletter'] },
@@ -143,6 +145,9 @@ const EXTRA_RAW: Extra[] = [
   { href: '/zh/staff/settings#off', label: '现在关着的功能', page: '设置', tab: '设置与团队', role: '', words: ['关着的功能', '关掉', '开关', '没开', '没打开', '说明'], pin: ['关着的功能', '没开', '没打开'] },
   { href: '/zh/staff/settings#wechat-qr', label: '换商会微信二维码', page: '设置', tab: '设置与团队', role: 'admin', words: ['商会微信', '微信二维码', '加微信', '换二维码', '二维码', '码'], pin: ['商会微信', '微信二维码', '加微信', '换二维码'] },
   { href: '/zh/staff/team#add', label: '加人（开通手机工作台）', page: '团队', tab: '设置与团队', role: 'admin', words: ['加人', '加员工', '员工', '新同事', '加同事', '工作人员', '开通工作台', '开通'], pin: ['加人', '加员工', '员工', '新同事', '加同事', '开通工作台', '开通', '工作人员'] },
+  // 指令 95：搜「通知」时排在「手机通知总闸」后面（第二个），搜「发通知」直接到发通知那一块
+  { href: '/zh/staff/board#send', label: '发看板通知（首页滚动的一句话）', page: '看板', tab: '内容', role: 'ops', words: ['发通知', '通知', '公告', '发公告', '看板', '黑板报', '置顶'], pin: ['发通知', '发看板通知', '看板通知'] },
+  { href: '/zh/staff/board#auto', label: '看板自动消息（开关）', page: '看板', tab: '内容', role: 'ops', words: ['看板开关', '自动消息', '开关', '关掉'], pin: ['看板开关', '自动消息'] },
   { href: '/zh/staff/contacts', label: '导出客户名单（全部客户，按条件筛）', page: '客户', tab: '客户', role: 'ops', words: ['导出客户', '客户名单', '导出会员', '会员名单', '全部客户'], pin: ['导出客户', '客户名单', '导出会员', '会员名单', '全部客户'] }
 ];
 export const SEARCH_EXTRA: NavItem[] = EXTRA_RAW.map(({ page, ...e }) => ({ ...e, group: e.tab, sub: page }));

@@ -26,6 +26,8 @@ const EXTRA_WORDS: Record<string, string> = {
   下架模板: '/zh/staff/poster-templates#list', 换模板: '/zh/staff/poster-templates#list', 小程序链接: '/zh/staff/settings#common', 链接: '/zh/staff/settings#common',
   报名名单: '/zh/staff/events?want=list', 活动名单: '/zh/staff/events?want=list', 导出名单: '/zh/staff/events?want=list', 导出报名: '/zh/staff/events?want=list',
   谁报名: '/zh/staff/events?want=list', 今天报名: '/zh/staff/events?want=list', 举报活动: '/zh/staff/moderation', 投诉: '/zh/staff/moderation',
+  // 指令 95 商会看板
+  看板: '/zh/staff/board', 公告: '/zh/staff/board', 黑板报: '/zh/staff/board', 商会看板: '/zh/staff/board', 发通知: '/zh/staff/board#send', 自动消息: '/zh/staff/board#auto',
   加同事: '/zh/staff/team#add', 工作人员: '/zh/staff/team#add', 说明: '/zh/staff/settings#off', 客户名单: '/zh/staff/contacts', 祝福图: '/zh/staff/poster-templates?purpose=greeting#list'
 };
 
@@ -45,5 +47,16 @@ function run(title: string, list: Record<string, string>) {
 }
 run(`40 个词（${WORDS.length}）`, EXPECT);
 run('验收时补查的说法', EXTRA_WORDS);
+
+/** 指令 95：这些词第一个不一定是看板，但前 3 个结果里必须有看板（「通知」第一个仍是手机通知总闸） */
+const TOP3: Record<string, string> = { 通知: '/zh/staff/board' };
+if (md) console.log(`\n**前 3 个结果里要有**\n\n| 搜的词 | 前 3 个结果 | 对不对 |\n|---|---|---|`);
+for (const [w, want] of Object.entries(TOP3)) {
+  const r = searchNav(w, all).slice(0, 3);
+  const ok = r.some((it) => it.href.split('#')[0] === want);
+  if (!ok) bad++;
+  if (md) console.log(`| ${w} | ${r.map(name).join('、')} | ${ok ? '对' : `**不对**（要有 \`${want}\`）`} |`);
+  else console.log(`${ok ? 'OK ' : 'NO '} ${w} → 前 3：${r.map(name).join(' / ')}${ok ? '' : `   要有 ${want}`}`);
+}
 console.log(md ? `\n第一个结果不对的：${bad} 个。` : `\n${bad} wrong`);
 process.exit(bad ? 1 : 0);
