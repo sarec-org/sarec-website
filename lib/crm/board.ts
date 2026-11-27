@@ -49,16 +49,16 @@ export type PinnedItem = BoardItem & { sub: string; endsAt: string | null };
 export type BoardDay = { date: string; label: string; items: BoardItem[] };
 export type Board = { ticker: BoardItem[]; pinned: PinnedItem[]; days: BoardDay[]; version: string; today: string };
 
-/** 每种消息：名字（后台开关用）、说明、图标 key、颜色（小程序不认识的新图标就用颜色画个圆点，不用发版） */
+/** 每种消息：名字（后台开关用）、说明、图标 key（指令 97 定的 10 个：event / meetup / poster / greeting / photo / member / job / article / quota / notice）、颜色（小程序不认识的新图标就用颜色画个圆点，不用发版） */
 export const KINDS: Record<Kind, { label: string; desc: string; icon: string; color: string }> = {
   notice: { label: '工作人员通知', desc: '后台 / 手机工作台手动发的', icon: 'notice', color: '#234A3E' },
   event_new: { label: '新活动开始报名', desc: '「12/5 周五分享会 开始报名」——商会活动公开且开着报名，14 天内新建的', icon: 'event', color: '#2257B8' },
-  seats_low: { label: '名额快满', desc: '「商会月会 名额所剩不多」——还剩 20% 以内（至少 1 个）时；不写数字（小程序不显示人数）', icon: 'seats', color: '#C97A1E' },
+  seats_low: { label: '名额快满', desc: '「商会月会 名额所剩不多」——还剩 20% 以内（至少 1 个）时；不写数字（小程序不显示人数）', icon: 'quota', color: '#C97A1E' },
   meetup_short: { label: '组局还差几位', desc: '「周六下午掼蛋局 还差 3 位」——已过内容检测、14 天内开始、还没满的俱乐部组局', icon: 'meetup', color: '#B07D2B' },
   member_new: { label: '新入会', desc: '「本周新加入 3 位会员 · 欢迎 ××公司 加入」——只写已同意官网展示的名字，其余只计数', icon: 'member', color: '#0E7A6B' },
-  jobs_new: { label: '找工人新发的活', desc: '「尔湾 · 找水电」——公开列表里能看到的活儿，只写城市和工种', icon: 'jobs', color: '#7A5A3C' },
-  festival: { label: '节日祝福', desc: '「后天感恩节，发一张祝福」——节日前 2 天起（按节日表），这个节日有祝福图时', icon: 'festival', color: '#C9403F' },
-  photos: { label: '活动相册新照片', desc: '「11/21 讲座 照片上传了 36 张」——公开的照片', icon: 'photos', color: '#5C5BA0' },
+  jobs_new: { label: '找工人新发的活', desc: '「尔湾 · 找水电」——公开列表里能看到的活儿，只写城市和工种', icon: 'job', color: '#7A5A3C' },
+  festival: { label: '节日祝福', desc: '「后天感恩节，发一张祝福」——节日前 2 天起（按节日表），这个节日有祝福图时', icon: 'greeting', color: '#C9403F' },
+  photos: { label: '活动相册新照片', desc: '「11/21 讲座 照片上传了 36 张」——公开的照片', icon: 'photo', color: '#5C5BA0' },
   article: { label: '研究与动态新文章', desc: '「新文章：×××」——小程序能看到的文章，14 天内发布的', icon: 'article', color: '#3D5A8A' },
   poster_new: { label: '新海报模板上架', desc: '「新上 30 张圣诞海报」——按分类、按天合并', icon: 'poster', color: '#0E7A6B' }
 };
@@ -359,7 +359,8 @@ export async function buildBoard(opts: { today?: string; now?: Date } = {}): Pro
 
   const pinned: PinnedItem[] = notices.filter((n) => n.pinned).map((n) => ({
     ...item({ id: `notice:${n.id}`, kind: 'notice', text: n.text, link: links.get(n.id) ?? null, time: iso(n.starts_at) }),
-    sub: [`${md(n.starts_at)} 发`, n.ends_at ? `${md(new Date(new Date(n.ends_at).getTime() - 1000))} 撤下` : null].filter(Boolean).join(' · '),
+    // 指令 97：署名统一「中美房地产商会」，不写个人名字
+    sub: ['中美房地产商会', `${md(n.starts_at)} 发`, n.ends_at ? `${md(new Date(new Date(n.ends_at).getTime() - 1000))} 撤下` : null].filter(Boolean).join(' · '),
     endsAt: n.ends_at ? iso(n.ends_at) : null
   }));
 
