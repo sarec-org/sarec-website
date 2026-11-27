@@ -187,7 +187,7 @@ export async function uploadSlides(s: Staff, eventId: string, pdf: Buffer, fullU
     const fl = fin[0].red_flags;
     const message = [
       `课件已${pub ? '上传并公开' : '上传（还没公开）'}：${fin[0].pages.length} 页。`,
-      ...r.notes,
+      r.notes.length ? r.notes.join('；') + '。' : '',
       pub ? '小程序活动页、「讲座课件」列表、看板都能看到了。' : '',
       fl.length ? `注意：这几页有可能影响小程序审核的字样（金额 / 会费 / 收益等）——${fl.map((x) => `第 ${x.page} 页：${x.words.join('、')}`).join('；')}。要撤下就点「先不公开」。` : '',
       fin[0].text_readable === false ? '这份是图片做的 PDF，系统读不到字，请自己翻一遍有没有金额、会费、收款方式、收益承诺。' : ''

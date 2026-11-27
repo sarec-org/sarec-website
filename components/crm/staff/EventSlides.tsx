@@ -100,7 +100,7 @@ export function EventSlides({ eventId }: { eventId: string }) {
             <div className={styles.btnRow}>
               {x.qrUrl && <a className={`${styles.btn} ${styles.btnGhost}`} href={x.qrUrl} download>下载小程序码</a>}
               {x.pdfUrl && <a className={`${styles.btn} ${styles.btnQuiet}`} href={x.pdfUrl} target="_blank" rel="noreferrer">看手机版 PDF</a>}
-              {x.fullUrl && <a className={`${styles.btn} ${styles.btnQuiet}`} href={x.fullUrl} target="_blank" rel="noreferrer">原稿</a>}
+              {x.fullUrl && <a className={`${styles.btn} ${styles.btnQuiet}`} href={x.fullUrl} target="_blank" rel="noreferrer">下载原稿</a>}
               <label className={styles.small} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <input type="checkbox" disabled={busy} checked={x.audience === 'members'} onChange={(e) => change(x, { audience: e.target.checked ? 'members' : 'all' })} /> 仅会员看完整版
               </label>
