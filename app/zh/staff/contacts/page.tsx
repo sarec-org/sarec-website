@@ -19,6 +19,9 @@ export default function StaffContacts() {
   const [rows, setRows] = useState<C[] | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [err, setErr] = useState('');
+  // 筛选那一块：电脑上默认展开，手机上默认收起（导出按钮留在第一屏）
+  const [wide, setWide] = useState(false);
+  useEffect(() => setWide(window.innerWidth > 760), []);
   const qs = (x = f) => new URLSearchParams(Object.entries(x).filter(([, v]) => v)).toString();
   async function load(x = f) {
     const r = await api<{ contacts: C[]; counts: Counts }>(`/api/v1/staff/contacts?${qs(x)}`);
@@ -62,7 +65,14 @@ export default function StaffContacts() {
             <input className={styles.input} placeholder="姓名 / 邮箱 / 手机 / 会员编号" value={f.q} onChange={(e) => setF({ ...f, q: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && load()} />
             <button className={styles.btn} onClick={() => load()}>查询</button>
           </div>
-          <div className={styles.grid2} style={{ marginBottom: '0.75rem' }}>
+          {/* 指令 89-B 验收 P2-6：导出按钮放第一屏（手机上原来被 8 个筛选挤到下面）；筛选收进一行，电脑上默认展开 */}
+          <div className={styles.btnRow} style={{ marginBottom: '0.75rem' }}>
+            <a className={`${styles.btn} ${styles.btnGhost}`} style={{ flex: '0 1 auto' }} href={`/api/v1/staff/contacts?${qs()}&format=csv`}>导出 Excel（CSV，按现在的条件）</a>
+            <Link className={`${styles.btn} ${styles.btnQuiet}`} style={{ flex: '0 1 auto' }} href="/zh/staff/events?want=list">某一场活动的报名名单 ›</Link>
+          </div>
+          <details open={wide} onToggle={(e) => setWide((e.target as HTMLDetailsElement).open)} style={{ marginBottom: '0.75rem' }}>
+            <summary style={{ cursor: 'pointer', minHeight: 36 }} className={styles.small}>按条件筛选（范围、新增时间、身份、邮箱、区域、行业、主题、标签）›</summary>
+          <div className={styles.grid2} style={{ margin: '0.5rem 0 0.75rem' }}>
             {sel('view', '范围（默认：有姓名或手机号的客户）', [['customers', '客户'], ['opened', '只打开过、未登记的微信用户'], ['all', '全部档案']])}
             {sel('newDays', '新增时间', [['7', '最近 7 天新增'], ['30', '最近 30 天新增'], ['90', '最近 90 天新增']])}
             {sel('member', '身份', [['member', '正式会员'], ['registered', '注册用户']])}
@@ -75,10 +85,8 @@ export default function StaffContacts() {
               <input id="f-tag" className={styles.input} value={f.tag} placeholder="如 往返:上海" onChange={(e) => setF({ ...f, tag: e.target.value })} />
             </div>
           </div>
-          <div className={styles.btnRow} style={{ marginBottom: '1rem' }}>
-            <button className={styles.btn} onClick={() => load()}>按条件筛选</button>
-            <a className={`${styles.btn} ${styles.btnGhost}`} href={`/api/v1/staff/contacts?${qs()}&format=csv`}>导出 Excel（CSV）</a>
-          </div>
+            <button className={styles.btn} style={{ marginBottom: '0.75rem' }} onClick={() => load()}>按条件筛选</button>
+          </details>
           <p className={styles.small}>{rows ? `共 ${rows.length} 人（最多显示 200，${f.newDays ? '最近新建的' : '最近有动作的'}排在前面）` : '加载中…'}</p>
           {rows?.map((c) => (
             <div key={c.id} className={styles.card} style={{ padding: '0.7rem 0.9rem', margin: '0 0 0.5rem' }}>

@@ -23,7 +23,8 @@ export function EventHub({ eventId, current }: { eventId: string; current: HubTa
   if (!eventId || !h) return null;
   const c = h.counts;
   const tabs: [HubTab, string, string][] = [
-    ['regs', `报名与签到 ${c.checked_in}/${c.registered}`, `/zh/staff/events/${eventId}`],
+    // 指令 89-B 验收 P2-1：点了跳到本页的报名名单（原来就是本页，点了没反应）
+    ['regs', `报名 ${c.registered} · 到场 ${c.checked_in}`, `/zh/staff/events/${eventId}#regs`],
     ['prep', c.prep_total ? `筹备清单 ${c.prep_done}/${c.prep_total}${c.prep_due ? `（${c.prep_due} 项到期）` : ''}` : '筹备清单', `/zh/staff/prep/${eventId}`],
     ['album', `相册 ${c.photos}${c.photos_review ? `（${c.photos_review} 张待审）` : ''}`, `/zh/staff/album?event=${eventId}`],
     ['recap', c.recap === 'published' ? '回顾（已发布）' : c.recap === 'drafted' ? '回顾（待发布）' : '回顾', `/zh/staff/recaps?event=${eventId}`],

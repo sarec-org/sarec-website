@@ -1,6 +1,7 @@
 'use client';
 /** 1.3.1 F：团队与权限（只有管理员）。每个微信账号一行，分别显示、可单独停用；加人生成 24 小时绑定码；关键操作记录可查。
  *  1.4.0：每人一行「出码」（小程序码 + 8 位码备用）；设置页“按邮箱管工作人员”并到这里（东哥已点头）。 */
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { Msg, StaffGate } from '@/components/crm/staff/StaffGate';
@@ -62,6 +63,7 @@ const WEB_ROLES: [string, string][] = [['checkin', '签到员'], ['finance', '�
 
 export default function Team() {
   const [team, setTeam] = useState<M[]>([]);
+  useHashScroll(team.length > 0); // 指令 89-B 验收：搜「员工 / 加人」带 #add 进来时，等名单加载完再滚到加人那块
   const [log, setLog] = useState<LogRow[]>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // 刚加的人 / 某一行出的码：按工作人员 id 存，显示在那一行下面
@@ -120,12 +122,20 @@ export default function Team() {
     <StaffGate title="团队" role="admin" wide>
       {() => (
         <>
-          <p className={styles.small}>
-            管理员：全部权限。运营：活动、客户、内容、通讯，不能改权限和价格。签到员：只能签到和补登记。财务：核款。地区管理员：只管自己地区的活动和报名；“全部地区”的通知只有管理员能发。每个微信账号单独一行，停用、改角色立即生效。
-          </p>
-          <div className={styles.notice}>
-            <strong>给同事开通手机工作台：</strong>在下面「工作人员」里找到这个人，点「出码」。{BIND_TIP}。新同事先到页面下方「加人」填姓名和手机号。
+          {/* 指令 89-B.4：「加人」原来只在页面最底下，第一屏先给按钮；角色说明收成一行可展开 */}
+          <div className={styles.btnRow} style={{ marginBottom: '0.6rem' }}>
+            <a href="#add" className={styles.btn}>＋ 加人（开通手机工作台）</a>
+            <a href="#web-login" className={`${styles.btn} ${styles.btnGhost}`}>网站后台登录（按邮箱）</a>
           </div>
+          <div className={styles.notice}>
+            <strong>给同事开通手机工作台：</strong>在下面「工作人员」里找到这个人，点「出码」。{BIND_TIP}。新同事点上面「加人」填姓名和手机号。
+          </div>
+          <details className={styles.small} style={{ margin: '0.4rem 0' }}>
+            <summary style={{ cursor: 'pointer' }}>各角色能做什么 ›</summary>
+            <p className={styles.small} style={{ margin: '0.3rem 0 0' }}>
+              管理员：全部权限。运营：活动、客户、内容、通讯，不能改权限和价格。签到员：只能签到和补登记。财务：核款。地区管理员：只管自己地区的活动和报名；“全部地区”的通知只有管理员能发。每个微信账号单独一行，停用、改角色立即生效。
+            </p>
+          </details>
           <Msg m={msg} />
 
           <h2 className={styles.h2}>工作人员（{team.filter((m) => m.is_active).length} 人在用）</h2>
@@ -238,7 +248,7 @@ export default function Team() {
           ))}
           <p className={styles.small}>出好的码只在这一页显示；离开页面后要用再点一次「出码」（之前出的码 24 小时内仍然能用）。</p>
 
-          <h2 className={styles.h2}>加人（开通手机工作台）</h2>
+          <h2 className={styles.h2} id="add" style={{ scrollMarginTop: 140 }}>加人（开通手机工作台）</h2>
           <div className={styles.card}>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="tm-name">姓名（同一人多个微信号请写清，例如“东哥 · 微信 2”）</label>
@@ -278,7 +288,7 @@ export default function Team() {
             </button>
           </div>
 
-          <h2 className={styles.h2} id="web-login">网站后台登录（按邮箱）</h2>
+          <h2 className={styles.h2} id="web-login" style={{ scrollMarginTop: 140 }}>网站后台登录（按邮箱）</h2>
           <div className={styles.card}>
             <p className={styles.small} style={{ marginTop: 0 }}>
               要在电脑或手机浏览器上进这个网站后台的人，在这里填邮箱和角色；他用这个邮箱收验证码登录，不需要密码。已有的人点上面那一行的「改网站登录」就能改。

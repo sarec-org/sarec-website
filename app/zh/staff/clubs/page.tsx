@@ -6,6 +6,7 @@
  * - 禁止名单：按会员号，或从组局的发起人一键「禁止此人」；「解除」。
  * - 操作记录：谁、什么时候、做了什么。
  */
+import { useHashScroll } from '@/components/crm/staff/useHashScroll';
 import { useCallback, useEffect, useState } from 'react';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
@@ -27,11 +28,18 @@ type Data = { clubs: Club[]; meetups: Meetup[]; bans: Ban[]; actions: Action[] }
 type Form = { editing: boolean; key: string; name: string; intro: string; membersOnly: boolean; sortOrder: string; icon: string; status: 'active' | 'preparing'; leaderNo: string; dropLeader: boolean; leaderName: string | null };
 
 const ACTION_TEXT: Record<string, string> = {
-  save: '保存了俱乐部', close_club: '关闭了俱乐部', reopen_club: '重新打开了俱乐部', set_qr: '换了群二维码', take_down: '下架了组局', restore: '恢复了组局',
+  save: '保存了俱乐部', close_club: '关闭了俱乐部', reopen_club: '重新打开了俱乐部', show_on_home: '设成在小程序首页显示（已成立＋打开）', set_qr: '换了群二维码', take_down: '下架了组局', restore: '恢复了组局',
   approve: '放行了组局', ban: '禁止了', unban: '解除禁止', remove: '移出了成员'
 };
 
 /** 群二维码状态：服务器给的是日期（可能带时间），只取前 10 位 */
+/** 指令 89-B 验收 P2-2：小程序首页到底显示不显示（= 没关闭 且 已成立），不显示时说清为什么 */
+function homeState(c: Club): { on: boolean; why: string } {
+  if (c.closed_at && c.status !== 'active') return { on: false, why: '已关闭、筹备中' };
+  if (c.closed_at) return { on: false, why: '已关闭' };
+  if (c.status !== 'active') return { on: false, why: '筹备中，只在「全部」里' };
+  return { on: true, why: '' };
+}
 function qrState(c: Club): { text: string; bad: boolean } {
   if (!c.group_qr_url) return { text: '还没上传群二维码', bad: true };
   const d = (c.group_qr_expires ?? '').slice(0, 10);
@@ -47,6 +55,7 @@ const plus7 = () => new Date(Date.now() + 7 * 86400e3).toLocaleDateString('en-CA
 
 function Clubs() {
   const [d, setD] = useState<Data | null>(null);
+  useHashScroll(!!d); // 指令 89-B：搜索 / 开关带 #club-xxx 点进来时滚到那个俱乐部
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const closeMsg = useCallback(() => setMsg(null), []);
   const [busy, setBusy] = useState('');
@@ -140,18 +149,43 @@ function Clubs() {
         </div>
       )}
       <Toast m={msg} onClose={closeMsg} />
+      {/* 指令 89-B.4：第一屏给"要干的事"——新建原来在所有俱乐部卡片下面；每个俱乐部一个直达（开 / 关麻将、改掼蛋介绍不用往下翻找） */}
+      <div className={styles.btnRow} style={{ marginBottom: '0.6rem' }}>
+        {!f && <button className={styles.btn} onClick={() => { setMsg(null); setF(blankForm()); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}>＋ 新建俱乐部</button>}
+        <a href="#meetups" className={`${styles.btn} ${styles.btnGhost}`}>组局（{meetups.length}）</a>
+      </div>
+      <p style={{ margin: '0 0 0.6rem', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {d.clubs.map((c) => (
+          <a key={c.key} href={`#club-${c.key}`} className={`${styles.chip} ${homeState(c).on ? styles.chipOn : ''}`} style={{ textDecoration: 'none' }}>
+            {c.name}：{homeState(c).on ? '首页显示' : `首页不显示（${homeState(c).why}）`} ›
+          </a>
+        ))}
+      </p>
 
-      <h2 className={styles.h}>俱乐部（{d.clubs.filter((c) => !c.closed_at).length} 个开着）</h2>
+      <h2 className={styles.h}>俱乐部（{d.clubs.filter((c) => homeState(c).on).length} 个在小程序首页显示，共 {d.clubs.length} 个）</h2>
       {d.clubs.map((c) => {
         const q = qrState(c);
         return (
-          <div key={c.key} className={styles.card} style={{ opacity: c.closed_at ? 0.65 : 1 }}>
+          <div key={c.key} id={`club-${c.key}`} className={styles.card} style={{ opacity: c.closed_at ? 0.65 : 1, scrollMarginTop: 140 }}>
             <p className={styles.cardTitle}>
               {c.name}
               {c.members_only && <span className={styles.badge}>仅会员</span>}
               {c.closed_at && <span className={`${styles.badge} ${styles.badgeMuted}`}>已关闭</span>}
             </p>
-            <p className={styles.small} style={{ margin: 0 }}>{c.status === 'active' ? '已成立' : '筹备中（小程序首页不显示，只在「全部」里）'} · {c.icon ? `${c.icon} · ` : ''}英文短名 {c.key} · 排序 {c.sort_order}（小程序首页方块按这个排，数字小的在前） · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
+            {(() => {
+              const h = homeState(c);
+              return (
+                <div className={h.on ? styles.success : styles.notice} style={{ margin: '0 0 6px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <strong>小程序首页：{h.on ? '显示' : `不显示（${h.why}）`}</strong>
+                  {!h.on && (
+                    <button className={`${styles.btn} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'show_on_home', key: c.key }, 'h' + c.key)}>
+                      在小程序首页显示（打开＋改成已成立）
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+            <p className={styles.small} style={{ margin: 0 }}>{c.status === 'active' ? '已成立' : '筹备中'} · {c.icon ? `${c.icon} · ` : ''}英文短名 {c.key} · 排序 {c.sort_order}（小程序首页方块按这个排，数字小的在前） · 成员 {c.members} 人 · 进行中组局 {c.open_meetups} 个 · 负责人：{c.leader_name ?? '没指定'}</p>
             {c.intro && <p style={{ margin: '0.3rem 0' }}>{c.intro}</p>}
             {!c.closed_at && (
               <div style={{ borderTop: '1px solid var(--line-2)', marginTop: 8, paddingTop: 8 }}>
@@ -185,8 +219,9 @@ function Clubs() {
             </div>
             <div className={styles.btnRow} style={{ marginTop: 10 }}>
               <button className={`${styles.btn} ${styles.btnSmall}`} onClick={() => { setMsg(null); setF({ editing: true, key: c.key, name: c.name, intro: c.intro ?? '', membersOnly: c.members_only, sortOrder: String(c.sort_order), icon: c.icon ?? '', status: c.status === 'active' ? 'active' : 'preparing', leaderNo: '', dropLeader: false, leaderName: c.leader_name }); setTimeout(() => document.getElementById('club-form')?.scrollIntoView({ behavior: 'smooth' }), 50); }}>编辑</button>
+              {/* 指令 89-B 验收第 2 轮 P3-3：筹备中的俱乐部"重新打开"了首页也不显示（老陷阱），所以筹备中不给「重新打开」，只用上面的「在小程序首页显示」；已成立的才用关闭 / 重新打开 */}
               {c.closed_at
-                ? <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'reopen_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>重新打开</button>
+                ? (c.status === 'active' ? <button className={`${styles.btn} ${styles.btnGhost} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'reopen_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>重新打开</button> : null)
                 : <button className={`${styles.btn} ${styles.btnDanger} ${styles.btnSmall}`} disabled={!!busy} onClick={() => post({ action: 'close_club', key: c.key }, 'c' + c.key, `：「${c.name}」`)}>关闭俱乐部</button>}
             </div>
           </div>
@@ -246,7 +281,7 @@ function Clubs() {
         </div>
       )}
 
-      <h2 className={styles.h}>组局（{meetups.length}）</h2>
+      <h2 className={styles.h} id="meetups" style={{ scrollMarginTop: 140 }}>组局（{meetups.length}）</h2>
       <div className={styles.field}>
         <label className={styles.label} htmlFor="mf">看哪个俱乐部的</label>
         <select id="mf" className={styles.select} value={clubFilter} onChange={(e) => setClubFilter(e.target.value)}>

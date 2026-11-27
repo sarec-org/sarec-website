@@ -5,7 +5,8 @@
  * - 底图 = 模板大图（1080×1620）；活动名称、日期星期时间、地点（地点名＋地址）、主办方、右侧报名码＋「长按识别报名」排在模板的信息位（box）里。
  * - 有 box（重做过关的模板）：字直接印在信息位上，字色用模板 ink，没有就按信息位底色深浅自动选深 / 浅。
  * - 没 box（第一批老图）：默认信息位 [0.06, 0.70, 0.94, 0.95]，下面垫一块半透明深色圆角底板，白字。
- * - 右上角固定一个小小的「AI 生成」标识（宽 ≤ 12%、高 ≤ 4%，在右上角 12%×6% 范围里），信息位碰到这块会自动往下让，任何字都不盖住它。
+ * - 「AI生成」标识（指令 84/88，国标 GB 45438-2025：边或角、字高 ≥ 最短边 5%）：crm_settings.ai_badge 管样式 / 位置 / 字高，模板 badge_pos 可单独指定位置；
+ *   信息位碰到标识会自动让开，任何字都不盖住它（planBadge）。
  * - 字体 NotoSansSC-Bold（SIL OFL，授权文本 lib/org/fonts/NotoSansSC_OFL.txt），next.config.js 的 outputFileTracingIncludes 把它打进函数包。
  * - 「传自己的海报」（posterOwn）：原图铺满宽度，底部接一条白色报名条（活动名、时间、地点、主办方、报名码）；
  *   上传时说是 AI 生成的（ai_generated）才画右上角「AI 生成」标识，不是就不画。
@@ -16,20 +17,20 @@ import path from 'node:path';
 import { ImageResponse } from 'next/og';
 import sharp from 'sharp';
 import { getPool } from '@/lib/db/client';
+import { AI_BADGE_DEFAULT, aiBadgeConfig, badgeGeom, placeFor, type AiBadgeCfg, type BadgePlace } from './aiBadge';
 import { CrmError } from '@/lib/crm/events';
 import { codePng, eventAccess, whenText } from './service';
-import { DEFAULT_BOX, LARGE, fetchTemplateImage, getTemplate } from './posterTemplates';
+import { DEFAULT_BOX, LARGE, fetchTemplateImage, getTemplate, isSlotBox, type SlotBox } from './posterTemplates';
 import { getOwnPoster, ownPosterBlocked } from './posterOwn';
 
 const W = LARGE.w;
 const H = LARGE.h;
-/** 「AI 生成」标识：右上角，宽 104（9.6%）、高 40（2.5%），整块在右上角 12%×6% 范围里 */
-const BADGE = { right: 22, top: 22, w: 104, h: 40 };
-/** 信息位不能进入的右上角区域（标识所在的 12%×6%） */
-const BADGE_ZONE = { x0: 1 - 0.12, y1: 0.06 };
+
+export { AI_BADGE_DEFAULT, AI_BADGE_KEY, aiBadgeConfig, badgeGeom, normalizeAiBadge, placeFor, type AiBadgeCfg, type BadgePlace } from './aiBadge';
+
 
 let fontCache: Promise<Buffer> | null = null;
-function font(): Promise<Buffer> {
+export function font(): Promise<Buffer> {
   if (!fontCache) {
     fontCache = readFile(path.join(process.cwd(), 'lib/org/fonts/NotoSansSC-Bold.otf')).catch((e) => {
       fontCache = null;
@@ -41,10 +42,10 @@ function font(): Promise<Buffer> {
 
 /** 去掉表情符号等字体里没有的字（避免出图时去网上找字体） */
 const EMOJI = new RegExp('[\\p{Extended_Pictographic}\\u{FE0F}\\u{200D}]', 'gu');
-const clean = (s: string | null | undefined) => String(s ?? '').replace(EMOJI, '').replace(/\s+/g, ' ').trim();
+export const clean = (s: string | null | undefined) => String(s ?? '').replace(EMOJI, '').replace(/\s+/g, ' ').trim();
 
 /** 估算一行字的宽度（中文 / 全角 1em；英文小写和数字约 0.62em、大写 0.74em、空格 0.28em、半角标点 0.36em——宁宽勿窄） */
-function textWidth(s: string, size: number): number {
+export function textWidth(s: string, size: number): number {
   let w = 0;
   for (const ch of s) {
     if (ch === ' ') w += 0.28;
@@ -56,9 +57,9 @@ function textWidth(s: string, size: number): number {
   return w * size;
 }
 /** 每一行固定行高（satori 按字体自身的上下高度排行，lineHeight 小于它时不生效；固定高度才和估算一致） */
-const ln = (size: number, k: number) => ({ height: Math.round(size * k), lineHeight: `${Math.round(size * k)}px`, display: 'flex' as const, alignItems: 'center' as const, overflow: 'hidden' as const });
+export const ln = (size: number, k: number) => ({ height: Math.round(size * k), lineHeight: `${Math.round(size * k)}px`, display: 'flex' as const, alignItems: 'center' as const, overflow: 'hidden' as const });
 /** 按宽度断行（最多 n 行，放不下的最后一行末尾加「…」） */
-function wrap(s: string, size: number, width: number, n: number): string[] {
+export function wrap(s: string, size: number, width: number, n: number): string[] {
   const chars = Array.from(s);
   const lines: string[] = [];
   let cur = '';
@@ -89,37 +90,148 @@ function wrap(s: string, size: number, width: number, n: number): string[] {
 }
 
 /** 信息位底色深浅（0 黑 – 1 白） */
-async function boxLuminance(img: Buffer, box: number[]): Promise<number> {
+export async function boxLuminance(img: Buffer, box: number[]): Promise<number> {
   const left = Math.round(box[0] * W);
   const top = Math.round(box[1] * H);
   const width = Math.max(1, Math.round((box[2] - box[0]) * W));
   const height = Math.max(1, Math.round((box[3] - box[1]) * H));
-  const st = await sharp(img).resize(W, H, { fit: 'fill' }).extract({ left, top, width: Math.min(width, W - left), height: Math.min(height, H - top) }).stats();
+  // 注意：sharp 的 stats() 不管前面的 resize / extract，直接算整张原图——要先 toBuffer() 把裁出来的那块落成图再算
+  const crop = await sharp(img).resize(W, H, { fit: 'fill' }).extract({ left, top, width: Math.min(width, W - left), height: Math.min(height, H - top) }).toBuffer();
+  const st = await sharp(crop).stats();
   const [r, g, b] = st.channels.map((c) => c.mean / 255);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-function AiBadge() {
+/** 底图某一块的平均颜色（box 按底图自身比例 0–1） */
+export async function regionStats(img: Buffer, box: number[]): Promise<{ r: number; g: number; b: number; lum: number }> {
+  const meta = await sharp(img).metadata();
+  const iw = meta.width ?? W;
+  const ih = meta.height ?? H;
+  const left = Math.max(0, Math.min(iw - 1, Math.round(box[0] * iw)));
+  const top = Math.max(0, Math.min(ih - 1, Math.round(box[1] * ih)));
+  const width = Math.max(1, Math.min(iw - left, Math.round((box[2] - box[0]) * iw)));
+  const height = Math.max(1, Math.min(ih - top, Math.round((box[3] - box[1]) * ih)));
+  const crop = await sharp(img).extract({ left, top, width, height }).removeAlpha().toBuffer();
+  const st = await sharp(crop).stats();
+  const [r, g, b] = st.channels.map((c) => c.mean);
+  return { r, g, b, lum: (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 };
+}
+
+export type BadgePlan = {
+  x: number; y: number; w: number; h: number; fs: number; padX: number; radius: number;
+  bg: string; color: string; border: string | null; style: 'plaque' | 'seal' | 'strip'; place: BadgePlace; minGlyph: number;
+};
+const mix = (c: number, to: number, k: number) => Math.round(c + (to - c) * k);
+
+/**
+ * 排「AI生成」标识：定位置（边 / 角 / 条子右端）、按底图取色，并把信息位 / 落款位 box（0–1，原地改）让开。
+ * - 角：box 和标识横向重叠时，上角把 box 顶边往下挪、下角把 box 底边往上收。
+ * - strip：标识贴画面底边、右边和条子右边对齐（像条子下面挂的一枚小签），条子底边往上收让出位置；没有条子退回右下角。
+ * - img 是底图（按画布同比例取色；imgH 给了表示底图只占画布上面 imgH 高，如「自己的海报」）。
+ */
+export async function planBadge(o: {
+  cfg: AiBadgeCfg; img: Buffer; cw: number; ch: number; imgH?: number; place: BadgePlace;
+  box: number[] | null; bar: 'plate' | 'painted' | null; plateBg?: string;
+  /** 三处空条模板：这些槽位（0–1）不能压，选中的角压到了就换一个角（右上 → 左上 → 右下 → 左下） */
+  avoid?: number[][];
+}): Promise<BadgePlan | null> {
+  const { cfg, cw, ch } = o;
+  if (!cfg.on) return null;
+  const g = badgeGeom(cfg, cw, ch);
+  let place = o.place;
+  if (place === 'strip' && (!o.box || !o.bar)) place = 'br';
+  if (o.avoid?.length) {
+    const rectAt = (pl: BadgePlace) => {
+      const px = pl === 'tr' || pl === 'br' ? cw - g.m - g.bw : g.m;
+      const py = pl === 'tr' || pl === 'tl' ? g.m : ch - g.m - g.bh;
+      return [px / cw, py / ch, (px + g.bw) / cw, (py + g.bh) / ch];
+    };
+    const hits = (r: number[]) => o.avoid!.some((a) => r[0] < a[2] && r[2] > a[0] && r[1] < a[3] && r[3] > a[1]);
+    const first = place === 'strip' ? 'br' : place;
+    place = ([first, 'tr', 'tl', 'br', 'bl'] as BadgePlace[]).find((pl) => !hits(rectAt(pl))) ?? first;
+  }
+  let x: number;
+  let y: number;
+  if (place === 'strip') {
+    const box = o.box!;
+    x = Math.min(cw - g.m - g.bw, Math.round(box[2] * cw) - g.bw);
+    y = ch - g.m - g.bh;
+    const need = (y - Math.round(g.m * 0.6)) / ch;
+    if (box[3] > need) box[3] = Math.max(box[1] + 0.04, need);
+  } else {
+    x = place === 'tr' || place === 'br' ? cw - g.m - g.bw : g.m;
+    y = place === 'tr' || place === 'tl' ? g.m : ch - g.m - g.bh;
+    if (o.box) {
+      const z = [(x - 6) / cw, (y - 6) / ch, (x + g.bw + 6) / cw, (y + g.bh + 6) / ch];
+      const box = o.box;
+      if (box[0] < z[2] && box[2] > z[0] && box[1] < z[3] && box[3] > z[1]) {
+        if (place === 'tr' || place === 'tl') box[1] = Math.min(z[3], box[3] - 0.04);
+        else box[3] = Math.max(z[1], box[1] + 0.04);
+      }
+    }
+  }
+  // 取色：标识所在那块底图（画布坐标 → 底图坐标）
+  const ih = o.imgH ?? ch;
+  const ry0 = y / ih;
+  const ry1 = (y + g.bh) / ih;
+  const st = ry0 >= 1 ? { r: 255, g: 255, b: 255, lum: 1 } : await regionStats(o.img, [x / cw, ry0, (x + g.bw) / cw, Math.min(1, ry1)]).catch(() => ({ r: 40, g: 40, b: 40, lum: 0.16 }));
+  const dark = st.lum < 0.55;
+  const style = place === 'strip' ? 'strip' : cfg.style === 'strip' ? 'plaque' : cfg.style;
+  const a = Math.min(0.95, Math.max(0.45, cfg.opacity + 0.2)).toFixed(2);
+  let bg: string;
+  let color: string;
+  let border: string | null = null;
+  let radius = Math.round(g.bh * 0.28);
+  if (style === 'seal') {
+    // 细金边小章：透明偏深底 + 金色细边框；深底金字、浅底白字
+    bg = `rgba(0,0,0,${dark ? 0.3 : 0.5})`;
+    color = dark ? '#EBC873' : '#FFFFFF';
+    border = `${Math.max(2, Math.round(g.fs * 0.045))}px solid rgba(222,186,104,0.95)`;
+    radius = Math.round(g.bh * 0.12);
+  } else if (style === 'strip' && o.bar === 'plate') {
+    // 和底板同色，像底板下面挂的一枚小签
+    bg = o.plateBg ?? 'rgba(12,14,20,0.6)';
+    color = '#FFFFFF';
+    radius = Math.round(g.bh * 0.24);
+  } else {
+    // 圆角小牌 / 画在图里的条子：底色从这块图里取，往深 / 浅压一半保证对比
+    const to = dark ? 0 : 255;
+    bg = `rgba(${mix(st.r, to, 0.5)},${mix(st.g, to, 0.5)},${mix(st.b, to, 0.5)},${a})`;
+    color = dark ? 'rgba(255,255,255,0.96)' : 'rgba(28,28,28,0.92)';
+  }
+  return { x, y, w: g.bw, h: g.bh, fs: g.fs, padX: g.padX, radius, bg, color, border, style, place, minGlyph: g.minGlyph };
+}
+
+export function AiBadge({ p }: { p: BadgePlan | null }) {
+  if (!p) return null;
   return (
     <div
       style={{
-        position: 'absolute', right: BADGE.right, top: BADGE.top, width: BADGE.w, height: BADGE.h, borderRadius: 12,
-        background: 'rgba(0,0,0,0.45)', color: '#FFFFFF', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        position: 'absolute', left: p.x, top: p.y, width: p.w, height: p.h, borderRadius: p.radius, background: p.bg, color: p.color,
+        ...(p.border ? { border: p.border } : {}),
+        fontSize: p.fs, display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap', lineHeight: 1
       }}
     >
-      AI 生成
+      AI生成
     </div>
   );
 }
 
-export type PosterInfo = { title: string; when: string; locationName: string; address: string; organizer: string };
+export type PosterInfo = {
+  title: string; when: string; locationName: string; address: string; organizer: string;
+  /** 三处空条模板用：日期星期、时间分开排；主办方标志（https，取不到就画名字首字） */
+  date?: string; time?: string; orgLogoUrl?: string | null;
+};
 
 /** 出图（不查库）：底图、信息、报名码 → PNG。scripts 里的样张也走这里 */
-export async function renderPoster(o: { image: Buffer; box: number[] | null; ink: string | null; info: PosterInfo; qr: Buffer }): Promise<Buffer> {
+export async function renderPoster(o: { image: Buffer; box: number[] | SlotBox | null; ink: string | null; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg; badgePos?: string | null }): Promise<Buffer> {
+  if (isSlotBox(o.box)) return renderSlotPoster({ ...o, box: o.box });
+  if (o.box && !Array.isArray(o.box)) o = { ...o, box: null }; // 认不出的对象：按老图默认信息位
+  const badge = o.badge ?? AI_BADGE_DEFAULT;
   const plate = !o.box;
-  const box = [...(o.box ?? DEFAULT_BOX)];
-  // 信息位碰到右上角标识区：顶边往下让
-  if (box[2] > BADGE_ZONE.x0 && box[1] < BADGE_ZONE.y1) box[1] = BADGE_ZONE.y1 + 0.005;
+  const box = [...((o.box as number[] | null) ?? DEFAULT_BOX)];
+  // 「AI生成」标识：定位置、取色，信息位碰到就让开（box 原地改）
+  const bp = await planBadge({ cfg: badge, img: o.image, cw: W, ch: H, place: placeFor(badge, o.badgePos), box, bar: plate ? 'plate' : 'painted', plateBg: 'rgba(12,14,20,0.62)' });
   const ink = plate ? '#FFFFFF' : o.ink && /^#[0-9a-f]{6}$/i.test(o.ink) ? o.ink : (await boxLuminance(o.image, box)) > 0.55 ? '#1E1E1E' : '#FFFFFF';
   const sub = ink;
 
@@ -204,7 +316,7 @@ export async function renderPoster(o: { image: Buffer; box: number[] | null; ink
             <div style={{ fontSize: capSize, marginTop: 10, color: ink, ...(shadow ? { textShadow: shadow } : {}) }}>长按识别报名</div>
           </div>
         </div>
-        <AiBadge />
+        <AiBadge p={bp} />
       </div>
     ),
     { width: W, height: H, fonts: [{ name: 'NotoSansSC', data: await font(), weight: 700, style: 'normal' }] }
@@ -213,8 +325,96 @@ export async function renderPoster(o: { image: Buffer; box: number[] | null; ink
   return Buffer.from(await res.arrayBuffer());
 }
 
+
+/** 三处空条模板用：一行字在宽度 width 里，字号最大 maxFs、最小 minFs；还放不下就截短加「…」 */
+function fitLine(text: string, width: number, maxFs: number, minFs: number): { fs: number; text: string } {
+  const one = Math.floor(width / Math.max(textWidth(text, 1), 0.01));
+  const fs = Math.max(minFs, Math.min(maxFs, one));
+  return { fs, text: textWidth(text, fs) <= width ? text : wrap(text, fs, width, 1)[0] };
+}
+/** 主办方标志：https、6 秒超时、裁成正方形 PNG；取不到 null */
+async function fetchLogo(url: string | null | undefined, px: number): Promise<Buffer | null> {
+  if (!url || !/^https:\/\//i.test(url)) return null;
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    return await sharp(Buffer.from(await res.arrayBuffer())).resize(px, px, { fit: 'cover' }).png().toBuffer();
+  } catch {
+    return null;
+  }
+}
+const inkFor = async (img: Buffer, r: number[], fixed: string | null) =>
+  fixed && /^#[0-9a-f]{6}$/i.test(fixed) ? fixed : (await boxLuminance(img, r).catch(() => 0)) > 0.55 ? '#3A2414' : '#FFFFFF';
+
+/**
+ * 活动第三批「标题画死＋三处空条」模板出图：不印活动名；主办方标志进圆标位、主办方名进横条；
+ * 三行信息（日期星期 / 时间 / 地点）各进一条，按条高定字号、一行放不下先缩字再截短；报名码进码位（码下不印字，底图画好了「扫码报名」）。
+ * 每个条子的字色按那块底图明暗取（模板有 ink 就用 ink）。AI 标识照国标版画，压到槽位自动换角。
+ */
+export async function renderSlotPoster(o: { image: Buffer; box: SlotBox; ink: string | null; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg; badgePos?: string | null }): Promise<Buffer> {
+  const badge = o.badge ?? AI_BADGE_DEFAULT;
+  const b = o.box;
+  const t = o.info;
+  const px = (r: number[]) => ({ x: r[0] * W, y: r[1] * H, w: (r[2] - r[0]) * W, h: (r[3] - r[1]) * H });
+  const slots = [b.org_logo, b.org_bar, ...b.info, b.qr].filter(Boolean) as number[][];
+  const bp = await planBadge({ cfg: badge, img: o.image, cw: W, ch: H, place: placeFor(badge, o.badgePos), box: null, bar: null, avoid: slots });
+
+  // 三行信息：日期星期 / 时间 / 地点（地点名放得下就带地址）
+  const place = t.locationName || t.address || '';
+  const lines = [t.date ?? t.when, t.time ?? '', place];
+  const infoEls = await Promise.all(b.info.slice(0, 3).map(async (r, i) => {
+    const p = px(r);
+    const pad = Math.round(p.h * 0.28);
+    let text = lines[i] ?? '';
+    if (i === 2 && t.locationName && t.address) {
+      const both = `${t.locationName} ${t.address}`;
+      if (Math.floor((p.w - pad * 2) / Math.max(textWidth(both, 1), 0.01)) >= p.h * 0.4) text = both;
+    }
+    const f = fitLine(text, p.w - pad * 2, Math.round(p.h * 0.58), Math.max(14, Math.round(p.h * 0.32)));
+    return { p, pad, f, ink: await inkFor(o.image, r, o.ink) };
+  }));
+  const bar = b.org_bar ? px(b.org_bar) : null;
+  const barFit = bar && t.organizer ? fitLine(t.organizer, bar.w * 0.88, Math.round(bar.h * 0.6), Math.max(14, Math.round(bar.h * 0.34))) : null;
+  const barInk = b.org_bar ? await inkFor(o.image, b.org_bar, o.ink) : '#FFFFFF';
+  const logo = b.org_logo ? px(b.org_logo) : null;
+  const logoSide = logo ? Math.round(Math.min(logo.w, logo.h) * 0.86) : 0;
+  const logoBuf = logo ? await fetchLogo(t.orgLogoUrl, logoSide * 2) : null;
+  const logoInk = b.org_logo ? await inkFor(o.image, b.org_logo, o.ink) : '#FFFFFF';
+  const q = px(b.qr);
+  const qSide = Math.round(Math.min(q.w, q.h) * 0.92);
+  const bg = `data:image/jpeg;base64,${(await sharp(o.image).resize(W, H, { fit: 'fill' }).jpeg({ quality: 90 }).toBuffer()).toString('base64')}`;
+
+  const res = new ImageResponse(
+    (
+      <div style={{ width: W, height: H, display: 'flex', position: 'relative', fontFamily: 'NotoSansSC' }}>
+        <img src={bg} width={W} height={H} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H }} />
+        {logo && (
+          <div style={{ position: 'absolute', left: logo.x + (logo.w - logoSide) / 2, top: logo.y + (logo.h - logoSide) / 2, width: logoSide, height: logoSide, borderRadius: logoSide / 2, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: logoBuf ? '#FFFFFF' : 'transparent' }}>
+            {logoBuf
+              ? <img src={`data:image/png;base64,${logoBuf.toString('base64')}`} width={logoSide} height={logoSide} style={{ borderRadius: logoSide / 2 }} />
+              : t.organizer ? <div style={{ fontSize: Math.round(logoSide * 0.5), color: logoInk, display: 'flex' }}>{Array.from(t.organizer)[0]}</div> : null}
+          </div>
+        )}
+        {bar && barFit && (
+          <div style={{ position: 'absolute', left: bar.x, top: bar.y, width: bar.w, height: bar.h, display: 'flex', alignItems: 'center', justifyContent: 'center', color: barInk, fontSize: barFit.fs, whiteSpace: 'nowrap', overflow: 'hidden' }}>{barFit.text}</div>
+        )}
+        {infoEls.map((e, i) => (
+          <div key={i} style={{ position: 'absolute', left: e.p.x + e.pad, top: e.p.y, width: e.p.w - e.pad * 2, height: e.p.h, display: 'flex', alignItems: 'center', color: e.ink, fontSize: e.f.fs, whiteSpace: 'nowrap', overflow: 'hidden' }}>{e.f.text}</div>
+        ))}
+        <div style={{ position: 'absolute', left: q.x + (q.w - qSide) / 2, top: q.y + (q.h - qSide) / 2, width: qSide, height: qSide, display: 'flex', background: '#FFFFFF', borderRadius: Math.round(qSide * 0.06), padding: Math.round(qSide * 0.05) }}>
+          <img src={`data:image/png;base64,${o.qr.toString('base64')}`} width={qSide - Math.round(qSide * 0.1)} height={qSide - Math.round(qSide * 0.1)} />
+        </div>
+        <AiBadge p={bp} />
+      </div>
+    ),
+    { width: W, height: H, fonts: [{ name: 'NotoSansSC', data: await font(), weight: 700, style: 'normal' }] }
+  );
+  return Buffer.from(await res.arrayBuffer());
+}
+
 /** 自己传的海报：原图铺满宽度（高度限制在 600–1620，超出居中裁），底部接白色报名条 */
-export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; info: PosterInfo; qr: Buffer }): Promise<Buffer> {
+export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg }): Promise<Buffer> {
+  const badge = o.badge ?? AI_BADGE_DEFAULT;
   const meta = await sharp(o.image).metadata();
   const ih = Math.round(Math.min(1620, Math.max(600, (W * (meta.height ?? W)) / (meta.width ?? W))));
   const img = await sharp(o.image).resize(W, ih, { fit: 'cover', position: 'centre' }).jpeg({ quality: 88 }).toBuffer();
@@ -231,6 +431,8 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
   const loc = wrap([t.locationName, t.address].filter(Boolean).join(' · '), 28, fitW, 2);
   const org = t.organizer ? wrap(`主办：${t.organizer}`, 24, fitW, 1) : [];
   const H2 = ih + SH;
+  // 自己的海报：底部是白色报名条（右边是报名码），标识只放上面两个角（全局 pos 是 tl 就左上，其余右上）
+  const bp = o.aiGenerated ? await planBadge({ cfg: badge, img, cw: W, ch: H2, imgH: ih, place: badge.pos === 'tl' ? 'tl' : 'tr', box: null, bar: null }) : null;
   const res = new ImageResponse(
     (
       <div style={{ width: W, height: H2, display: 'flex', flexDirection: 'column', position: 'relative', fontFamily: 'NotoSansSC', background: '#FFFFFF' }}>
@@ -247,7 +449,7 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
             <div style={{ fontSize: 24, marginTop: 8, color: '#1E1E1E' }}>长按识别报名</div>
           </div>
         </div>
-        {o.aiGenerated && <AiBadge />}
+        <AiBadge p={bp} />
       </div>
     ),
     { width: W, height: H2, fonts: [{ name: 'NotoSansSC', data: await font(), weight: 700, style: 'normal' }] }
@@ -255,13 +457,26 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
   return Buffer.from(await res.arrayBuffer());
 }
 
+/** 三处空条模板：「12月13日（周日）」和「11:00 – 15:00」分开 */
+function dayTimeText(ev: { starts_at: Date; ends_at: Date | null; timezone: string }) {
+  const f = (d: Date, opt: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('zh-CN', { timeZone: ev.timezone, ...opt }).format(new Date(d));
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: ev.timezone, month: 'numeric', day: 'numeric' }).formatToParts(new Date(ev.starts_at));
+  const md = `${parts.find((p) => p.type === 'month')?.value}月${parts.find((p) => p.type === 'day')?.value}日`;
+  const wk = f(ev.starts_at, { weekday: 'short' });
+  const hm = (d: Date) => f(d, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return { date: `${md}（${wk}）`, time: `${hm(ev.starts_at)}${ev.ends_at ? ' – ' + hm(ev.ends_at) : ''}` };
+}
+
 /** 接口用：权限和 posterData 一样（负责人 / 帮手，活动没下架 / 取消） */
-export async function eventPosterPng(contactId: string, eventId: string): Promise<Buffer> {
+export async function eventPosterPng(contactId: string, eventId: string, base?: string): Promise<Buffer> {
   const pool = getPool();
   const { ev } = await eventAccess(pool, contactId, eventId, 'helper');
   if (ev.status !== 'published' && ev.status !== 'review') throw new CrmError('event_closed', '这场活动已下架或取消，不能出海报');
-  const { rows: o } = await pool.query<{ name: string }>(`SELECT name FROM organizers WHERE id = $1`, [ev.organizer_id]);
-  const info = { title: clean(ev.title), when: whenText(ev), locationName: clean(ev.location_name), address: clean(ev.address), organizer: clean(o[0]?.name) };
+  const { rows: o } = await pool.query<{ name: string; logo_url: string | null }>(`SELECT name, logo_url FROM organizers WHERE id = $1`, [ev.organizer_id]);
+  const info: PosterInfo = {
+    title: clean(ev.title), when: whenText(ev), locationName: clean(ev.location_name), address: clean(ev.address), organizer: clean(o[0]?.name),
+    ...dayTimeText(ev), orgLogoUrl: o[0]?.logo_url ?? null
+  };
   if (ev.poster_own) {
     const own = await getOwnPoster(ev.poster_own, pool);
     if (!own) throw new CrmError('not_found', '这场活动用的海报图找不到了');
@@ -269,13 +484,13 @@ export async function eventPosterPng(contactId: string, eventId: string): Promis
     const res = await fetch(own.url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`海报图取不到（${res.status}）`);
     const [image, qr] = [Buffer.from(await res.arrayBuffer()), await codePng(ev.code, 'register', contactId)];
-    return renderOwnPoster({ image, aiGenerated: own.ai_generated, info, qr });
+    return renderOwnPoster({ image, aiGenerated: own.ai_generated, info, qr, badge: await aiBadgeConfig(pool) });
   }
   if (!ev.poster_tpl) throw new CrmError('not_found', '这场活动没有选海报模板');
   const tpl = await getTemplate(ev.poster_tpl, pool);
   if (!tpl) throw new CrmError('not_found', '这场活动选的海报模板找不到了');
-  const [image, qr] = await Promise.all([fetchTemplateImage(tpl, 'l'), codePng(ev.code, 'register', contactId)]);
+  const [image, qr] = await Promise.all([fetchTemplateImage(tpl, 'l', base), codePng(ev.code, 'register', contactId)]);
   return renderPoster({
-    image, box: tpl.box, ink: tpl.ink, qr, info
+    image, box: tpl.box, ink: tpl.ink, qr, info, badge: await aiBadgeConfig(pool), badgePos: tpl.badge_pos
   });
 }

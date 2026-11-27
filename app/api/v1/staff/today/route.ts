@@ -22,5 +22,18 @@ export const GET = handler(async (req: Request) => {
     .catch(() => ({ rows: [] as { bound: boolean; at: Date | null }[] }));
   const mpBind = { bound: !!rows[0]?.bound, boundAt: rows[0]?.at ?? null, bindHref: '/zh/staff/settings#mp-bind' };
   if (await isMiniProgramRequest(req)) return ok({ ...forMiniProgram(out), mpBind } as unknown as Record<string, unknown>);
+  // 指令 89-B 验收 P2-1：「今天新报名 N ›」——今天（洛杉矶）新报名的真实客户（口径同活动页：不含内部 / 测试账号、不含已取消），按活动分
+  if (staffCan(s, 'ops') || staffCan(s, 'checkin')) {
+    const { rows: nr } = await getPool()
+      .query<{ eventId: string; title: string; n: number }>(
+        `SELECT e.id AS "eventId", e.title, count(*)::int AS n
+           FROM registrations r JOIN events e ON e.id = r.event_id JOIN contacts c ON c.id = r.contact_id
+          WHERE (r.created_at AT TIME ZONE 'America/Los_Angeles')::date = (now() AT TIME ZONE 'America/Los_Angeles')::date
+            AND r.status <> 'cancelled' AND c.account_kind IS NULL
+          GROUP BY e.id, e.title ORDER BY n DESC, e.title`
+      )
+      .catch(() => ({ rows: [] as { eventId: string; title: string; n: number }[] }));
+    out.newRegs = nr;
+  }
   return ok({ ...out, mpBind } as unknown as Record<string, unknown>);
 });

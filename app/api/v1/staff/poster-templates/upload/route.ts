@@ -12,6 +12,8 @@ export const POST = handler(async (req: Request) => {
   if (!f || typeof f === 'string') throw new CrmError('bad_request', '请选模板图片');
   return ok(await uploadNew(s, {
     category: String(form?.get('category') ?? ''), name: String(form?.get('name') ?? ''), file: Buffer.from(await f.arrayBuffer()),
-    box: form?.get('box') ?? null, ink: form?.get('ink') ?? null
+    box: form?.get('box') ?? null, ink: form?.get('ink') ?? null,
+    // 0054：祝福分类的模板可以带落款位（JSON 数组 [x0,y0,x1,y1]）；活动分类忽略
+    sigBox: form?.get('sig_box') ?? null
   }));
 });

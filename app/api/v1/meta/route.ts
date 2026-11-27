@@ -15,6 +15,8 @@ export const GET = handler(async (req: Request) => {
   const placement = new URL(req.url).searchParams.get('p');
   const qr = await wechatQrFor(placement, placement ? await optionalContact(req) : null);
   return ok({
+    /** 服务器能力标记（双击上线文件用它确认新代码已在线）：multiSlotPoster = 认「三处空条」对象 box 的活动海报 */
+    features: ['multiSlotPoster'],
     roleCategories: ROLE_CATEGORIES.map((c) => ({ key: c.key, label: c.label, subs: c.subs.map((s) => ({ key: s.key, label: s.label })) })),
     quickRoles: QUICK_ROLES.map((k) => ({ key: k, label: findRoleSub(k)!.label })),
     topics: TOPIC_LABELS,

@@ -182,14 +182,14 @@ export async function clubDetail(contactId: string | null, key: string) {
   };
 }
 
-type MeetupRow = {
+export type MeetupRow = {
   id: string; club_id: string; title: string; starts_at: Date; location: string | null; address: string | null; capacity: number; note: string | null;
   status: string; sec_status: string; creator_id: string; creator_name: string | null; joined: number; mine: boolean;
   // 1.6.1（0052）：改过时间 / 地点的时间；我报名的时间（报名早于改动的人才显示「已改」）
   time_changed_at?: Date | null; place_changed_at?: Date | null; my_joined_at?: Date | null;
 };
 
-const MEETUP_SELECT = `SELECT u.*, NULLIF(ct.name, '微信用户') AS creator_name,
+export const MEETUP_SELECT = `SELECT u.*, NULLIF(ct.name, '微信用户') AS creator_name,
             (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined,
             EXISTS (SELECT 1 FROM club_meetup_joins j WHERE j.meetup_id = u.id AND j.contact_id = $2) AS mine,
             (SELECT j.joined_at FROM club_meetup_joins j WHERE j.meetup_id = u.id AND j.contact_id = $2) AS my_joined_at
@@ -205,7 +205,7 @@ function changedLabel(u: MeetupRow, contactId: string | null): string | null {
 }
 
 /** 组局板和组局详情页用同一个样子 */
-function meetupView(u: MeetupRow, contactId: string | null, geo: unknown) {
+export function meetupView(u: MeetupRow, contactId: string | null, geo: unknown) {
   const started = new Date(u.starts_at).getTime() <= Date.now();
   return {
     id: u.id, title: u.title, startsAt: u.starts_at, location: u.location, address: u.address, geo, capacity: u.capacity, note: u.note,
@@ -550,6 +550,16 @@ export async function staffClubAction(s: Staff, b: Record<string, unknown>) {
     await pool.query(`UPDATE clubs SET closed_at = ${act === 'close_club' ? 'now()' : 'NULL'}, updated_at = now() WHERE key = $1`, [String(b.key ?? '')]);
     await log(actor, 'club', String(b.key ?? ''), act, String(b.reason ?? '') || null);
     return { message: act === 'close_club' ? '俱乐部已关闭（小程序里不再显示）' : '俱乐部已重新打开' };
+  }
+  // 指令 89-B 验收 P2-2：「在小程序首页显示」一步到位——打开（closed_at 清空）＋ 状态改成已成立（和「编辑」里改状态写同一份 committees、记同样的操作记录）。
+  // 原来「重新打开」只清 closed_at，筹备中的照样不上首页，后台却显示"开着"，两处各改一半。
+  if (act === 'show_on_home') {
+    const key = String(b.key ?? '');
+    const { rows } = await pool.query<{ name: string }>(`UPDATE clubs SET closed_at = NULL, updated_at = now() WHERE key = $1 RETURNING name`, [key]);
+    if (!rows[0]) throw new CrmError('not_found', '找不到这个俱乐部');
+    await setClubStatus(s, key, rows[0].name, 'active');
+    await log(actor, 'club', key, 'show_on_home', null);
+    return { message: `「${rows[0].name}」已打开并改成已成立：小程序首页「专委会与俱乐部」里能看到了（1 分钟内生效）` };
   }
   if (act === 'set_qr') return setGroupQr(actor, String(b.key ?? ''), String(b.url ?? ''), (b.expires as string) ?? null);
   if (act === 'take_down' || act === 'restore' || act === 'approve') {

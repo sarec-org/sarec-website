@@ -135,7 +135,7 @@ export async function staffRecordBookingPayment(s: Staff, bookingId: string, p: 
 
 // ── 1.2 配置项（ops 可改）───────────────────────────────────────────────
 
-export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address', 'photo_topic', 'companions_max', 'invite_prompts', 'oa_username', 'channels_live', 'wecom_userids', 'wecom_enabled', 'home_recap_days', 'invite_card_text', 'card_tpl_batches'] as const;
+export const GROWTH_KEYS = ['wechat_qr_url', 'channels_finder_id', 'committees', 'content_visibility', 'room_notice', 'room_address', 'photo_topic', 'companions_max', 'invite_prompts', 'oa_username', 'channels_live', 'wecom_userids', 'wecom_enabled', 'home_recap_days', 'invite_card_text', 'card_tpl_batches', 'home_desk_hide'] as const;
 export type GrowthKey = (typeof GROWTH_KEYS)[number];
 
 export async function growthSettings() {
@@ -176,6 +176,11 @@ export async function updateGrowthSetting(s: Staff, key: string, value: unknown)
   if (key === 'invite_prompts' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
   if (key === 'oa_username' && !(typeof value === 'string' && /^(|gh_[a-f0-9]{12})$/.test(value.trim()))) throw new CrmError('bad_request', '服务号原始 ID 以 gh_ 开头（公众平台 → 设置 → 账号信息）；留空 = 不显示');
   if (key === 'channels_live' && (typeof value !== 'object' || value === null || Array.isArray(value))) throw new CrmError('bad_request', '格式不对');
+  // 指令 99：小程序首页方块区不摆哪几个（方块的 key，例如 invitecard、tool:xxx）；空数组 = 都摆
+  if (key === 'home_desk_hide') {
+    if (!Array.isArray(value) || value.length > 40 || value.some((v) => typeof v !== 'string' || !/^[a-z0-9_:-]{1,40}$/.test(v))) throw new CrmError('bad_request', '格式不对：要一组方块的 key（小写英文）');
+    value = Array.from(new Set(value as string[]));
+  }
   return withTransaction(async (db) => {
     const before = await getSetting(db, key, null);
     await setSetting(db, key, typeof value === 'string' ? value.trim() : value, s.name);
