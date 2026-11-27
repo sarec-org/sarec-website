@@ -129,7 +129,8 @@ function Page({ admin }: { admin: boolean }) {
         <p className={styles.small}>机器检测说「建议复核」（或正式站检测没出结果）的，以及「主办方自动开通」关着时新主办方的前几场（默认 3 场，每个主办方可改），先在这里看一眼再公开。放行前报名页只有主办方自己看得到。</p>
         {!pending.length && <p className={styles.muted}>没有等放行的活动</p>}
         {pending.map((e) => (
-          <div key={e.id} className={styles.listItem}>
+          // 指令 102：「今天」/「等你处理」里点「打开」带 #ev-<活动 id>，滚到这一场、放行按钮就在旁边
+          <div key={e.id} id={`ev-${e.id}`} className={styles.listItem} style={{ scrollMarginTop: 140, ...(typeof window !== 'undefined' && location.hash === `#ev-${e.id}` ? { outline: '2px solid var(--gold)', borderRadius: 8 } : {}) }}>
             <b>{e.title}</b>（{e.organizer} · {e.mode === 'chain' ? '接龙' : '报名'}）<br />
             <span className={styles.small}>{e.when} · {e.locationName}{e.address ? ' · ' + e.address : ''} · 机器检测：{e.secStatus ?? '—'}</span>
             {e.description && <p className={styles.small} style={{ whiteSpace: 'pre-wrap' }}>{e.description}</p>}

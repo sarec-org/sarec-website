@@ -235,7 +235,7 @@ export async function flushHeld(now = new Date()): Promise<{ people: number; ite
 }
 
 // ── 每日汇总（洛杉矶 8:30）──────────────────────────────────────────────────
-export type DigestItem = { title: string; priority: number };
+export type DigestItem = { title: string; priority: number; id?: string; review?: boolean };
 
 /** 8:30 以后、当天还没发过的人：今天几件事 + 最要紧的一件；没有待办不发 */
 export async function runDigest(now = new Date(), items?: () => Promise<DigestItem[]>): Promise<{ sent: number; empty: boolean; skipped: string | null }> {
@@ -255,7 +255,8 @@ export async function runDigest(now = new Date(), items?: () => Promise<DigestIt
     const top = [...list].sort((a, b) => a.priority - b.priority)[0];
     const g = await gateSend({
       kind: '每日汇总', channel: r.channel, to: r.to, subject: `SAREC 今天有 ${list.length} 件事`, ref: `digest:${day}`, dedupeKey: `staff_digest:${r.key}:${day}`,
-      text: `SAREC 今天有 ${list.length} 件事，最要紧的是：${top.title}。打开「今天」：${staffBase()}/zh/staff`
+      // 指令 102：链接直达最要紧的那一条（「今天」页滚到它、按钮在卡片上）；有要审的写出几件
+      text: `SAREC 今天有 ${list.length} 件事${list.some((x) => x.review) ? `（等你审 ${list.filter((x) => x.review).length} 件）` : ''}，最要紧的是：${top.title}。点开处理：${staffBase()}/zh/staff${top.id ? `?item=${encodeURIComponent(top.id)}` : ''}`
     });
     await pool.query(`UPDATE staff_digests SET status = $3 WHERE staff_key = $1 AND la_day = $2`, [r.key, day, g.status]);
     sent++;

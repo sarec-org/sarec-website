@@ -52,7 +52,15 @@ export type TodayKind =
   /** 1.5.1（providers/b.ts）：小程序里交来的「发布活儿」，等工作人员看过再派给师傅 */
   | 'jobs_request'
   /** 指令 103（providers/slides.ts）：讲座结束 2 小时后还没挂课件 */
-  | 'slides_upload';
+  | 'slides_upload'
+  /** 指令 102（providers/b.ts）：主办方的活动等放行（先审后发） */
+  | 'org_event_review';
+
+/**
+ * 指令 102：「等你处理（N）」——要工作人员审 / 放行的几类（后台首页、小程序工作台首页单独一块；每条带「通过 / 不通过」这类按钮）。
+ * 接口 GET /api/v1/staff/review-queue 只返回这几类；网站「今天」页从同一份待办里按这几类分出来。
+ */
+export const REVIEW_KINDS: TodayKind[] = ['jobs_pro_verify', 'jobs_request', 'org_event_review', 'media_review', 'dup_confirm', 'complaint', 'ugc_report', 'ugc_machine', 'profile_review'];
 
 /** 卡片上的按钮。页面按 type 渲染；所有按钮都要够大（手机上一指点中）。 */
 export type TodayAction =

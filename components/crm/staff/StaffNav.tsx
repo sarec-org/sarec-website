@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from 'react';
 import css from './nav.module.css';
 import { NAV_ITEMS, NAV_TABS, SEARCH_EXTRA, activeHref, activeTab, canSee, searchNav, tabHref, type NavItem, type NavTab } from './nav';
 import { useStaffMe } from './useStaffMe';
+import { api } from '@/components/crm/client';
 import { SaveImageHost } from './SaveImage';
 
 function NavSearch({ items, onGo, autoFocus }: { items: NavItem[]; onGo: (href: string) => void; autoFocus?: boolean }) {
@@ -101,13 +102,41 @@ function GroupList({ items, active, onPick }: { items: NavItem[]; active: string
   );
 }
 
+/** 指令 102：小导航上的红数字（有几条等你审） */
+function Red({ n }: { n?: number }) {
+  return n ? <span className={css.red} aria-label={`${n} 条等处理`}>{n}</span> : null;
+}
+
+/**
+ * 指令 102：「找工人·接活儿」各页上的红数字（接活人等核验、活儿等派、投诉没处理），只在「客户」栏、运营能看时读，换页重读。
+ * 返回 { 页面地址: 条数 }。
+ */
+function useJobsBadges(on: boolean, pathname: string): Record<string, number> {
+  const [b, setB] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!on) return;
+    let live = true;
+    api<{ pros: number; posts: number; reports: number }>('/api/v1/workbench/jobs/counts').then((r) => {
+      if (live && r.ok) setB({ '/zh/staff/jobs': r.data.posts, '/zh/staff/jobs/pros': r.data.pros, '/zh/staff/jobs/reports': r.data.reports });
+    });
+    return () => { live = false; };
+  }, [on, pathname]);
+  return on ? b : {};
+}
+
 /** 页面上方的同栏小导航：当前这一栏里的其他页面（手机、电脑都显示；小组只在进了小组后展开，否则一个入口） */
-function SubBar({ items, active, tab }: { items: NavItem[]; active: string | null; tab: NavTab }) {
+function SubBar({ items, active, tab, badges = {} }: { items: NavItem[]; active: string | null; tab: NavTab; badges?: Record<string, number> }) {
   const list = items.filter((it) => it.tab === tab);
   if (list.length < 2) return null;
   const inSub = list.find((it) => it.href === active)?.sub;
   const main = list.filter((it) => !it.sub);
   const subs = Array.from(new Set(list.filter((it) => it.sub).map((it) => it.sub!)));
+  // 收起的小组入口：有待审的直接进有待审的那一页（不先落到第一页）
+  const subHref = (sub: string) => {
+    const inIt = list.filter((it) => it.sub === sub);
+    return (inIt.find((it) => badges[it.href]) ?? inIt[0]).href;
+  };
+  const subCount = (sub: string) => list.filter((it) => it.sub === sub).reduce((a, it) => a + (badges[it.href] ?? 0), 0);
   return (
     <nav className={css.subBar} aria-label={`「${tab}」里的页面`}>
       {main.map((it) => (
@@ -121,13 +150,13 @@ function SubBar({ items, active, tab }: { items: NavItem[]; active: string | nul
             <span className={css.subBoxTitle}>{sub}：</span>
             {list.filter((it) => it.sub === sub).map((it) => (
               <Link key={it.href} href={it.href} className={`${css.subTab} ${active === it.href ? css.subTabOn : ''}`} aria-current={active === it.href ? 'page' : undefined}>
-                {it.label}
+                {it.label}<Red n={badges[it.href]} />
               </Link>
             ))}
           </span>
         ) : (
-          <Link key={sub} href={list.find((it) => it.sub === sub)!.href} className={css.subTab}>
-            {sub} ›
+          <Link key={sub} href={subHref(sub)} className={css.subTab}>
+            {sub}<Red n={subCount(sub)} /> ›
           </Link>
         )
       )}
@@ -154,6 +183,7 @@ export function StaffNav() {
   const active = activeHref(pathname);
   const curTab = activeTab(pathname);
   const logged = status === 'ok' && !!me;
+  const badges = useJobsBadges(logged && curTab === '客户' && items.some((it) => it.href === '/zh/staff/jobs/pros'), pathname);
   const go = (href: string) => {
     setMenu(false);
     // 搜到的是本页里的一块（#锚点）：直接改地址栏的 #，页面自己滚过去、展开
@@ -222,7 +252,7 @@ export function StaffNav() {
       <div className={css.subWrap}>
         {/* 手机上：先告诉人现在在哪一栏，点「菜单」看全部 */}
         <p className={`${css.where} ${css.mobileOnly}`}>现在在「{curTab}」{active && NAV_ITEMS.find((it) => it.href === active)?.label !== curTab ? ` › ${NAV_ITEMS.find((it) => it.href === active)?.label}` : ''}</p>
-        <SubBar items={items} active={active} tab={curTab} />
+        <SubBar items={items} active={active} tab={curTab} badges={badges} />
       </div>
     )}
     <SaveImageHost />

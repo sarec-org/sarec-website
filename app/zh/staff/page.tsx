@@ -8,7 +8,7 @@ import { NAV_GROUPS, NAV_ITEMS, ROLE_NAME, canSee, type NavGroup } from '@/compo
 import { notifyStaffChanged } from '@/components/crm/staff/useStaffMe';
 import { ActionButtons, ContactResult } from '@/components/crm/staff/TodayActions';
 import { QuickActions } from '@/components/crm/staff/QuickActions';
-import type { TodayItem, TodayPayload } from '@/lib/crm/today/types';
+import { REVIEW_KINDS, type TodayItem, type TodayPayload } from '@/lib/crm/today/types';
 
 /**
  * 后台综合优化 B（第二部分 三）：后台首页 = 「今天」。打开就是一列要办的事，每条一句话"这是什么、建议怎么办"，按钮直接在卡片上。
@@ -75,6 +75,11 @@ const EXTRA: { href: string; title: string; desc: string; role: string; group: N
 
 type Msg = { ok: boolean; text: string };
 
+/** 指令 102：通知 / 汇总里的链接带 ?item=<待办编号>：滚到那一条、描金边，按钮就在卡片上 */
+function focusItem(): string | null {
+  return typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('item') : null;
+}
+
 function Card({ it, onChanged }: { it: TodayItem; onChanged: () => void }) {
   const [msg, setMsg] = useState<Msg | null>(null);
   const [asked, setAsked] = useState(false);
@@ -85,7 +90,7 @@ function Card({ it, onChanged }: { it: TodayItem; onChanged: () => void }) {
   };
   const red = it.tags?.some((t) => t.startsWith('过期') || t === '钱');
   return (
-    <div className={`${styles.card} ${styles.cardGold}`} style={{ borderLeftColor: red ? '#e7a1a1' : undefined }} data-kind={it.kind}>
+    <div id={`todo-${it.id}`} className={`${styles.card} ${styles.cardGold}`} style={{ borderLeftColor: red ? '#e7a1a1' : undefined, scrollMarginTop: 140, ...(focusItem() === it.id ? { outline: '2px solid var(--gold)' } : {}) }} data-kind={it.kind}>
       {it.tags && it.tags.length > 0 && (
         <p style={{ margin: '0 0 0.3rem', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {it.tags.map((t) => (
@@ -118,11 +123,34 @@ function Today({ ops }: { ops: boolean }) {
     if (r.ok) { setD(r.data); setErr(''); } else setErr(r.message);
   }, []);
   useEffect(() => { load(); }, [load]);
+  // 指令 102：带 ?item= 打开时，数据到了滚到那一条
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const f = focusItem();
+    if (!d || !f || scrolled) return;
+    setScrolled(true);
+    setTimeout(() => document.getElementById(`todo-${f}`)?.scrollIntoView({ block: 'start' }), 60);
+  }, [d, scrolled]);
   if (err) return <p className={styles.error}>{err}</p>;
   if (!d) return <p className={styles.muted}>正在看今天有什么事…</p>;
   const y = d.yesterday;
+  // 指令 102：要审的（接活人核验、活儿等派、主办方活动等放行、照片名片、举报……）单独放最上面「等你处理（N）」，下面「要办的事」不再重复
+  const review = d.items.filter((it) => REVIEW_KINDS.includes(it.kind));
+  const rest = d.items.filter((it) => !REVIEW_KINDS.includes(it.kind));
+  const f = focusItem();
   return (
     <>
+      {ops && (
+        <section aria-label="等你处理" id="review">
+          <h2 className={styles.h2} style={{ marginTop: '0.4rem' }}>等你处理（{review.length}）</h2>
+          {review.length === 0 ? (
+            <div className={styles.card}><p className={styles.cardTitle} style={{ margin: 0 }}>没有要处理的</p></div>
+          ) : (
+            review.map((it) => <Card key={it.id} it={it} onChanged={load} />)
+          )}
+        </section>
+      )}
+      {f && d && !d.items.some((it) => it.id === f) && <p className={styles.notice}>要找的那一件已经办完了，或者不在今天的待办里了。</p>}
       {d.newRegs && (
         // 指令 89-B 验收 P2-1：今天谁报名了，一行看到、点了直接到那场的报名名单（第 3 轮：挪到绑定提示上面，手机第一屏能看到）
         <p className={styles.card} style={{ margin: '0 0 0.6rem', display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
@@ -150,14 +178,14 @@ function Today({ ops }: { ops: boolean }) {
           </div>
         </section>
       ))}
-      <h2 className={styles.h2} style={{ marginTop: '0.6rem' }}>要办的事{d.items.length ? `（${d.items.length}）` : ''}</h2>
+      <h2 className={styles.h2} style={{ marginTop: '0.6rem' }}>{ops ? '其他要办的事' : '要办的事'}{(ops ? rest : d.items).length ? `（${(ops ? rest : d.items).length}）` : ''}</h2>
       {d.failed.length > 0 && <p className={styles.error}>这几类暂时读不出来：{d.failed.join('、')}。请稍后刷新，或直接去对应页面看。</p>}
-      {d.items.length === 0 ? (
+      {(ops ? rest : d.items).length === 0 ? (
         <div className={styles.card} style={{ textAlign: 'center' }}>
-          <p className={styles.cardTitle} style={{ margin: 0 }}>今天没有要办的事</p>
+          <p className={styles.cardTitle} style={{ margin: 0 }}>今天没有{ops ? '别的' : ''}要办的事</p>
         </div>
       ) : (
-        d.items.map((it) => <Card key={it.id} it={it} onChanged={load} />)
+        (ops ? rest : d.items).map((it) => <Card key={it.id} it={it} onChanged={load} />)
       )}
       {ops && y && (
         <div className={styles.card} style={{ marginTop: '1.2rem' }}>
