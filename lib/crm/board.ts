@@ -7,7 +7,7 @@
  *    - ends_at 过了就不出现（查询时过滤，不用定时任务）；removed_at 不为空 = 立即撤下。
  * 2. 自动消息（每种一个开关，crm_settings.board_auto；没有这条 / 没写到的种类 = 开）——全部从现有表实时算，**只取已公开 / 已过检测的东西**：
  *    event_new    新活动开始报名：商会活动 is_listed、scheduled、开着报名、还没开始，14 天内新建的
- *    seats_low    名额快满：上面这类活动里有名额上限、还剩 1 个到 20% 的（剩几个按"已报名 + 递补确认中"算）
+ *    seats_low    名额快满：上面这类活动里有名额上限、还剩 1 个到 20% 的（剩几个按"已报名 + 递补确认中"算）；文字只说「名额所剩不多」，不写数字
  *    meetup_short 组局还差几位：俱乐部组局 open + 已过微信内容检测（sec_status = ok）、14 天内开始、还没满、俱乐部已成立且没关闭；
  *                 文字由服务器按"哪天 + 上午/下午/晚上 + 俱乐部名 + 局"拼，不用用户自己写的标题
  *    member_new   新入会：最近 7 天成为会员的人数；写名字（公司名，没有就人名）的只用已同意「官网展示」的（display_status = published 且审核通过）
@@ -53,7 +53,7 @@ export type Board = { ticker: BoardItem[]; pinned: PinnedItem[]; days: BoardDay[
 export const KINDS: Record<Kind, { label: string; desc: string; icon: string; color: string }> = {
   notice: { label: '工作人员通知', desc: '后台 / 手机工作台手动发的', icon: 'notice', color: '#234A3E' },
   event_new: { label: '新活动开始报名', desc: '「12/5 周五分享会 开始报名」——商会活动公开且开着报名，14 天内新建的', icon: 'event', color: '#2257B8' },
-  seats_low: { label: '名额快满', desc: '「商会月会 只剩 5 个名额」——还剩 20% 以内（至少 1 个）时', icon: 'seats', color: '#C97A1E' },
+  seats_low: { label: '名额快满', desc: '「商会月会 名额所剩不多」——还剩 20% 以内（至少 1 个）时；不写数字（小程序不显示人数）', icon: 'seats', color: '#C97A1E' },
   meetup_short: { label: '组局还差几位', desc: '「周六下午掼蛋局 还差 3 位」——已过内容检测、14 天内开始、还没满的俱乐部组局', icon: 'meetup', color: '#B07D2B' },
   member_new: { label: '新入会', desc: '「本周新加入 3 位会员 · 欢迎 ××公司 加入」——只写已同意官网展示的名字，其余只计数', icon: 'member', color: '#0E7A6B' },
   jobs_new: { label: '找工人新发的活', desc: '「尔湾 · 找水电」——公开列表里能看到的活儿，只写城市和工种', icon: 'jobs', color: '#7A5A3C' },
@@ -136,7 +136,8 @@ async function seatsLow(c: Ctx): Promise<Raw[]> {
     .filter((e) => { const left = e.capacity - e.taken; return left > 0 && left <= e.capacity * 0.2; })
     .map((e) => ({
       id: `seats_low:${e.id}`, kind: 'seats_low', time: iso(c.now),
-      text: `${cut(e.title, 18)} 只剩 ${e.capacity - e.taken} 个名额`,
+      // 1.3.1 起小程序不显示人数 / 剩几个，只说「所剩不多」
+      text: `${cut(e.title, 18)} 名额所剩不多`,
       link: `/pages/event/event?slug=${q(e.slug)}`
     }));
 }
