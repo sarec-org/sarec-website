@@ -177,3 +177,93 @@ export async function saveHomeEntries(list: unknown, actor: string): Promise<Hom
   await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, before_value, after_value) VALUES ($1, 'jobs_home_entries', 'jobs_home_entries', 'all', $2, $3)`, [actor, JSON.stringify(before), JSON.stringify(clean)]);
   return loadHomeEntries(pool);
 }
+
+// ── 指令 99：两侧首页各 8 个工种 ─────────────────────────────────────────
+/**
+ * 首页入口表（jobs_home_entries，后台「工种与资质表」里调，最多 7 个）分到两侧后，各自不满 8 个的，用"最常用的工种"补到 8 个。
+ * - 补哪些：后台可指定（crm_settings.jobs_side_fill = { find?: [工种 key…], work?: [工种 key…] }，按顺序）；没指定的一侧自动选。
+ * - 自动选：开放的工种里，有核验通过的人的在前 → 人多的在前 → 活儿多的在前 → 资质表原顺序。
+ * - 不补重复的：已经是入口的工种不补；入口里有「一组」（如 装修 = 维修与装修组）时，这一组里的工种（如 油漆粉刷）不补；
+ *   只在另一侧出现的组（如 家政保洁只在接活儿一侧）的工种，这一侧也不补。指定的工种也照这个规矩过滤。
+ * - 老版本小程序只取前 7 个（utils/jobs.js slice(0, 7)），多给 1 个不影响。不加迁移。
+ */
+export const SIDE_FILL_KEY = 'jobs_side_fill';
+export const SIDE_MAX = 8;
+export type SideFill = { find?: string[] | null; work?: string[] | null };
+
+export async function loadSideFill(db: Db = getPool()): Promise<SideFill> {
+  const { getSetting } = await import('@/lib/crm/orders');
+  const v = await getSetting<unknown>(db, SIDE_FILL_KEY, null);
+  const o = v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+  const list = (x: unknown) => (Array.isArray(x) ? x.filter((k): k is string => typeof k === 'string') : null);
+  return { find: list(o.find), work: list(o.work) };
+}
+
+/** 每个工种的使用量：核验通过、上了列表的人数（不算工人）＋没下架的活儿数 */
+export async function tradeUsage(db: Db = getPool()): Promise<Map<string, { pros: number; posts: number }>> {
+  const [{ rows: p }, { rows: j }] = await Promise.all([
+    db.query<{ k: string; n: number }>(`SELECT k, count(*)::int AS n FROM (SELECT unnest(verified_trades) AS k FROM jobs_pros WHERE listed AND role <> 'worker') x GROUP BY k`),
+    db.query<{ k: string; n: number }>(`SELECT trade_key AS k, count(*)::int AS n FROM jobs_posts WHERE status <> 'removed' GROUP BY trade_key`)
+  ]);
+  const m = new Map<string, { pros: number; posts: number }>();
+  for (const r of p) m.set(r.k, { pros: r.n, posts: 0 });
+  for (const r of j) m.set(r.k, { pros: m.get(r.k)?.pros ?? 0, posts: r.n });
+  return m;
+}
+
+const shortName = (n: string) => n.replace(/（[^）]*）|\([^)]*\)/g, '').trim() || n;
+
+/** 这一侧可以用来补位的工种（按规矩过滤、按常用排好） */
+export function sideCandidates(side: Side, all: HomeEntry[], trades: Trade[], usage: Map<string, { pros: number; posts: number }>): Trade[] {
+  const other: Side = side === 'find' ? 'work' : 'find';
+  const sideEntries = side === 'find' ? findSideEntries(all) : workSideEntries(all);
+  const usedTrades = new Set(sideEntries.filter((e) => e.target.type === 'trade').map((e) => e.target.key));
+  const usedGroups = new Set(sideEntries.filter((e) => e.target.type === 'group').map((e) => e.target.key));
+  // 只在另一侧出现的入口：它的组（或它这个工种所在的组）这一侧不补
+  const otherOnly = all.filter((e) => { const on = e.showOn ?? ['find', 'work']; return on.includes(other) && !on.includes(side); });
+  const byKey = new Map(trades.map((t) => [t.key, t]));
+  const blockedGroups = new Set(otherOnly.map((e) => (e.target.type === 'group' ? e.target.key : byKey.get(e.target.key)?.group ?? '')));
+  const order = new Map(trades.map((t, i) => [t.key, i]));
+  return trades
+    .filter((t) => t.open && !usedTrades.has(t.key) && !usedGroups.has(t.group) && !blockedGroups.has(t.group))
+    .sort((a, b) => {
+      const ua = usage.get(a.key) ?? { pros: 0, posts: 0 };
+      const ub = usage.get(b.key) ?? { pros: 0, posts: 0 };
+      return Number(ub.pros > 0) - Number(ua.pros > 0) || ub.pros - ua.pros || ub.posts - ua.posts || (order.get(a.key)! - order.get(b.key)!);
+    });
+}
+
+/** 这一侧最终的入口（≤ 8 个）：入口表里这一侧的 + 补位的工种；auto = 补位是不是自动选的 */
+export function sideEntries8(side: Side, all: HomeEntry[], trades: Trade[], usage: Map<string, { pros: number; posts: number }>, fill: SideFill): { entries: HomeEntry[]; fill: string[]; auto: boolean } {
+  const base = (side === 'find' ? findSideEntries(all) : workSideEntries(all)).slice(0, SIDE_MAX);
+  const cands = sideCandidates(side, all, trades, usage);
+  const pick = fill[side];
+  const okKeys = new Set(cands.map((t) => t.key));
+  const chosen = (pick ? pick.filter((k) => okKeys.has(k)).map((k) => cands.find((t) => t.key === k)!) : cands).slice(0, Math.max(0, SIDE_MAX - base.length));
+  // 指定的不够数时，用自动的接着补
+  if (pick && chosen.length < SIDE_MAX - base.length) for (const t of cands) if (chosen.length < SIDE_MAX - base.length && !chosen.includes(t)) chosen.push(t);
+  const extra: HomeEntry[] = chosen.map((t, i) => ({
+    slot: 100 + i, label: shortName(t.name), icon: t.icon, target: { type: 'trade', key: t.key }, pinned: false, showOn: [side], workSort: null
+  }));
+  return { entries: [...base, ...extra], fill: chosen.map((t) => t.key), auto: !pick };
+}
+
+/** 后台：指定两侧补位的工种（null = 这一侧改回自动）。记操作记录 */
+export async function saveSideFill(b: { find?: unknown; work?: unknown }, actor: string): Promise<SideFill> {
+  const pool = getPool();
+  const trades = await tradeMap(pool);
+  const clean = (v: unknown, side: string): string[] | null => {
+    if (v == null) return null;
+    if (!Array.isArray(v) || v.length > SIDE_MAX) throw new CrmError('bad_request', `${side}一侧最多选 ${SIDE_MAX} 个工种`);
+    const ks = Array.from(new Set(v.map((x) => String(x))));
+    const bad = ks.find((k) => !trades.get(k)?.open);
+    if (bad) throw new CrmError('bad_request', `工种「${bad}」不存在或没开放`);
+    return ks;
+  };
+  const before = await loadSideFill(pool);
+  const after: SideFill = { find: clean(b.find, '找工人'), work: clean(b.work, '接活儿') };
+  const { setSetting } = await import('@/lib/crm/orders');
+  await setSetting(pool, SIDE_FILL_KEY, after, actor);
+  await pool.query(`INSERT INTO crm_audit_log (actor, action, target_type, target_id, before_value, after_value) VALUES ($1, 'jobs_side_fill', 'setting', $2, $3, $4)`, [actor, SIDE_FILL_KEY, JSON.stringify(before), JSON.stringify(after)]);
+  return after;
+}

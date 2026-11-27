@@ -35,6 +35,14 @@ type M = { ok: boolean; text: string } | null;
 const TIERS: [string, string][] = [['none', '注册用户'], ['member', '普通会员'], ['board', '理事'], ['exec_board', '常务理事'], ['vp', '副会长'], ['strategic_partner', '战略伙伴']];
 const PROMPTS: [string, string][] = [['enabled', '总开关'], ['afterRegister', '报名成功页一行“带位朋友一起来？”'], ['afterPhoto', '第一次保存合影 / 看照片时轻提示“把这张发给朋友”'], ['nextEvent', '看下一场相关活动时提示“邀请朋友同行”']];
 
+/** 指令 99：小程序首页方块的 key 和名字（和小程序 utils/entries.js 一致） */
+const DESK_KEYS: [string, string][] = [
+  ['events', '活动报名'], ['checkin', '现场签到'], ['myevents', '我的报名'], ['album', '活动相册'], ['myphotos', '我的照片'], ['past', '往期活动'],
+  ['join', '加入商会'], ['benefits', '会员权益'], ['rooms', '会议室'], ['offers', '商家优惠'], ['clubs', '全部俱乐部'], ['referrals', '我的推荐'],
+  ['card', '我的名片'], ['cardbook', '名片夹'], ['invite', '邀请好友'], ['invitecard', '商会邀请卡'], ['intro', '商会介绍'], ['services', '商会服务'],
+  ['research', '研究与动态'], ['contact', '联系商会'], ['showcase', '商会风采'], ['guandan', '掼蛋俱乐部'], ['mahjong', '麻将俱乐部']
+];
+
 /** 一项配置：名字 + 当前值 + 一句人话；点开才显示修改的地方 */
 function Item({ id, title, now, desc, children }: { id: string; title: string; now: ReactNode; desc: string; children: ReactNode }) {
   return (
@@ -146,6 +154,7 @@ function Hub({ s }: { s: StaffInfo }) {
   const [comms, setComms] = useState<Committee[]>([]);
   const [wecomUsers, setWecomUsers] = useState('');
   const [recapDays, setRecapDays] = useState('7');
+  const [deskHide, setDeskHide] = useState<string[]>([]);
   const [inviteText, setInviteText] = useState<Record<string, string>>({ title: '', intro: '' });
 
   const val = (k: string) => d?.settings.find((x) => x.key === k)?.value;
@@ -172,6 +181,7 @@ function Hub({ s }: { s: StaffInfo }) {
     setComms((st.committees as Committee[]) ?? []);
     setWecomUsers(String(st.wecom_userids ?? ''));
     setRecapDays(String(st.home_recap_days ?? 7));
+    setDeskHide(Array.isArray(st.home_desk_hide) ? (st.home_desk_hide as unknown[]).filter((x): x is string => typeof x === 'string') : []);
     setInviteText({ title: '', intro: '', ...((st.invite_card_text as Record<string, string>) ?? {}) });
   }, [g]);
 
@@ -386,6 +396,17 @@ function Hub({ s }: { s: StaffInfo }) {
                     </table>
                   </div>
                 )}
+              </Item>
+              {/* 指令 99：小程序首页方块区不摆哪几个（/api/v1/home 的 deskHide；小程序拿到后再按一行 4 个凑整；搜索、「全部服务」里照样找得到） */}
+              <Item id="desk-hide" title="首页不摆的方块" now={deskHide.length ? deskHide.map((k) => DESK_KEYS.find(([x]) => x === k)?.[1] ?? k).join('、') : '都摆（默认）'} desc="勾上的方块不在小程序首页那一片方块里出现（小程序会自动凑成一行 4 个）；搜索和「全部服务」里照样能找到。">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px' }}>
+                  {DESK_KEYS.map(([k, l]) => (
+                    <label key={k} className={styles.small} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <input type="checkbox" checked={deskHide.includes(k)} onChange={(e) => setDeskHide(e.target.checked ? [...deskHide, k] : deskHide.filter((x) => x !== k))} /> {l}
+                    </label>
+                  ))}
+                </div>
+                <button className={styles.btn} style={{ marginTop: 8 }} onClick={() => save('home_desk_hide', deskHide, deskHide.length ? '已保存：首页不摆这几个方块' : '已保存：首页方块都摆')}>保存</button>
               </Item>
               <Item id="invite-card" title="“认识商会”邀请卡文案" now={inviteText.title ? `标题「${String((st.invite_card_text as Record<string, string> | null)?.title || '默认')}」` : '用默认文案'} desc="小程序里邀请卡上的标题和介绍；不能写金额。">
                 <input className={styles.input} value={inviteText.title} onChange={(e) => setInviteText({ ...inviteText, title: e.target.value })} placeholder="标题，默认：邀请你认识中美房地产商会" aria-label="邀请卡标题" />

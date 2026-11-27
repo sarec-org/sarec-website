@@ -15,11 +15,14 @@ import { latestPosts } from './posts';
 import { approveRequest, postMode, requestsReady } from './requests';
 import { proBrief } from './pros';
 import { groupCities, loadCities } from './cities';
-import { findSideEntries, loadGroups, loadHomeEntries, loadTrades, tradeMap, tradesWithPros, workSideEntries } from './trades';
+import { loadGroups, loadHomeEntries, loadSideFill, loadTrades, sideEntries8, tradeMap, tradesWithPros, tradeUsage } from './trades';
 
 export async function buildMeta(v: Viewer) {
   const pool = getPool();
-  const [groups, trades, entries, withPros, cityList] = await Promise.all([loadGroups(pool), loadTrades(pool), loadHomeEntries(pool), tradesWithPros(pool), loadCities(pool)]);
+  const [groups, trades, entries, withPros, cityList, usage, sideFill] = await Promise.all([
+    loadGroups(pool), loadTrades(pool), loadHomeEntries(pool), tradesWithPros(pool), loadCities(pool),
+    tradeUsage(pool).catch(() => new Map<string, { pros: number; posts: number }>()), loadSideFill(pool)
+  ]);
   const entryOut = (e: (typeof entries)[number]) => ({
     label: e.label, icon: e.icon, target: e.target, pinned: e.pinned, showOn: e.showOn ?? ['find', 'work'],
     hasPros: e.target.type === 'trade' ? withPros.has(e.target.key) : trades.some((t) => t.open && t.group === e.target.key && withPros.has(t.key))
@@ -51,8 +54,9 @@ export async function buildMeta(v: Viewer) {
     // D29：pinned = 常显（不管有没有人都出，没人时标“招募中”）；hasPros = 这个入口指向的工种 / 这一组里有没有核验通过的人
     // 指令 29：homeEntries = 找工人一侧（家政保洁只在接活儿一侧，这里不出现；线上 1.4.3 等老版本也自动看不到它）；
     // workEntries = 接活儿一侧（家政保洁第一，其余按原顺序）。每条带 showOn。
-    homeEntries: findSideEntries(entries).map((e) => entryOut(e)),
-    workEntries: workSideEntries(entries).map((e) => entryOut(e)),
+    // 指令 99：两侧各给 8 个（入口表 + 最常用的工种补位，见 lib/jobs/trades.ts sideEntries8）；老版本小程序只取前 7 个
+    homeEntries: sideEntries8('find', entries, trades, usage, sideFill).entries.map((e) => entryOut(e)),
+    workEntries: sideEntries8('work', entries, trades, usage, sideFill).entries.map((e) => entryOut(e)),
     // D11 冷启动：一个核验通过的人都没有时，首页方块区换成一行招募说明 +「全部工种和服务」；没人的工种标“招募中”
     anyPros: trades.some((t) => t.open && withPros.has(t.key)),
     recruitingText: RECRUITING_TEXT,

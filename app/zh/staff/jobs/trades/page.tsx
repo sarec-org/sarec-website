@@ -72,6 +72,7 @@ function Trades() {
       <p className={styles.small}>A、B 类显示“执照已核验 + 日期”；C 类显示“此类服务无需州执照”“已提供营业登记 / 责任保险”。没核实清楚的工种先别打开（open 关着的工种不出现在任何页面）。</p>
       <Msg m={msg} />
       <HomeEntries d={d} save={(entries) => call('/api/v1/workbench/jobs/home-entries', 'PUT', { entries }, '首页入口已保存')} />
+      <SideFill key={JSON.stringify(d.homeEntries)} onMsg={setMsg} />
 
       <h2 className={styles.h}>工种（按分组）</h2>
       <div className={styles.btnRow} style={{ marginBottom: '1rem' }}>
@@ -238,6 +239,56 @@ function HomeEntries({ d, save }: { d: Res; save: (e: E[]) => Promise<boolean> }
         <button className={styles.btn} disabled={!dirty || list.length < 1 || list.length > 7 || list.some((x) => !x.label.trim() || (x.showOn ?? ['find', 'work']).length === 0)} onClick={() => save(list)}>保存首页入口</button>
         {dirty && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setList(d.homeEntries); setDirty(false); }}>不改了</button>}
       </div>
+    </section>
+  );
+}
+
+/** 指令 99：两侧首页各 8 个——上面的入口不满 8 个的，用最常用的工种补（可指定，可改回自动） */
+type SideV = { base: string[]; fill: string[]; auto: boolean; candidates: { key: string; name: string; pros: number; posts: number }[] };
+function SideFill({ onMsg }: { onMsg: (m: { ok: boolean; text: string }) => void }) {
+  const [v, setV] = useState<{ find: SideV; work: SideV; max: number } | null>(null);
+  const [pick, setPick] = useState<{ find: string[]; work: string[] }>({ find: [], work: [] });
+  const load = useCallback(async () => {
+    const r = await api<{ find: SideV; work: SideV; max: number }>('/api/v1/workbench/jobs/side-fill');
+    if (r.ok) { setV(r.data); setPick({ find: r.data.find.fill, work: r.data.work.fill }); } else onMsg({ ok: false, text: r.message });
+  }, [onMsg]);
+  useEffect(() => { load(); }, [load]);
+  async function put(body: Record<string, unknown>, text: string) {
+    const r = await api<{ find: SideV; work: SideV; max: number }>('/api/v1/workbench/jobs/side-fill', { method: 'PUT', body });
+    onMsg(r.ok ? { ok: true, text } : { ok: false, text: r.message });
+    if (r.ok) { setV(r.data); setPick({ find: r.data.find.fill, work: r.data.work.fill }); }
+  }
+  if (!v) return null;
+  return (
+    <section className={styles.card} id="side-fill">
+      <p className={styles.cardTitle}>两侧首页各 {v.max} 个工种</p>
+      <p className={styles.small}>小程序首页找工人、接活儿两侧各摆 {v.max} 个方块（其余在「全部 ›」里）。上面的入口不满 {v.max} 个的，用这里的工种补。不指定就自动选：有核验通过的人的在前、人多的在前、活儿多的在前；已经有「一组」入口的组（如 装修）里的工种不再补，家政保洁那组不补到找工人一侧。</p>
+      {(['find', 'work'] as const).map((side) => {
+        const s = v[side];
+        const room = v.max - s.base.length;
+        const cur = pick[side];
+        return (
+          <div key={side} style={{ marginTop: 10 }}>
+            <p style={{ margin: '0 0 4px', fontWeight: 600 }}>{side === 'find' ? '找工人一侧' : '接活儿一侧'}：{s.base.join('、')}{s.fill.length ? ' ＋ ' + s.fill.map((k) => s.candidates.find((c) => c.key === k)?.name ?? k).join('、') : ''}
+              <span className={`${styles.badge} ${s.auto ? styles.badgeMuted : ''}`}>{s.auto ? '自动选' : '指定的'}</span></p>
+            {room > 0 && (
+              <div className={styles.inputRow} style={{ flexWrap: 'wrap' }}>
+                {Array.from({ length: room }).map((_, i) => (
+                  <select key={i} className={styles.select} aria-label={`${side === 'find' ? '找工人' : '接活儿'}补位第 ${i + 1} 个`} value={cur[i] ?? ''} style={{ maxWidth: 220 }}
+                    onChange={(e) => { const n = [...cur]; n[i] = e.target.value; setPick({ ...pick, [side]: n.filter(Boolean) }); }}>
+                    <option value="">（自动）</option>
+                    {s.candidates.map((c) => <option key={c.key} value={c.key}>{c.name}（{c.pros} 人 · {c.posts} 个活儿）</option>)}
+                  </select>
+                ))}
+              </div>
+            )}
+            <div className={styles.btnRow} style={{ marginTop: 6 }}>
+              <button className={`${styles.btn} ${styles.btnSmall}`} onClick={() => put({ ...{ find: v.find.auto ? null : v.find.fill, work: v.work.auto ? null : v.work.fill }, [side]: cur.length ? cur : null }, '已保存')}>保存这一侧</button>
+              {!s.auto && <button className={`${styles.btn} ${styles.btnQuiet} ${styles.btnSmall}`} onClick={() => put({ find: v.find.auto ? null : v.find.fill, work: v.work.auto ? null : v.work.fill, [side]: null }, '已改回自动')}>改回自动</button>}
+            </div>
+          </div>
+        );
+      })}
     </section>
   );
 }

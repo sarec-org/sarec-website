@@ -148,6 +148,9 @@ const EXTRA_RAW: Extra[] = [
   // 指令 95：搜「通知」时排在「手机通知总闸」后面（第二个），搜「发通知」直接到发通知那一块
   { href: '/zh/staff/board#send', label: '发看板通知（首页滚动的一句话）', page: '看板', tab: '内容', role: 'ops', words: ['发通知', '通知', '公告', '发公告', '看板', '黑板报', '置顶'], pin: ['发通知', '发看板通知', '看板通知'] },
   { href: '/zh/staff/board#auto', label: '看板自动消息（开关）', page: '看板', tab: '内容', role: 'ops', words: ['看板开关', '自动消息', '开关', '关掉'], pin: ['看板开关', '自动消息'] },
+  // 指令 99：首页方块不摆哪几个；找工人 / 接活儿两侧各 8 个工种
+  { href: '/zh/staff/settings#desk-hide', label: '首页不摆的方块', page: '设置', tab: '设置与团队', role: 'ops', words: ['首页方块', '方块', '不摆', '首页不摆', '邀请卡方块', '首页图标'], pin: ['首页方块', '不摆', '首页不摆', '首页图标'] },
+  { href: '/zh/staff/jobs/trades#side-fill', label: '找工人 / 接活儿首页 8 个工种', page: '工种与资质表', tab: '客户', role: 'ops', words: ['首页工种', '8 个工种', '常用工种', '首页入口', '补位'], pin: ['首页工种', '常用工种', '8 个工种'] },
   { href: '/zh/staff/contacts', label: '导出客户名单（全部客户，按条件筛）', page: '客户', tab: '客户', role: 'ops', words: ['导出客户', '客户名单', '导出会员', '会员名单', '全部客户'], pin: ['导出客户', '客户名单', '导出会员', '会员名单', '全部客户'] }
 ];
 export const SEARCH_EXTRA: NavItem[] = EXTRA_RAW.map(({ page, ...e }) => ({ ...e, group: e.tab, sub: page }));
