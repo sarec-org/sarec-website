@@ -182,14 +182,14 @@ export async function clubDetail(contactId: string | null, key: string) {
   };
 }
 
-type MeetupRow = {
+export type MeetupRow = {
   id: string; club_id: string; title: string; starts_at: Date; location: string | null; address: string | null; capacity: number; note: string | null;
   status: string; sec_status: string; creator_id: string; creator_name: string | null; joined: number; mine: boolean;
   // 1.6.1（0052）：改过时间 / 地点的时间；我报名的时间（报名早于改动的人才显示「已改」）
   time_changed_at?: Date | null; place_changed_at?: Date | null; my_joined_at?: Date | null;
 };
 
-const MEETUP_SELECT = `SELECT u.*, NULLIF(ct.name, '微信用户') AS creator_name,
+export const MEETUP_SELECT = `SELECT u.*, NULLIF(ct.name, '微信用户') AS creator_name,
             (SELECT count(*)::int FROM club_meetup_joins j WHERE j.meetup_id = u.id) AS joined,
             EXISTS (SELECT 1 FROM club_meetup_joins j WHERE j.meetup_id = u.id AND j.contact_id = $2) AS mine,
             (SELECT j.joined_at FROM club_meetup_joins j WHERE j.meetup_id = u.id AND j.contact_id = $2) AS my_joined_at
@@ -205,7 +205,7 @@ function changedLabel(u: MeetupRow, contactId: string | null): string | null {
 }
 
 /** 组局板和组局详情页用同一个样子 */
-function meetupView(u: MeetupRow, contactId: string | null, geo: unknown) {
+export function meetupView(u: MeetupRow, contactId: string | null, geo: unknown) {
   const started = new Date(u.starts_at).getTime() <= Date.now();
   return {
     id: u.id, title: u.title, startsAt: u.starts_at, location: u.location, address: u.address, geo, capacity: u.capacity, note: u.note,
