@@ -31,12 +31,44 @@ export const LARGE = { w: 1080, h: 1620 };
 export const THUMB = { w: 300, h: 450 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * 活动第三批「标题画死＋三处空条」模板的 box（对象形式，同一个 jsonb 列，不加迁移）：
+ * org_logo 主办方圆标位、org_bar 主办方名横条、info 三行信息条（日期 / 时间 / 地点）、qr 报名码位（都是 [x0,y0,x1,y1]，0–1）。
+ * 出图不印活动名、码下不印「长按识别报名」（底图画好了）。老模板的 box 仍是数组，行为不变。
+ */
+export type SlotBox = { org_logo?: number[]; org_bar?: number[]; info: number[][]; qr: number[]; info_icons?: string[]; painted?: string[] };
+const rectOk = (r: unknown): r is number[] =>
+  Array.isArray(r) && r.length === 4 && r.every((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1) && r[2] > r[0] && r[3] > r[1];
+export function isSlotBox(b: unknown): b is SlotBox {
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return false;
+  const o = b as Record<string, unknown>;
+  return Array.isArray(o.info) && o.info.length >= 1 && o.info.length <= 3 && o.info.every(rectOk) && rectOk(o.qr)
+    && (o.org_logo == null || rectOk(o.org_logo)) && (o.org_bar == null || rectOk(o.org_bar));
+}
+/** 对象形式 box：校验后只留认识的字段、坐标保留 4 位小数；不合格 null */
+export function parseSlotBox(v: unknown): SlotBox | null {
+  let a = v;
+  if (typeof v === 'string') { try { a = JSON.parse(v); } catch { return null; } }
+  if (!isSlotBox(a)) return null;
+  const r4 = (r: number[]) => r.map((x) => Math.round(x * 10000) / 10000);
+  const out: SlotBox = { info: a.info.map(r4), qr: r4(a.qr) };
+  if (a.org_logo) out.org_logo = r4(a.org_logo);
+  if (a.org_bar) out.org_bar = r4(a.org_bar);
+  if (Array.isArray(a.info_icons)) out.info_icons = a.info_icons.map(String).slice(0, 3);
+  if (Array.isArray(a.painted)) out.painted = a.painted.map(String).slice(0, 8);
+  return out;
+}
+/** 上传 / 导入用：数组（老式信息位）或对象（三处空条）都认 */
+export function parseAnyBox(v: unknown): number[] | SlotBox | null {
+  return parseSlotBox(v) ?? parseBox(v);
+}
+
 export type Purpose = 'event' | 'greeting';
 export const PURPOSE_LABEL: Record<Purpose, string> = { event: '办活动', greeting: '节日祝福' };
 export type PosterCategory = { key: string; name: string; tier: number; sort: number; active: boolean; updated_at: Date | null; purpose: Purpose; festival_date: string | null };
 export type PosterTemplate = {
   id: string; code: string | null; category_key: string; name: string; image_url: string; thumb_url: string;
-  box: number[] | null; ink: string | null; layout: number; sort: number; status: 'active' | 'hidden'; source: string | null;
+  box: number[] | SlotBox | null; ink: string | null; layout: number; sort: number; status: 'active' | 'hidden'; source: string | null;
   version: number; uses: number; created_at: Date; updated_at: Date; purpose: Purpose; sig_box: number[] | null;
   /** 0054（指令 88）：「AI生成」标识位置 tr / tl / br / bl / strip；null = 用全局设置 */
   badge_pos?: string | null;
@@ -51,9 +83,11 @@ export const imgUrl = (base: string, id: string, version: number, size: 't' | 'l
 export const uploadOn = (db: Db = getPool()) => getSetting<boolean>(db, UPLOAD_ON_KEY, false).then((v) => v === true);
 
 // ── 小程序清单（不要求登录） ─────────────────────────────────────────
-type Item = { id: string; name: string; thumb: string; large: string; layout?: number };
-const itemOf = (base: string, t: Pick<PosterTemplate, 'id' | 'name' | 'version' | 'layout'>, withLayout = true): Item => ({
-  id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l'), ...(withLayout ? { layout: t.layout } : {})
+type Item = { id: string; name: string; thumb: string; large: string; layout?: number; slots?: true };
+const itemOf = (base: string, t: Pick<PosterTemplate, 'id' | 'name' | 'version' | 'layout'> & { box?: PosterTemplate['box'] }, withLayout = true): Item => ({
+  id: t.id, name: t.name, thumb: imgUrl(base, t.id, t.version, 't'), large: imgUrl(base, t.id, t.version, 'l'), ...(withLayout ? { layout: t.layout } : {}),
+  // 三处空条模板（标题画在图上，出图不印活动名）：多给 slots: true；老包只读认识的字段，不受影响
+  ...(isSlotBox(t.box) ? { slots: true } : {})
 });
 
 const FEST_TIER1 = 4;
@@ -249,7 +283,7 @@ export async function uploadNew(s: Staff, f: { category: string; name: string; f
   const imgs = await makeImages(f.file);
   const code = `${cat.key}-U${randomBytes(4).toString('hex')}`;
   const urls = await putImages(cat.key, code, 1, imgs);
-  const box = parseBox(f.box);
+  const box = parseAnyBox(f.box);
   const ink = typeof f.ink === 'string' && INK.test(f.ink) ? f.ink : null;
   const sigBox = cat.purpose === 'greeting' ? parseSigBox(f.sigBox) : null;
   const { rows } = await pool.query<{ id: string }>(
@@ -432,7 +466,7 @@ export async function importData(s: Staff, b: { categories?: ImportCat[]; templa
       const imageUrl = txt(x.image_url, 500);
       const thumbUrl = txt(x.thumb_url, 500);
       if (!code || !txt(x.name, 30) || !BLOB_URL.test(imageUrl) || !BLOB_URL.test(thumbUrl)) throw new CrmError('bad_request', `模板「${code}」缺编号 / 名字，或图片不是 poster-templates 下的 Blob 地址`);
-      const box = parseBox(x.box);
+      const box = parseAnyBox(x.box);
       // 用途：传了就按传的，没传跟着分类；和分类不一致的拒收（不然两边清单都不出现）
       if (x.purpose != null && !purposeOf(x.purpose)) throw new CrmError('bad_request', `模板「${code}」的用途只能是 event / greeting`);
       const { rows: cr } = await db.query<{ purpose: Purpose }>(`SELECT purpose FROM poster_categories WHERE key = $1`, [txt(x.category_key, 40)]);

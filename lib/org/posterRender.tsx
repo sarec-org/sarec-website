@@ -20,7 +20,7 @@ import { getPool } from '@/lib/db/client';
 import { AI_BADGE_DEFAULT, aiBadgeConfig, badgeGeom, placeFor, type AiBadgeCfg, type BadgePlace } from './aiBadge';
 import { CrmError } from '@/lib/crm/events';
 import { codePng, eventAccess, whenText } from './service';
-import { DEFAULT_BOX, LARGE, fetchTemplateImage, getTemplate } from './posterTemplates';
+import { DEFAULT_BOX, LARGE, fetchTemplateImage, getTemplate, isSlotBox, type SlotBox } from './posterTemplates';
 import { getOwnPoster, ownPosterBlocked } from './posterOwn';
 
 const W = LARGE.w;
@@ -132,12 +132,24 @@ const mix = (c: number, to: number, k: number) => Math.round(c + (to - c) * k);
 export async function planBadge(o: {
   cfg: AiBadgeCfg; img: Buffer; cw: number; ch: number; imgH?: number; place: BadgePlace;
   box: number[] | null; bar: 'plate' | 'painted' | null; plateBg?: string;
+  /** 三处空条模板：这些槽位（0–1）不能压，选中的角压到了就换一个角（右上 → 左上 → 右下 → 左下） */
+  avoid?: number[][];
 }): Promise<BadgePlan | null> {
   const { cfg, cw, ch } = o;
   if (!cfg.on) return null;
   const g = badgeGeom(cfg, cw, ch);
   let place = o.place;
   if (place === 'strip' && (!o.box || !o.bar)) place = 'br';
+  if (o.avoid?.length) {
+    const rectAt = (pl: BadgePlace) => {
+      const px = pl === 'tr' || pl === 'br' ? cw - g.m - g.bw : g.m;
+      const py = pl === 'tr' || pl === 'tl' ? g.m : ch - g.m - g.bh;
+      return [px / cw, py / ch, (px + g.bw) / cw, (py + g.bh) / ch];
+    };
+    const hits = (r: number[]) => o.avoid!.some((a) => r[0] < a[2] && r[2] > a[0] && r[1] < a[3] && r[3] > a[1]);
+    const first = place === 'strip' ? 'br' : place;
+    place = ([first, 'tr', 'tl', 'br', 'bl'] as BadgePlace[]).find((pl) => !hits(rectAt(pl))) ?? first;
+  }
   let x: number;
   let y: number;
   if (place === 'strip') {
@@ -205,13 +217,19 @@ export function AiBadge({ p }: { p: BadgePlan | null }) {
   );
 }
 
-export type PosterInfo = { title: string; when: string; locationName: string; address: string; organizer: string };
+export type PosterInfo = {
+  title: string; when: string; locationName: string; address: string; organizer: string;
+  /** 三处空条模板用：日期星期、时间分开排；主办方标志（https，取不到就画名字首字） */
+  date?: string; time?: string; orgLogoUrl?: string | null;
+};
 
 /** 出图（不查库）：底图、信息、报名码 → PNG。scripts 里的样张也走这里 */
-export async function renderPoster(o: { image: Buffer; box: number[] | null; ink: string | null; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg; badgePos?: string | null }): Promise<Buffer> {
+export async function renderPoster(o: { image: Buffer; box: number[] | SlotBox | null; ink: string | null; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg; badgePos?: string | null }): Promise<Buffer> {
+  if (isSlotBox(o.box)) return renderSlotPoster({ ...o, box: o.box });
+  if (o.box && !Array.isArray(o.box)) o = { ...o, box: null }; // 认不出的对象：按老图默认信息位
   const badge = o.badge ?? AI_BADGE_DEFAULT;
   const plate = !o.box;
-  const box = [...(o.box ?? DEFAULT_BOX)];
+  const box = [...((o.box as number[] | null) ?? DEFAULT_BOX)];
   // 「AI生成」标识：定位置、取色，信息位碰到就让开（box 原地改）
   const bp = await planBadge({ cfg: badge, img: o.image, cw: W, ch: H, place: placeFor(badge, o.badgePos), box, bar: plate ? 'plate' : 'painted', plateBg: 'rgba(12,14,20,0.62)' });
   const ink = plate ? '#FFFFFF' : o.ink && /^#[0-9a-f]{6}$/i.test(o.ink) ? o.ink : (await boxLuminance(o.image, box)) > 0.55 ? '#1E1E1E' : '#FFFFFF';
@@ -307,6 +325,93 @@ export async function renderPoster(o: { image: Buffer; box: number[] | null; ink
   return Buffer.from(await res.arrayBuffer());
 }
 
+
+/** 三处空条模板用：一行字在宽度 width 里，字号最大 maxFs、最小 minFs；还放不下就截短加「…」 */
+function fitLine(text: string, width: number, maxFs: number, minFs: number): { fs: number; text: string } {
+  const one = Math.floor(width / Math.max(textWidth(text, 1), 0.01));
+  const fs = Math.max(minFs, Math.min(maxFs, one));
+  return { fs, text: textWidth(text, fs) <= width ? text : wrap(text, fs, width, 1)[0] };
+}
+/** 主办方标志：https、6 秒超时、裁成正方形 PNG；取不到 null */
+async function fetchLogo(url: string | null | undefined, px: number): Promise<Buffer | null> {
+  if (!url || !/^https:\/\//i.test(url)) return null;
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(6000) });
+    if (!res.ok) return null;
+    return await sharp(Buffer.from(await res.arrayBuffer())).resize(px, px, { fit: 'cover' }).png().toBuffer();
+  } catch {
+    return null;
+  }
+}
+const inkFor = async (img: Buffer, r: number[], fixed: string | null) =>
+  fixed && /^#[0-9a-f]{6}$/i.test(fixed) ? fixed : (await boxLuminance(img, r).catch(() => 0)) > 0.55 ? '#3A2414' : '#FFFFFF';
+
+/**
+ * 活动第三批「标题画死＋三处空条」模板出图：不印活动名；主办方标志进圆标位、主办方名进横条；
+ * 三行信息（日期星期 / 时间 / 地点）各进一条，按条高定字号、一行放不下先缩字再截短；报名码进码位（码下不印字，底图画好了「扫码报名」）。
+ * 每个条子的字色按那块底图明暗取（模板有 ink 就用 ink）。AI 标识照国标版画，压到槽位自动换角。
+ */
+export async function renderSlotPoster(o: { image: Buffer; box: SlotBox; ink: string | null; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg; badgePos?: string | null }): Promise<Buffer> {
+  const badge = o.badge ?? AI_BADGE_DEFAULT;
+  const b = o.box;
+  const t = o.info;
+  const px = (r: number[]) => ({ x: r[0] * W, y: r[1] * H, w: (r[2] - r[0]) * W, h: (r[3] - r[1]) * H });
+  const slots = [b.org_logo, b.org_bar, ...b.info, b.qr].filter(Boolean) as number[][];
+  const bp = await planBadge({ cfg: badge, img: o.image, cw: W, ch: H, place: placeFor(badge, o.badgePos), box: null, bar: null, avoid: slots });
+
+  // 三行信息：日期星期 / 时间 / 地点（地点名放得下就带地址）
+  const place = t.locationName || t.address || '';
+  const lines = [t.date ?? t.when, t.time ?? '', place];
+  const infoEls = await Promise.all(b.info.slice(0, 3).map(async (r, i) => {
+    const p = px(r);
+    const pad = Math.round(p.h * 0.28);
+    let text = lines[i] ?? '';
+    if (i === 2 && t.locationName && t.address) {
+      const both = `${t.locationName} ${t.address}`;
+      if (Math.floor((p.w - pad * 2) / Math.max(textWidth(both, 1), 0.01)) >= p.h * 0.4) text = both;
+    }
+    const f = fitLine(text, p.w - pad * 2, Math.round(p.h * 0.58), Math.max(14, Math.round(p.h * 0.32)));
+    return { p, pad, f, ink: await inkFor(o.image, r, o.ink) };
+  }));
+  const bar = b.org_bar ? px(b.org_bar) : null;
+  const barFit = bar && t.organizer ? fitLine(t.organizer, bar.w * 0.88, Math.round(bar.h * 0.6), Math.max(14, Math.round(bar.h * 0.34))) : null;
+  const barInk = b.org_bar ? await inkFor(o.image, b.org_bar, o.ink) : '#FFFFFF';
+  const logo = b.org_logo ? px(b.org_logo) : null;
+  const logoSide = logo ? Math.round(Math.min(logo.w, logo.h) * 0.86) : 0;
+  const logoBuf = logo ? await fetchLogo(t.orgLogoUrl, logoSide * 2) : null;
+  const logoInk = b.org_logo ? await inkFor(o.image, b.org_logo, o.ink) : '#FFFFFF';
+  const q = px(b.qr);
+  const qSide = Math.round(Math.min(q.w, q.h) * 0.92);
+  const bg = `data:image/jpeg;base64,${(await sharp(o.image).resize(W, H, { fit: 'fill' }).jpeg({ quality: 90 }).toBuffer()).toString('base64')}`;
+
+  const res = new ImageResponse(
+    (
+      <div style={{ width: W, height: H, display: 'flex', position: 'relative', fontFamily: 'NotoSansSC' }}>
+        <img src={bg} width={W} height={H} style={{ position: 'absolute', left: 0, top: 0, width: W, height: H }} />
+        {logo && (
+          <div style={{ position: 'absolute', left: logo.x + (logo.w - logoSide) / 2, top: logo.y + (logo.h - logoSide) / 2, width: logoSide, height: logoSide, borderRadius: logoSide / 2, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: logoBuf ? '#FFFFFF' : 'transparent' }}>
+            {logoBuf
+              ? <img src={`data:image/png;base64,${logoBuf.toString('base64')}`} width={logoSide} height={logoSide} style={{ borderRadius: logoSide / 2 }} />
+              : t.organizer ? <div style={{ fontSize: Math.round(logoSide * 0.5), color: logoInk, display: 'flex' }}>{Array.from(t.organizer)[0]}</div> : null}
+          </div>
+        )}
+        {bar && barFit && (
+          <div style={{ position: 'absolute', left: bar.x, top: bar.y, width: bar.w, height: bar.h, display: 'flex', alignItems: 'center', justifyContent: 'center', color: barInk, fontSize: barFit.fs, whiteSpace: 'nowrap', overflow: 'hidden' }}>{barFit.text}</div>
+        )}
+        {infoEls.map((e, i) => (
+          <div key={i} style={{ position: 'absolute', left: e.p.x + e.pad, top: e.p.y, width: e.p.w - e.pad * 2, height: e.p.h, display: 'flex', alignItems: 'center', color: e.ink, fontSize: e.f.fs, whiteSpace: 'nowrap', overflow: 'hidden' }}>{e.f.text}</div>
+        ))}
+        <div style={{ position: 'absolute', left: q.x + (q.w - qSide) / 2, top: q.y + (q.h - qSide) / 2, width: qSide, height: qSide, display: 'flex', background: '#FFFFFF', borderRadius: Math.round(qSide * 0.06), padding: Math.round(qSide * 0.05) }}>
+          <img src={`data:image/png;base64,${o.qr.toString('base64')}`} width={qSide - Math.round(qSide * 0.1)} height={qSide - Math.round(qSide * 0.1)} />
+        </div>
+        <AiBadge p={bp} />
+      </div>
+    ),
+    { width: W, height: H, fonts: [{ name: 'NotoSansSC', data: await font(), weight: 700, style: 'normal' }] }
+  );
+  return Buffer.from(await res.arrayBuffer());
+}
+
 /** 自己传的海报：原图铺满宽度（高度限制在 600–1620，超出居中裁），底部接白色报名条 */
 export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; info: PosterInfo; qr: Buffer; badge?: AiBadgeCfg }): Promise<Buffer> {
   const badge = o.badge ?? AI_BADGE_DEFAULT;
@@ -352,13 +457,26 @@ export async function renderOwnPoster(o: { image: Buffer; aiGenerated: boolean; 
   return Buffer.from(await res.arrayBuffer());
 }
 
+/** 三处空条模板：「12月13日（周日）」和「11:00 – 15:00」分开 */
+function dayTimeText(ev: { starts_at: Date; ends_at: Date | null; timezone: string }) {
+  const f = (d: Date, opt: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('zh-CN', { timeZone: ev.timezone, ...opt }).format(new Date(d));
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: ev.timezone, month: 'numeric', day: 'numeric' }).formatToParts(new Date(ev.starts_at));
+  const md = `${parts.find((p) => p.type === 'month')?.value}月${parts.find((p) => p.type === 'day')?.value}日`;
+  const wk = f(ev.starts_at, { weekday: 'short' });
+  const hm = (d: Date) => f(d, { hour: '2-digit', minute: '2-digit', hour12: false });
+  return { date: `${md}（${wk}）`, time: `${hm(ev.starts_at)}${ev.ends_at ? ' – ' + hm(ev.ends_at) : ''}` };
+}
+
 /** 接口用：权限和 posterData 一样（负责人 / 帮手，活动没下架 / 取消） */
 export async function eventPosterPng(contactId: string, eventId: string, base?: string): Promise<Buffer> {
   const pool = getPool();
   const { ev } = await eventAccess(pool, contactId, eventId, 'helper');
   if (ev.status !== 'published' && ev.status !== 'review') throw new CrmError('event_closed', '这场活动已下架或取消，不能出海报');
-  const { rows: o } = await pool.query<{ name: string }>(`SELECT name FROM organizers WHERE id = $1`, [ev.organizer_id]);
-  const info = { title: clean(ev.title), when: whenText(ev), locationName: clean(ev.location_name), address: clean(ev.address), organizer: clean(o[0]?.name) };
+  const { rows: o } = await pool.query<{ name: string; logo_url: string | null }>(`SELECT name, logo_url FROM organizers WHERE id = $1`, [ev.organizer_id]);
+  const info: PosterInfo = {
+    title: clean(ev.title), when: whenText(ev), locationName: clean(ev.location_name), address: clean(ev.address), organizer: clean(o[0]?.name),
+    ...dayTimeText(ev), orgLogoUrl: o[0]?.logo_url ?? null
+  };
   if (ev.poster_own) {
     const own = await getOwnPoster(ev.poster_own, pool);
     if (!own) throw new CrmError('not_found', '这场活动用的海报图找不到了');
