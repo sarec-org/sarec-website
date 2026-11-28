@@ -4,7 +4,7 @@
  * 办完下次读就没有了。和「今天」是同一份待办（lib/crm/today），只取 REVIEW_KINDS 这几类。
  * 返回 { n, items, failed }；小程序来的请求同「今天」：钱相关去掉、每条带 mpPath，旧版小程序不给 /zh/staff/jobs… 的链接。
  */
-import { handler, isMiniProgramRequest, isMpOlderThan, mpVersion, ok, requireStaffAny } from '@/lib/crm/http';
+import { handler, isMiniProgramRequest, isMpOlderThan, mpVersion, ok, requireStaffAny, siteUrl } from '@/lib/crm/http';
 import { allProviders, collectToday } from '@/lib/crm/today/registry';
 import { forMiniProgram } from '@/lib/crm/today/mp';
 import { REVIEW_KINDS } from '@/lib/crm/today/types';
@@ -14,7 +14,7 @@ export const GET = handler(async (req: Request) => {
   const s = await requireStaffAny(req, ['checkin', 'finance', 'ops', 'admin']);
   const t = await collectToday(s, { providers: allProviders().filter((p) => REVIEW_KINDS.includes(p.kind)) });
   if (await isMiniProgramRequest(req)) {
-    const m = forMiniProgram({ ...t, yesterday: null }, { legacyJobsLink: !mpVersion(req) || isMpOlderThan(req, [1, 7, 2]) });
+    const m = forMiniProgram({ ...t, yesterday: null }, { legacyJobsLink: !mpVersion(req) || isMpOlderThan(req, [1, 7, 2]), siteBase: siteUrl(req) });
     return ok({ n: m.items.length, items: m.items, failed: t.failed });
   }
   return ok({ n: t.items.length, items: t.items, failed: t.failed });

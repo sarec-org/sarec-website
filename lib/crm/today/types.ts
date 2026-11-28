@@ -78,7 +78,14 @@ export type TodayAction =
    * 直接生效的操作：页面 POST 到 endpoint（必须是 /api/v1/staff/ 或 /api/v1/workbench/ 开头，服务器端自己再查权限），
    * 成功后整列刷新。confirm 有值时先弹一句确认（只用于不可撤销的事）；done 是成功后的提示。
    */
-  | { type: 'post'; label: string; endpoint: string; body?: Record<string, unknown>; confirm?: string; done?: string; primary?: boolean; danger?: boolean };
+  | {
+      type: 'post'; label: string; endpoint: string; body?: Record<string, unknown>; confirm?: string; done?: string; primary?: boolean; danger?: boolean;
+      /**
+       * 指令 105-2：有值时点了先弹出这份清单（接活人核验清单），每条都勾上才能点「确认」；确认时 body 加 checked: 勾上的原文（服务器再查一遍）。
+       * 不认这个字段的旧版小程序拿不到带清单的按钮（lib/crm/today/mp.ts 换成「复制网站核验链接」）。
+       */
+      checklist?: string[];
+    };
 
 export type TodayItem = {
   /** 全列唯一、刷新后不变，例如 'followup:<任务号>'（只用作 key，不显示） */

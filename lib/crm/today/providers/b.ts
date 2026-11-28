@@ -5,6 +5,8 @@ import { getPool } from '@/lib/db/client';
 import { CATEGORY_LABEL, contactActions, draftFor, loadCards, teamMembers, voiceFor } from '@/lib/crm/followupKit';
 import { headline } from '@/lib/crm/followupMail';
 import { realContact } from '@/lib/crm/accountKind';
+import { tradeMap } from '@/lib/jobs/trades';
+import { checklistFor } from '@/lib/jobs/verify';
 import { PRIORITY, type TodayItem, type TodayProvider } from '../types';
 
 const money = (cents: number) => '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 });
@@ -172,23 +174,25 @@ export const jobsProProvider: TodayProvider = {
   kind: 'jobs_pro_verify',
   roles: ['ops'],
   async list() {
-    type Row = { id: string; name: string; trades: string[]; needs_review: boolean; status: string; updated_at: Date; license_no: string | null; ls: { state?: string; active?: boolean; problems?: string[] } | null };
+    type Row = { id: string; name: string; trade_keys: string[]; trades: string[]; needs_review: boolean; status: string; updated_at: Date; license_no: string | null; ls: { state?: string; active?: boolean; problems?: string[] } | null };
     const { rows } = await getPool().query<Row>(
-      `SELECT p.id, p.name, ARRAY(SELECT coalesce(t.name, x) FROM unnest(p.trades) x LEFT JOIN jobs_trades t ON t.key = x) AS trades,
+      `SELECT p.id, p.name, p.trades AS trade_keys, ARRAY(SELECT coalesce(t.name, x) FROM unnest(p.trades) x LEFT JOIN jobs_trades t ON t.key = x) AS trades,
               p.needs_review, p.status, p.updated_at, p.license_no, p.license_state AS ls
          FROM jobs_pros p WHERE p.status = 'pending' OR (p.needs_review AND p.status <> 'removed') ORDER BY p.updated_at LIMIT 30`
     );
+    const tm = rows.length ? await tradeMap() : new Map();
     return rows.map((p) => {
       const href = `/zh/staff/jobs/pros?status=pending&id=${p.id}`;
+      const checklist = checklistFor({ trades: p.trade_keys }, tm);
       const cslb = p.ls?.state === 'done' ? (p.ls.active ? '加州承包商牌照自动查：有效。' : `加州承包商牌照自动查：有问题（${clip((p.ls.problems ?? []).join('；') || '看核验页', 40)}），建议先打开看一眼。`) : p.ls?.state === 'queued' ? '牌照正在自动查，几分钟出结果。' : '';
       return {
         id: `jobs_pro:${p.id}`,
         kind: 'jobs_pro_verify' as const,
         priority: PRIORITY.review,
         title: p.status === 'pending' ? `${p.name} 登记接活（${clip(p.trades.join('、') || '未选工种', 30)}），等核验` : `${p.name} 核验后又改了工种或牌照，等再看一次`,
-        suggestion: `${cslb}${p.license_no ? `牌照 / 执照号 ${p.license_no}。` : ''}核对没问题点「通过」（上找工人列表、通知本人）；对不上点「不通过」（退回让他改）。要看证件、只通过部分工种点「打开」。`,
+        suggestion: `${cslb}${p.license_no ? `牌照 / 执照号 ${p.license_no}。` : ''}点「通过」会弹出核验清单，逐条勾完才能确认（上找工人列表、通知本人）；对不上点「不通过」（退回让他改）。要看证件、只通过部分工种点「打开」。`,
         actions: [
-          { type: 'post' as const, label: '通过', endpoint: `/api/v1/workbench/jobs/pros/${p.id}/verify`, body: { action: 'approve' }, primary: true, done: `${p.name} 核验通过，本人会收到通知` },
+          { type: 'post' as const, label: '通过', endpoint: `/api/v1/workbench/jobs/pros/${p.id}/verify`, body: { action: 'approve' }, checklist, primary: true, done: `${p.name} 核验通过，本人会收到通知` },
           { type: 'post' as const, label: '不通过', endpoint: `/api/v1/workbench/jobs/pros/${p.id}/verify`, body: { action: 'return', reason: PRO_RETURN_REASON }, confirm: `不通过「${p.name}」？会退回给本人，告诉他：${PRO_RETURN_REASON}。（要写别的原因点「打开」）`, done: '已退回，本人会收到原因', danger: true },
           { type: 'link' as const, label: '打开', href }
         ],

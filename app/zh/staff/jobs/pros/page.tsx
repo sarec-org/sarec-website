@@ -118,7 +118,7 @@ function Cslb({ s }: { s: LicState }) {
 }
 
 function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, unknown>, ok: string) => void }) {
-  const [mode, setMode] = useState<'' | 'return' | 'remove'>('');
+  const [mode, setMode] = useState<'' | 'return' | 'remove' | 'approve'>('');
   const [reason, setReason] = useState('');
   const [checked, setChecked] = useState<string[]>([]);
   const covered = p.licenseState?.coveredTrades;
@@ -126,6 +126,8 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
   const links = [...(p.cslbDetailUrl ? [{ agency: 'CSLB 牌照详情', url: p.cslbDetailUrl }] : []), ...p.officialUrls.filter((l) => l.url !== p.cslbDetailUrl)];
   const docs = [['营业登记', p.businessRegUrl], ['责任保险', p.insuranceUrl], ['执照照片', p.licenseDocUrl]].filter(([, u]) => u) as [string, string][];
   const canApprove = p.status === 'pending' || p.status === 'returned' || p.needsReview;
+  // 恢复上架：按原来通过的工种（没有就全部）
+  const approvePick = canApprove ? pick : p.trades.filter((t) => t.verified).map((t) => t.key).length ? p.trades.filter((t) => t.verified).map((t) => t.key) : p.trades.map((t) => t.key);
   return (
     <div className={styles.card}>
       <div>
@@ -155,17 +157,6 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
           {p.licenseNo && p.trades.some((t) => t.licType === 'A') && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => verify(p.id, { action: 'check' }, `已让系统再查一次 ${p.name} 的 CSLB 牌照，几分钟后刷新看结果`)}>CSLB 再查一次</button>}
         </div>
       )}
-      {p.checklist.length > 0 && canApprove && (
-        <div style={{ margin: '0.4rem 0' }}>
-          <p className={styles.small} style={{ margin: 0 }}>核验清单（{checked.length}/{p.checklist.length}，帮自己对，勾不勾都能点「通过」）：</p>
-          {p.checklist.map((c) => (
-            <label key={c} style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 36 }}>
-              <input type="checkbox" checked={checked.includes(c)} onChange={(e) => setChecked(e.target.checked ? [...checked, c] : checked.filter((x) => x !== c))} />
-              {c}
-            </label>
-          ))}
-        </div>
-      )}
       <div style={{ margin: '0.4rem 0' }}>
         <p className={styles.small} style={{ margin: 0 }}>工种（{canApprove ? '勾上核验通过的' : '已通过的打勾'}）：</p>
         {p.trades.map((t) => (
@@ -175,7 +166,24 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
           </label>
         ))}
       </div>
-      {mode ? (
+      {mode === 'approve' ? (
+        // 指令 105-2：点「通过」先弹出核验清单，逐条勾完才能确认（服务器也查）
+        <div className={styles.notice} role="dialog" aria-label="核验清单" style={{ marginTop: '0.5rem' }}>
+          <p style={{ margin: '0 0 0.4rem' }}><strong>核验清单</strong>：逐条核对过就勾上，全部勾完才能确认（{checked.length}/{p.checklist.length}）</p>
+          {p.checklist.map((c) => (
+            <label key={c} style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 40 }}>
+              <input type="checkbox" checked={checked.includes(c)} onChange={(e) => setChecked(e.target.checked ? [...checked, c] : checked.filter((x) => x !== c))} />
+              {c}
+            </label>
+          ))}
+          <div className={styles.btnRow} style={{ marginTop: '0.4rem' }}>
+            <button className={styles.btn} disabled={checked.length < p.checklist.length || approvePick.length === 0} onClick={() => verify(p.id, { action: 'approve', trades: approvePick, checked }, p.status === 'removed' ? `${p.name} 已恢复（核验通过）` : `${p.name} 核验通过（${approvePick.length} 个工种），本人会收到通知`)}>
+              {checked.length < p.checklist.length ? `还差 ${p.checklist.length - checked.length} 项` : p.status === 'removed' ? '确认恢复上架' : '确认通过'}
+            </button>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setMode(''); setChecked([]); }}>先不</button>
+          </div>
+        </div>
+      ) : mode ? (
         <div style={{ marginTop: '0.5rem' }}>
           <p className={styles.small} style={{ margin: '0 0 0.3rem' }}>{mode === 'return' ? '不通过的原因（退回给本人，让他改好再交）' : '下架原因（会告诉本人）'}：</p>
           <div className={styles.chips} style={{ marginBottom: '0.5rem' }}>
@@ -192,14 +200,14 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
       ) : (
         <div className={styles.btnRow} style={{ marginTop: '0.5rem' }}>
           {canApprove && (
-            // 指令 102：「通过」一下就生效（核验清单是帮自己对的，勾不勾都能点）；只通过部分工种就先去掉不通过的勾
-            <button className={styles.btn} disabled={pick.length === 0} onClick={() => verify(p.id, { action: 'approve', trades: pick }, `${p.name} 核验通过（${pick.length} 个工种），本人会收到通知`)}>
+            // 指令 105-2：「通过」先弹出核验清单（勾完才能确认）；只通过部分工种就先去掉不通过的勾
+            <button className={styles.btn} disabled={pick.length === 0} onClick={() => { setChecked([]); setMode('approve'); }}>
               {pick.length === 0 ? '先勾通过的工种' : pick.length < p.trades.length ? `通过（${pick.length} 个工种）` : '通过'}
             </button>
           )}
           {(p.status === 'pending' || p.needsReview) && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setMode('return')}>不通过</button>}
           {p.status !== 'removed' && <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setMode('remove')}>下架</button>}
-          {p.status === 'removed' && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => verify(p.id, { action: 'approve', trades: p.trades.filter((t) => t.verified).map((t) => t.key).length ? p.trades.filter((t) => t.verified).map((t) => t.key) : p.trades.map((t) => t.key) }, `${p.name} 已恢复（核验通过）`)}>恢复上架</button>}
+          {p.status === 'removed' && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setChecked([]); setMode('approve'); }}>恢复上架</button>}
         </div>
       )}
     </div>

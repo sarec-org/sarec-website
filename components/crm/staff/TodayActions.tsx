@@ -32,6 +32,16 @@ export function ActionButtons({
   onContact?: () => void;
 }) {
   const [busy, setBusy] = useState('');
+  // 指令 105-2：带核验清单的按钮（接活人「通过」）点了先展开清单，逐条勾完才能确认
+  const [ck, setCk] = useState<{ i: number; on: string[] } | null>(null);
+  const send = async (a: Extract<TodayAction, { type: 'post' }>, extra: Record<string, unknown> = {}) => {
+    setBusy(a.label);
+    const r = await api<{ message?: string }>(a.endpoint, { body: { ...(a.body ?? {}), ...extra } });
+    setBusy('');
+    if (r.ok) setCk(null);
+    onDone(r.ok ? { ok: true, text: r.data.message || a.done || '已完成' } : { ok: false, text: r.message });
+  };
+  const open = ck ? actions[ck.i] : null;
   const cls = (a: { primary?: boolean; danger?: boolean }, i: number) =>
     `${styles.btn} ${a.danger ? styles.btnDanger : a.primary || i === 0 ? '' : styles.btnGhost}`;
   return (
@@ -56,17 +66,32 @@ export function ActionButtons({
             className={cls(a, i)}
             disabled={!!busy}
             onClick={async () => {
+              if (a.checklist) { setCk(ck?.i === i ? null : { i, on: [] }); return; }
               if (a.confirm && !window.confirm(a.confirm)) return;
-              setBusy(a.label);
-              const r = await api<{ message?: string }>(a.endpoint, { body: a.body ?? {} });
-              setBusy('');
-              onDone(r.ok ? { ok: true, text: r.data.message || a.done || '已完成' } : { ok: false, text: r.message });
+              await send(a);
             }}
           >
             {busy === a.label ? '处理中…' : a.label}
           </button>
         );
       })}
+      {ck && open?.type === 'post' && open.checklist && (
+        <div className={styles.notice} role="dialog" aria-label="核验清单" style={{ width: '100%', marginTop: '0.4rem' }}>
+          <p style={{ margin: '0 0 0.4rem' }}><strong>核验清单</strong>：逐条核对过就勾上，全部勾完才能确认（{ck.on.length}/{open.checklist.length}）</p>
+          {open.checklist.map((c) => (
+            <label key={c} style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 40 }}>
+              <input type="checkbox" checked={ck.on.includes(c)} onChange={(e) => setCk({ i: ck.i, on: e.target.checked ? [...ck.on, c] : ck.on.filter((x) => x !== c) })} />
+              {c}
+            </label>
+          ))}
+          <div className={styles.btnRow} style={{ marginTop: '0.4rem' }}>
+            <button type="button" className={styles.btn} disabled={!!busy || ck.on.length < open.checklist.length} onClick={() => send(open, { checked: ck.on })}>
+              {busy ? '处理中…' : ck.on.length < open.checklist.length ? `还差 ${open.checklist.length - ck.on.length} 项` : `确认${open.label}`}
+            </button>
+            <button type="button" className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setCk(null)}>先不</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

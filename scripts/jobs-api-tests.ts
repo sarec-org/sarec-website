@@ -51,6 +51,12 @@ async function phoneTaken(p: string) {
 }
 
 type Res = { status: number; j: Record<string, any> };
+/** 指令 105-2：通过要带勾完的核验清单——先读这个人的清单 */
+async function checklistOf(id: string, who: { token: string }): Promise<string[]> {
+  const r = await call('GET', '/workbench/jobs/pros', who);
+  return ((r.j.items ?? []) as { id: string; checklist: string[] }[]).find((x) => x.id === id)?.checklist ?? [];
+}
+
 async function call(method: string, path: string, who?: { token: string } | null, b?: unknown, headers: Record<string, string> = {}): Promise<Res> {
   const res = await fetch(`${BASE}/api/v1${path}`, {
     method,
@@ -402,7 +408,10 @@ async function main() {
   ok('核验队列：一键打开官方查询页 + 核验清单');
   r = await call('POST', `/workbench/jobs/pros/${proAId}/verify`, staff, { action: 'return' });
   assert.equal(r.status, 400);
-  r = await call('POST', `/workbench/jobs/pros/${proAId}/verify`, staff, { action: 'approve', trades: ['handyman'] });
+  // 指令 105-2：没勾完核验清单不能通过（服务器也查）
+  r = await call('POST', `/workbench/jobs/pros/${proAId}/verify`, staff, { action: 'approve', trades: ['handyman'], checked: qA.checklist.slice(1) });
+  assert.equal(r.status, 400);
+  r = await call('POST', `/workbench/jobs/pros/${proAId}/verify`, staff, { action: 'approve', trades: ['handyman'], checked: qA.checklist });
   assert.equal(r.j.pro.status, 'verified');
   r = await call('GET', '/jobs/meta', proA);
   assert.equal(r.j.me.pro.needPay, true);
@@ -905,7 +914,7 @@ async function main() {
     ok('D20：runner 送来的总表行显示过期 → 自动下架、通知本人、提醒工作人员');
   }
   // 90 天复核（B、C 类转工作人员）
-  await call('POST', `/workbench/jobs/pros/${designerId}/verify`, staff, { action: 'approve' });
+  await call('POST', `/workbench/jobs/pros/${designerId}/verify`, staff, { action: 'approve', checked: await checklistOf(designerId, staff) });
   await pool.query(`UPDATE jobs_pros SET next_review_at = now() - interval '1 minute' WHERE id = $1`, [designerId]);
   await runVerification(new Date());
   const { rows: dr } = await pool.query<{ needs_review: boolean }>(`SELECT needs_review FROM jobs_pros WHERE id = $1`, [designerId]);

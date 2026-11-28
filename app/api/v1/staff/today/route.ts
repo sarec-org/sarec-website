@@ -7,7 +7,7 @@
 import { getPool } from '@/lib/db/client';
 import { dailyResults } from '@/lib/crm/postEvent';
 import { staffCan } from '@/lib/crm/auth';
-import { handler, isMiniProgramRequest, isMpOlderThan, mpVersion, ok, requireStaffAny } from '@/lib/crm/http';
+import { handler, isMiniProgramRequest, isMpOlderThan, mpVersion, ok, requireStaffAny, siteUrl } from '@/lib/crm/http';
 import { collectToday } from '@/lib/crm/today/registry';
 import { forMiniProgram } from '@/lib/crm/today/mp';
 import type { TodayPayload } from '@/lib/crm/today/types';
@@ -22,7 +22,7 @@ export const GET = handler(async (req: Request) => {
     .catch(() => ({ rows: [] as { bound: boolean; at: Date | null }[] }));
   const mpBind = { bound: !!rows[0]?.bound, boundAt: rows[0]?.at ?? null, bindHref: '/zh/staff/settings#mp-bind' };
   // 指令 102：1.7.2 以前的小程序打开 /zh/staff/jobs… 会落到「开关」——给它们的条目不带这类链接（按钮照样在卡片上）
-  if (await isMiniProgramRequest(req)) return ok({ ...forMiniProgram(out, { legacyJobsLink: !mpVersion(req) || isMpOlderThan(req, [1, 7, 2]) }), mpBind } as unknown as Record<string, unknown>);
+  if (await isMiniProgramRequest(req)) return ok({ ...forMiniProgram(out, { legacyJobsLink: !mpVersion(req) || isMpOlderThan(req, [1, 7, 2]), siteBase: siteUrl(req) }), mpBind } as unknown as Record<string, unknown>);
   // 指令 89-B 验收 P2-1：「今天新报名 N ›」——今天（洛杉矶）新报名的真实客户（口径同活动页：不含内部 / 测试账号、不含已取消），按活动分
   if (staffCan(s, 'ops') || staffCan(s, 'checkin')) {
     const { rows: nr } = await getPool()

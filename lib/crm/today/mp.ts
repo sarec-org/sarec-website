@@ -43,13 +43,30 @@ export type MpTodayPayload = Omit<TodayPayload, 'items'> & { items: MpTodayItem[
  * 「通过 / 不通过」「派给师傅 / 不派」按钮就在卡片上）。1.7.2 起小程序保留标签和那一条（?tab=pros&id=…），照常给。
  */
 const JOBS_HREF = /^\/zh\/staff\/jobs(\/|\?|#|$)/;
-function legacyJobs(it: TodayItem): TodayItem {
-  if (!JOBS_HREF.test(it.href) && !it.actions.some((a) => a.type === 'link' && JOBS_HREF.test(a.href))) return it;
-  return { ...it, href: JOBS_HREF.test(it.href) ? '' : it.href, actions: it.actions.filter((a) => !(a.type === 'link' && JOBS_HREF.test(a.href))) };
+function legacyJobs(it: TodayItem, siteBase: string): TodayItem {
+  const hasChecklist = it.actions.some((a) => a.type === 'post' && a.checklist);
+  if (!hasChecklist && !JOBS_HREF.test(it.href) && !it.actions.some((a) => a.type === 'link' && JOBS_HREF.test(a.href))) return it;
+  // 指令 105-2：旧版小程序弹不出核验清单（不认 checklist）→ 不给「通过」，换成「复制网站核验链接」（手机浏览器打开，勾完清单再通过）
+  const web = JOBS_HREF.test(it.href) ? it.href : (it.actions.find((a) => a.type === 'link' && JOBS_HREF.test(a.href)) as { href: string } | undefined)?.href;
+  const actions: TodayAction[] = [];
+  for (const a of it.actions) {
+    if (a.type === 'link' && JOBS_HREF.test(a.href)) continue;
+    if (a.type === 'post' && a.checklist) {
+      if (web) actions.push({ type: 'copy', label: '复制网站核验链接', text: siteBase + web, toast: '已复制网站核验链接：用手机浏览器打开，逐条勾完核验清单再点通过' });
+      continue;
+    }
+    actions.push(a);
+  }
+  return {
+    ...it,
+    href: JOBS_HREF.test(it.href) ? '' : it.href,
+    suggestion: hasChecklist ? `${it.suggestion}（这个版本的小程序勾不了核验清单：要通过请点「复制网站核验链接」，用手机浏览器打开）` : it.suggestion,
+    actions
+  };
 }
 
-export function forMiniProgram(p: TodayPayload, opts: { legacyJobsLink?: boolean } = {}): MpTodayPayload {
-  const keep = p.items.filter((it) => !isMoneyItem(it)).map((it) => (opts.legacyJobsLink ? legacyJobs(it) : it));
+export function forMiniProgram(p: TodayPayload, opts: { legacyJobsLink?: boolean; siteBase?: string } = {}): MpTodayPayload {
+  const keep = p.items.filter((it) => !isMoneyItem(it)).map((it) => (opts.legacyJobsLink ? legacyJobs(it, (opts.siteBase ?? '').replace(/\/$/, '')) : it));
   return {
     ...p,
     items: keep.map((it) => ({ ...it, detail: it.detail && PAY_WORDS.test(it.detail) ? undefined : it.detail, actions: it.actions.filter(safeAction), mpPath: mpPathFor(it.id) })),
