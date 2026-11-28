@@ -25,7 +25,8 @@ export const KIND_NAME: Record<TodayKind, string> = {
   ugc_machine: '机器拦下的内容',
   profile_review: '个人主页待看一眼',
   jobs_request: '找师傅：小程序交来的待派',
-  slides_upload: '讲座课件待上传'
+  slides_upload: '讲座课件待上传',
+  org_event_review: '主办方活动等放行'
 };
 
 export function allProviders(): TodayProvider[] {

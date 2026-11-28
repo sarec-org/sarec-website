@@ -143,9 +143,9 @@ async function complaints(): Promise<TodayItem[]> {
     priority: PRIORITY.review + 20,
     title: `找工人·接活儿 有人投诉${r.target_type === 'pro' ? '一位接活人' : '一条活儿'}`,
     suggestion: `${fmtDay(r.created_at)}：${r.reason.slice(0, 60)}。看一眼，属实就下架，处理完写一句结果。`,
-    href: '/zh/staff/jobs/reports',
+    href: `/zh/staff/jobs/reports?id=${r.id}`,
     at: r.created_at.toISOString(),
-    actions: [{ type: 'link', label: '去处理', href: '/zh/staff/jobs/reports', primary: true }]
+    actions: [{ type: 'link', label: '去处理', href: `/zh/staff/jobs/reports?id=${r.id}`, primary: true }]
   }));
 }
 
@@ -214,10 +214,14 @@ function failureText(kind: string): { title: string; suggest: string } {
 }
 
 async function failures(): Promise<TodayItem[]> {
-  const { rows } = await getPool().query<{ id: string; kind: string; error: string | null; updated_at: Date; attempts: number }>(
-    `SELECT id, kind, error, updated_at, attempts FROM ops_exceptions WHERE status = 'open' ORDER BY updated_at DESC LIMIT 10`
+  // 指令 102：「有接活人等核验」不再单独出一条（「接活人待核验」那一条带通过 / 不通过，办完这条异常自动关掉）
+  const { rows } = await getPool().query<{ id: string; kind: string; error: string | null; updated_at: Date; attempts: number; ref: string | null }>(
+    `SELECT id, kind, error, updated_at, attempts, ref FROM ops_exceptions WHERE status = 'open' AND kind <> 'jobs_verify' ORDER BY updated_at DESC LIMIT 10`
   );
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return rows.map((x) => {
+    // 指令 102：接活人执照出问题 / 到 90 天复核的，链接直达这一个人（不再落到「待跟进 › 异常」总页）
+    const proHref = (x.kind === 'jobs_review' || x.kind === 'jobs_license') && x.ref && UUID.test(x.ref) ? `/zh/staff/jobs/pros?id=${x.ref}` : null;
     const f = failureText(x.kind);
     const why = humanizeError(x.error);
     return {
@@ -228,9 +232,12 @@ async function failures(): Promise<TodayItem[]> {
       suggestion: `${why.replace(/[。.]$/, '')}。${f.suggest}；不用管的点“不处理”。`,
       // 原始报错只放在收起来的“看详情”里
       detail: x.error ? `系统记下的原文：${x.error.slice(0, 500)}${x.attempts > 1 ? `\n（已经出过 ${x.attempts} 次）` : ''}` : undefined,
-      href: '/zh/staff/followups?tab=exceptions',
+      href: proHref ?? '/zh/staff/followups?tab=exceptions',
       at: x.updated_at.toISOString(),
-      actions: [
+      actions: proHref ? [
+        { type: 'link', label: '打开这个人', href: proHref, primary: true },
+        { type: 'post', label: '看过了', endpoint: '/api/v1/staff/exceptions', body: { id: x.id, action: 'ignore' } }
+      ] : [
         { type: 'post', label: '重试', endpoint: '/api/v1/staff/exceptions', body: { id: x.id, action: 'retry' }, primary: true },
         { type: 'post', label: '不处理', endpoint: '/api/v1/staff/exceptions', body: { id: x.id, action: 'ignore' } }
       ]

@@ -19,15 +19,35 @@ export default function StaffJobsPosts() {
   );
 }
 
+/** 地址里的 ?status= / ?id=（「今天」「等你处理」点进来带 id = 那一条活儿） */
+function linkParam(k: string): string | null {
+  return typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get(k) : null;
+}
+
 function Posts() {
-  const [status, setStatus] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('status') ?? '' : ''));
+  // 指令 102：没带 status 打开时先看有没有待审的——有活儿等派就停在「小程序交来·待派」；没有活儿等派、有接活人等核验就直接去「接活人核验」
+  const [status, setStatus] = useState<string | null>(() => linkParam('status') ?? (linkParam('id') ? '' : null));
+  const [focus] = useState(() => linkParam('id'));
+  const [pendingN, setPendingN] = useState(0);
   const [rows, setRows] = useState<P[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => {
+    api<{ pros: number; posts: number }>('/api/v1/workbench/jobs/counts').then((r) => {
+      const c = r.ok ? r.data : { pros: 0, posts: 0 };
+      setPendingN(c.posts);
+      if (status !== null) return;
+      if (c.posts > 0) setStatus('pending');
+      else if (c.pros > 0) window.location.replace('/zh/staff/jobs/pros');
+      else setStatus('');
+    });
+  }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
   const load = useCallback(async () => {
+    if (status === null) return;
     const r = await api<{ items: P[] }>(`/api/v1/workbench/jobs/posts${status ? `?status=${status}` : ''}`);
     if (r.ok) setRows(r.data.items); else setMsg({ ok: false, text: r.message });
   }, [status]);
   useEffect(() => { setRows(null); load(); }, [load]);
+  useEffect(() => { if (focus && rows?.some((p) => p.id === focus)) document.getElementById(`post-${focus}`)?.scrollIntoView({ block: 'center' }); }, [rows, focus]);
   async function act(id: string, b: Record<string, unknown>, okText: string) {
     const r = await api(`/api/v1/workbench/jobs/posts/${id}`, { body: b });
     if (!r.ok) return setMsg({ ok: false, text: r.message });
@@ -38,12 +58,13 @@ function Posts() {
     <>
       <p className={styles.small}>状态自动更新：14 天到期自动下架，发布人自己可改“已找到 / 已关闭”。这里能下架违规的活儿、写备注（备注只有工作人员看得到）。点标题看活儿页面。工作人员不代接活人联系发布人。</p>
       <div className={styles.tabs}>
-        {FILTERS.map(([k, l]) => <button key={k} className={`${styles.tab} ${status === k ? styles.tabOn : ''}`} onClick={() => setStatus(k)}>{l}</button>)}
+        {FILTERS.map(([k, l]) => <button key={k} className={`${styles.tab} ${status === k ? styles.tabOn : ''}`} onClick={() => setStatus(k)}>{l}{k === 'pending' && pendingN > 0 ? <span className={styles.badge} style={{ marginLeft: 6, background: "#d64545", borderColor: "#d64545", color: "#fff", fontWeight: 700 }}>{pendingN}</span> : null}</button>)}
       </div>
       <Msg m={msg} />
       {!rows && <p className={styles.muted}>正在加载…</p>}
       {rows && rows.length === 0 && <p className={styles.muted}>{status === 'pending' ? '小程序交来的都处理完了。' : status ? '这个状态下没有活儿。' : '还没有人发布活儿。'}</p>}
-      {rows?.map((p) => <Row key={p.id} p={p} act={act} />)}
+      {focus && rows && !rows.some((p) => p.id === focus) && <p className={styles.notice}>要找的那一条已经处理过了（不在这一栏里）。</p>}
+      {rows?.map((p) => <div key={p.id} id={`post-${p.id}`} style={focus === p.id ? { outline: '2px solid var(--gold)', borderRadius: 8 } : undefined}><Row p={p} act={act} /></div>)}
     </>
   );
 }

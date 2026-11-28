@@ -19,6 +19,9 @@ function Reports() {
   const [st, setSt] = useState('open');
   const [rows, setRows] = useState<R[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // 指令 102：「今天」里点进来带 ?id=<投诉编号>：滚到这一条、描金边，「标为已处理」就在下面
+  const [focus] = useState(() => (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('id') : null));
+  useEffect(() => { if (focus && rows?.some((r) => r.id === focus)) document.getElementById(`rp-${focus}`)?.scrollIntoView({ block: 'center' }); }, [rows, focus]);
   const load = useCallback(async () => {
     const r = await api<{ items: R[] }>(`/api/v1/workbench/jobs/reports?status=${st}`);
     if (r.ok) setRows(r.data.items); else setMsg({ ok: false, text: r.message });
@@ -33,7 +36,7 @@ function Reports() {
       <Msg m={msg} />
       {!rows && <p className={styles.muted}>正在加载…</p>}
       {rows && rows.length === 0 && <p className={styles.muted}>{st === 'open' ? '没有要处理的投诉。' : '还没有处理过的投诉。'}</p>}
-      {rows?.map((r) => <Row key={r.id} r={r} done={(t) => { setMsg({ ok: true, text: t }); load(); }} fail={(t) => setMsg({ ok: false, text: t })} />)}
+      {rows?.map((r) => <div key={r.id} id={`rp-${r.id}`} style={focus === r.id ? { outline: '2px solid var(--gold)', borderRadius: 8 } : undefined}><Row r={r} done={(t) => { setMsg({ ok: true, text: t }); load(); }} fail={(t) => setMsg({ ok: false, text: t })} /></div>)}
     </>
   );
 }

@@ -37,8 +37,36 @@ function safeAction(a: TodayAction): boolean {
 export type MpTodayItem = TodayItem & { mpPath: string };
 export type MpTodayPayload = Omit<TodayPayload, 'items'> & { items: MpTodayItem[]; hiddenMoney: number };
 
-export function forMiniProgram(p: TodayPayload): MpTodayPayload {
-  const keep = p.items.filter((it) => !isMoneyItem(it));
+/**
+ * 指令 102：1.7.2 以前的小程序把 /zh/staff/jobs… 一律转成不带标签的「找工人·接活儿」页，落到第一个标签「开关」，找不到要审的。
+ * 对这些旧版本：指向 /zh/staff/jobs… 的「打开」按钮去掉、标题不再跳转（href 置空 → 旧版「今天」页就地显示这一条，
+ * 「通过 / 不通过」「派给师傅 / 不派」按钮就在卡片上）。1.7.2 起小程序保留标签和那一条（?tab=pros&id=…），照常给。
+ */
+const JOBS_HREF = /^\/zh\/staff\/jobs(\/|\?|#|$)/;
+function legacyJobs(it: TodayItem, siteBase: string): TodayItem {
+  const hasChecklist = it.actions.some((a) => a.type === 'post' && a.checklist);
+  if (!hasChecklist && !JOBS_HREF.test(it.href) && !it.actions.some((a) => a.type === 'link' && JOBS_HREF.test(a.href))) return it;
+  // 指令 105-2：旧版小程序弹不出核验清单（不认 checklist）→ 不给「通过」，换成「复制网站核验链接」（手机浏览器打开，勾完清单再通过）
+  const web = JOBS_HREF.test(it.href) ? it.href : (it.actions.find((a) => a.type === 'link' && JOBS_HREF.test(a.href)) as { href: string } | undefined)?.href;
+  const actions: TodayAction[] = [];
+  for (const a of it.actions) {
+    if (a.type === 'link' && JOBS_HREF.test(a.href)) continue;
+    if (a.type === 'post' && a.checklist) {
+      if (web) actions.push({ type: 'copy', label: '复制网站核验链接', text: siteBase + web, toast: '已复制网站核验链接：用手机浏览器打开，逐条勾完核验清单再点通过' });
+      continue;
+    }
+    actions.push(a);
+  }
+  return {
+    ...it,
+    href: JOBS_HREF.test(it.href) ? '' : it.href,
+    suggestion: hasChecklist ? `${it.suggestion}（这个版本的小程序勾不了核验清单：要通过请点「复制网站核验链接」，用手机浏览器打开）` : it.suggestion,
+    actions
+  };
+}
+
+export function forMiniProgram(p: TodayPayload, opts: { legacyJobsLink?: boolean; siteBase?: string } = {}): MpTodayPayload {
+  const keep = p.items.filter((it) => !isMoneyItem(it)).map((it) => (opts.legacyJobsLink ? legacyJobs(it, (opts.siteBase ?? '').replace(/\/$/, '')) : it));
   return {
     ...p,
     items: keep.map((it) => ({ ...it, detail: it.detail && PAY_WORDS.test(it.detail) ? undefined : it.detail, actions: it.actions.filter(safeAction), mpPath: mpPathFor(it.id) })),
@@ -59,6 +87,11 @@ export function mpPathForHref(href: string | null | undefined, category?: string
   if (MONEY_HREF.test(href) || category === 'paid_join' || category === 'zelle_pending') return null;
   const f = /^\/zh\/staff\/followups\/([0-9a-f-]{36})(?:[?#].*)?$/i.exec(href);
   if (f) return mpPathFor(`followup:${f[1]}`);
+  // 指令 102：接活人核验 / 小程序交来的活儿 → 「今天」里那一条（卡片上就有通过 / 不通过、派给师傅 / 不派），旧版小程序也不会落到「开关」
+  const jp = /^\/zh\/staff\/jobs\/pros\?(?:.*&)?id=([0-9a-f-]{36})/i.exec(href);
+  if (jp) return mpPathFor(`jobs_pro:${jp[1]}`);
+  const jr = /^\/zh\/staff\/jobs\?(?:.*&)?id=([0-9a-f-]{36})/i.exec(href);
+  if (jr) return mpPathFor(`jobs_request:${jr[1]}`);
   if (href === '/zh/staff' || href === '/zh/staff/') return MP_TODAY_PAGE;
   return `${MP_TODAY_PAGE}?h=${encodeURIComponent(href)}`;
 }

@@ -51,6 +51,12 @@ async function person(name: string, opts: { staff?: boolean; roles?: string[]; p
 }
 
 type Res = { status: number; j: Record<string, any> };
+/** 指令 105-2：通过要带勾完的核验清单——先读这个人的清单 */
+async function checklistOf(id: string, who: { token: string }): Promise<string[]> {
+  const r = await call('GET', '/workbench/jobs/pros', who);
+  return ((r.j.items ?? []) as { id: string; checklist: string[] }[]).find((x) => x.id === id)?.checklist ?? [];
+}
+
 async function call(method: string, path: string, who?: { token: string } | null, b?: unknown): Promise<Res> {
   const res = await fetch(`${BASE}/api/v1${path}`, {
     method,
@@ -245,7 +251,7 @@ async function main() {
   // ── 核验通过即上列表；设置改成“等本人确认”后，没确认的撤下、确认过的照上；公开卡片不出“商会代登记”
   const dian = bs.find((b) => b.name.includes('电工'))!;
   for (const id of [zhangId, dian.id]) {
-    r = await call('POST', `/workbench/jobs/pros/${id}/verify`, staff, { action: 'approve' });
+    r = await call('POST', `/workbench/jobs/pros/${id}/verify`, staff, { action: 'approve', checked: await checklistOf(id, staff) });
     assert.equal(r.status, 200, JSON.stringify(r.j));
   }
   // 收费方式不是“必须是会员”时，非会员核验通过即上

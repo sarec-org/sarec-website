@@ -303,6 +303,12 @@ export async function staffProList(status: string | null, opts: { mp: boolean; o
   return { items };
 }
 
+/** 指令 105-2：这个人的核验清单里还没勾的几条（checked 不是数组 = 一条都没勾） */
+export function uncheckedItems(p: Pick<ProRow, 'trades'>, trades: Map<string, Trade>, checked: unknown): string[] {
+  const got = new Set(Array.isArray(checked) ? checked.filter((x): x is string => typeof x === 'string').map((x) => x.trim()) : []);
+  return checklistFor(p, trades).filter((c) => !got.has(c));
+}
+
 export async function staffVerify(s: Staff, id: string, b: Record<string, unknown>) {
   const pool = getPool();
   const p = await proById(pool, id);
@@ -314,6 +320,9 @@ export async function staffVerify(s: Staff, id: string, b: Record<string, unknow
     case 'approve': {
       const pick = Array.isArray(b.trades) ? b.trades.filter((k): k is string => typeof k === 'string' && p.trades.includes(k)) : p.trades;
       if (!pick.length) throw new CrmError('bad_request', '请至少勾一个核验通过的工种');
+      // 指令 105-2：通过之前核验清单必须逐条勾完（服务器也查，不只靠页面）。checked = 页面上勾上的那几条原文
+      const missing = uncheckedItems(p, trades, b.checked);
+      if (missing.length) throw new CrmError('bad_request', `核验清单还有 ${missing.length} 项没勾，勾完才能通过：${missing.join('；')}`);
       await pool.query(
         `UPDATE jobs_pros SET status = 'verified', verified_trades = $2, verified_at = now(), verified_by = $3, needs_review = false, return_reason = NULL,
             removed_reason = NULL, next_review_at = CASE WHEN role = 'worker' THEN NULL ELSE now() + make_interval(days => $4) END, updated_at = now() WHERE id = $1`,

@@ -48,6 +48,9 @@ function List() {
   const [looked, setLooked] = useState(false);
   const [rows, setRows] = useState<Pro[] | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // 指令 102：「待核验」标签上的红数字（含核验后又改了资料的）
+  const [pendingN, setPendingN] = useState(0);
+  useEffect(() => { api<{ pros: number }>('/api/v1/workbench/jobs/counts').then((r) => { if (r.ok) setPendingN(r.data.pros); }); }, [rows]);
   const load = useCallback(async () => {
     const r = await api<{ items: Pro[] }>(`/api/v1/workbench/jobs/pros?status=${tab}`);
     if (r.ok) setRows(r.data.items); else setMsg({ ok: false, text: r.message });
@@ -57,6 +60,7 @@ function List() {
     if (!focus || !rows) return;
     if (rows.some((p) => p.id === focus)) {
       document.getElementById(`pro-${focus}`)?.scrollIntoView({ block: 'start' });
+      window.scrollBy(0, -120); // 顶栏是固定的，别把名字挡住
       return;
     }
     if (looked) return;
@@ -79,7 +83,7 @@ function List() {
     <>
       <p className={styles.small}>加州承包商牌照自动对照 CSLB 官方名单（状态、类别、工伤保险、保证金），结果和日期写在每人卡片上；其余资质点“打开官方查询页”，照清单逐条对。每 90 天自动复核，执照过期或被停会自动下架并通知本人。结果会通知本人。</p>
       <div className={styles.tabs}>
-        {TABS.map(([k, l]) => <button key={k} className={`${styles.tab} ${tab === k ? styles.tabOn : ''}`} onClick={() => setTab(k)}>{l}</button>)}
+        {TABS.map(([k, l]) => <button key={k} className={`${styles.tab} ${tab === k ? styles.tabOn : ''}`} onClick={() => setTab(k)}>{l}{k === 'pending' && pendingN > 0 ? <span className={styles.badge} style={{ marginLeft: 6, background: "#d64545", borderColor: "#d64545", color: "#fff", fontWeight: 700 }}>{pendingN}</span> : null}</button>)}
       </div>
       <Msg m={msg} />
       {!rows && <p className={styles.muted}>正在加载…</p>}
@@ -114,7 +118,7 @@ function Cslb({ s }: { s: LicState }) {
 }
 
 function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, unknown>, ok: string) => void }) {
-  const [mode, setMode] = useState<'' | 'return' | 'remove'>('');
+  const [mode, setMode] = useState<'' | 'return' | 'remove' | 'approve'>('');
   const [reason, setReason] = useState('');
   const [checked, setChecked] = useState<string[]>([]);
   const covered = p.licenseState?.coveredTrades;
@@ -122,6 +126,8 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
   const links = [...(p.cslbDetailUrl ? [{ agency: 'CSLB 牌照详情', url: p.cslbDetailUrl }] : []), ...p.officialUrls.filter((l) => l.url !== p.cslbDetailUrl)];
   const docs = [['营业登记', p.businessRegUrl], ['责任保险', p.insuranceUrl], ['执照照片', p.licenseDocUrl]].filter(([, u]) => u) as [string, string][];
   const canApprove = p.status === 'pending' || p.status === 'returned' || p.needsReview;
+  // 恢复上架：按原来通过的工种（没有就全部）
+  const approvePick = canApprove ? pick : p.trades.filter((t) => t.verified).map((t) => t.key).length ? p.trades.filter((t) => t.verified).map((t) => t.key) : p.trades.map((t) => t.key);
   return (
     <div className={styles.card}>
       <div>
@@ -151,17 +157,6 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
           {p.licenseNo && p.trades.some((t) => t.licType === 'A') && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => verify(p.id, { action: 'check' }, `已让系统再查一次 ${p.name} 的 CSLB 牌照，几分钟后刷新看结果`)}>CSLB 再查一次</button>}
         </div>
       )}
-      {p.checklist.length > 0 && canApprove && (
-        <div style={{ margin: '0.4rem 0' }}>
-          <p className={styles.small} style={{ margin: 0 }}>核验清单（{checked.length}/{p.checklist.length}）：</p>
-          {p.checklist.map((c) => (
-            <label key={c} style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 36 }}>
-              <input type="checkbox" checked={checked.includes(c)} onChange={(e) => setChecked(e.target.checked ? [...checked, c] : checked.filter((x) => x !== c))} />
-              {c}
-            </label>
-          ))}
-        </div>
-      )}
       <div style={{ margin: '0.4rem 0' }}>
         <p className={styles.small} style={{ margin: 0 }}>工种（{canApprove ? '勾上核验通过的' : '已通过的打勾'}）：</p>
         {p.trades.map((t) => (
@@ -171,9 +166,26 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
           </label>
         ))}
       </div>
-      {mode ? (
+      {mode === 'approve' ? (
+        // 指令 105-2：点「通过」先弹出核验清单，逐条勾完才能确认（服务器也查）
+        <div className={styles.notice} role="dialog" aria-label="核验清单" style={{ marginTop: '0.5rem' }}>
+          <p style={{ margin: '0 0 0.4rem' }}><strong>核验清单</strong>：逐条核对过就勾上，全部勾完才能确认（{checked.length}/{p.checklist.length}）</p>
+          {p.checklist.map((c) => (
+            <label key={c} style={{ display: 'flex', gap: 8, alignItems: 'center', minHeight: 40 }}>
+              <input type="checkbox" checked={checked.includes(c)} onChange={(e) => setChecked(e.target.checked ? [...checked, c] : checked.filter((x) => x !== c))} />
+              {c}
+            </label>
+          ))}
+          <div className={styles.btnRow} style={{ marginTop: '0.4rem' }}>
+            <button className={styles.btn} disabled={checked.length < p.checklist.length || approvePick.length === 0} onClick={() => verify(p.id, { action: 'approve', trades: approvePick, checked }, p.status === 'removed' ? `${p.name} 已恢复（核验通过）` : `${p.name} 核验通过（${approvePick.length} 个工种），本人会收到通知`)}>
+              {checked.length < p.checklist.length ? `还差 ${p.checklist.length - checked.length} 项` : p.status === 'removed' ? '确认恢复上架' : '确认通过'}
+            </button>
+            <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setMode(''); setChecked([]); }}>先不</button>
+          </div>
+        </div>
+      ) : mode ? (
         <div style={{ marginTop: '0.5rem' }}>
-          <p className={styles.small} style={{ margin: '0 0 0.3rem' }}>{mode === 'return' ? '退回原因（会告诉本人，让他改好再交）' : '下架原因（会告诉本人）'}：</p>
+          <p className={styles.small} style={{ margin: '0 0 0.3rem' }}>{mode === 'return' ? '不通过的原因（退回给本人，让他改好再交）' : '下架原因（会告诉本人）'}：</p>
           <div className={styles.chips} style={{ marginBottom: '0.5rem' }}>
             {(mode === 'return' ? RETURN_REASONS : REMOVE_REASONS).map((x) => (
               <button key={x} type="button" className={`${styles.chip} ${reason === x ? styles.chipOn : ''}`} onClick={() => setReason(x)}>{x}</button>
@@ -181,20 +193,21 @@ function ProRow({ p, verify }: { p: Pro; verify: (id: string, b: Record<string, 
           </div>
           <div className={styles.inputRow}>
             <input className={styles.input} placeholder="也可以自己写" value={reason} onChange={(e) => setReason(e.target.value)} />
-            <button className={`${styles.btn} ${styles.btnDanger}`} disabled={!reason.trim()} onClick={() => verify(p.id, { action: mode, reason: reason.trim() }, mode === 'return' ? `已退回 ${p.name}，原因已告诉本人` : `已下架 ${p.name}`)}>{mode === 'return' ? '确认退回' : '确认下架'}</button>
+            <button className={`${styles.btn} ${styles.btnDanger}`} disabled={!reason.trim()} onClick={() => verify(p.id, { action: mode, reason: reason.trim() }, mode === 'return' ? `${p.name} 没通过，已退回，原因已告诉本人` : `已下架 ${p.name}`)}>{mode === 'return' ? '确认不通过' : '确认下架'}</button>
             <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setMode(''); setReason(''); }}>取消</button>
           </div>
         </div>
       ) : (
         <div className={styles.btnRow} style={{ marginTop: '0.5rem' }}>
           {canApprove && (
-            <button className={styles.btn} disabled={pick.length === 0 || checked.length < p.checklist.length} onClick={() => verify(p.id, { action: 'approve', trades: pick }, `${p.name} 核验通过（${pick.length} 个工种）`)}>
-              {pick.length === 0 ? '先勾通过的工种' : checked.length < p.checklist.length ? `清单还差 ${p.checklist.length - checked.length} 项` : '通过'}
+            // 指令 105-2：「通过」先弹出核验清单（勾完才能确认）；只通过部分工种就先去掉不通过的勾
+            <button className={styles.btn} disabled={pick.length === 0} onClick={() => { setChecked([]); setMode('approve'); }}>
+              {pick.length === 0 ? '先勾通过的工种' : pick.length < p.trades.length ? `通过（${pick.length} 个工种）` : '通过'}
             </button>
           )}
-          {(p.status === 'pending' || p.needsReview) && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setMode('return')}>退回</button>}
+          {(p.status === 'pending' || p.needsReview) && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => setMode('return')}>不通过</button>}
           {p.status !== 'removed' && <button className={`${styles.btn} ${styles.btnDanger}`} onClick={() => setMode('remove')}>下架</button>}
-          {p.status === 'removed' && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => verify(p.id, { action: 'approve', trades: p.trades.filter((t) => t.verified).map((t) => t.key).length ? p.trades.filter((t) => t.verified).map((t) => t.key) : p.trades.map((t) => t.key) }, `${p.name} 已恢复（核验通过）`)}>恢复上架</button>}
+          {p.status === 'removed' && <button className={`${styles.btn} ${styles.btnQuiet}`} onClick={() => { setChecked([]); setMode('approve'); }}>恢复上架</button>}
         </div>
       )}
     </div>

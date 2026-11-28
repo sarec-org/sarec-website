@@ -72,12 +72,13 @@ export const NAV: Record<NavTab, Entry[]> = {
     { href: '/zh/staff/jobs/pros', label: '接活人核验', role: 'ops', sub: JOBS, words: ['核验', '牌照', '执照', 'CSLB', '施工队', '师傅', '退回', '下架接活人'] },
     { href: '/zh/staff/jobs/trades', label: '工种与资质表', role: 'ops', sub: JOBS, words: ['工种', '资质', '资质表', '分组', '首页入口', '方块'] },
     { href: '/zh/staff/jobs/cities', label: '找工人接活儿城市', role: 'ops', sub: JOBS, words: ['城市', '地区', '尔湾', '橙县', '服务城市', '加城市', '城市排序'] },
-    { href: '/zh/staff/jobs/switches', label: '找工人接活儿开关', role: 'ops', sub: JOBS, words: ['开关', '开放', '缴费会员', '接活开关', '接活儿开关', '找工人开关', '收费方式', '免费额度', '免费次数', '关掉'] },
     { href: '/zh/staff/jobs/stats', label: '找工人接活儿统计', role: 'ops', sub: JOBS, words: ['统计', '点击数', '联系次数', '成了', '多久有人联系'] },
     { href: '/zh/staff/jobs/reports', label: '找工人接活儿投诉', role: 'ops', sub: JOBS, words: ['投诉', '反馈', '举报'] },
     // 子任务 D（指令 13 第 3 条）：工作人员替师傅代登记、贴表批量录入
     { href: '/zh/staff/jobs/proxy', label: '代登记接活人', role: 'ops', sub: JOBS, words: ['代登记', '替师傅登记', '批量登记', '贴表', '商会代登记', '登记师傅'] },
-    { href: '/zh/staff/jobs/invite', label: '邀请登记接活', role: 'ops', sub: JOBS, words: ['邀请', '行业标签', '来登记接活', '登记接活儿', '邀请会员'] }
+    { href: '/zh/staff/jobs/invite', label: '邀请登记接活', role: 'ops', sub: JOBS, words: ['邀请', '行业标签', '来登记接活', '登记接活儿', '邀请会员'] },
+    // 指令 102：「开关」是设置、不是日常要点的，挪到这一组最后
+    { href: '/zh/staff/jobs/switches', label: '找工人接活儿开关', role: 'ops', sub: JOBS, words: ['开关', '开放', '缴费会员', '接活开关', '接活儿开关', '找工人开关', '收费方式', '免费额度', '免费次数', '关掉'] }
   ],
   收款: [
     { href: '/zh/staff/payments', label: '核款', role: 'finance', words: ['核款工作台', '收款', 'Zelle', '付款', '订单', '到账'] },
