@@ -1,6 +1,6 @@
 /**
  * POST /api/v1/staff/docs/upload —— 浏览器直传图片存储的令牌（PDF 常常超过 4.5MB，不能经函数转）。
- * 只给管理员；只收 PDF / JPG / PNG，单个最大 60MB；只能传到 docs/ 目录下。
+ * 管理员和运营（指令 103：活动页「传课件」）；只收 PDF / JPG / PNG，单个最大 60MB；只能传到 docs/ 目录下。
  */
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { CrmError } from '@/lib/crm/events';
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export const POST = handler(async (req: Request) => {
   const b = (await req.json()) as HandleUploadBody;
   // 令牌申请时校验身份；上传完成的回调（来自存储服务）不带会话，不做事
-  if (b.type === 'blob.generate-client-token') await requireStaff(req, 'admin');
+  if (b.type === 'blob.generate-client-token') await requireStaff(req, 'ops');
   const r = await handleUpload({
     body: b,
     request: req,

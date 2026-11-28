@@ -20,7 +20,9 @@ const nextConfig = {
       '/api/v1/greetings/**': ['./lib/org/fonts/*'],
       '/api/v1/cards/**': ['./node_modules/.pnpm/@sparticuz+chromium@*/node_modules/@sparticuz/chromium/bin/**'],
       // 商会资料：PDF 逐页转图用 MuPDF（WebAssembly）
-      '/api/v1/staff/docs/**': ['./node_modules/.pnpm/mupdf@*/node_modules/mupdf/dist/**']
+      '/api/v1/staff/docs/**': ['./node_modules/.pnpm/mupdf@*/node_modules/mupdf/dist/**', './lib/org/fonts/*'],
+      // 指令 103 / 104 讲座课件：活动页「传课件」也要 MuPDF（逐页转图、压图、加扫码页）和中文字体（扫码页）
+      '/api/v1/staff/events/*/slides': ['./node_modules/.pnpm/mupdf@*/node_modules/mupdf/dist/**', './lib/org/fonts/*']
     }
   },
   images: {

@@ -50,7 +50,9 @@ export type TodayKind =
   | 'ugc_machine'
   | 'profile_review'
   /** 1.5.1（providers/b.ts）：小程序里交来的「发布活儿」，等工作人员看过再派给师傅 */
-  | 'jobs_request';
+  | 'jobs_request'
+  /** 指令 103（providers/slides.ts）：讲座结束 2 小时后还没挂课件 */
+  | 'slides_upload';
 
 /** 卡片上的按钮。页面按 type 渲染；所有按钮都要够大（手机上一指点中）。 */
 export type TodayAction =

@@ -9,6 +9,7 @@ import { upload } from '@vercel/blob/client';
 import styles from '@/components/crm/crm.module.css';
 import { StaffGate } from '@/components/crm/staff/StaffGate';
 import { api } from '@/components/crm/client';
+import { PPT_HINT } from '@/components/crm/staff/EventSlides';
 
 type Doc = {
   id: string; slug: string; title: string; summary: string | null; cover_url: string | null; sort_order: number; is_public: boolean; audience?: 'all' | 'members'; event_id?: string | null; preview_pages?: number;
@@ -16,6 +17,8 @@ type Doc = {
   red_flags: { page: number; words: string[] }[]; text_readable: boolean | null; open_count: number; share_count: number; pdf_count: number;
 };
 const mb = (n: number | null) => (n ? `${(n / 1048576).toFixed(1)} MB` : '');
+// 指令 103：PPT 不能直接传（服务器转 PPT 要付费服务，没做），给明确提示
+const isPpt = (f: File) => /\.(pptx?|key|potx?)$/i.test(f.name);
 
 export default function StaffDocs() {
   const [docs, setDocs] = useState<Doc[] | null>(null);
@@ -75,6 +78,7 @@ export default function StaffDocs() {
   }
   async function uploadPdf(d: Doc, f: File | null) {
     if (!f) return;
+    if (isPpt(f)) return setMsg({ ok: false, text: PPT_HINT });
     setBusy(d.id);
     try {
       setMsg({ ok: true, text: `正在上传 PDF（${mb(f.size)}）…` });
@@ -118,6 +122,7 @@ export default function StaffDocs() {
   }
   async function uploadPdfOnly(d: Doc, f: File | null) {
     if (!f) return;
+    if (isPpt(f)) return setMsg({ ok: false, text: PPT_HINT });
     setBusy(d.id);
     try {
       const b = await putFile(d, f, (p) => setMsg({ ok: true, text: `正在上传 PDF 原件… ${p}%` }));
@@ -136,7 +141,8 @@ export default function StaffDocs() {
     <StaffGate title="商会资料" role="admin" wide>
       {() => (
         <>
-          <p className={styles.lead}>小程序「商会资料」：一页一屏看、能转发给朋友、能查看 / 转发 PDF 原件。PPT 在 PowerPoint 里点「文件 → 导出 → PDF」再传。</p>
+          <p className={styles.lead}>小程序「商会资料」：一页一屏看、能转发给朋友、能查看 / 转发 PDF 原件。<strong>PPT 请先另存为 PDF 再传</strong>（Mac 上用桌面的『双击我_PPT转PDF』，或 PowerPoint「文件 › 导出 › PDF」）。</p>
+          <p className={styles.small}>讲座课件更顺手的传法：活动页（活动 › 这场 ›「讲座课件」）直接「传课件」——自动挂到这场、默认所有人能看能下、做手机版并加扫码页。挂了活动的资料在这里传 PDF 也一样处理。</p>
           <p className={styles.small}>红线：资料里不能有金额、会费价格、收款方式、收益承诺（小程序审核）。系统会提醒，删页还是换页由你定。</p>
           {msg && <p className={msg.ok ? styles.success : styles.error}>{msg.text}</p>}
           {docs === null ? <p className={styles.small}>正在读取…</p> : null}
@@ -180,10 +186,12 @@ export default function StaffDocs() {
                 </div>
                 <div className={styles.btnRow}>
                   <button className={styles.btn} disabled={!!busy} onClick={() => save(d)}>{busy === d.id ? '处理中…' : '保存'}</button>
-                  <label className={`${styles.btn} ${styles.btnGhost}`} style={{ cursor: 'pointer' }}>上传 PDF（逐页转图）<input type="file" accept="application/pdf" hidden onChange={(x) => { uploadPdf(d, x.target.files?.[0] ?? null); x.target.value = ''; }} /></label>
+                  <label className={`${styles.btn} ${styles.btnGhost}`} style={{ cursor: 'pointer' }}>上传 PDF（逐页转图）<input type="file" accept="application/pdf,.pdf,.ppt,.pptx" hidden onChange={(x) => { uploadPdf(d, x.target.files?.[0] ?? null); x.target.value = ''; }} /></label>
                   <label className={`${styles.btn} ${styles.btnQuiet}`} style={{ cursor: 'pointer' }}>改用一组页面图片<input type="file" accept="image/jpeg,image/png" multiple hidden onChange={(x) => { uploadImages(d, x.target.files); x.target.value = ''; }} /></label>
-                  <label className={`${styles.btn} ${styles.btnQuiet}`} style={{ cursor: 'pointer' }}>只换 PDF 原件<input type="file" accept="application/pdf" hidden onChange={(x) => { uploadPdfOnly(d, x.target.files?.[0] ?? null); x.target.value = ''; }} /></label>
+                  <label className={`${styles.btn} ${styles.btnQuiet}`} style={{ cursor: 'pointer' }}>只换 PDF 原件<input type="file" accept="application/pdf,.pdf,.ppt,.pptx" hidden onChange={(x) => { uploadPdfOnly(d, x.target.files?.[0] ?? null); x.target.value = ''; }} /></label>
                   {d.pdf_site_url && <a className={`${styles.btn} ${styles.btnQuiet}`} href={d.pdf_site_url} target="_blank" rel="noreferrer">看 PDF 原件</a>}
+                  {d.pages.length > 0 && <a className={`${styles.btn} ${styles.btnQuiet}`} href={`/api/v1/staff/docs/${d.id}/qr`} download>下载小程序码</a>}
+                  {d.event_id && <a className={`${styles.btn} ${styles.btnQuiet}`} href={`/zh/staff/events/${d.event_id}?slides=1`}>去活动页</a>}
                   <button className={`${styles.btn} ${styles.btnQuiet}`} disabled={!!busy} onClick={() => remove(d)}>删除</button>
                 </div>
                 {d.pages.length > 0 && (
